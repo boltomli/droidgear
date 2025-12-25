@@ -78,7 +78,10 @@ export async function buildAppMenu(): Promise<Menu> {
         await PredefinedMenuItem.new({ item: 'Cut', text: t('menu.cut') }),
         await PredefinedMenuItem.new({ item: 'Copy', text: t('menu.copy') }),
         await PredefinedMenuItem.new({ item: 'Paste', text: t('menu.paste') }),
-        await PredefinedMenuItem.new({ item: 'SelectAll', text: t('menu.selectAll') }),
+        await PredefinedMenuItem.new({
+          item: 'SelectAll',
+          text: t('menu.selectAll'),
+        }),
       ],
     })
 

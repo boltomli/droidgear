@@ -75,7 +75,10 @@ export function ModelConfigPage() {
             <FileText className="h-4 w-4" />
             <span>{configPath}</span>
             {hasChanges && (
-              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+              <Badge
+                variant="secondary"
+                className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+              >
                 Unsaved Changes
               </Badge>
             )}
@@ -98,7 +101,12 @@ export function ModelConfigPage() {
         <div className="mx-4 mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center gap-2">
           <AlertCircle className="h-4 w-4 text-destructive" />
           <span className="text-sm text-destructive">{error}</span>
-          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setError(null)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto"
+            onClick={() => setError(null)}
+          >
             Dismiss
           </Button>
         </div>
@@ -118,17 +126,23 @@ export function ModelConfigPage() {
       />
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteIndex !== null} onOpenChange={() => setDeleteIndex(null)}>
+      <AlertDialog
+        open={deleteIndex !== null}
+        onOpenChange={() => setDeleteIndex(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Model</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this model? This action cannot be undone.
+              Are you sure you want to delete this model? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirmDelete}>
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -18,7 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { commands, type CustomModel, type Provider, type ModelInfo } from '@/lib/bindings'
+import {
+  commands,
+  type CustomModel,
+  type Provider,
+  type ModelInfo,
+} from '@/lib/bindings'
 
 interface ModelDialogProps {
   open: boolean
@@ -40,13 +45,21 @@ interface ModelFormProps {
 }
 
 function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
-  const [provider, setProvider] = useState<Provider>(model?.provider ?? 'anthropic')
-  const [baseUrl, setBaseUrl] = useState(model?.baseUrl ?? defaultBaseUrls.anthropic)
+  const [provider, setProvider] = useState<Provider>(
+    model?.provider ?? 'anthropic'
+  )
+  const [baseUrl, setBaseUrl] = useState(
+    model?.baseUrl ?? defaultBaseUrls.anthropic
+  )
   const [apiKey, setApiKey] = useState(model?.apiKey ?? '')
   const [modelId, setModelId] = useState(model?.model ?? '')
   const [displayName, setDisplayName] = useState(model?.displayName ?? '')
-  const [maxTokens, setMaxTokens] = useState(model?.maxOutputTokens?.toString() ?? '')
-  const [supportsImages, setSupportsImages] = useState(model?.supportsImages ?? false)
+  const [maxTokens, setMaxTokens] = useState(
+    model?.maxOutputTokens?.toString() ?? ''
+  )
+  const [supportsImages, setSupportsImages] = useState(
+    model?.supportsImages ?? false
+  )
 
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([])
   const [isFetching, setIsFetching] = useState(false)
@@ -112,7 +125,9 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
             <SelectContent>
               <SelectItem value="anthropic">Anthropic</SelectItem>
               <SelectItem value="openai">OpenAI</SelectItem>
-              <SelectItem value="generic-chat-completion-api">Generic (OpenAI Compatible)</SelectItem>
+              <SelectItem value="generic-chat-completion-api">
+                Generic (OpenAI Compatible)
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -143,10 +158,16 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
               onClick={handleFetchModels}
               disabled={isFetching || !baseUrl || !apiKey}
             >
-              {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Fetch Models'}
+              {isFetching ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Fetch Models'
+              )}
             </Button>
           </div>
-          {fetchError && <p className="text-sm text-destructive">{fetchError}</p>}
+          {fetchError && (
+            <p className="text-sm text-destructive">{fetchError}</p>
+          )}
         </div>
 
         <div className="grid gap-2">
@@ -217,7 +238,12 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
   )
 }
 
-export function ModelDialog({ open, onOpenChange, model, onSave }: ModelDialogProps) {
+export function ModelDialog({
+  open,
+  onOpenChange,
+  model,
+  onSave,
+}: ModelDialogProps) {
   const formKey = model ? `edit-${model.model}` : 'new'
 
   const handleSave = (newModel: CustomModel) => {

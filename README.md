@@ -31,10 +31,10 @@ DroidGear reads and writes to `~/.factory/settings.json`:
 
 ### Supported Providers
 
-| Provider | Value |
-|----------|-------|
-| Anthropic | `anthropic` |
-| OpenAI | `openai` |
+| Provider    | Value                         |
+| ----------- | ----------------------------- |
+| Anthropic   | `anthropic`                   |
+| OpenAI      | `openai`                      |
 | Generic API | `generic-chat-completion-api` |
 
 ## Development

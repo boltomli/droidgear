@@ -45,7 +45,11 @@ export const useModelStore = create<ModelState>()(
           ])
 
           if (pathResult.status === 'ok') {
-            set({ configPath: pathResult.data }, undefined, 'loadModels/setPath')
+            set(
+              { configPath: pathResult.data },
+              undefined,
+              'loadModels/setPath'
+            )
           }
 
           if (modelsResult.status === 'ok') {
