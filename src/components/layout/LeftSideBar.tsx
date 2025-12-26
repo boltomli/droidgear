@@ -3,10 +3,22 @@ import { useTranslation } from 'react-i18next'
 import { Server, Cpu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { ChannelList, ChannelDialog } from '@/components/channels'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
+import { useModelStore } from '@/store/model-store'
 import { commands, type Channel } from '@/lib/bindings'
+
+type NavigationView = 'models' | 'channels'
 
 interface LeftSideBarProps {
   children?: React.ReactNode
@@ -21,9 +33,51 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   const saveChannels = useChannelStore(state => state.saveChannels)
   const channels = useChannelStore(state => state.channels)
   const selectChannel = useChannelStore(state => state.selectChannel)
+  const channelHasChanges = useChannelStore(state => state.hasChanges)
+  const modelHasChanges = useModelStore(state => state.hasChanges)
 
   const [channelDialogOpen, setChannelDialogOpen] = useState(false)
   const [editingChannel, setEditingChannel] = useState<Channel | undefined>()
+  const [pendingView, setPendingView] = useState<NavigationView | null>(null)
+
+  const handleViewChange = (view: NavigationView) => {
+    if (view === currentView) return
+
+    // Check if current view has unsaved changes
+    const hasUnsavedChanges =
+      (currentView === 'models' && modelHasChanges) ||
+      (currentView === 'channels' && channelHasChanges)
+
+    if (hasUnsavedChanges) {
+      setPendingView(view)
+    } else {
+      setCurrentView(view)
+    }
+  }
+
+  const handleSaveAndSwitch = async () => {
+    if (currentView === 'models') {
+      await useModelStore.getState().saveModels()
+    } else {
+      await useChannelStore.getState().saveChannels()
+    }
+    if (pendingView) {
+      setCurrentView(pendingView)
+      setPendingView(null)
+    }
+  }
+
+  const handleDiscardAndSwitch = () => {
+    if (currentView === 'models') {
+      useModelStore.getState().resetChanges()
+    } else {
+      useChannelStore.getState().resetChanges()
+    }
+    if (pendingView) {
+      setCurrentView(pendingView)
+      setPendingView(null)
+    }
+  }
 
   const handleAddChannel = () => {
     setEditingChannel(undefined)
@@ -82,7 +136,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           variant={currentView === 'channels' ? 'secondary' : 'ghost'}
           size="sm"
           className="flex-1"
-          onClick={() => setCurrentView('channels')}
+          onClick={() => handleViewChange('channels')}
         >
           <Server className="h-4 w-4 mr-2" />
           {t('sidebar.channels')}
@@ -91,7 +145,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           variant={currentView === 'models' ? 'secondary' : 'ghost'}
           size="sm"
           className="flex-1"
-          onClick={() => setCurrentView('models')}
+          onClick={() => handleViewChange('models')}
         >
           <Cpu className="h-4 w-4 mr-2" />
           {t('sidebar.models')}
@@ -118,6 +172,32 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
         channel={editingChannel}
         onSave={handleSaveChannel}
       />
+
+      {/* Unsaved Changes Confirmation Dialog */}
+      <AlertDialog
+        open={pendingView !== null}
+        onOpenChange={open => !open && setPendingView(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('sidebar.unsavedChanges.title')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('sidebar.unsavedChanges.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleDiscardAndSwitch}>
+              {t('sidebar.unsavedChanges.discard')}
+            </Button>
+            <Button onClick={handleSaveAndSwitch}>
+              {t('sidebar.unsavedChanges.save')}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

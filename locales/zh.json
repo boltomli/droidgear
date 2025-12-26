@@ -136,6 +136,10 @@
   "sidebar.channels": "渠道",
   "sidebar.models": "模型",
   "sidebar.selectModelHint": "从主面板选择一个模型进行编辑",
+  "sidebar.unsavedChanges.title": "未保存的更改",
+  "sidebar.unsavedChanges.description": "您有未保存的更改，是否保存？",
+  "sidebar.unsavedChanges.save": "保存",
+  "sidebar.unsavedChanges.discard": "丢弃",
 
   "channels.title": "渠道",
   "channels.noChannels": "未配置渠道",

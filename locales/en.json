@@ -136,6 +136,10 @@
   "sidebar.channels": "Channels",
   "sidebar.models": "Models",
   "sidebar.selectModelHint": "Select a model from the main panel to edit",
+  "sidebar.unsavedChanges.title": "Unsaved Changes",
+  "sidebar.unsavedChanges.description": "You have unsaved changes. Do you want to save them?",
+  "sidebar.unsavedChanges.save": "Save",
+  "sidebar.unsavedChanges.discard": "Discard",
 
   "channels.title": "Channels",
   "channels.noChannels": "No channels configured",
