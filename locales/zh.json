@@ -200,6 +200,10 @@
   "models.configParseError.description": "settings.json 文件已损坏或无效。是否要重置并保存当前模型？这将删除文件中的其他设置。",
   "models.configParseError.cancel": "取消",
   "models.configParseError.confirm": "重置并保存",
+  "models.refresh": "刷新",
+  "models.refreshConfirm.title": "放弃更改？",
+  "models.refreshConfirm.description": "您有未保存的更改。刷新将放弃所有更改并从配置文件重新加载。",
+  "models.refreshConfirm.confirm": "放弃并刷新",
 
   "quickPane.placeholder": "输入文本...",
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Save, AlertCircle, FileText } from 'lucide-react'
+import { Plus, Save, AlertCircle, FileText, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -40,6 +40,7 @@ export function ModelConfigPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
+  const [showRefreshConfirm, setShowRefreshConfirm] = useState(false)
 
   useEffect(() => {
     loadModels()
@@ -48,6 +49,19 @@ export function ModelConfigPage() {
   const handleAdd = () => {
     setEditingIndex(null)
     setDialogOpen(true)
+  }
+
+  const handleRefresh = () => {
+    if (hasChanges) {
+      setShowRefreshConfirm(true)
+    } else {
+      loadModels()
+    }
+  }
+
+  const handleConfirmRefresh = () => {
+    setShowRefreshConfirm(false)
+    loadModels()
   }
 
   const handleEdit = (index: number) => {
@@ -90,6 +104,14 @@ export function ModelConfigPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            {t('models.refresh')}
+          </Button>
           <Button variant="outline" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
             {t('models.addModel')}
@@ -174,6 +196,29 @@ export function ModelConfigPage() {
             </AlertDialogCancel>
             <AlertDialogAction onClick={resetConfigAndSave}>
               {t('models.configParseError.confirm', 'Reset and Save')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Refresh Confirmation */}
+      <AlertDialog
+        open={showRefreshConfirm}
+        onOpenChange={setShowRefreshConfirm}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('models.refreshConfirm.title')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('models.refreshConfirm.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRefresh}>
+              {t('models.refreshConfirm.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

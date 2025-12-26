@@ -200,6 +200,10 @@
   "models.configParseError.description": "The settings.json file is corrupted or invalid. Would you like to reset it and save your current models? This will remove any other settings in the file.",
   "models.configParseError.cancel": "Cancel",
   "models.configParseError.confirm": "Reset and Save",
+  "models.refresh": "Refresh",
+  "models.refreshConfirm.title": "Discard Changes?",
+  "models.refreshConfirm.description": "You have unsaved changes. Refreshing will discard all changes and reload from the config file.",
+  "models.refreshConfirm.confirm": "Discard and Refresh",
 
   "quickPane.placeholder": "Enter text...",
 
