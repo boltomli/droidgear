@@ -35,6 +35,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
 
 /// Export TypeScript bindings to the frontend.
 /// Run with: cargo test export_bindings -- --ignored
+#[cfg(debug_assertions)]
 pub fn export_ts_bindings() {
     generate_bindings()
         .export(
@@ -45,7 +46,7 @@ pub fn export_ts_bindings() {
         .expect("Failed to export TypeScript bindings");
 }
 
-#[cfg(test)]
+#[cfg(all(test, debug_assertions))]
 mod tests {
     use super::*;
 
