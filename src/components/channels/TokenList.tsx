@@ -11,10 +11,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useChannelStore } from '@/store/channel-store'
-import type { ChannelToken } from '@/lib/bindings'
+import type { ChannelToken, ChannelType } from '@/lib/bindings'
 
 interface TokenListProps {
   channelId: string
+  channelType: ChannelType
   baseUrl: string
   onSelectToken: (token: ChannelToken) => void
 }
@@ -43,6 +44,7 @@ function getStatusBadge(status: number) {
 
 export function TokenList({
   channelId,
+  channelType,
   baseUrl,
   onSelectToken,
 }: TokenListProps) {
@@ -55,7 +57,7 @@ export function TokenList({
   const tokens: ChannelToken[] = tokensMap?.[channelId] ?? []
 
   const handleRefresh = () => {
-    fetchTokens(channelId, baseUrl)
+    fetchTokens(channelId, channelType, baseUrl)
   }
 
   const handleCopyKey = async (token: ChannelToken) => {

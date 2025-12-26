@@ -19,7 +19,8 @@ use super::config::{read_config_file, write_config_file, ModelInfo};
 #[serde(rename_all = "kebab-case")]
 pub enum ChannelType {
     NewApi,
-    OneApi,
+    #[serde(rename = "sub-2-api")]
+    Sub2Api,
 }
 
 /// Channel configuration
@@ -201,15 +202,28 @@ pub async fn delete_channel_credentials(channel_id: String) -> Result<(), String
     Ok(())
 }
 
-/// Fetches tokens from a New API channel
+/// Fetches tokens from a channel (dispatches based on channel type)
 #[tauri::command]
 #[specta::specta]
 pub async fn fetch_channel_tokens(
+    channel_type: ChannelType,
     base_url: String,
     username: String,
     password: String,
 ) -> Result<Vec<ChannelToken>, String> {
-    log::debug!("Fetching tokens from {base_url}");
+    match channel_type {
+        ChannelType::NewApi => fetch_new_api_tokens(&base_url, &username, &password).await,
+        ChannelType::Sub2Api => fetch_sub2api_tokens(&base_url, &username, &password).await,
+    }
+}
+
+/// Fetches tokens from a New API channel
+async fn fetch_new_api_tokens(
+    base_url: &str,
+    username: &str,
+    password: &str,
+) -> Result<Vec<ChannelToken>, String> {
+    log::debug!("Fetching tokens from New API: {base_url}");
 
     // Create client with cookie store for session management
     let client = reqwest::Client::builder()
@@ -307,6 +321,144 @@ pub async fn fetch_channel_tokens(
         .unwrap_or_default();
 
     log::info!("Fetched {} tokens", tokens.len());
+    Ok(tokens)
+}
+
+/// Fetches tokens from a Sub2API channel
+async fn fetch_sub2api_tokens(
+    base_url: &str,
+    email: &str,
+    password: &str,
+) -> Result<Vec<ChannelToken>, String> {
+    log::debug!("Fetching tokens from Sub2API: {base_url}");
+
+    let client = reqwest::Client::new();
+    let base = base_url.trim_end_matches('/');
+
+    // Login to get JWT access token
+    let login_url = format!("{base}/api/v1/auth/login");
+    let login_response = client
+        .post(&login_url)
+        .json(&serde_json::json!({
+            "email": email,
+            "password": password
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to login: {e}"))?;
+
+    if !login_response.status().is_success() {
+        let status = login_response.status();
+        let body = login_response.text().await.unwrap_or_default();
+        return Err(format!("Login failed {status}: {body}"));
+    }
+
+    let login_data: Value = login_response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse login response: {e}"))?;
+
+    if login_data.get("code").and_then(|v| v.as_i64()) != Some(0) {
+        let msg = login_data
+            .get("message")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Unknown error");
+        return Err(format!("Login failed: {msg}"));
+    }
+
+    let access_token = login_data
+        .get("data")
+        .and_then(|d| d.get("access_token"))
+        .and_then(|t| t.as_str())
+        .ok_or("Could not get access_token from login response")?;
+
+    log::debug!("Got Sub2API access token");
+
+    // Fetch keys list
+    let keys_url = format!("{base}/api/v1/keys");
+    let keys_response = client
+        .get(&keys_url)
+        .header("Authorization", format!("Bearer {access_token}"))
+        .query(&[("page", "1"), ("page_size", "100")])
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch keys: {e}"))?;
+
+    if !keys_response.status().is_success() {
+        let status = keys_response.status();
+        let body = keys_response.text().await.unwrap_or_default();
+        return Err(format!("API error {status}: {body}"));
+    }
+
+    let keys_data: Value = keys_response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse keys response: {e}"))?;
+
+    // Extract key IDs for usage query
+    let items = keys_data
+        .get("data")
+        .and_then(|d| d.get("items"))
+        .and_then(|v| v.as_array())
+        .ok_or("Could not get items from keys response")?;
+
+    let key_ids: Vec<i64> = items
+        .iter()
+        .filter_map(|k| k.get("id").and_then(|id| id.as_i64()))
+        .collect();
+
+    // Fetch usage stats
+    let usage_url = format!("{base}/api/v1/usage/dashboard/api-keys-usage");
+    let usage_response = client
+        .post(&usage_url)
+        .header("Authorization", format!("Bearer {access_token}"))
+        .json(&serde_json::json!({ "api_key_ids": key_ids }))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch usage: {e}"))?;
+
+    let usage_stats: std::collections::HashMap<String, Value> = if usage_response.status().is_success() {
+        let usage_data: Value = usage_response.json().await.unwrap_or_default();
+        usage_data
+            .get("data")
+            .and_then(|d| d.get("stats"))
+            .and_then(|s| serde_json::from_value(s.clone()).ok())
+            .unwrap_or_default()
+    } else {
+        std::collections::HashMap::new()
+    };
+
+    // Build tokens list
+    let tokens: Vec<ChannelToken> = items
+        .iter()
+        .filter_map(|k| {
+            let id = k.get("id")?.as_f64()?;
+            let id_str = (id as i64).to_string();
+            let usage = usage_stats.get(&id_str);
+
+            let status_str = k.get("status").and_then(|s| s.as_str()).unwrap_or("unknown");
+            let status = match status_str {
+                "active" => 1,
+                "inactive" => 2,
+                _ => 0,
+            };
+
+            Some(ChannelToken {
+                id,
+                name: k.get("name")?.as_str()?.to_string(),
+                key: k.get("key")?.as_str()?.to_string(),
+                status,
+                remain_quota: 0.0, // Sub2API doesn't have quota concept
+                used_quota: usage
+                    .and_then(|u| u.get("total_actual_cost"))
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0),
+                unlimited_quota: true,
+            })
+        })
+        .collect();
+
+    log::info!("Fetched {} tokens from Sub2API", tokens.len());
     Ok(tokens)
 }
 

@@ -168,6 +168,7 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
       <div className="flex-1 overflow-auto p-4">
         <TokenList
           channelId={channel.id}
+          channelType={channel.type}
           baseUrl={channel.baseUrl}
           onSelectToken={handleSelectToken}
         />

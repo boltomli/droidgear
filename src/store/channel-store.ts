@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { commands, type Channel, type ChannelToken } from '@/lib/bindings'
+import {
+  commands,
+  type Channel,
+  type ChannelToken,
+  type ChannelType,
+} from '@/lib/bindings'
 
 interface ChannelState {
   channels: Channel[]
@@ -18,7 +23,11 @@ interface ChannelState {
   updateChannel: (id: string, channel: Partial<Channel>) => void
   deleteChannel: (id: string) => Promise<void>
   selectChannel: (id: string | null) => void
-  fetchTokens: (channelId: string, baseUrl: string) => Promise<void>
+  fetchTokens: (
+    channelId: string,
+    channelType: ChannelType,
+    baseUrl: string
+  ) => Promise<void>
   resetChanges: () => void
   setError: (error: string | null) => void
 }
@@ -160,7 +169,7 @@ export const useChannelStore = create<ChannelState>()(
         set({ selectedChannelId: id }, undefined, 'selectChannel')
       },
 
-      fetchTokens: async (channelId, baseUrl) => {
+      fetchTokens: async (channelId, channelType, baseUrl) => {
         set({ isLoading: true, error: null }, undefined, 'fetchTokens/start')
         try {
           // Get credentials from storage
@@ -180,6 +189,7 @@ export const useChannelStore = create<ChannelState>()(
 
           const [username, password] = credResult.data
           const result = await commands.fetchChannelTokens(
+            channelType,
             baseUrl,
             username,
             password

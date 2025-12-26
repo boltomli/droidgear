@@ -28,7 +28,7 @@ interface ChannelDialogProps {
 
 const defaultBaseUrls: Record<ChannelType, string> = {
   'new-api': 'https://api.newapi.ai',
-  'one-api': '',
+  'sub-2-api': '',
 }
 
 interface ChannelFormProps {
@@ -114,7 +114,7 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="new-api">New API</SelectItem>
-              <SelectItem value="one-api">One API</SelectItem>
+              <SelectItem value="sub-2-api">Sub2API</SelectItem>
             </SelectContent>
           </Select>
         </div>

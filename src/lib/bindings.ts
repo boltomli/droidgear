@@ -243,11 +243,11 @@ async deleteChannelCredentials(channelId: string) : Promise<Result<null, string>
 }
 },
 /**
- * Fetches tokens from a New API channel
+ * Fetches tokens from a channel (dispatches based on channel type)
  */
-async fetchChannelTokens(baseUrl: string, username: string, password: string) : Promise<Result<ChannelToken[], string>> {
+async fetchChannelTokens(channelType: ChannelType, baseUrl: string, username: string, password: string) : Promise<Result<ChannelToken[], string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("fetch_channel_tokens", { baseUrl, username, password }) };
+    return { status: "ok", data: await TAURI_INVOKE("fetch_channel_tokens", { channelType, baseUrl, username, password }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -354,7 +354,7 @@ unlimitedQuota: boolean }
 /**
  * Channel types supported
  */
-export type ChannelType = "new-api" | "one-api"
+export type ChannelType = "new-api" | "sub-2-api"
 /**
  * Custom model configuration
  */
