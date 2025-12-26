@@ -120,9 +120,19 @@ pub fn read_config_file() -> ConfigReadResult {
 }
 
 /// Writes the entire config.json file (atomic write)
+/// If the config file is a symlink, writes to the actual target file
 pub fn write_config_file(config: &Value) -> Result<(), String> {
     let config_path = get_factory_config_path()?;
-    let temp_path = config_path.with_extension("tmp");
+
+    // Resolve symlink to get the actual file path
+    let actual_path = if config_path.is_symlink() {
+        std::fs::canonicalize(&config_path)
+            .map_err(|e| format!("Failed to resolve symlink: {e}"))?
+    } else {
+        config_path
+    };
+
+    let temp_path = actual_path.with_extension("tmp");
 
     let json_content = serde_json::to_string_pretty(config)
         .map_err(|e| format!("Failed to serialize config: {e}"))?;
@@ -130,7 +140,7 @@ pub fn write_config_file(config: &Value) -> Result<(), String> {
     std::fs::write(&temp_path, json_content)
         .map_err(|e| format!("Failed to write config file: {e}"))?;
 
-    std::fs::rename(&temp_path, &config_path).map_err(|e| {
+    std::fs::rename(&temp_path, &actual_path).map_err(|e| {
         let _ = std::fs::remove_file(&temp_path);
         format!("Failed to finalize config file: {e}")
     })?;
