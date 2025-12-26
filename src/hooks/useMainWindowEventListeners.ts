@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { exit } from '@tauri-apps/plugin-process'
 import { useCommandContext } from './use-command-context'
 import { useKeyboardShortcuts } from './use-keyboard-shortcuts'
 import { useUIStore } from '@/store/ui-store'
@@ -72,9 +73,13 @@ export function useMainWindowEventListeners() {
           )
 
           if (shouldClose) {
-            // User confirmed, close the window
-            await appWindow.destroy()
+            // User confirmed, exit the entire app (including quick-pane window)
+            await exit(0)
           }
+        } else {
+          // No unsaved changes, exit the entire app (including quick-pane window)
+          // This fixes Windows where closing main window doesn't exit due to hidden quick-pane
+          await exit(0)
         }
       })
       .then(unlistenFn => {
