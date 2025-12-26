@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, Copy, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -65,6 +65,13 @@ export function TokenList({
   const handleRefresh = () => {
     fetchTokens(channelId, channelType, baseUrl)
   }
+
+  // Auto refresh tokens when channel changes and no tokens exist
+  useEffect(() => {
+    if (tokens.length === 0 && !isLoading) {
+      fetchTokens(channelId, channelType, baseUrl)
+    }
+  }, [channelId, tokens.length, isLoading, fetchTokens, channelType, baseUrl])
 
   const handleCopyKey = async (token: ChannelToken) => {
     await navigator.clipboard.writeText(token.key)
