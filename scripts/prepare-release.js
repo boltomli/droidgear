@@ -71,14 +71,14 @@ async function prepareRelease() {
     fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n')
     console.log(`   ${oldPkgVersion} → ${cleanVersion}`)
 
-    // Update Cargo.toml
+    // Update Cargo.toml (only [package] section version)
     console.log('📝 Updating Cargo.toml...')
     const cargoPath = 'src-tauri/Cargo.toml'
     const cargoToml = fs.readFileSync(cargoPath, 'utf8')
-    const oldCargoVersion = cargoToml.match(/version = "([^"]*)"/)
+    const oldCargoVersion = cargoToml.match(/\[package\][\s\S]*?version = "([^"]*)"/)
     const updatedCargo = cargoToml.replace(
-      /version = "[^"]*"/,
-      `version = "${cleanVersion}"`
+      /(\[package\][\s\S]*?version = ")[^"]*(")/,
+      `$1${cleanVersion}$2`
     )
     fs.writeFileSync(cargoPath, updatedCargo)
     console.log(
@@ -159,10 +159,10 @@ async function prepareRelease() {
 
       console.log(`\n🎊 Release ${tagVersion} has been published!`)
       console.log(
-        '📱 Check GitHub Actions: https://github.com/YOUR_USERNAME/YOUR_REPO/actions'
+        '📱 Check GitHub Actions: https://github.com/Sunshow/droidgear/actions'
       )
       console.log(
-        '📦 Draft release will appear at: https://github.com/YOUR_USERNAME/YOUR_REPO/releases'
+        '📦 Draft release will appear at: https://github.com/Sunshow/droidgear/releases'
       )
       console.log(
         '\n⚠️  Remember: You need to manually publish the draft release on GitHub!'
