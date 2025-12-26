@@ -8,7 +8,7 @@ use specta::Type;
 use std::fs;
 use std::path::PathBuf;
 
-use super::config::{read_config_file, write_config_file, ModelInfo};
+use super::config::{read_config_file, write_config_file, ConfigReadResult, ModelInfo};
 
 // ============================================================================
 // Types
@@ -121,7 +121,17 @@ fn delete_channel_auth(channel_id: &str) -> Result<(), String> {
 pub async fn load_channels() -> Result<Vec<Channel>, String> {
     log::debug!("Loading channels from settings");
 
-    let config = read_config_file()?;
+    let config = match read_config_file() {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => {
+            log::debug!("Config file not found, returning empty channels");
+            return Ok(vec![]);
+        }
+        ConfigReadResult::ParseError(e) => {
+            log::warn!("Config file parse error: {e}, returning empty channels");
+            return Ok(vec![]);
+        }
+    };
 
     let channels: Vec<Channel> = config
         .get("channels")
@@ -143,7 +153,13 @@ pub async fn load_channels() -> Result<Vec<Channel>, String> {
 pub async fn save_channels(channels: Vec<Channel>) -> Result<(), String> {
     log::debug!("Saving {} channels to settings", channels.len());
 
-    let mut config = read_config_file()?;
+    let mut config = match read_config_file() {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => serde_json::json!({}),
+        ConfigReadResult::ParseError(e) => {
+            return Err(format!("CONFIG_PARSE_ERROR: {e}"));
+        }
+    };
 
     let channels_value = serde_json::to_value(&channels)
         .map_err(|e| format!("Failed to serialize channels: {e}"))?;

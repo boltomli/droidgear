@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { commands, type CustomModel } from '@/lib/bindings'
 
+const CONFIG_PARSE_ERROR_PREFIX = 'CONFIG_PARSE_ERROR:'
+
 interface ModelState {
   models: CustomModel[]
   originalModels: CustomModel[]
@@ -9,16 +11,19 @@ interface ModelState {
   hasChanges: boolean
   isLoading: boolean
   error: string | null
+  configParseError: string | null
 
   // Actions
   loadModels: () => Promise<void>
   saveModels: () => Promise<void>
+  resetConfigAndSave: () => Promise<void>
   addModel: (model: CustomModel) => void
   updateModel: (index: number, model: CustomModel) => void
   deleteModel: (index: number) => void
   reorderModels: (fromIndex: number, toIndex: number) => void
   resetChanges: () => void
   setError: (error: string | null) => void
+  clearConfigParseError: () => void
 }
 
 function modelsEqual(a: CustomModel[], b: CustomModel[]): boolean {
@@ -35,6 +40,7 @@ export const useModelStore = create<ModelState>()(
       hasChanges: false,
       isLoading: false,
       error: null,
+      configParseError: null,
 
       loadModels: async () => {
         set({ isLoading: true, error: null }, undefined, 'loadModels/start')
@@ -81,7 +87,11 @@ export const useModelStore = create<ModelState>()(
 
       saveModels: async () => {
         const { models } = get()
-        set({ isLoading: true, error: null }, undefined, 'saveModels/start')
+        set(
+          { isLoading: true, error: null, configParseError: null },
+          undefined,
+          'saveModels/start'
+        )
         try {
           const result = await commands.saveCustomModels(models)
           if (result.status === 'ok') {
@@ -95,17 +105,70 @@ export const useModelStore = create<ModelState>()(
               'saveModels/success'
             )
           } else {
-            set(
-              { error: result.error, isLoading: false },
-              undefined,
-              'saveModels/error'
-            )
+            if (result.error.startsWith(CONFIG_PARSE_ERROR_PREFIX)) {
+              set(
+                { configParseError: result.error, isLoading: false },
+                undefined,
+                'saveModels/configParseError'
+              )
+            } else {
+              set(
+                { error: result.error, isLoading: false },
+                undefined,
+                'saveModels/error'
+              )
+            }
           }
         } catch (e) {
           set(
             { error: String(e), isLoading: false },
             undefined,
             'saveModels/exception'
+          )
+        }
+      },
+
+      resetConfigAndSave: async () => {
+        const { models } = get()
+        set(
+          { isLoading: true, error: null, configParseError: null },
+          undefined,
+          'resetConfigAndSave/start'
+        )
+        try {
+          const resetResult = await commands.resetConfigFile()
+          if (resetResult.status !== 'ok') {
+            set(
+              { error: resetResult.error, isLoading: false },
+              undefined,
+              'resetConfigAndSave/resetError'
+            )
+            return
+          }
+
+          const saveResult = await commands.saveCustomModels(models)
+          if (saveResult.status === 'ok') {
+            set(
+              {
+                originalModels: JSON.parse(JSON.stringify(models)),
+                hasChanges: false,
+                isLoading: false,
+              },
+              undefined,
+              'resetConfigAndSave/success'
+            )
+          } else {
+            set(
+              { error: saveResult.error, isLoading: false },
+              undefined,
+              'resetConfigAndSave/saveError'
+            )
+          }
+        } catch (e) {
+          set(
+            { error: String(e), isLoading: false },
+            undefined,
+            'resetConfigAndSave/exception'
           )
         }
       },
@@ -183,6 +246,9 @@ export const useModelStore = create<ModelState>()(
       },
 
       setError: error => set({ error }, undefined, 'setError'),
+
+      clearConfigParseError: () =>
+        set({ configParseError: null }, undefined, 'clearConfigParseError'),
     }),
     { name: 'model-store' }
   )

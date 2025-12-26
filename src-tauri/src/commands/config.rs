@@ -10,6 +10,23 @@ use std::path::PathBuf;
 use tauri::AppHandle;
 
 // ============================================================================
+// Config Read Result
+// ============================================================================
+
+/// Result of reading the config file
+pub enum ConfigReadResult {
+    /// Successfully parsed config
+    Ok(Value),
+    /// File does not exist
+    NotFound,
+    /// Failed to parse JSON (contains error message)
+    ParseError(String),
+}
+
+/// Error type for config operations that require valid JSON
+pub const CONFIG_PARSE_ERROR_PREFIX: &str = "CONFIG_PARSE_ERROR:";
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -76,19 +93,30 @@ fn get_factory_config_path() -> Result<PathBuf, String> {
     Ok(factory_dir.join("settings.json"))
 }
 
-/// Reads the entire config.json file
-pub fn read_config_file() -> Result<Value, String> {
-    let config_path = get_factory_config_path()?;
+/// Reads the entire config.json file and returns a ConfigReadResult
+pub fn read_config_file() -> ConfigReadResult {
+    let config_path = match get_factory_config_path() {
+        Ok(path) => path,
+        Err(_) => return ConfigReadResult::NotFound,
+    };
 
     if !config_path.exists() {
-        // Return empty object if file doesn't exist
-        return Ok(serde_json::json!({}));
+        return ConfigReadResult::NotFound;
     }
 
-    let contents = std::fs::read_to_string(&config_path)
-        .map_err(|e| format!("Failed to read config file: {e}"))?;
+    let contents = match std::fs::read_to_string(&config_path) {
+        Ok(c) => c,
+        Err(e) => return ConfigReadResult::ParseError(format!("Failed to read config file: {e}")),
+    };
 
-    serde_json::from_str(&contents).map_err(|e| format!("Failed to parse config JSON: {e}"))
+    if contents.trim().is_empty() {
+        return ConfigReadResult::NotFound;
+    }
+
+    match serde_json::from_str(&contents) {
+        Ok(value) => ConfigReadResult::Ok(value),
+        Err(e) => ConfigReadResult::ParseError(format!("Failed to parse config JSON: {e}")),
+    }
 }
 
 /// Writes the entire config.json file (atomic write)
@@ -122,13 +150,33 @@ pub fn get_config_path() -> Result<String, String> {
     Ok(path.to_string_lossy().to_string())
 }
 
+/// Resets the config file to an empty JSON object
+#[tauri::command]
+#[specta::specta]
+pub async fn reset_config_file() -> Result<(), String> {
+    log::warn!("Resetting config file to empty object");
+    write_config_file(&serde_json::json!({}))?;
+    log::info!("Config file reset successfully");
+    Ok(())
+}
+
 /// Loads custom models from settings.json
 #[tauri::command]
 #[specta::specta]
 pub async fn load_custom_models() -> Result<Vec<CustomModel>, String> {
     log::debug!("Loading custom models from settings");
 
-    let config = read_config_file()?;
+    let config = match read_config_file() {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => {
+            log::debug!("Config file not found, returning empty models");
+            return Ok(vec![]);
+        }
+        ConfigReadResult::ParseError(e) => {
+            log::warn!("Config file parse error: {e}, returning empty models");
+            return Ok(vec![]);
+        }
+    };
 
     let models: Vec<CustomModel> = config
         .get("customModels")
@@ -150,13 +198,17 @@ pub async fn load_custom_models() -> Result<Vec<CustomModel>, String> {
 pub async fn save_custom_models(models: Vec<CustomModel>) -> Result<(), String> {
     log::debug!("Saving {} custom models to settings", models.len());
 
-    let mut config = read_config_file()?;
+    let mut config = match read_config_file() {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => serde_json::json!({}),
+        ConfigReadResult::ParseError(e) => {
+            return Err(format!("{CONFIG_PARSE_ERROR_PREFIX} {e}"));
+        }
+    };
 
-    // Convert models to JSON value
     let models_value =
         serde_json::to_value(&models).map_err(|e| format!("Failed to serialize models: {e}"))?;
 
-    // Update only the customModels field
     if let Some(obj) = config.as_object_mut() {
         obj.insert("customModels".to_string(), models_value);
     } else {

@@ -17,6 +17,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         quick_pane::get_default_quick_pane_shortcut,
         quick_pane::update_quick_pane_shortcut,
         config::get_config_path,
+        config::reset_config_file,
         config::load_custom_models,
         config::save_custom_models,
         config::fetch_models,

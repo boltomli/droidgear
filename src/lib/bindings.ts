@@ -155,6 +155,17 @@ async getConfigPath() : Promise<Result<string, string>> {
 }
 },
 /**
+ * Resets the config file to an empty JSON object
+ */
+async resetConfigFile() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("reset_config_file") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Loads custom models from settings.json
  */
 async loadCustomModels() : Promise<Result<CustomModel[], string>> {

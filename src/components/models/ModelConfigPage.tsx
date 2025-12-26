@@ -16,20 +16,25 @@ import { ModelList } from './ModelList'
 import { ModelDialog } from './ModelDialog'
 import { useModelStore } from '@/store/model-store'
 import type { CustomModel } from '@/lib/bindings'
+import { useTranslation } from 'react-i18next'
 
 export function ModelConfigPage() {
+  const { t } = useTranslation()
   const {
     models,
     configPath,
     hasChanges,
     isLoading,
     error,
+    configParseError,
     loadModels,
     saveModels,
+    resetConfigAndSave,
     addModel,
     updateModel,
     deleteModel,
     setError,
+    clearConfigParseError,
   } = useModelStore()
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -142,6 +147,34 @@ export function ModelConfigPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete}>
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Config Parse Error Confirmation */}
+      <AlertDialog
+        open={configParseError !== null}
+        onOpenChange={() => clearConfigParseError()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('models.configParseError.title', 'Config File Error')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(
+                'models.configParseError.description',
+                'The settings.json file is corrupted or invalid. Would you like to reset it and save your current models? This will remove any other settings in the file.'
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {t('models.configParseError.cancel', 'Cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={resetConfigAndSave}>
+              {t('models.configParseError.confirm', 'Reset and Save')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
