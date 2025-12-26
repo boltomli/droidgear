@@ -80,6 +80,10 @@ npm run tauri build
 - **后端**: Tauri v2, Rust
 - **状态管理**: Zustand
 
+## 隐私声明
+
+DroidGear 重视您的隐私安全。您的用户名、密码、API 密钥等敏感数据仅存储在本地设备，不会上传至任何服务器。
+
 ## 许可证
 
 [MIT](LICENSE.md)

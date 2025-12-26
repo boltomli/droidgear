@@ -80,6 +80,10 @@ npm run tauri build
 - **Backend**: Tauri v2, Rust
 - **State**: Zustand
 
+## Privacy
+
+DroidGear values your privacy. Your username, password, API keys, and other sensitive data are stored locally on your device only and are never uploaded to any server.
+
 ## License
 
 [MIT](LICENSE.md)

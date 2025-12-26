@@ -215,6 +215,9 @@ export function ChannelDialog({
           <DialogTitle>
             {channel ? t('channels.editChannel') : t('channels.addChannel')}
           </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {t('channels.privacyNotice')}
+          </p>
         </DialogHeader>
         {open && (
           <ChannelForm
