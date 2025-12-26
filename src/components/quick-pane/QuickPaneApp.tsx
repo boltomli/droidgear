@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { emit, listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { commands } from '@/lib/tauri-bindings'
@@ -40,6 +41,7 @@ function applyTheme() {
 }
 
 export default function QuickPaneApp() {
+  const { t } = useTranslation()
   const [text, setText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -114,7 +116,7 @@ export default function QuickPaneApp() {
         type="text"
         value={text}
         onChange={e => setText(e.target.value)}
-        placeholder="Enter text..."
+        placeholder={t('quickPane.placeholder')}
         className="w-full bg-transparent text-lg text-foreground placeholder:text-muted-foreground outline-none"
         autoComplete="off"
         autoCorrect="off"

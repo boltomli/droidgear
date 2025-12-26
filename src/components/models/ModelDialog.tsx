@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
 import {
   Dialog,
@@ -45,6 +46,7 @@ interface ModelFormProps {
 }
 
 function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
+  const { t } = useTranslation()
   const [provider, setProvider] = useState<Provider>(
     model?.provider ?? 'anthropic'
   )
@@ -74,7 +76,7 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
 
   const handleFetchModels = async () => {
     if (!baseUrl || !apiKey) {
-      setFetchError('Please enter API URL and API Key first')
+      setFetchError(t('models.fetchModelsError'))
       return
     }
 
@@ -88,7 +90,7 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
     if (result.status === 'ok') {
       setAvailableModels(result.data)
       if (result.data.length === 0) {
-        setFetchError('No models found')
+        setFetchError(t('models.noModelsFound'))
       }
     } else {
       setFetchError(result.error)
@@ -117,23 +119,27 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
     <>
       <div className="grid gap-4 py-4">
         <div className="grid gap-2">
-          <Label htmlFor="provider">Provider</Label>
+          <Label htmlFor="provider">{t('models.provider')}</Label>
           <Select value={provider} onValueChange={handleProviderChange}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="anthropic">Anthropic</SelectItem>
-              <SelectItem value="openai">OpenAI</SelectItem>
+              <SelectItem value="anthropic">
+                {t('models.providerAnthropic')}
+              </SelectItem>
+              <SelectItem value="openai">
+                {t('models.providerOpenAI')}
+              </SelectItem>
               <SelectItem value="generic-chat-completion-api">
-                Generic (OpenAI Compatible)
+                {t('models.providerGeneric')}
               </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="baseUrl">API URL</Label>
+          <Label htmlFor="baseUrl">{t('models.apiUrl')}</Label>
           <Input
             id="baseUrl"
             value={baseUrl}
@@ -143,7 +149,7 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="apiKey">API Key</Label>
+          <Label htmlFor="apiKey">{t('models.apiKey')}</Label>
           <div className="flex gap-2">
             <Input
               id="apiKey"
@@ -161,7 +167,7 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
               {isFetching ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                'Fetch Models'
+                t('models.fetchModels')
               )}
             </Button>
           </div>
@@ -171,11 +177,11 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="model">Model</Label>
+          <Label htmlFor="model">{t('models.model')}</Label>
           {availableModels.length > 0 ? (
             <Select value={modelId} onValueChange={setModelId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a model" />
+                <SelectValue placeholder={t('models.selectModel')} />
               </SelectTrigger>
               <SelectContent>
                 {availableModels.map(m => (
@@ -196,7 +202,7 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="displayName">Display Name (optional)</Label>
+          <Label htmlFor="displayName">{t('models.displayName')}</Label>
           <Input
             id="displayName"
             value={displayName}
@@ -206,7 +212,7 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="maxTokens">Max Tokens (optional)</Label>
+          <Label htmlFor="maxTokens">{t('models.maxTokens')}</Label>
           <Input
             id="maxTokens"
             type="number"
@@ -222,16 +228,16 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
             checked={supportsImages}
             onCheckedChange={checked => setSupportsImages(checked === true)}
           />
-          <Label htmlFor="supportsImages">Supports Images</Label>
+          <Label htmlFor="supportsImages">{t('models.supportsImages')}</Label>
         </div>
       </div>
 
       <DialogFooter>
         <Button variant="outline" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={!isValid}>
-          {model ? 'Save' : 'Add'}
+          {model ? t('common.save') : t('common.add')}
         </Button>
       </DialogFooter>
     </>
@@ -244,6 +250,7 @@ export function ModelDialog({
   model,
   onSave,
 }: ModelDialogProps) {
+  const { t } = useTranslation()
   const formKey = model ? `edit-${model.model}` : 'new'
 
   const handleSave = (newModel: CustomModel) => {
@@ -255,7 +262,9 @@ export function ModelDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{model ? 'Edit Model' : 'Add Model'}</DialogTitle>
+          <DialogTitle>
+            {model ? t('models.editModel') : t('models.addModel')}
+          </DialogTitle>
         </DialogHeader>
         {open && (
           <ModelForm

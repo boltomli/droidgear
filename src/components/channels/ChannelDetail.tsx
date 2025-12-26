@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Pencil, Trash2, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +39,7 @@ interface ChannelDetailProps {
 }
 
 export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
+  const { t } = useTranslation()
   const deleteChannel = useChannelStore(state => state.deleteChannel)
   const saveChannels = useChannelStore(state => state.saveChannels)
   const error = useChannelStore(state => state.error)
@@ -125,7 +127,9 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold">{channel.name}</h1>
-            {!channel.enabled && <Badge variant="secondary">Disabled</Badge>}
+            {!channel.enabled && (
+              <Badge variant="secondary">{t('common.disabled')}</Badge>
+            )}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             {channel.type === 'new-api' ? 'New API' : 'One API'} -{' '}
@@ -135,7 +139,7 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onEdit}>
             <Pencil className="h-4 w-4 mr-2" />
-            Edit
+            {t('common.edit')}
           </Button>
           <Button
             variant="outline"
@@ -143,7 +147,7 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
             onClick={() => setDeleteDialogOpen(true)}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete
+            {t('common.delete')}
           </Button>
         </div>
       </div>
@@ -159,7 +163,7 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
             className="ml-auto"
             onClick={() => setError(null)}
           >
-            Dismiss
+            {t('common.dismiss')}
           </Button>
         </div>
       )}
@@ -178,16 +182,16 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Channel</AlertDialogTitle>
+            <AlertDialogTitle>{t('channels.deleteChannel')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{channel.name}&quot;? This
-              will also remove the system token from your keychain. This action
-              cannot be undone.
+              {t('channels.deleteConfirm', { name: channel.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>
+              {t('common.delete')}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -196,13 +200,13 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
       <Dialog open={modelDialogOpen} onOpenChange={setModelDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Add Models from Token</DialogTitle>
+            <DialogTitle>{t('models.addModels')}</DialogTitle>
           </DialogHeader>
 
           {isFetchingModels ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              <span>Fetching available models...</span>
+              <span>{t('models.fetchingModels')}</span>
             </div>
           ) : modelError ? (
             <div className="py-4 text-center text-destructive">
@@ -210,13 +214,15 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
             </div>
           ) : availableModels.length === 0 ? (
             <div className="py-4 text-center text-muted-foreground">
-              <p>No models available for this token.</p>
+              <p>{t('models.noModelsAvailable')}</p>
             </div>
           ) : (
             <div className="py-4 space-y-4">
               <div className="flex items-center justify-between">
                 <Label>
-                  Select models to add ({selectedModels.size} selected)
+                  {t('models.selectModelsToAdd', {
+                    count: selectedModels.size,
+                  })}
                 </Label>
                 <Button
                   variant="ghost"
@@ -230,8 +236,8 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
                   }}
                 >
                   {selectedModels.size === availableModels.length
-                    ? 'Deselect All'
-                    : 'Select All'}
+                    ? t('common.deselectAll')
+                    : t('common.selectAll')}
                 </Button>
               </div>
               <div className="h-[300px] border rounded-md p-2 overflow-auto">
@@ -258,7 +264,7 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
                           {model.name || model.id}
                           {isExisting && (
                             <span className="ml-2 text-xs text-muted-foreground">
-                              (already added)
+                              {t('models.alreadyAdded')}
                             </span>
                           )}
                         </label>
@@ -272,14 +278,15 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setModelDialogOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleAddModels}
               disabled={selectedModels.size === 0 || isFetchingModels}
             >
-              Add {selectedModels.size} Model
-              {selectedModels.size !== 1 ? 's' : ''}
+              {selectedModels.size === 1
+                ? t('models.addCount', { count: selectedModels.size })
+                : t('models.addCountPlural', { count: selectedModels.size })}
             </Button>
           </DialogFooter>
         </DialogContent>

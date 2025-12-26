@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { ModelConfigPage } from '@/components/models'
 import { ChannelDetail, ChannelDialog } from '@/components/channels'
@@ -15,6 +16,7 @@ export function MainWindowContent({
   children,
   className,
 }: MainWindowContentProps) {
+  const { t } = useTranslation()
   const currentView = useUIStore(state => state.currentView)
   const channels = useChannelStore(state => state.channels)
   const selectedChannelId = useChannelStore(state => state.selectedChannelId)
@@ -62,7 +64,7 @@ export function MainWindowContent({
 
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
-        <p>Select a channel from the sidebar or add a new one</p>
+        <p>{t('channels.selectChannelHint')}</p>
       </div>
     )
   }

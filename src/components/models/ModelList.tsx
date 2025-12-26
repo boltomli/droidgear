@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   DndContext,
   closestCenter,
@@ -21,6 +22,7 @@ interface ModelListProps {
 }
 
 export function ModelList({ onEdit, onDelete }: ModelListProps) {
+  const { t } = useTranslation()
   const { models, reorderModels } = useModelStore()
 
   const sensors = useSensors(
@@ -42,10 +44,8 @@ export function ModelList({ onEdit, onDelete }: ModelListProps) {
   if (models.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        <p>No custom models configured</p>
-        <p className="text-sm mt-1">
-          Click &quot;Add Model&quot; to get started
-        </p>
+        <p>{t('models.noModels')}</p>
+        <p className="text-sm mt-1">{t('models.noModelsHint')}</p>
       </div>
     )
   }

@@ -5,6 +5,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { initializeCommandSystem } from './lib/commands'
 import { buildAppMenu, setupMenuLanguageListener } from './lib/menu'
 import { initializeLanguage } from './i18n/language-init'
+import i18n from './i18n/config'
 import { logger } from './lib/logger'
 import { cleanupOldFiles } from './lib/recovery'
 import { commands } from './lib/tauri-bindings'
@@ -79,7 +80,7 @@ function App() {
 
           // Show confirmation dialog
           const shouldUpdate = confirm(
-            `Update available: ${update.version}\n\nWould you like to install this update now?`
+            i18n.t('update.available', { version: update.version })
           )
 
           if (shouldUpdate) {
@@ -88,30 +89,34 @@ function App() {
               await update.downloadAndInstall(event => {
                 switch (event.event) {
                   case 'Started':
-                    logger.info(`Downloading ${event.data.contentLength} bytes`)
+                    logger.info(
+                      i18n.t('update.downloading', {
+                        size: event.data.contentLength,
+                      })
+                    )
                     break
                   case 'Progress':
-                    logger.info(`Downloaded: ${event.data.chunkLength} bytes`)
+                    logger.info(
+                      i18n.t('update.progress', {
+                        size: event.data.chunkLength,
+                      })
+                    )
                     break
                   case 'Finished':
-                    logger.info('Download complete, installing...')
+                    logger.info(i18n.t('update.installing'))
                     break
                 }
               })
 
               // Ask if user wants to restart now
-              const shouldRestart = confirm(
-                'Update completed successfully!\n\nWould you like to restart the app now to use the new version?'
-              )
+              const shouldRestart = confirm(i18n.t('update.completed'))
 
               if (shouldRestart) {
                 await relaunch()
               }
             } catch (updateError) {
               logger.error(`Update installation failed: ${String(updateError)}`)
-              alert(
-                `Update failed: There was a problem with the automatic download.\n\n${String(updateError)}`
-              )
+              alert(i18n.t('update.failed', { error: String(updateError) }))
             }
           }
         }

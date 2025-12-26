@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Server } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -19,6 +20,7 @@ function ChannelItem({
   isSelected: boolean
   onClick: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <button
       onClick={onClick}
@@ -33,7 +35,7 @@ function ChannelItem({
       <span className="truncate">{channel.name}</span>
       {!channel.enabled && (
         <span className="ml-auto text-xs text-muted-foreground">
-          (disabled)
+          ({t('common.disabled')})
         </span>
       )}
     </button>
@@ -41,6 +43,7 @@ function ChannelItem({
 }
 
 export function ChannelList({ onAddChannel }: ChannelListProps) {
+  const { t } = useTranslation()
   const channels = useChannelStore(state => state.channels)
   const selectedChannelId = useChannelStore(state => state.selectedChannelId)
   const loadChannels = useChannelStore(state => state.loadChannels)
@@ -53,7 +56,7 @@ export function ChannelList({ onAddChannel }: ChannelListProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b">
-        <span className="text-sm font-medium">Channels</span>
+        <span className="text-sm font-medium">{t('channels.title')}</span>
         <Button
           variant="ghost"
           size="icon"
@@ -67,7 +70,7 @@ export function ChannelList({ onAddChannel }: ChannelListProps) {
         <div className="p-2 space-y-1">
           {channels.length === 0 ? (
             <p className="text-sm text-muted-foreground px-3 py-2">
-              No channels configured
+              {t('channels.noChannels')}
             </p>
           ) : (
             channels.map(channel => (

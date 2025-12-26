@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Server, Cpu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ interface LeftSideBarProps {
 }
 
 export function LeftSideBar({ children, className }: LeftSideBarProps) {
+  const { t } = useTranslation()
   const currentView = useUIStore(state => state.currentView)
   const setCurrentView = useUIStore(state => state.setCurrentView)
   const addChannel = useChannelStore(state => state.addChannel)
@@ -78,7 +80,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           onClick={() => setCurrentView('channels')}
         >
           <Server className="h-4 w-4 mr-2" />
-          Channels
+          {t('sidebar.channels')}
         </Button>
         <Button
           variant={currentView === 'models' ? 'secondary' : 'ghost'}
@@ -87,7 +89,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           onClick={() => setCurrentView('models')}
         >
           <Cpu className="h-4 w-4 mr-2" />
-          Models
+          {t('sidebar.models')}
         </Button>
       </div>
 
@@ -97,7 +99,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           <ChannelList onAddChannel={handleAddChannel} />
         ) : (
           <div className="p-3 text-sm text-muted-foreground">
-            Select a model from the main panel to edit
+            {t('sidebar.selectModelHint')}
           </div>
         )}
       </div>

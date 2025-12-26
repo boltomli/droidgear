@@ -75,7 +75,7 @@ export function ModelConfigPage() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div>
-          <h1 className="text-xl font-semibold">BYOK Model Configuration</h1>
+          <h1 className="text-xl font-semibold">{t('models.title')}</h1>
           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
             <FileText className="h-4 w-4" />
             <span>{configPath}</span>
@@ -84,7 +84,7 @@ export function ModelConfigPage() {
                 variant="secondary"
                 className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
               >
-                Unsaved Changes
+                {t('models.unsavedChanges')}
               </Badge>
             )}
           </div>
@@ -92,11 +92,11 @@ export function ModelConfigPage() {
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Model
+            {t('models.addModel')}
           </Button>
           <Button onClick={saveModels} disabled={!hasChanges || isLoading}>
             <Save className="h-4 w-4 mr-2" />
-            Save
+            {t('common.save')}
           </Button>
         </div>
       </div>
@@ -112,7 +112,7 @@ export function ModelConfigPage() {
             className="ml-auto"
             onClick={() => setError(null)}
           >
-            Dismiss
+            {t('common.dismiss')}
           </Button>
         </div>
       )}
@@ -137,16 +137,15 @@ export function ModelConfigPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Model</AlertDialogTitle>
+            <AlertDialogTitle>{t('models.deleteModel')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this model? This action cannot be
-              undone.
+              {t('models.deleteConfirm')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete}>
-              Delete
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

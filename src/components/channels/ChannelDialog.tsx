@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ interface ChannelFormProps {
 }
 
 function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
+  const { t } = useTranslation()
   const [name, setName] = useState(channel?.name ?? '')
   const [channelType, setChannelType] = useState<ChannelType>(
     channel?.type ?? 'new-api'
@@ -97,7 +99,7 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
     <>
       <div className="grid gap-4 py-4">
         <div className="grid gap-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name">{t('common.name')}</Label>
           <Input
             id="name"
             value={name}
@@ -107,20 +109,24 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="type">Type</Label>
+          <Label htmlFor="type">{t('channels.type')}</Label>
           <Select value={channelType} onValueChange={handleTypeChange}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="new-api">New API</SelectItem>
-              <SelectItem value="sub-2-api">Sub2API</SelectItem>
+              <SelectItem value="new-api">
+                {t('channels.typeNewApi')}
+              </SelectItem>
+              <SelectItem value="sub-2-api">
+                {t('channels.typeSub2Api')}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="baseUrl">API URL</Label>
+          <Label htmlFor="baseUrl">{t('channels.apiUrl')}</Label>
           <Input
             id="baseUrl"
             value={baseUrl}
@@ -130,46 +136,54 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="username">Username</Label>
+          <Label htmlFor="username">{t('channels.username')}</Label>
           <Input
             id="username"
             value={username}
             onChange={e => setUsername(e.target.value)}
-            placeholder={isLoadingCredentials ? 'Loading...' : 'Enter username'}
+            placeholder={
+              isLoadingCredentials
+                ? t('common.loading')
+                : t('channels.enterUsername')
+            }
             disabled={isLoadingCredentials}
           />
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t('channels.password')}</Label>
           <Input
             id="password"
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            placeholder={isLoadingCredentials ? 'Loading...' : 'Enter password'}
+            placeholder={
+              isLoadingCredentials
+                ? t('common.loading')
+                : t('channels.enterPassword')
+            }
             disabled={isLoadingCredentials}
           />
           <p className="text-xs text-muted-foreground">
-            Credentials are stored locally in ~/.droidgear/auth/
+            {t('channels.credentialsHint')}
           </p>
         </div>
 
         <div className="flex items-center justify-between">
-          <Label htmlFor="enabled">Enabled</Label>
+          <Label htmlFor="enabled">{t('common.enabled')}</Label>
           <Switch id="enabled" checked={enabled} onCheckedChange={setEnabled} />
         </div>
       </div>
 
       <DialogFooter>
         <Button variant="outline" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button
           onClick={handleSave}
           disabled={!isValid || isLoadingCredentials}
         >
-          {channel ? 'Save' : 'Add'}
+          {channel ? t('common.save') : t('common.add')}
         </Button>
       </DialogFooter>
     </>
@@ -182,6 +196,7 @@ export function ChannelDialog({
   channel,
   onSave,
 }: ChannelDialogProps) {
+  const { t } = useTranslation()
   const formKey = channel ? `edit-${channel.id}` : 'new'
 
   const handleSave = (
@@ -197,7 +212,9 @@ export function ChannelDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{channel ? 'Edit Channel' : 'Add Channel'}</DialogTitle>
+          <DialogTitle>
+            {channel ? t('channels.editChannel') : t('channels.addChannel')}
+          </DialogTitle>
         </DialogHeader>
         {open && (
           <ChannelForm
