@@ -546,7 +546,7 @@ pub async fn fetch_models_by_api_key(
     let (url, parser): (String, fn(&Value) -> Vec<ModelInfo>) = match platform.as_deref() {
         Some("gemini") => (format!("{trimmed_base}/v1beta/models"), parse_gemini_models),
         Some("openai") => (format!("{trimmed_base}/v1/models"), parse_openai_models),
-        _ => (format!("{trimmed_base}/models"), parse_openai_models),
+        _ => (format!("{trimmed_base}/v1/models"), parse_openai_models),
     };
 
     log::debug!("Requesting models from {url}");
