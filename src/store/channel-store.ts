@@ -11,7 +11,7 @@ interface ChannelState {
   channels: Channel[]
   originalChannels: Channel[]
   selectedChannelId: string | null
-  tokens: Record<string, ChannelToken[]>
+  keys: Record<string, ChannelToken[]>
   hasChanges: boolean
   isLoading: boolean
   error: string | null
@@ -23,7 +23,7 @@ interface ChannelState {
   updateChannel: (id: string, channel: Partial<Channel>) => void
   deleteChannel: (id: string) => Promise<void>
   selectChannel: (id: string | null) => void
-  fetchTokens: (
+  fetchKeys: (
     channelId: string,
     channelType: ChannelType,
     baseUrl: string
@@ -43,7 +43,7 @@ export const useChannelStore = create<ChannelState>()(
       channels: [],
       originalChannels: [],
       selectedChannelId: null,
-      tokens: {},
+      keys: {},
       hasChanges: false,
       isLoading: false,
       error: null,
@@ -151,10 +151,10 @@ export const useChannelStore = create<ChannelState>()(
         set(
           state => {
             const newChannels = state.channels.filter(ch => ch.id !== id)
-            const { [id]: _removed, ...remainingTokens } = state.tokens
+            const { [id]: _removed, ...remainingKeys } = state.keys
             return {
               channels: newChannels,
-              tokens: remainingTokens,
+              keys: remainingKeys,
               selectedChannelId:
                 state.selectedChannelId === id ? null : state.selectedChannelId,
               hasChanges: !channelsEqual(newChannels, state.originalChannels),
@@ -169,8 +169,8 @@ export const useChannelStore = create<ChannelState>()(
         set({ selectedChannelId: id }, undefined, 'selectChannel')
       },
 
-      fetchTokens: async (channelId, channelType, baseUrl) => {
-        set({ isLoading: true, error: null }, undefined, 'fetchTokens/start')
+      fetchKeys: async (channelId, channelType, baseUrl) => {
+        set({ isLoading: true, error: null }, undefined, 'fetchKeys/start')
         try {
           // Get credentials from storage
           const credResult = await commands.getChannelCredentials(channelId)
@@ -182,7 +182,7 @@ export const useChannelStore = create<ChannelState>()(
                 isLoading: false,
               },
               undefined,
-              'fetchTokens/noCredentials'
+              'fetchKeys/noCredentials'
             )
             return
           }
@@ -197,24 +197,24 @@ export const useChannelStore = create<ChannelState>()(
           if (result.status === 'ok') {
             set(
               state => ({
-                tokens: { ...state.tokens, [channelId]: result.data },
+                keys: { ...state.keys, [channelId]: result.data },
                 isLoading: false,
               }),
               undefined,
-              'fetchTokens/success'
+              'fetchKeys/success'
             )
           } else {
             set(
               { error: result.error, isLoading: false },
               undefined,
-              'fetchTokens/error'
+              'fetchKeys/error'
             )
           }
         } catch (e) {
           set(
             { error: String(e), isLoading: false },
             undefined,
-            'fetchTokens/exception'
+            'fetchKeys/exception'
           )
         }
       },

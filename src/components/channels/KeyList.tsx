@@ -14,11 +14,11 @@ import {
 import { useChannelStore } from '@/store/channel-store'
 import type { ChannelToken, ChannelType } from '@/lib/bindings'
 
-interface TokenListProps {
+interface KeyListProps {
   channelId: string
   channelType: ChannelType
   baseUrl: string
-  onSelectToken: (token: ChannelToken) => void
+  onSelectKey: (key: ChannelToken) => void
 }
 
 function formatQuota(
@@ -26,7 +26,7 @@ function formatQuota(
   unlimited: boolean,
   t: (key: string) => string
 ): string {
-  if (unlimited) return t('tokens.unlimited')
+  if (unlimited) return t('keys.unlimited')
   if (quota >= 1000000) return `${(quota / 1000000).toFixed(2)}M`
   if (quota >= 1000) return `${(quota / 1000).toFixed(2)}K`
   return quota.toString()
@@ -35,54 +35,54 @@ function formatQuota(
 function getStatusBadge(status: number, t: (key: string) => string) {
   switch (status) {
     case 1:
-      return <Badge variant="default">{t('tokens.status.enabled')}</Badge>
+      return <Badge variant="default">{t('keys.status.enabled')}</Badge>
     case 2:
-      return <Badge variant="secondary">{t('tokens.status.disabled')}</Badge>
+      return <Badge variant="secondary">{t('keys.status.disabled')}</Badge>
     case 3:
-      return <Badge variant="destructive">{t('tokens.status.expired')}</Badge>
+      return <Badge variant="destructive">{t('keys.status.expired')}</Badge>
     case 4:
-      return <Badge variant="outline">{t('tokens.status.exhausted')}</Badge>
+      return <Badge variant="outline">{t('keys.status.exhausted')}</Badge>
     default:
-      return <Badge variant="outline">{t('tokens.status.unknown')}</Badge>
+      return <Badge variant="outline">{t('keys.status.unknown')}</Badge>
   }
 }
 
-export function TokenList({
+export function KeyList({
   channelId,
   channelType,
   baseUrl,
-  onSelectToken,
-}: TokenListProps) {
+  onSelectKey,
+}: KeyListProps) {
   const { t } = useTranslation()
-  const tokensMap = useChannelStore(state => state.tokens)
+  const keysMap = useChannelStore(state => state.keys)
   const isLoading = useChannelStore(state => state.isLoading)
-  const fetchTokens = useChannelStore(state => state.fetchTokens)
+  const fetchKeys = useChannelStore(state => state.fetchKeys)
   const [copiedId, setCopiedId] = useState<number | null>(null)
 
-  // Safely get tokens array
-  const tokens: ChannelToken[] = tokensMap?.[channelId] ?? []
+  // Safely get keys array
+  const keys: ChannelToken[] = keysMap?.[channelId] ?? []
 
   const handleRefresh = () => {
-    fetchTokens(channelId, channelType, baseUrl)
+    fetchKeys(channelId, channelType, baseUrl)
   }
 
-  // Auto refresh tokens when channel changes and no tokens exist
+  // Auto refresh keys when channel changes and no keys exist
   useEffect(() => {
-    if (tokens.length === 0 && !isLoading) {
-      fetchTokens(channelId, channelType, baseUrl)
+    if (keys.length === 0 && !isLoading) {
+      fetchKeys(channelId, channelType, baseUrl)
     }
-  }, [channelId, tokens.length, isLoading, fetchTokens, channelType, baseUrl])
+  }, [channelId, keys.length, isLoading, fetchKeys, channelType, baseUrl])
 
-  const handleCopyKey = async (token: ChannelToken) => {
-    await navigator.clipboard.writeText(token.key)
-    setCopiedId(token.id)
+  const handleCopyKey = async (apiKey: ChannelToken) => {
+    await navigator.clipboard.writeText(apiKey.key)
+    setCopiedId(apiKey.id)
     setTimeout(() => setCopiedId(null), 2000)
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">{t('tokens.title')}</h3>
+        <h3 className="text-lg font-medium">{t('keys.title')}</h3>
         <Button
           variant="outline"
           size="sm"
@@ -98,10 +98,10 @@ export function TokenList({
         </Button>
       </div>
 
-      {tokens.length === 0 ? (
+      {keys.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          <p>{t('tokens.noTokens')}</p>
-          <p className="text-sm mt-1">{t('tokens.noTokensHint')}</p>
+          <p>{t('keys.noKeys')}</p>
+          <p className="text-sm mt-1">{t('keys.noKeysHint')}</p>
         </div>
       ) : (
         <div className="border rounded-md">
@@ -110,23 +110,23 @@ export function TokenList({
               <TableRow>
                 <TableHead>{t('common.name')}</TableHead>
                 <TableHead>{t('common.status')}</TableHead>
-                <TableHead>{t('tokens.remaining')}</TableHead>
-                <TableHead>{t('tokens.used')}</TableHead>
+                <TableHead>{t('keys.remaining')}</TableHead>
+                <TableHead>{t('keys.used')}</TableHead>
                 <TableHead className="w-[100px]">
                   {t('common.actions')}
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tokens.map(token => (
-                <TableRow key={token.id}>
-                  <TableCell className="font-medium">{token.name}</TableCell>
-                  <TableCell>{getStatusBadge(token.status, t)}</TableCell>
+              {keys.map(apiKey => (
+                <TableRow key={apiKey.id}>
+                  <TableCell className="font-medium">{apiKey.name}</TableCell>
+                  <TableCell>{getStatusBadge(apiKey.status, t)}</TableCell>
                   <TableCell>
-                    {formatQuota(token.remainQuota, token.unlimitedQuota, t)}
+                    {formatQuota(apiKey.remainQuota, apiKey.unlimitedQuota, t)}
                   </TableCell>
                   <TableCell>
-                    {formatQuota(token.usedQuota, false, t)}
+                    {formatQuota(apiKey.usedQuota, false, t)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -134,10 +134,10 @@ export function TokenList({
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => handleCopyKey(token)}
-                        title={t('tokens.copyKey')}
+                        onClick={() => handleCopyKey(apiKey)}
+                        title={t('keys.copyKey')}
                       >
-                        {copiedId === token.id ? (
+                        {copiedId === apiKey.id ? (
                           <Check className="h-4 w-4 text-green-500" />
                         ) : (
                           <Copy className="h-4 w-4" />
@@ -146,8 +146,8 @@ export function TokenList({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onSelectToken(token)}
-                        disabled={token.status !== 1}
+                        onClick={() => onSelectKey(apiKey)}
+                        disabled={apiKey.status !== 1}
                       >
                         {t('sidebar.models')}
                       </Button>

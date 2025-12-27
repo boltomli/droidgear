@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Pencil, Trash2, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { TokenList } from './TokenList'
+import { KeyList } from './KeyList'
 import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
 import {
@@ -58,11 +59,17 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [modelDialogOpen, setModelDialogOpen] = useState(false)
-  const [selectedToken, setSelectedToken] = useState<ChannelToken | null>(null)
+  const [selectedKey, setSelectedKey] = useState<ChannelToken | null>(null)
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([])
-  const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
+  // Map of modelId -> alias (empty string means no custom alias)
+  const [selectedModels, setSelectedModels] = useState<Map<string, string>>(
+    new Map()
+  )
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [modelError, setModelError] = useState<string | null>(null)
+  // Prefix and suffix for batch alias generation
+  const [prefix, setPrefix] = useState('')
+  const [suffix, setSuffix] = useState('')
 
   // Load models on mount
   useEffect(() => {
@@ -75,14 +82,19 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
     setDeleteDialogOpen(false)
   }
 
-  const handleSelectToken = async (token: ChannelToken) => {
-    setSelectedToken(token)
+  const handleSelectKey = async (apiKey: ChannelToken) => {
+    setSelectedKey(apiKey)
     setModelDialogOpen(true)
     setIsFetchingModels(true)
     setModelError(null)
-    setSelectedModels(new Set())
+    setSelectedModels(new Map())
+    setPrefix('')
+    setSuffix('')
 
-    const result = await commands.fetchModelsByToken(channel.baseUrl, token.key)
+    const result = await commands.fetchModelsByToken(
+      channel.baseUrl,
+      apiKey.key
+    )
     setIsFetchingModels(false)
 
     if (result.status === 'ok') {
@@ -94,30 +106,52 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
 
   const handleToggleModel = (modelId: string) => {
     setSelectedModels(prev => {
-      const next = new Set(prev)
+      const next = new Map(prev)
       if (next.has(modelId)) {
         next.delete(modelId)
       } else {
-        next.add(modelId)
+        next.set(modelId, '') // Empty string means use default (prefix + modelId + suffix)
       }
       return next
     })
   }
 
+  const handleAliasChange = (modelId: string, alias: string) => {
+    setSelectedModels(prev => {
+      const next = new Map(prev)
+      next.set(modelId, alias)
+      return next
+    })
+  }
+
+  // Check if model+key combination already exists
+  const isModelKeyExisting = (modelId: string, apiKeyValue: string) => {
+    return existingModels.some(
+      m => m.model === modelId && m.apiKey === apiKeyValue
+    )
+  }
+
   const handleAddModels = async () => {
-    if (!selectedToken || selectedModels.size === 0) return
+    if (!selectedKey || selectedModels.size === 0) return
 
-    const existingModelIds = new Set(existingModels.map(m => m.model))
+    for (const [modelId, customAlias] of selectedModels) {
+      // Skip if this model+key combination already exists
+      if (isModelKeyExisting(modelId, selectedKey.key)) continue
 
-    for (const modelId of selectedModels) {
-      if (existingModelIds.has(modelId)) continue
+      // Determine display name: custom alias > prefix+model+suffix > model
+      let displayName = modelId
+      if (customAlias) {
+        displayName = customAlias
+      } else if (prefix || suffix) {
+        displayName = `${prefix}${modelId}${suffix}`
+      }
 
       const newModel: CustomModel = {
         model: modelId,
         baseUrl: channel.baseUrl,
-        apiKey: selectedToken.key,
+        apiKey: selectedKey.key,
         provider: 'generic-chat-completion-api',
-        displayName: modelId,
+        displayName,
       }
       addModel(newModel)
     }
@@ -173,13 +207,13 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
         </div>
       )}
 
-      {/* Token List */}
+      {/* Key List */}
       <div className="flex-1 overflow-auto p-4">
-        <TokenList
+        <KeyList
           channelId={channel.id}
           channelType={channel.type}
           baseUrl={channel.baseUrl}
-          onSelectToken={handleSelectToken}
+          onSelectKey={handleSelectKey}
         />
       </div>
 
@@ -223,6 +257,28 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
             </div>
           ) : (
             <div className="py-4 space-y-4">
+              {/* Prefix and Suffix inputs */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="prefix">{t('models.prefix')}</Label>
+                  <Input
+                    id="prefix"
+                    value={prefix}
+                    onChange={e => setPrefix(e.target.value)}
+                    placeholder={t('models.prefixPlaceholder')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="suffix">{t('models.suffix')}</Label>
+                  <Input
+                    id="suffix"
+                    value={suffix}
+                    onChange={e => setSuffix(e.target.value)}
+                    placeholder={t('models.suffixPlaceholder')}
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <Label>
                   {t('models.selectModelsToAdd', {
@@ -233,14 +289,22 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    if (selectedModels.size === availableModels.length) {
-                      setSelectedModels(new Set())
+                    const selectableModels = availableModels.filter(
+                      m => !isModelKeyExisting(m.id, selectedKey?.key ?? '')
+                    )
+                    if (selectedModels.size === selectableModels.length) {
+                      setSelectedModels(new Map())
                     } else {
-                      setSelectedModels(new Set(availableModels.map(m => m.id)))
+                      const newMap = new Map<string, string>()
+                      selectableModels.forEach(m => newMap.set(m.id, ''))
+                      setSelectedModels(newMap)
                     }
                   }}
                 >
-                  {selectedModels.size === availableModels.length
+                  {selectedModels.size ===
+                  availableModels.filter(
+                    m => !isModelKeyExisting(m.id, selectedKey?.key ?? '')
+                  ).length
                     ? t('common.deselectAll')
                     : t('common.selectAll')}
                 </Button>
@@ -248,9 +312,11 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
               <div className="h-[300px] border rounded-md p-2 overflow-auto">
                 <div className="space-y-2">
                   {availableModels.map(model => {
-                    const isExisting = existingModels.some(
-                      m => m.model === model.id
+                    const isExisting = isModelKeyExisting(
+                      model.id,
+                      selectedKey?.key ?? ''
                     )
+                    const isSelected = selectedModels.has(model.id)
                     return (
                       <div
                         key={model.id}
@@ -258,21 +324,31 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
                       >
                         <Checkbox
                           id={model.id}
-                          checked={selectedModels.has(model.id)}
+                          checked={isSelected}
                           onCheckedChange={() => handleToggleModel(model.id)}
                           disabled={isExisting}
                         />
                         <label
                           htmlFor={model.id}
-                          className="flex-1 text-sm cursor-pointer"
+                          className="text-sm cursor-pointer min-w-[120px] shrink-0"
                         >
                           {model.name || model.id}
                           {isExisting && (
                             <span className="ml-2 text-xs text-muted-foreground">
-                              {t('models.alreadyAdded')}
+                              {t('models.alreadyAddedForKey')}
                             </span>
                           )}
                         </label>
+                        {isSelected && (
+                          <Input
+                            className="h-7 text-sm flex-1"
+                            value={selectedModels.get(model.id) ?? ''}
+                            onChange={e =>
+                              handleAliasChange(model.id, e.target.value)
+                            }
+                            placeholder={t('models.aliasPlaceholder')}
+                          />
+                        )}
                       </div>
                     )
                   })}

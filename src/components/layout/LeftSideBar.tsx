@@ -123,7 +123,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
     // Auto refresh tokens after saving channel
     useChannelStore
       .getState()
-      .fetchTokens(channel.id, channel.type, channel.baseUrl)
+      .fetchKeys(channel.id, channel.type, channel.baseUrl)
   }
 
   return (
