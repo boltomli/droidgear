@@ -84,6 +84,22 @@ npm run tauri build
 
 DroidGear values your privacy. Your username, password, API keys, and other sensitive data are stored locally on your device only and are never uploaded to any server.
 
+## Changelog
+
+### v0.0.4
+
+**New Features**
+
+- Version check and upgrade notification
+- Quick panel disabled by default
+
+**Bug Fixes**
+
+- Fixed model key uniqueness issue
+- Fixed overflow layout issue
+- Fixed confirm save prompt when switching with unsaved changes
+- Fixed channel name mapping
+
 ## License
 
 [MIT](LICENSE.md)
