@@ -5,6 +5,40 @@ export interface ProviderConfig {
   baseUrl: string
 }
 
+/**
+ * Infer the provider type based on platform and model ID.
+ * Priority: platform binding > model name prefix matching > generic
+ */
+export const inferProviderFromPlatformAndModel = (
+  platform: string | null | undefined,
+  modelId: string
+): Provider => {
+  // 1. Platform-based binding (highest priority)
+  if (platform === 'openai') return 'openai'
+  if (platform === 'anthropic') return 'anthropic'
+  if (platform === 'gemini') return 'generic-chat-completion-api'
+
+  // 2. Model name prefix matching
+  if (modelId.startsWith('claude-')) return 'anthropic'
+  if (modelId.startsWith('gpt-')) return 'openai'
+
+  // 3. Default to generic
+  return 'generic-chat-completion-api'
+}
+
+/**
+ * Get the base URL for a provider, applying necessary normalizations
+ */
+export const getBaseUrlForProvider = (
+  provider: Provider,
+  baseUrl: string
+): string => {
+  if (provider === 'openai') {
+    return normalizeBaseUrl(baseUrl, '/v1')
+  }
+  return baseUrl
+}
+
 export const normalizeBaseUrl = (baseUrl: string, suffix: string): string => {
   const trimmed = baseUrl.replace(/\/+$/, '')
   if (!suffix) return trimmed

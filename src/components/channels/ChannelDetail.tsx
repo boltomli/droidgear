@@ -23,6 +23,13 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { KeyList } from './KeyList'
 import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
@@ -33,8 +40,12 @@ import {
   type ChannelType,
   type ModelInfo,
   type CustomModel,
+  type Provider,
 } from '@/lib/bindings'
-import { getProviderConfigFromPlatform } from '@/lib/sub2api-platform'
+import {
+  inferProviderFromPlatformAndModel,
+  getBaseUrlForProvider,
+} from '@/lib/sub2api-platform'
 
 const channelTypeI18nKeys: Record<ChannelType, string> = {
   'new-api': 'channels.typeNewApi',
@@ -62,10 +73,10 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
   const [modelDialogOpen, setModelDialogOpen] = useState(false)
   const [selectedKey, setSelectedKey] = useState<ChannelToken | null>(null)
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([])
-  // Map of modelId -> alias (empty string means no custom alias)
-  const [selectedModels, setSelectedModels] = useState<Map<string, string>>(
-    new Map()
-  )
+  // Map of modelId -> { alias, provider }
+  const [selectedModels, setSelectedModels] = useState<
+    Map<string, { alias: string; provider: Provider }>
+  >(new Map())
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [modelError, setModelError] = useState<string | null>(null)
   // Prefix and suffix for batch alias generation
@@ -112,7 +123,11 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
       if (next.has(modelId)) {
         next.delete(modelId)
       } else {
-        next.set(modelId, '') // Empty string means use default (prefix + modelId + suffix)
+        const defaultProvider = inferProviderFromPlatformAndModel(
+          selectedKey?.platform,
+          modelId
+        )
+        next.set(modelId, { alias: '', provider: defaultProvider })
       }
       return next
     })
@@ -121,7 +136,21 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
   const handleAliasChange = (modelId: string, alias: string) => {
     setSelectedModels(prev => {
       const next = new Map(prev)
-      next.set(modelId, alias)
+      const current = next.get(modelId)
+      if (current) {
+        next.set(modelId, { ...current, alias })
+      }
+      return next
+    })
+  }
+
+  const handleProviderChange = (modelId: string, provider: Provider) => {
+    setSelectedModels(prev => {
+      const next = new Map(prev)
+      const current = next.get(modelId)
+      if (current) {
+        next.set(modelId, { ...current, provider })
+      }
       return next
     })
   }
@@ -136,28 +165,25 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
   const handleAddModels = async () => {
     if (!selectedKey || selectedModels.size === 0) return
 
-    for (const [modelId, customAlias] of selectedModels) {
+    for (const [modelId, config] of selectedModels) {
       // Skip if this model+key combination already exists
       if (isModelKeyExisting(modelId, selectedKey.key)) continue
 
-      const providerConfig = getProviderConfigFromPlatform(
-        selectedKey.platform,
-        channel.baseUrl
-      )
+      const baseUrl = getBaseUrlForProvider(config.provider, channel.baseUrl)
 
       // Determine display name: custom alias > prefix+model+suffix > model
       let displayName = modelId
-      if (customAlias) {
-        displayName = customAlias
+      if (config.alias) {
+        displayName = config.alias
       } else if (prefix || suffix) {
         displayName = `${prefix}${modelId}${suffix}`
       }
 
       const newModel: CustomModel = {
         model: modelId,
-        baseUrl: providerConfig.baseUrl,
+        baseUrl,
         apiKey: selectedKey.key,
-        provider: providerConfig.provider,
+        provider: config.provider,
         displayName,
       }
       addModel(newModel)
@@ -302,8 +328,17 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
                     if (selectedModels.size === selectableModels.length) {
                       setSelectedModels(new Map())
                     } else {
-                      const newMap = new Map<string, string>()
-                      selectableModels.forEach(m => newMap.set(m.id, ''))
+                      const newMap = new Map<
+                        string,
+                        { alias: string; provider: Provider }
+                      >()
+                      selectableModels.forEach(m => {
+                        const provider = inferProviderFromPlatformAndModel(
+                          selectedKey?.platform,
+                          m.id
+                        )
+                        newMap.set(m.id, { alias: '', provider })
+                      })
                       setSelectedModels(newMap)
                     }
                   }}
@@ -324,6 +359,7 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
                       selectedKey?.key ?? ''
                     )
                     const isSelected = selectedModels.has(model.id)
+                    const modelConfig = selectedModels.get(model.id)
                     return (
                       <div
                         key={model.id}
@@ -347,14 +383,37 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
                           )}
                         </label>
                         {isSelected && (
-                          <Input
-                            className="h-7 text-sm flex-1"
-                            value={selectedModels.get(model.id) ?? ''}
-                            onChange={e =>
-                              handleAliasChange(model.id, e.target.value)
-                            }
-                            placeholder={t('models.aliasPlaceholder')}
-                          />
+                          <>
+                            <Select
+                              value={modelConfig?.provider}
+                              onValueChange={(value: Provider) =>
+                                handleProviderChange(model.id, value)
+                              }
+                            >
+                              <SelectTrigger className="h-7 w-[140px] text-sm shrink-0">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="anthropic">
+                                  {t('models.providerAnthropic')}
+                                </SelectItem>
+                                <SelectItem value="openai">
+                                  {t('models.providerOpenAI')}
+                                </SelectItem>
+                                <SelectItem value="generic-chat-completion-api">
+                                  {t('models.providerGeneric')}
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              className="h-7 text-sm flex-1"
+                              value={modelConfig?.alias ?? ''}
+                              onChange={e =>
+                                handleAliasChange(model.id, e.target.value)
+                              }
+                              placeholder={t('models.aliasPlaceholder')}
+                            />
+                          </>
                         )}
                       </div>
                     )
