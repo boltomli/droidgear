@@ -5,11 +5,15 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import type { CustomModel } from '@/lib/bindings'
 
 interface ModelCardProps {
   model: CustomModel
   index: number
+  selectionMode?: boolean
+  isSelected?: boolean
+  onSelect?: (index: number, selected: boolean) => void
   onEdit: () => void
   onDelete: () => void
   onCopy: () => void
@@ -32,6 +36,9 @@ const providerColors: Record<string, string> = {
 export function ModelCard({
   model,
   index,
+  selectionMode = false,
+  isSelected = false,
+  onSelect,
   onEdit,
   onDelete,
   onCopy,
@@ -60,13 +67,21 @@ export function ModelCard({
       style={style}
       className="flex items-center gap-3 p-3 mb-2"
     >
-      <button
-        className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-5 w-5" />
-      </button>
+      {selectionMode ? (
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={checked => onSelect?.(index, checked === true)}
+          className="h-5 w-5"
+        />
+      ) : (
+        <button
+          className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
+      )}
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">

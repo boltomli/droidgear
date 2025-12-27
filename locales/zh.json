@@ -230,6 +230,13 @@
   "models.refreshConfirm.title": "放弃更改？",
   "models.refreshConfirm.description": "您有未保存的更改。刷新将放弃所有更改并从配置文件重新加载。",
   "models.refreshConfirm.confirm": "放弃并刷新",
+  "models.search": "搜索模型...",
+  "models.filterProvider": "所有提供商",
+  "models.batchDelete": "批量删除",
+  "models.selectAll": "全选",
+  "models.deleteSelected": "删除 {{count}} 个",
+  "models.batchDeleteConfirm": "确定要删除 {{count}} 个模型吗？此操作无法撤销。",
+  "models.noMatchingModels": "没有匹配的模型",
 
   "quickPane.placeholder": "输入文本...",
 

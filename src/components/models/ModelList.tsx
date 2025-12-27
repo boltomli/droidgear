@@ -15,14 +15,32 @@ import {
 } from '@dnd-kit/sortable'
 import { ModelCard } from './ModelCard'
 import { useModelStore } from '@/store/model-store'
+import type { CustomModel } from '@/lib/bindings'
+
+interface FilteredModel {
+  model: CustomModel
+  originalIndex: number
+}
 
 interface ModelListProps {
   onEdit: (index: number) => void
   onDelete: (index: number) => void
   onCopy: (index: number) => void
+  filteredModels?: FilteredModel[]
+  selectionMode?: boolean
+  selectedIndices?: Set<number>
+  onSelect?: (index: number, selected: boolean) => void
 }
 
-export function ModelList({ onEdit, onDelete, onCopy }: ModelListProps) {
+export function ModelList({
+  onEdit,
+  onDelete,
+  onCopy,
+  filteredModels,
+  selectionMode = false,
+  selectedIndices = new Set(),
+  onSelect,
+}: ModelListProps) {
   const { t } = useTranslation()
   const { models, reorderModels } = useModelStore()
 
@@ -42,11 +60,48 @@ export function ModelList({ onEdit, onDelete, onCopy }: ModelListProps) {
     }
   }
 
+  // Use filtered models if provided, otherwise use all models
+  const isFiltered = filteredModels !== undefined
+  const displayModels = isFiltered
+    ? filteredModels
+    : models.map((model, index) => ({ model, originalIndex: index }))
+
   if (models.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <p>{t('models.noModels')}</p>
         <p className="text-sm mt-1">{t('models.noModelsHint')}</p>
+      </div>
+    )
+  }
+
+  if (displayModels.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <p>{t('models.noMatchingModels')}</p>
+      </div>
+    )
+  }
+
+  // Disable drag when filtering or in selection mode
+  const isDragDisabled = isFiltered || selectionMode
+
+  if (isDragDisabled) {
+    return (
+      <div className="space-y-2">
+        {displayModels.map(({ model, originalIndex }) => (
+          <ModelCard
+            key={`model-${originalIndex}`}
+            model={model}
+            index={originalIndex}
+            selectionMode={selectionMode}
+            isSelected={selectedIndices.has(originalIndex)}
+            onSelect={onSelect}
+            onEdit={() => onEdit(originalIndex)}
+            onDelete={() => onDelete(originalIndex)}
+            onCopy={() => onCopy(originalIndex)}
+          />
+        ))}
       </div>
     )
   }
@@ -58,18 +113,23 @@ export function ModelList({ onEdit, onDelete, onCopy }: ModelListProps) {
       onDragEnd={handleDragEnd}
     >
       <SortableContext
-        items={models.map((_, i) => `model-${i}`)}
+        items={displayModels.map(
+          ({ originalIndex }) => `model-${originalIndex}`
+        )}
         strategy={verticalListSortingStrategy}
       >
         <div className="space-y-2">
-          {models.map((model, index) => (
+          {displayModels.map(({ model, originalIndex }) => (
             <ModelCard
-              key={`model-${index}`}
+              key={`model-${originalIndex}`}
               model={model}
-              index={index}
-              onEdit={() => onEdit(index)}
-              onDelete={() => onDelete(index)}
-              onCopy={() => onCopy(index)}
+              index={originalIndex}
+              selectionMode={selectionMode}
+              isSelected={selectedIndices.has(originalIndex)}
+              onSelect={onSelect}
+              onEdit={() => onEdit(originalIndex)}
+              onDelete={() => onDelete(originalIndex)}
+              onCopy={() => onCopy(originalIndex)}
             />
           ))}
         </div>

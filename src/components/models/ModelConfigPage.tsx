@@ -1,7 +1,25 @@
-import { useState, useEffect } from 'react'
-import { Plus, Save, AlertCircle, FileText, RefreshCw } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import {
+  Plus,
+  Save,
+  AlertCircle,
+  FileText,
+  RefreshCw,
+  Search,
+  Trash2,
+  X,
+  CheckSquare,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +51,7 @@ export function ModelConfigPage() {
     addModel,
     updateModel,
     deleteModel,
+    deleteModels,
     setError,
     clearConfigParseError,
   } = useModelStore()
@@ -43,9 +62,51 @@ export function ModelConfigPage() {
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
   const [showRefreshConfirm, setShowRefreshConfirm] = useState(false)
 
+  // Filter state
+  const [filterText, setFilterText] = useState('')
+  const [filterProvider, setFilterProvider] = useState<string>('all')
+
+  // Selection mode state
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false)
+
   useEffect(() => {
     loadModels()
   }, [loadModels])
+
+  // Filter models based on search text and provider
+  const filteredModels = useMemo(() => {
+    const searchLower = filterText.toLowerCase()
+    const hasFilter = filterText || filterProvider !== 'all'
+
+    if (!hasFilter) {
+      return undefined // Return undefined to indicate no filtering
+    }
+
+    return models
+      .map((model, index) => ({ model, originalIndex: index }))
+      .filter(({ model }) => {
+        // Provider filter
+        if (filterProvider !== 'all' && model.provider !== filterProvider) {
+          return false
+        }
+        // Text filter
+        if (filterText) {
+          const matchesModel = model.model.toLowerCase().includes(searchLower)
+          const matchesDisplayName = model.displayName
+            ?.toLowerCase()
+            .includes(searchLower)
+          const matchesBaseUrl = model.baseUrl
+            .toLowerCase()
+            .includes(searchLower)
+          if (!matchesModel && !matchesDisplayName && !matchesBaseUrl) {
+            return false
+          }
+        }
+        return true
+      })
+  }, [models, filterText, filterProvider])
 
   const handleAdd = () => {
     setEditingIndex(null)
@@ -94,6 +155,42 @@ export function ModelConfigPage() {
       deleteModel(deleteIndex)
       setDeleteIndex(null)
     }
+  }
+
+  // Selection mode handlers
+  const handleEnterSelectionMode = () => {
+    setSelectionMode(true)
+    setSelectedIndices(new Set())
+  }
+
+  const handleExitSelectionMode = () => {
+    setSelectionMode(false)
+    setSelectedIndices(new Set())
+  }
+
+  const handleSelect = (index: number, selected: boolean) => {
+    setSelectedIndices(prev => {
+      const next = new Set(prev)
+      if (selected) {
+        next.add(index)
+      } else {
+        next.delete(index)
+      }
+      return next
+    })
+  }
+
+  const handleSelectAll = () => {
+    const indicesToSelect = filteredModels
+      ? filteredModels.map(({ originalIndex }) => originalIndex)
+      : models.map((_, index) => index)
+    setSelectedIndices(new Set(indicesToSelect))
+  }
+
+  const handleConfirmBatchDelete = () => {
+    deleteModels(Array.from(selectedIndices))
+    setShowBatchDeleteConfirm(false)
+    handleExitSelectionMode()
   }
 
   return (
@@ -160,12 +257,81 @@ export function ModelConfigPage() {
         </div>
       )}
 
+      {/* Filter Bar */}
+      {models.length > 0 && (
+        <div className="flex items-center gap-2 px-4 pt-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t('models.search')}
+              value={filterText}
+              onChange={e => setFilterText(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={filterProvider} onValueChange={setFilterProvider}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder={t('models.filterProvider')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('models.filterProvider')}</SelectItem>
+              <SelectItem value="anthropic">
+                {t('models.providerAnthropic')}
+              </SelectItem>
+              <SelectItem value="openai">
+                {t('models.providerOpenAI')}
+              </SelectItem>
+              <SelectItem value="generic-chat-completion-api">
+                {t('models.providerGeneric')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          {!selectionMode ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEnterSelectionMode}
+              disabled={models.length === 0}
+            >
+              <CheckSquare className="h-4 w-4 mr-2" />
+              {t('models.batchDelete')}
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                {t('models.selectAll')}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowBatchDeleteConfirm(true)}
+                disabled={selectedIndices.size === 0}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {t('models.deleteSelected', { count: selectedIndices.size })}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExitSelectionMode}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Model List */}
       <div className="flex-1 overflow-auto p-4">
         <ModelList
           onEdit={handleEdit}
           onDelete={setDeleteIndex}
           onCopy={handleCopy}
+          filteredModels={filteredModels}
+          selectionMode={selectionMode}
+          selectedIndices={selectedIndices}
+          onSelect={handleSelect}
         />
       </div>
 
@@ -255,6 +421,27 @@ export function ModelConfigPage() {
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmRefresh}>
               {t('models.refreshConfirm.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Batch Delete Confirmation */}
+      <AlertDialog
+        open={showBatchDeleteConfirm}
+        onOpenChange={setShowBatchDeleteConfirm}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('models.batchDelete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('models.batchDeleteConfirm', { count: selectedIndices.size })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmBatchDelete}>
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

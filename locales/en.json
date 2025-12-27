@@ -230,6 +230,13 @@
   "models.refreshConfirm.title": "Discard Changes?",
   "models.refreshConfirm.description": "You have unsaved changes. Refreshing will discard all changes and reload from the config file.",
   "models.refreshConfirm.confirm": "Discard and Refresh",
+  "models.search": "Search models...",
+  "models.filterProvider": "All Providers",
+  "models.batchDelete": "Batch Delete",
+  "models.selectAll": "Select All",
+  "models.deleteSelected": "Delete {{count}} Selected",
+  "models.batchDeleteConfirm": "Are you sure you want to delete {{count}} models? This action cannot be undone.",
+  "models.noMatchingModels": "No models match the filter criteria",
 
   "quickPane.placeholder": "Enter text...",
 

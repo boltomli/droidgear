@@ -20,6 +20,7 @@ interface ModelState {
   addModel: (model: CustomModel) => void
   updateModel: (index: number, model: CustomModel) => void
   deleteModel: (index: number) => void
+  deleteModels: (indices: number[]) => void
   reorderModels: (fromIndex: number, toIndex: number) => void
   resetChanges: () => void
   setError: (error: string | null) => void
@@ -213,6 +214,21 @@ export const useModelStore = create<ModelState>()(
           },
           undefined,
           'deleteModel'
+        )
+      },
+
+      deleteModels: indices => {
+        set(
+          state => {
+            const indexSet = new Set(indices)
+            const newModels = state.models.filter((_, i) => !indexSet.has(i))
+            return {
+              models: newModels,
+              hasChanges: !modelsEqual(newModels, state.originalModels),
+            }
+          },
+          undefined,
+          'deleteModels'
         )
       },
 
