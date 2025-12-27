@@ -27,6 +27,10 @@ pub static FILENAME_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct AppPreferences {
     pub theme: String,
+    /// Whether the quick pane feature is enabled
+    /// If None, defaults to false (disabled)
+    #[serde(default)]
+    pub quick_pane_enabled: Option<bool>,
     /// Global shortcut for quick pane (e.g., "CommandOrControl+Shift+.")
     /// If None, uses the default shortcut
     pub quick_pane_shortcut: Option<String>,
@@ -39,6 +43,7 @@ impl Default for AppPreferences {
     fn default() -> Self {
         Self {
             theme: "system".to_string(),
+            quick_pane_enabled: None,  // None means disabled (default)
             quick_pane_shortcut: None, // None means use default
             language: None,            // None means use system locale
         }

@@ -37,6 +37,35 @@ pub fn load_quick_pane_shortcut(app: &AppHandle) -> Option<String> {
     prefs.quick_pane_shortcut
 }
 
+/// Load the saved quick pane enabled state from preferences.
+/// Returns false (disabled) on any failure or if not set.
+/// Used at startup before the full preferences system is available.
+pub fn load_quick_pane_enabled(app: &AppHandle) -> bool {
+    let path = match get_preferences_path(app) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+    if !path.exists() {
+        return false;
+    }
+    let contents = match std::fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(e) => {
+            log::warn!("Failed to read preferences: {e}");
+            return false;
+        }
+    };
+    let prefs: AppPreferences = match serde_json::from_str(&contents) {
+        Ok(p) => p,
+        Err(e) => {
+            log::warn!("Failed to parse preferences: {e}");
+            return false;
+        }
+    };
+    // None means disabled (default)
+    prefs.quick_pane_enabled.unwrap_or(false)
+}
+
 /// Simple greeting command for demonstration purposes.
 #[tauri::command]
 #[specta::specta]

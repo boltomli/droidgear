@@ -26,6 +26,8 @@
   "preferences.advanced": "Advanced",
 
   "preferences.general.keyboardShortcuts": "Keyboard Shortcuts",
+  "preferences.general.quickPaneEnabled": "Enable Quick Pane",
+  "preferences.general.quickPaneEnabledDescription": "Enable or disable the quick pane feature and its global shortcut",
   "preferences.general.quickPaneShortcut": "Quick Pane Shortcut",
   "preferences.general.quickPaneShortcutDescription": "Global keyboard shortcut to toggle the quick pane from any application",
   "preferences.general.exampleSettings": "Example Settings",

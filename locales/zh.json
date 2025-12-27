@@ -26,6 +26,8 @@
   "preferences.advanced": "高级",
 
   "preferences.general.keyboardShortcuts": "键盘快捷键",
+  "preferences.general.quickPaneEnabled": "启用快捷面板",
+  "preferences.general.quickPaneEnabledDescription": "启用或禁用快捷面板功能及其全局快捷键",
   "preferences.general.quickPaneShortcut": "快捷面板快捷键",
   "preferences.general.quickPaneShortcutDescription": "从任何应用程序切换快捷面板的全局键盘快捷键",
   "preferences.general.exampleSettings": "示例设置",

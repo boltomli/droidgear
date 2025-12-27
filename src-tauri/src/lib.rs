@@ -110,19 +110,27 @@ pub fn run() {
                 app.handle().plugin(Builder::new().build())?;
             }
 
-            // Load saved preferences and register the quick pane shortcut
+            // Load saved preferences and register the quick pane shortcut if enabled
             #[cfg(desktop)]
             {
-                let saved_shortcut = commands::preferences::load_quick_pane_shortcut(app.handle());
-                let shortcut_to_register = saved_shortcut
-                    .as_deref()
-                    .unwrap_or(DEFAULT_QUICK_PANE_SHORTCUT);
+                let quick_pane_enabled =
+                    commands::preferences::load_quick_pane_enabled(app.handle());
 
-                log::info!("Registering quick pane shortcut: {shortcut_to_register}");
-                commands::quick_pane::register_quick_pane_shortcut(
-                    app.handle(),
-                    shortcut_to_register,
-                )?;
+                if quick_pane_enabled {
+                    let saved_shortcut =
+                        commands::preferences::load_quick_pane_shortcut(app.handle());
+                    let shortcut_to_register = saved_shortcut
+                        .as_deref()
+                        .unwrap_or(DEFAULT_QUICK_PANE_SHORTCUT);
+
+                    log::info!("Registering quick pane shortcut: {shortcut_to_register}");
+                    commands::quick_pane::register_quick_pane_shortcut(
+                        app.handle(),
+                        shortcut_to_register,
+                    )?;
+                } else {
+                    log::info!("Quick pane is disabled, skipping shortcut registration");
+                }
             }
 
             // Create the quick pane window (hidden) - must be done on main thread

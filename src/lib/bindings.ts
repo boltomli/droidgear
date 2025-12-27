@@ -150,6 +150,18 @@ async updateQuickPaneShortcut(shortcut: string | null) : Promise<Result<null, st
 }
 },
 /**
+ * Updates the quick pane enabled state.
+ * When disabled, unregisters the shortcut. When enabled, registers the shortcut.
+ */
+async updateQuickPaneEnabled(enabled: boolean, shortcut: string | null) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_quick_pane_enabled", { enabled, shortcut }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Gets the path to the Factory config file
  */
 async getConfigPath() : Promise<Result<string, string>> {
@@ -320,6 +332,11 @@ async fetchModelsByToken(baseUrl: string, tokenKey: string) : Promise<Result<Mod
  * Only contains settings that should be saved between sessions.
  */
 export type AppPreferences = { theme: string; 
+/**
+ * Whether the quick pane feature is enabled
+ * If None, defaults to false (disabled)
+ */
+quick_pane_enabled?: boolean | null; 
 /**
  * Global shortcut for quick pane (e.g., "CommandOrControl+Shift+.")
  * If None, uses the default shortcut

@@ -34,6 +34,9 @@ export function GeneralPane() {
   const { data: preferences } = usePreferences()
   const savePreferences = useSavePreferences()
 
+  // Derive quick pane enabled state (default to false if not set)
+  const quickPaneEnabled = preferences?.quick_pane_enabled ?? false
+
   // Get the default shortcut from the backend
   const { data: defaultShortcut } = useQuery({
     queryKey: ['default-quick-pane-shortcut'],
@@ -157,6 +160,60 @@ export function GeneralPane() {
     }
   }
 
+  const handleQuickPaneEnabledChange = async (enabled: boolean) => {
+    if (!preferences) return
+
+    const oldEnabled = preferences.quick_pane_enabled ?? true
+
+    logger.info('Updating quick pane enabled state', { oldEnabled, enabled })
+
+    // First, try to update the backend state
+    const result = await commands.updateQuickPaneEnabled(
+      enabled,
+      preferences.quick_pane_shortcut
+    )
+
+    if (result.status === 'error') {
+      logger.error('Failed to update quick pane enabled state', {
+        error: result.error,
+      })
+      toast.error(t('toast.error.generic'), {
+        description: result.error,
+      })
+      return
+    }
+
+    // If backend update succeeded, try to save the preference
+    try {
+      await savePreferences.mutateAsync({
+        ...preferences,
+        quick_pane_enabled: enabled,
+      })
+    } catch {
+      // Save failed - roll back the backend state
+      logger.warn('Save failed, rolling back quick pane enabled state', {
+        oldEnabled,
+        enabled,
+      })
+
+      const rollbackResult = await commands.updateQuickPaneEnabled(
+        oldEnabled,
+        preferences.quick_pane_shortcut
+      )
+
+      if (rollbackResult.status === 'error') {
+        logger.error(
+          'Rollback failed - backend and preferences are out of sync',
+          {
+            error: rollbackResult.error,
+          }
+        )
+      } else {
+        logger.info('Successfully rolled back quick pane enabled state')
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <SettingsSection title={t('preferences.general.softwareUpdate')}>
@@ -217,17 +274,36 @@ export function GeneralPane() {
 
       <SettingsSection title={t('preferences.general.keyboardShortcuts')}>
         <SettingsField
-          label={t('preferences.general.quickPaneShortcut')}
-          description={t('preferences.general.quickPaneShortcutDescription')}
+          label={t('preferences.general.quickPaneEnabled')}
+          description={t('preferences.general.quickPaneEnabledDescription')}
         >
-          <ShortcutPicker
-            value={preferences?.quick_pane_shortcut ?? null}
-            // Fallback matches DEFAULT_QUICK_PANE_SHORTCUT in src-tauri/src/lib.rs
-            defaultValue={defaultShortcut ?? 'CommandOrControl+Shift+.'}
-            onChange={handleShortcutChange}
-            disabled={!preferences || savePreferences.isPending}
-          />
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="quick-pane-enabled"
+              checked={quickPaneEnabled}
+              onCheckedChange={handleQuickPaneEnabledChange}
+              disabled={!preferences || savePreferences.isPending}
+            />
+            <Label htmlFor="quick-pane-enabled" className="text-sm">
+              {quickPaneEnabled ? t('common.enabled') : t('common.disabled')}
+            </Label>
+          </div>
         </SettingsField>
+
+        {quickPaneEnabled && (
+          <SettingsField
+            label={t('preferences.general.quickPaneShortcut')}
+            description={t('preferences.general.quickPaneShortcutDescription')}
+          >
+            <ShortcutPicker
+              value={preferences?.quick_pane_shortcut ?? null}
+              // Fallback matches DEFAULT_QUICK_PANE_SHORTCUT in src-tauri/src/lib.rs
+              defaultValue={defaultShortcut ?? 'CommandOrControl+Shift+.'}
+              onChange={handleShortcutChange}
+              disabled={!preferences || savePreferences.isPending}
+            />
+          </SettingsField>
+        )}
       </SettingsSection>
 
       <SettingsSection title={t('preferences.general.exampleSettings')}>

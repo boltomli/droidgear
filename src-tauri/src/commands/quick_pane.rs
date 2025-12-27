@@ -399,3 +399,69 @@ pub fn update_quick_pane_shortcut(app: AppHandle, shortcut: Option<String>) -> R
 
     Ok(())
 }
+
+/// Unregisters the current quick pane shortcut.
+/// Used when disabling the quick pane feature.
+#[cfg(desktop)]
+pub fn unregister_quick_pane_shortcut(app: &AppHandle) -> Result<(), String> {
+    use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+
+    let global_shortcut = app.global_shortcut();
+
+    // Lock the mutex to get the current shortcut
+    let mut current_shortcut = CURRENT_QUICK_PANE_SHORTCUT
+        .lock()
+        .map_err(|e| format!("Failed to lock shortcut mutex: {e}"))?;
+
+    // Unregister the current shortcut if one exists
+    if let Some(old_shortcut_str) = current_shortcut.take() {
+        log::debug!("Unregistering quick pane shortcut: {old_shortcut_str}");
+        match old_shortcut_str.parse::<Shortcut>() {
+            Ok(old_shortcut) => {
+                if let Err(e) = global_shortcut.unregister(old_shortcut) {
+                    log::warn!("Failed to unregister shortcut '{old_shortcut_str}': {e}");
+                }
+            }
+            Err(e) => {
+                log::warn!("Failed to parse shortcut '{old_shortcut_str}': {e}");
+            }
+        }
+        log::info!("Quick pane shortcut unregistered");
+    } else {
+        log::debug!("No quick pane shortcut to unregister");
+    }
+
+    Ok(())
+}
+
+/// Updates the quick pane enabled state.
+/// When disabled, unregisters the shortcut. When enabled, registers the shortcut.
+#[tauri::command]
+#[specta::specta]
+pub fn update_quick_pane_enabled(
+    app: AppHandle,
+    enabled: bool,
+    shortcut: Option<String>,
+) -> Result<(), String> {
+    #[cfg(desktop)]
+    {
+        if enabled {
+            let shortcut_to_register = shortcut.as_deref().unwrap_or(DEFAULT_QUICK_PANE_SHORTCUT);
+            log::info!("Enabling quick pane with shortcut: {shortcut_to_register}");
+            register_quick_pane_shortcut(&app, shortcut_to_register)?;
+        } else {
+            log::info!("Disabling quick pane");
+            unregister_quick_pane_shortcut(&app)?;
+            // Also dismiss the quick pane if it's visible
+            let _ = dismiss_quick_pane(app);
+        }
+    }
+
+    #[cfg(not(desktop))]
+    {
+        let _ = (app, enabled, shortcut);
+        log::warn!("Global shortcuts not supported on this platform");
+    }
+
+    Ok(())
+}
