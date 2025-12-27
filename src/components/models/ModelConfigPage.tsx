@@ -87,36 +87,45 @@ export function ModelConfigPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div>
+      <div className="flex items-center justify-between gap-2 p-4 border-b">
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold">{t('models.title')}</h1>
           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-            <FileText className="h-4 w-4" />
-            <span>{configPath}</span>
+            <FileText className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">{configPath}</span>
             {hasChanges && (
               <Badge
                 variant="secondary"
-                className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 flex-shrink-0"
               >
                 {t('models.unsavedChanges')}
               </Badge>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Button
             variant="outline"
+            size="icon"
             onClick={handleRefresh}
             disabled={isLoading}
+            title={t('models.refresh')}
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            {t('models.refresh')}
+            <RefreshCw className="h-4 w-4" />
           </Button>
-          <Button variant="outline" onClick={handleAdd}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('models.addModel')}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleAdd}
+            title={t('models.addModel')}
+          >
+            <Plus className="h-4 w-4" />
           </Button>
-          <Button onClick={saveModels} disabled={!hasChanges || isLoading}>
+          <Button
+            onClick={saveModels}
+            disabled={!hasChanges || isLoading}
+            title={t('common.save')}
+          >
             <Save className="h-4 w-4 mr-2" />
             {t('common.save')}
           </Button>
