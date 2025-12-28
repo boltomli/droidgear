@@ -86,6 +86,33 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ## Changelog
 
+### v0.0.6
+
+**New Features**
+
+- Added skip login helper
+
+**Bug Fixes**
+
+- Fixed uploadPlainBinary issue
+- Fixed Anthropic model fetching: now supports OpenAI-style Bearer token auth for third-party proxy services
+
+### v0.0.5
+
+**New Features**
+
+- Copy model functionality
+- Filter and batch delete functionality
+- Import/export configuration
+- Added sub2api platform support
+- Provider selection when adding models from channels
+
+**Bug Fixes**
+
+- Fixed codex/gemini platform support (gemini now only supports v1beta/models)
+- Fixed API path issue when no platform is set
+- Fixed model scrolling issue during import
+
 ### v0.0.4
 
 **New Features**
