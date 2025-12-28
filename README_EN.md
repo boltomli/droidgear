@@ -86,6 +86,13 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ## Changelog
 
+### v0.0.7
+
+**New Features**
+
+- Added Specs panel to view spec files from ~/.factory/specs directory
+- Support Markdown rendering for spec file content
+
 ### v0.0.6
 
 **New Features**
