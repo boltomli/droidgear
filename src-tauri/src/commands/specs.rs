@@ -104,7 +104,11 @@ pub async fn list_specs() -> Result<Vec<SpecFile>, String> {
     }
 
     // Sort by modified time, newest first
-    specs.sort_by(|a, b| b.modified_at.partial_cmp(&a.modified_at).unwrap_or(std::cmp::Ordering::Equal));
+    specs.sort_by(|a, b| {
+        b.modified_at
+            .partial_cmp(&a.modified_at)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     log::info!("Found {} spec files", specs.len());
     Ok(specs)

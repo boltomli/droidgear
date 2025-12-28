@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, FileText, Clock } from 'lucide-react'
+import { Streamdown } from 'streamdown'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
@@ -12,31 +13,39 @@ export function SpecsPage() {
   const [selectedSpec, setSelectedSpec] = useState<SpecFile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const loadSpecs = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const result = await commands.listSpecs()
-      if (result.status === 'ok') {
-        setSpecs(result.data)
-        // Auto-select first spec if none selected
-        if (result.data.length > 0 && !selectedSpec) {
-          setSelectedSpec(result.data[0])
-        }
-      } else {
-        setError(result.error)
-      }
-    } catch (err) {
-      setError(String(err))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
+    const loadSpecs = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const result = await commands.listSpecs()
+        if (result.status === 'ok') {
+          setSpecs(result.data)
+          // Auto-select first spec if none selected
+          setSelectedSpec(prev => {
+            if (result.data.length > 0 && !prev) {
+              return result.data[0] ?? null
+            }
+            return prev
+          })
+        } else {
+          setError(result.error)
+        }
+      } catch (err) {
+        setError(String(err))
+      } finally {
+        setLoading(false)
+      }
+    }
+
     loadSpecs()
-  }, [])
+  }, [refreshKey])
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1)
+  }
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp)
@@ -56,10 +65,12 @@ export function SpecsPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={loadSpecs}
+          onClick={handleRefresh}
           disabled={loading}
         >
-          <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
+          <RefreshCw
+            className={cn('h-4 w-4 mr-2', loading && 'animate-spin')}
+          />
           {t('common.refresh')}
         </Button>
       </div>
@@ -91,7 +102,9 @@ export function SpecsPage() {
                       selectedSpec?.path === spec.path && 'bg-accent'
                     )}
                   >
-                    <div className="font-medium text-sm truncate">{spec.name}</div>
+                    <div className="font-medium text-sm truncate">
+                      {spec.name}
+                    </div>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                       <Clock className="h-3 w-3" />
                       {formatDate(spec.modifiedAt)}
@@ -114,10 +127,8 @@ export function SpecsPage() {
                 </p>
               </div>
               <ScrollArea className="flex-1">
-                <div className="p-4">
-                  <pre className="whitespace-pre-wrap text-sm font-mono">
-                    {selectedSpec.content}
-                  </pre>
+                <div className="p-4 px-6">
+                  <Streamdown>{selectedSpec.content}</Streamdown>
                 </div>
               </ScrollArea>
             </>

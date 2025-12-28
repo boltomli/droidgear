@@ -372,10 +372,6 @@ async readSpec(path: string) : Promise<Result<SpecFile, string>> {
 /** user-defined types **/
 
 /**
- * Spec file from ~/.factory/specs directory
- */
-export type SpecFile = { name: string; path: string; content: string; modifiedAt: number }
-/**
  * Application preferences that persist to disk.
  * Only contains settings that should be saved between sessions.
  */
@@ -541,6 +537,26 @@ export type RecoveryError =
  * JSON serialization/deserialization error
  */
 { type: "ParseError"; message: string }
+/**
+ * Spec file metadata
+ */
+export type SpecFile = { 
+/**
+ * File name (e.g., "2025-12-18-ui.md")
+ */
+name: string; 
+/**
+ * Full path to the file
+ */
+path: string; 
+/**
+ * File content
+ */
+content: string; 
+/**
+ * Last modified timestamp in milliseconds
+ */
+modifiedAt: number }
 
 /** tauri-specta globals **/
 
