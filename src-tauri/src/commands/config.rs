@@ -300,6 +300,7 @@ pub async fn fetch_models(
 }
 
 /// Fetches models from Anthropic API
+/// Falls back to OpenAI-style Bearer token auth for third-party proxy services
 async fn fetch_anthropic_models(
     client: &reqwest::Client,
     base_url: &str,
@@ -307,6 +308,7 @@ async fn fetch_anthropic_models(
 ) -> Result<Vec<ModelInfo>, String> {
     let url = format!("{}/v1/models", base_url.trim_end_matches('/'));
 
+    // Try Anthropic official format first
     let response = client
         .get(&url)
         .header("x-api-key", api_key)
@@ -314,6 +316,19 @@ async fn fetch_anthropic_models(
         .send()
         .await
         .map_err(|e| format!("Request failed: {e}"))?;
+
+    // If Anthropic format fails, fallback to OpenAI format (Bearer token)
+    // Many third-party Anthropic proxies use OpenAI-style auth for /v1/models
+    let response = if !response.status().is_success() {
+        client
+            .get(&url)
+            .header("Authorization", format!("Bearer {api_key}"))
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {e}"))?
+    } else {
+        response
+    };
 
     if !response.status().is_success() {
         let status = response.status();
