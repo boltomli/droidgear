@@ -67,12 +67,12 @@ export function KeyList({
     fetchKeys(channelId, channelType, baseUrl)
   }
 
-  // Auto refresh keys when channel changes and no keys exist
+  // Auto refresh keys when channel changes and keys have never been fetched
   useEffect(() => {
-    if (keys.length === 0 && !isLoading) {
+    if (keysMap[channelId] === undefined && !isLoading) {
       fetchKeys(channelId, channelType, baseUrl)
     }
-  }, [channelId, keys.length, isLoading, fetchKeys, channelType, baseUrl])
+  }, [channelId, keysMap, isLoading, fetchKeys, channelType, baseUrl])
 
   const handleCopyKey = async (apiKey: ChannelToken) => {
     await navigator.clipboard.writeText(apiKey.key)

@@ -176,11 +176,12 @@ export const useChannelStore = create<ChannelState>()(
           const credResult = await commands.getChannelCredentials(channelId)
           if (credResult.status !== 'ok' || !credResult.data) {
             set(
-              {
+              state => ({
+                keys: { ...state.keys, [channelId]: [] },
                 error:
                   'Credentials not found. Please set the username and password first.',
                 isLoading: false,
-              },
+              }),
               undefined,
               'fetchKeys/noCredentials'
             )
