@@ -177,7 +177,17 @@
   "droid.specs.noSpecs": "No specs found",
   "droid.specs.noSpecsHint": "Specs will appear here when available in ~/.factory/specs",
   "droid.specs.selectSpecHint": "Select a spec from the list to view its content",
+  "droid.specs.renameTitle": "Rename Spec",
+  "droid.specs.renameDescription": "Enter a new name for the spec file",
+  "droid.specs.fileNamePlaceholder": "File name",
+  "droid.specs.renameSuccess": "Spec renamed successfully",
+  "droid.specs.deleteTitle": "Delete Spec",
+  "droid.specs.deleteDescription": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+  "droid.specs.deleteSuccess": "Spec deleted successfully",
+  "droid.specs.exportSuccess": "Spec exported successfully",
 
+  "common.rename": "Rename",
+  "common.export": "Export",
   "common.copied": "Copied",
 
   "channels.title": "Channels",

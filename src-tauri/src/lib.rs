@@ -9,6 +9,7 @@ mod commands;
 mod types;
 mod utils;
 
+use std::sync::Mutex;
 use tauri::Manager;
 
 // Re-export only what's needed externally
@@ -95,6 +96,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .manage(commands::specs::SpecsWatcherState(Mutex::new(None)))
         .setup(|app| {
             log::info!("Application starting up");
             log::debug!(

@@ -36,6 +36,7 @@ log = "0.4"
 regex = "1"
 reqwest = { version = "0.12", features = ["json", "cookies"] }
 dirs = "5"
+notify = { version = "6", default-features = false, features = ["macos_fsevent"] }
 
 # Type-safe Tauri command bindings
 specta = { version = "=2.0.0-rc.22", features = ["derive", "serde_json"] }

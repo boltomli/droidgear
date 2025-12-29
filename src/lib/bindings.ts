@@ -358,6 +358,51 @@ async readSpec(path: string) : Promise<Result<SpecFile, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Renames a spec file.
+ */
+async renameSpec(oldPath: string, newName: string) : Promise<Result<SpecFile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("rename_spec", { oldPath, newName }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Deletes a spec file.
+ */
+async deleteSpec(path: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_spec", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Starts watching the specs directory for changes.
+ * Emits "specs-changed" event when files are added, modified, or removed.
+ */
+async startSpecsWatcher() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_specs_watcher") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Stops watching the specs directory.
+ */
+async stopSpecsWatcher() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_specs_watcher") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

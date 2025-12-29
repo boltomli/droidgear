@@ -2,9 +2,12 @@
 //!
 //! Handles reading spec files from ~/.factory/specs directory.
 
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
+use tauri::{AppHandle, Emitter, Manager};
 
 /// Spec file metadata
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
@@ -155,4 +158,170 @@ pub async fn read_spec(path: String) -> Result<SpecFile, String> {
         content,
         modified_at,
     })
+}
+
+/// Renames a spec file.
+#[tauri::command]
+#[specta::specta]
+pub async fn rename_spec(old_path: String, new_name: String) -> Result<SpecFile, String> {
+    log::debug!("Renaming spec file: {old_path} -> {new_name}");
+
+    let specs_dir = get_specs_dir()?;
+    let old_path_buf = PathBuf::from(&old_path);
+
+    // Security check: ensure the file is in specs directory
+    if !old_path_buf.starts_with(&specs_dir) {
+        return Err("Invalid file path".to_string());
+    }
+
+    if !old_path_buf.exists() {
+        return Err("Spec file not found".to_string());
+    }
+
+    // Validate new name
+    let new_name = new_name.trim();
+    if new_name.is_empty() {
+        return Err("File name cannot be empty".to_string());
+    }
+
+    // Ensure .md extension
+    let new_name = if new_name.ends_with(".md") {
+        new_name.to_string()
+    } else {
+        format!("{new_name}.md")
+    };
+
+    // Validate filename (no path separators)
+    if new_name.contains('/') || new_name.contains('\\') {
+        return Err("Invalid file name".to_string());
+    }
+
+    let new_path = specs_dir.join(&new_name);
+
+    // Check if target already exists
+    if new_path.exists() && new_path != old_path_buf {
+        return Err("A file with this name already exists".to_string());
+    }
+
+    // Rename the file
+    fs::rename(&old_path_buf, &new_path).map_err(|e| {
+        log::error!("Failed to rename spec file: {e}");
+        format!("Failed to rename file: {e}")
+    })?;
+
+    log::info!("Renamed spec file to: {new_path:?}");
+
+    // Return updated spec file
+    read_spec(new_path.to_string_lossy().to_string()).await
+}
+
+/// Deletes a spec file.
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_spec(path: String) -> Result<(), String> {
+    log::debug!("Deleting spec file: {path}");
+
+    let specs_dir = get_specs_dir()?;
+    let path_buf = PathBuf::from(&path);
+
+    // Security check: ensure the file is in specs directory
+    if !path_buf.starts_with(&specs_dir) {
+        return Err("Invalid file path".to_string());
+    }
+
+    if !path_buf.exists() {
+        return Err("Spec file not found".to_string());
+    }
+
+    fs::remove_file(&path_buf).map_err(|e| {
+        log::error!("Failed to delete spec file: {e}");
+        format!("Failed to delete file: {e}")
+    })?;
+
+    log::info!("Deleted spec file: {path}");
+    Ok(())
+}
+
+/// State for the specs file watcher
+pub struct SpecsWatcherState(pub Mutex<Option<RecommendedWatcher>>);
+
+/// Starts watching the specs directory for changes.
+/// Emits "specs-changed" event when files are added, modified, or removed.
+#[tauri::command]
+#[specta::specta]
+pub async fn start_specs_watcher(app: AppHandle) -> Result<(), String> {
+    log::debug!("Starting specs watcher");
+
+    let specs_dir = get_specs_dir()?;
+
+    // Create directory if it doesn't exist
+    if !specs_dir.exists() {
+        fs::create_dir_all(&specs_dir).map_err(|e| {
+            log::error!("Failed to create specs directory: {e}");
+            format!("Failed to create specs directory: {e}")
+        })?;
+    }
+
+    let app_handle = app.clone();
+
+    let watcher = RecommendedWatcher::new(
+        move |res: Result<notify::Event, notify::Error>| {
+            if let Ok(event) = res {
+                // Only emit for relevant events
+                use notify::EventKind;
+                match event.kind {
+                    EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                        log::debug!("Specs directory changed: {event:?}");
+                        let _ = app_handle.emit("specs-changed", ());
+                    }
+                    _ => {}
+                }
+            }
+        },
+        Config::default(),
+    )
+    .map_err(|e| {
+        log::error!("Failed to create watcher: {e}");
+        format!("Failed to create watcher: {e}")
+    })?;
+
+    // Store watcher in state
+    let state = app.state::<SpecsWatcherState>();
+    let mut guard = state.0.lock().map_err(|e| format!("Lock error: {e}"))?;
+
+    // Replace existing watcher
+    if let Some(mut old_watcher) = guard.take() {
+        let _ = old_watcher.unwatch(&specs_dir);
+    }
+
+    let mut watcher = watcher;
+    watcher
+        .watch(&specs_dir, RecursiveMode::NonRecursive)
+        .map_err(|e| {
+            log::error!("Failed to watch specs directory: {e}");
+            format!("Failed to watch directory: {e}")
+        })?;
+
+    *guard = Some(watcher);
+
+    log::info!("Started watching specs directory: {specs_dir:?}");
+    Ok(())
+}
+
+/// Stops watching the specs directory.
+#[tauri::command]
+#[specta::specta]
+pub async fn stop_specs_watcher(app: AppHandle) -> Result<(), String> {
+    log::debug!("Stopping specs watcher");
+
+    let specs_dir = get_specs_dir()?;
+    let state = app.state::<SpecsWatcherState>();
+    let mut guard = state.0.lock().map_err(|e| format!("Lock error: {e}"))?;
+
+    if let Some(mut watcher) = guard.take() {
+        let _ = watcher.unwatch(&specs_dir);
+        log::info!("Stopped watching specs directory");
+    }
+
+    Ok(())
 }

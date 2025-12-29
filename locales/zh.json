@@ -177,7 +177,17 @@
   "droid.specs.noSpecs": "没有找到 Specs",
   "droid.specs.noSpecsHint": "Specs 将在 ~/.factory/specs 中可用时显示在这里",
   "droid.specs.selectSpecHint": "从列表中选择一个 Spec 查看内容",
+  "droid.specs.renameTitle": "重命名 Spec",
+  "droid.specs.renameDescription": "输入 Spec 文件的新名称",
+  "droid.specs.fileNamePlaceholder": "文件名",
+  "droid.specs.renameSuccess": "Spec 重命名成功",
+  "droid.specs.deleteTitle": "删除 Spec",
+  "droid.specs.deleteDescription": "确定要删除 \"{{name}}\" 吗？此操作无法撤销。",
+  "droid.specs.deleteSuccess": "Spec 删除成功",
+  "droid.specs.exportSuccess": "Spec 导出成功",
 
+  "common.rename": "重命名",
+  "common.export": "导出",
   "common.copied": "已复制",
 
   "channels.title": "渠道",
