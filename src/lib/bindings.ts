@@ -239,6 +239,28 @@ async fetchModels(provider: Provider, baseUrl: string, apiKey: string) : Promise
 }
 },
 /**
+ * Gets the default model ID from sessionDefaultSettings.model
+ */
+async getDefaultModel() : Promise<Result<string | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_default_model") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Saves the default model ID to sessionDefaultSettings.model
+ */
+async saveDefaultModel(modelId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_default_model", { modelId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Loads all channels from ~/.droidgear/channels.json
  * Falls back to ~/.factory/settings.json for migration
  */
@@ -518,6 +540,10 @@ export type CustomModel = {
  * Model identifier sent via API
  */
 model: string; 
+/**
+ * Unique identifier for the model (e.g., "custom:ModelName-0")
+ */
+id?: string | null; 
 /**
  * Human-friendly name shown in model selector
  */

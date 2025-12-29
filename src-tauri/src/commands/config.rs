@@ -45,6 +45,9 @@ pub enum Provider {
 pub struct CustomModel {
     /// Model identifier sent via API
     pub model: String,
+    /// Unique identifier for the model (e.g., "custom:ModelName-0")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
     /// Human-friendly name shown in model selector
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
@@ -401,4 +404,56 @@ async fn fetch_openai_models(
         .unwrap_or_default();
 
     Ok(models)
+}
+
+/// Gets the default model ID from sessionDefaultSettings.model
+#[tauri::command]
+#[specta::specta]
+pub async fn get_default_model() -> Result<Option<String>, String> {
+    log::debug!("Getting default model from settings");
+
+    let config = match read_config_file() {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => return Ok(None),
+        ConfigReadResult::ParseError(_) => return Ok(None),
+    };
+
+    let model_id = config
+        .get("sessionDefaultSettings")
+        .and_then(|s| s.get("model"))
+        .and_then(|m| m.as_str())
+        .map(String::from);
+
+    log::debug!("Default model: {:?}", model_id);
+    Ok(model_id)
+}
+
+/// Saves the default model ID to sessionDefaultSettings.model
+#[tauri::command]
+#[specta::specta]
+pub async fn save_default_model(model_id: String) -> Result<(), String> {
+    log::debug!("Saving default model: {}", model_id);
+
+    let mut config = match read_config_file() {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => serde_json::json!({}),
+        ConfigReadResult::ParseError(e) => {
+            return Err(format!("{CONFIG_PARSE_ERROR_PREFIX} {e}"));
+        }
+    };
+
+    if let Some(obj) = config.as_object_mut() {
+        let session_settings = obj
+            .entry("sessionDefaultSettings")
+            .or_insert_with(|| serde_json::json!({}));
+
+        if let Some(session_obj) = session_settings.as_object_mut() {
+            session_obj.insert("model".to_string(), serde_json::json!(model_id));
+        }
+    }
+
+    write_config_file(&config)?;
+
+    log::info!("Successfully saved default model: {}", model_id);
+    Ok(())
 }

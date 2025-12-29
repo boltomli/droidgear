@@ -26,20 +26,24 @@ interface ModelListProps {
   onEdit: (index: number) => void
   onDelete: (index: number) => void
   onCopy: (index: number) => void
+  onSetDefault: (index: number) => void
   filteredModels?: FilteredModel[]
   selectionMode?: boolean
   selectedIndices?: Set<number>
   onSelect?: (index: number, selected: boolean) => void
+  defaultModelId?: string | null
 }
 
 export function ModelList({
   onEdit,
   onDelete,
   onCopy,
+  onSetDefault,
   filteredModels,
   selectionMode = false,
   selectedIndices = new Set(),
   onSelect,
+  defaultModelId,
 }: ModelListProps) {
   const { t } = useTranslation()
   const { models, reorderModels } = useModelStore()
@@ -86,6 +90,12 @@ export function ModelList({
   // Disable drag when filtering or in selection mode
   const isDragDisabled = isFiltered || selectionMode
 
+  // Helper function to check if a model is the default
+  const isModelDefault = (model: CustomModel) => {
+    if (!defaultModelId) return false
+    return model.id === defaultModelId
+  }
+
   if (isDragDisabled) {
     return (
       <div className="space-y-2">
@@ -96,10 +106,12 @@ export function ModelList({
             index={originalIndex}
             selectionMode={selectionMode}
             isSelected={selectedIndices.has(originalIndex)}
+            isDefault={isModelDefault(model)}
             onSelect={onSelect}
             onEdit={() => onEdit(originalIndex)}
             onDelete={() => onDelete(originalIndex)}
             onCopy={() => onCopy(originalIndex)}
+            onSetDefault={() => onSetDefault(originalIndex)}
           />
         ))}
       </div>
@@ -126,10 +138,12 @@ export function ModelList({
               index={originalIndex}
               selectionMode={selectionMode}
               isSelected={selectedIndices.has(originalIndex)}
+              isDefault={isModelDefault(model)}
               onSelect={onSelect}
               onEdit={() => onEdit(originalIndex)}
               onDelete={() => onDelete(originalIndex)}
               onCopy={() => onCopy(originalIndex)}
+              onSetDefault={() => onSetDefault(originalIndex)}
             />
           ))}
         </div>

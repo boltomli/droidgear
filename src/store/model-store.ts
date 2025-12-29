@@ -12,6 +12,7 @@ interface ModelState {
   isLoading: boolean
   error: string | null
   configParseError: string | null
+  defaultModelId: string | null
 
   // Actions
   loadModels: () => Promise<void>
@@ -25,6 +26,8 @@ interface ModelState {
   resetChanges: () => void
   setError: (error: string | null) => void
   clearConfigParseError: () => void
+  loadDefaultModel: () => Promise<void>
+  setDefaultModel: (index: number) => Promise<void>
 }
 
 function modelsEqual(a: CustomModel[], b: CustomModel[]): boolean {
@@ -42,6 +45,7 @@ export const useModelStore = create<ModelState>()(
       isLoading: false,
       error: null,
       configParseError: null,
+      defaultModelId: null,
 
       loadModels: async () => {
         set({ isLoading: true, error: null }, undefined, 'loadModels/start')
@@ -265,6 +269,36 @@ export const useModelStore = create<ModelState>()(
 
       clearConfigParseError: () =>
         set({ configParseError: null }, undefined, 'clearConfigParseError'),
+
+      loadDefaultModel: async () => {
+        try {
+          const result = await commands.getDefaultModel()
+          if (result.status === 'ok') {
+            set({ defaultModelId: result.data }, undefined, 'loadDefaultModel')
+          }
+        } catch {
+          // Silently ignore errors when loading default model
+        }
+      },
+
+      setDefaultModel: async index => {
+        const { models } = get()
+        const model = models[index]
+        if (!model || !model.id) return
+
+        const modelId = model.id
+
+        try {
+          const result = await commands.saveDefaultModel(modelId)
+          if (result.status === 'ok') {
+            set({ defaultModelId: modelId }, undefined, 'setDefaultModel')
+          } else {
+            set({ error: result.error }, undefined, 'setDefaultModel/error')
+          }
+        } catch (e) {
+          set({ error: String(e) }, undefined, 'setDefaultModel/exception')
+        }
+      },
     }),
     { name: 'model-store' }
   )

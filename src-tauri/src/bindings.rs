@@ -27,6 +27,8 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         config::check_legacy_config,
         config::delete_legacy_config,
         config::fetch_models,
+        config::get_default_model,
+        config::save_default_model,
         channel::load_channels,
         channel::save_channels,
         channel::save_channel_credentials,

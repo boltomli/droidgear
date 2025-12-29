@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Pencil, Trash2, Copy } from 'lucide-react'
+import { GripVertical, Pencil, Trash2, Copy, Star } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -14,10 +14,12 @@ interface ModelCardProps {
   index: number
   selectionMode?: boolean
   isSelected?: boolean
+  isDefault?: boolean
   onSelect?: (index: number, selected: boolean) => void
   onEdit: () => void
   onDelete: () => void
   onCopy: () => void
+  onSetDefault?: () => void
 }
 
 export function ModelCard({
@@ -25,10 +27,12 @@ export function ModelCard({
   index,
   selectionMode = false,
   isSelected = false,
+  isDefault = false,
   onSelect,
   onEdit,
   onDelete,
   onCopy,
+  onSetDefault,
 }: ModelCardProps) {
   const { t } = useTranslation()
   const {
@@ -76,6 +80,11 @@ export function ModelCard({
           <Badge variant="secondary" className={providerColors[model.provider]}>
             {providerLabels[model.provider]}
           </Badge>
+          {isDefault && (
+            <Badge variant="default" className="bg-yellow-500 text-white">
+              {t('models.default')}
+            </Badge>
+          )}
         </div>
         <div className="text-sm text-muted-foreground truncate">
           {model.model} • {model.baseUrl}
@@ -83,6 +92,16 @@ export function ModelCard({
       </div>
 
       <div className="flex items-center gap-1">
+        {!isDefault && onSetDefault && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onSetDefault}
+            title={t('models.setAsDefault')}
+          >
+            <Star className="h-4 w-4" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"

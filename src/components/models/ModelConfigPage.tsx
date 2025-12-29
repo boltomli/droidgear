@@ -57,6 +57,7 @@ export function ModelConfigPage() {
     isLoading,
     error,
     configParseError,
+    defaultModelId,
     loadModels,
     saveModels,
     resetConfigAndSave,
@@ -66,6 +67,8 @@ export function ModelConfigPage() {
     deleteModels,
     setError,
     clearConfigParseError,
+    loadDefaultModel,
+    setDefaultModel,
   } = useModelStore()
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -89,7 +92,8 @@ export function ModelConfigPage() {
 
   useEffect(() => {
     loadModels()
-  }, [loadModels])
+    loadDefaultModel()
+  }, [loadModels, loadDefaultModel])
 
   // Filter models based on search text and provider
   const filteredModels = useMemo(() => {
@@ -460,10 +464,12 @@ export function ModelConfigPage() {
           onEdit={handleEdit}
           onDelete={setDeleteIndex}
           onCopy={handleCopy}
+          onSetDefault={setDefaultModel}
           filteredModels={filteredModels}
           selectionMode={selectionMode}
           selectedIndices={selectedIndices}
           onSelect={handleSelect}
+          defaultModelId={defaultModelId}
         />
       </div>
 
