@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+  ResizableDialog,
+  ResizableDialogContent,
+  ResizableDialogHeader,
+  ResizableDialogBody,
+  ResizableDialogTitle,
+  ResizableDialogFooter,
+} from '@/components/ui/resizable-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -118,129 +119,131 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
 
   return (
     <>
-      <div className="grid gap-4 py-4">
-        <div className="grid gap-2">
-          <Label htmlFor="provider">{t('models.provider')}</Label>
-          <Select value={provider} onValueChange={handleProviderChange}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="anthropic">
-                {t('models.providerAnthropic')}
-              </SelectItem>
-              <SelectItem value="openai">
-                {t('models.providerOpenAI')}
-              </SelectItem>
-              <SelectItem value="generic-chat-completion-api">
-                {t('models.providerGeneric')}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="grid gap-2">
-          <Label htmlFor="baseUrl">{t('models.apiUrl')}</Label>
-          <Input
-            id="baseUrl"
-            value={baseUrl}
-            onChange={e => setBaseUrl(e.target.value)}
-            placeholder="https://api.example.com"
-          />
-        </div>
-
-        <div className="grid gap-2">
-          <Label htmlFor="apiKey">{t('models.apiKey')}</Label>
-          <div className="flex gap-2">
-            <Input
-              id="apiKey"
-              type="password"
-              value={apiKey}
-              onChange={e => setApiKey(e.target.value)}
-              placeholder="sk-..."
-              className="flex-1"
-            />
-            <Button
-              variant="outline"
-              onClick={handleFetchModels}
-              disabled={isFetching || !baseUrl || !apiKey}
-            >
-              {isFetching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t('models.fetchModels')
-              )}
-            </Button>
-          </div>
-          {fetchError && (
-            <p className="text-sm text-destructive">{fetchError}</p>
-          )}
-        </div>
-
-        <div className="grid gap-2">
-          <Label htmlFor="model">{t('models.model')}</Label>
-          {availableModels.length > 0 ? (
-            <Select value={modelId} onValueChange={setModelId}>
+      <ResizableDialogBody>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="provider">{t('models.provider')}</Label>
+            <Select value={provider} onValueChange={handleProviderChange}>
               <SelectTrigger>
-                <SelectValue placeholder={t('models.selectModel')} />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {availableModels.map(m => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.name || m.id}
-                  </SelectItem>
-                ))}
+                <SelectItem value="anthropic">
+                  {t('models.providerAnthropic')}
+                </SelectItem>
+                <SelectItem value="openai">
+                  {t('models.providerOpenAI')}
+                </SelectItem>
+                <SelectItem value="generic-chat-completion-api">
+                  {t('models.providerGeneric')}
+                </SelectItem>
               </SelectContent>
             </Select>
-          ) : (
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="baseUrl">{t('models.apiUrl')}</Label>
             <Input
-              id="model"
-              value={modelId}
-              onChange={e => setModelId(e.target.value)}
-              placeholder="claude-sonnet-4-5-20250929"
+              id="baseUrl"
+              value={baseUrl}
+              onChange={e => setBaseUrl(e.target.value)}
+              placeholder="https://api.example.com"
             />
-          )}
-        </div>
+          </div>
 
-        <div className="grid gap-2">
-          <Label htmlFor="displayName">{t('models.displayName')}</Label>
-          <Input
-            id="displayName"
-            value={displayName}
-            onChange={e => setDisplayName(e.target.value)}
-            placeholder="My Custom Model"
-          />
-        </div>
+          <div className="grid gap-2">
+            <Label htmlFor="apiKey">{t('models.apiKey')}</Label>
+            <div className="flex gap-2">
+              <Input
+                id="apiKey"
+                type="password"
+                value={apiKey}
+                onChange={e => setApiKey(e.target.value)}
+                placeholder="sk-..."
+                className="flex-1"
+              />
+              <Button
+                variant="outline"
+                onClick={handleFetchModels}
+                disabled={isFetching || !baseUrl || !apiKey}
+              >
+                {isFetching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  t('models.fetchModels')
+                )}
+              </Button>
+            </div>
+            {fetchError && (
+              <p className="text-sm text-destructive">{fetchError}</p>
+            )}
+          </div>
 
-        <div className="grid gap-2">
-          <Label htmlFor="maxTokens">{t('models.maxTokens')}</Label>
-          <Input
-            id="maxTokens"
-            type="number"
-            value={maxTokens}
-            onChange={e => setMaxTokens(e.target.value)}
-            placeholder="8192"
-          />
-        </div>
+          <div className="grid gap-2">
+            <Label htmlFor="model">{t('models.model')}</Label>
+            {availableModels.length > 0 ? (
+              <Select value={modelId} onValueChange={setModelId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('models.selectModel')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map(m => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name || m.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="model"
+                value={modelId}
+                onChange={e => setModelId(e.target.value)}
+                placeholder="claude-sonnet-4-5-20250929"
+              />
+            )}
+          </div>
 
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="supportsImages"
-            checked={supportsImages}
-            onCheckedChange={checked => setSupportsImages(checked === true)}
-          />
-          <Label htmlFor="supportsImages">{t('models.supportsImages')}</Label>
-        </div>
-      </div>
+          <div className="grid gap-2">
+            <Label htmlFor="displayName">{t('models.displayName')}</Label>
+            <Input
+              id="displayName"
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              placeholder="My Custom Model"
+            />
+          </div>
 
-      <DialogFooter>
+          <div className="grid gap-2">
+            <Label htmlFor="maxTokens">{t('models.maxTokens')}</Label>
+            <Input
+              id="maxTokens"
+              type="number"
+              value={maxTokens}
+              onChange={e => setMaxTokens(e.target.value)}
+              placeholder="8192"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="supportsImages"
+              checked={supportsImages}
+              onCheckedChange={checked => setSupportsImages(checked === true)}
+            />
+            <Label htmlFor="supportsImages">{t('models.supportsImages')}</Label>
+          </div>
+        </div>
+      </ResizableDialogBody>
+
+      <ResizableDialogFooter>
         <Button variant="outline" onClick={onCancel}>
           {t('common.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={!isValid}>
           {model ? t('common.save') : t('common.add')}
         </Button>
-      </DialogFooter>
+      </ResizableDialogFooter>
     </>
   )
 }
@@ -268,11 +271,16 @@ export function ModelDialog({
         : 'models.addModel'
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{t(titleKey)}</DialogTitle>
-        </DialogHeader>
+    <ResizableDialog open={open} onOpenChange={onOpenChange}>
+      <ResizableDialogContent
+        defaultWidth={600}
+        defaultHeight={580}
+        minWidth={500}
+        minHeight={400}
+      >
+        <ResizableDialogHeader>
+          <ResizableDialogTitle>{t(titleKey)}</ResizableDialogTitle>
+        </ResizableDialogHeader>
         {open && (
           <ModelForm
             key={formKey}
@@ -281,7 +289,7 @@ export function ModelDialog({
             onCancel={() => onOpenChange(false)}
           />
         )}
-      </DialogContent>
-    </Dialog>
+      </ResizableDialogContent>
+    </ResizableDialog>
   )
 }

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+  ResizableDialog,
+  ResizableDialogContent,
+  ResizableDialogHeader,
+  ResizableDialogBody,
+  ResizableDialogTitle,
+  ResizableDialogFooter,
+} from '@/components/ui/resizable-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -97,85 +98,91 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
 
   return (
     <>
-      <div className="grid gap-4 py-4">
-        <div className="grid gap-2">
-          <Label htmlFor="name">{t('common.name')}</Label>
-          <Input
-            id="name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="My API Channel"
-          />
-        </div>
+      <ResizableDialogBody>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="name">{t('common.name')}</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="My API Channel"
+            />
+          </div>
 
-        <div className="grid gap-2">
-          <Label htmlFor="type">{t('channels.type')}</Label>
-          <Select value={channelType} onValueChange={handleTypeChange}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="new-api">
-                {t('channels.typeNewApi')}
-              </SelectItem>
-              <SelectItem value="sub-2-api">
-                {t('channels.typeSub2Api')}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="grid gap-2">
+            <Label htmlFor="type">{t('channels.type')}</Label>
+            <Select value={channelType} onValueChange={handleTypeChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new-api">
+                  {t('channels.typeNewApi')}
+                </SelectItem>
+                <SelectItem value="sub-2-api">
+                  {t('channels.typeSub2Api')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="grid gap-2">
-          <Label htmlFor="baseUrl">{t('channels.apiUrl')}</Label>
-          <Input
-            id="baseUrl"
-            value={baseUrl}
-            onChange={e => setBaseUrl(e.target.value)}
-            placeholder="https://api.example.com"
-          />
-        </div>
+          <div className="grid gap-2">
+            <Label htmlFor="baseUrl">{t('channels.apiUrl')}</Label>
+            <Input
+              id="baseUrl"
+              value={baseUrl}
+              onChange={e => setBaseUrl(e.target.value)}
+              placeholder="https://api.example.com"
+            />
+          </div>
 
-        <div className="grid gap-2">
-          <Label htmlFor="username">{t('channels.username')}</Label>
-          <Input
-            id="username"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            placeholder={
-              isLoadingCredentials
-                ? t('common.loading')
-                : t('channels.enterUsername')
-            }
-            disabled={isLoadingCredentials}
-          />
-        </div>
+          <div className="grid gap-2">
+            <Label htmlFor="username">{t('channels.username')}</Label>
+            <Input
+              id="username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder={
+                isLoadingCredentials
+                  ? t('common.loading')
+                  : t('channels.enterUsername')
+              }
+              disabled={isLoadingCredentials}
+            />
+          </div>
 
-        <div className="grid gap-2">
-          <Label htmlFor="password">{t('channels.password')}</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder={
-              isLoadingCredentials
-                ? t('common.loading')
-                : t('channels.enterPassword')
-            }
-            disabled={isLoadingCredentials}
-          />
-          <p className="text-xs text-muted-foreground">
-            {t('channels.credentialsHint')}
-          </p>
-        </div>
+          <div className="grid gap-2">
+            <Label htmlFor="password">{t('channels.password')}</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder={
+                isLoadingCredentials
+                  ? t('common.loading')
+                  : t('channels.enterPassword')
+              }
+              disabled={isLoadingCredentials}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('channels.credentialsHint')}
+            </p>
+          </div>
 
-        <div className="flex items-center justify-between">
-          <Label htmlFor="enabled">{t('common.enabled')}</Label>
-          <Switch id="enabled" checked={enabled} onCheckedChange={setEnabled} />
+          <div className="flex items-center justify-between">
+            <Label htmlFor="enabled">{t('common.enabled')}</Label>
+            <Switch
+              id="enabled"
+              checked={enabled}
+              onCheckedChange={setEnabled}
+            />
+          </div>
         </div>
-      </div>
+      </ResizableDialogBody>
 
-      <DialogFooter>
+      <ResizableDialogFooter>
         <Button variant="outline" onClick={onCancel}>
           {t('common.cancel')}
         </Button>
@@ -185,7 +192,7 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
         >
           {channel ? t('common.save') : t('common.add')}
         </Button>
-      </DialogFooter>
+      </ResizableDialogFooter>
     </>
   )
 }
@@ -209,16 +216,21 @@ export function ChannelDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
+    <ResizableDialog open={open} onOpenChange={onOpenChange}>
+      <ResizableDialogContent
+        defaultWidth={600}
+        defaultHeight={550}
+        minWidth={500}
+        minHeight={400}
+      >
+        <ResizableDialogHeader>
+          <ResizableDialogTitle>
             {channel ? t('channels.editChannel') : t('channels.addChannel')}
-          </DialogTitle>
+          </ResizableDialogTitle>
           <p className="text-sm text-muted-foreground">
             {t('channels.privacyNotice')}
           </p>
-        </DialogHeader>
+        </ResizableDialogHeader>
         {open && (
           <ChannelForm
             key={formKey}
@@ -227,7 +239,7 @@ export function ChannelDialog({
             onCancel={() => onOpenChange(false)}
           />
         )}
-      </DialogContent>
-    </Dialog>
+      </ResizableDialogContent>
+    </ResizableDialog>
   )
 }
