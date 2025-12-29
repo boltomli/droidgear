@@ -43,13 +43,40 @@ import {
 import { cn } from '@/lib/utils'
 import { commands, type SpecFile } from '@/lib/bindings'
 import { useUIStore } from '@/store/ui-store'
+import { useTheme } from '@/hooks/use-theme'
 
 export function SpecsPage() {
   const { t } = useTranslation()
+  const { theme } = useTheme()
   const [specs, setSpecs] = useState<SpecFile[]>([])
   const [selectedSpec, setSelectedSpec] = useState<SpecFile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() =>
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  )
+
+  useEffect(() => {
+    if (theme !== 'system') return
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleChange = (e: MediaQueryListEvent) => {
+      setSystemPrefersDark(e.matches)
+    }
+
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [theme])
+
+  const isDark = theme === 'dark' || (theme === 'system' && systemPrefersDark)
+
+  const shikiTheme: [
+    import('shiki').BundledTheme,
+    import('shiki').BundledTheme,
+  ] = isDark
+    ? ['github-light', 'github-dark']
+    : ['github-light', 'github-light']
 
   // Rename dialog state
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
@@ -306,7 +333,9 @@ export function SpecsPage() {
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-4 px-6">
-                  <Streamdown>{selectedSpec.content}</Streamdown>
+                  <Streamdown shikiTheme={shikiTheme}>
+                    {selectedSpec.content}
+                  </Streamdown>
                 </div>
               </ScrollArea>
             </>
