@@ -8,11 +8,13 @@ description: Generate changelog from commits since last tag and release new vers
 ## Instructions
 
 1. Get the latest tag:
+
    ```bash
    git tag --list --sort=-version:refname | head -1
    ```
 
 2. Get commits since last tag:
+
    ```bash
    git log <latest-tag>..HEAD --oneline
    ```
