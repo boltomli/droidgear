@@ -5,6 +5,11 @@ import './i18n'
 import App from './App'
 import { queryClient } from './lib/query-client'
 
+// Disable default browser context menu to prevent accidental page reload
+document.addEventListener('contextmenu', e => {
+  e.preventDefault()
+})
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <QueryClientProvider client={queryClient}>
     <App />
