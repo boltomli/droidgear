@@ -20,7 +20,6 @@ description: Generate changelog from commits since last tag and release new vers
    ```
 
 3. Calculate next version automatically:
-
    - Parse current version vX.Y.Z
    - Increment: Z+1, if Z=9 then Z=0 and Y+1, if Y=9 then Y=0 and X+1
    - Examples: v0.0.8 → v0.0.9, v0.0.9 → v0.1.0, v0.9.9 → v1.0.0
@@ -28,7 +27,6 @@ description: Generate changelog from commits since last tag and release new vers
 4. Show suggested version to user, allow modification before proceeding
 
 5. Categorize commits by type:
-
    - `feat:` → **新功能** / **New Features**
    - `fix:` → **问题修复** / **Bug Fixes**
 

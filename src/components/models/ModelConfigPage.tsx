@@ -139,12 +139,14 @@ export function ModelConfigPage() {
       setShowRefreshConfirm(true)
     } else {
       loadModels()
+      loadDefaultModel()
     }
   }
 
   const handleConfirmRefresh = () => {
     setShowRefreshConfirm(false)
     loadModels()
+    loadDefaultModel()
   }
 
   const handleEdit = (index: number) => {
