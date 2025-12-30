@@ -9,6 +9,8 @@ export const platformColors: Record<string, string> = {
   openai: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   gemini:
     'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  antigravity:
+    'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
 }
 
 // Provider colors map to platform colors where applicable

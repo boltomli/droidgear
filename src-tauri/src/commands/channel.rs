@@ -604,6 +604,35 @@ pub async fn fetch_models_by_api_key(
     );
 
     let trimmed_base = base_url.trim_end_matches('/');
+    let client = reqwest::Client::new();
+
+    // Handle antigravity platform - fetch Claude models only
+    if platform.as_deref() == Some("antigravity") {
+        let claude_url = format!("{trimmed_base}/antigravity/v1/models");
+
+        let response = client
+            .get(&claude_url)
+            .header("Authorization", format!("Bearer {api_key}"))
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {e}"))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(format!("API error {status}: {body}"));
+        }
+
+        let data: Value = response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {e}"))?;
+
+        let models = parse_openai_models(&data);
+        log::info!("Fetched {} models from antigravity", models.len());
+        return Ok(models);
+    }
+
     let (url, parser): (String, fn(&Value) -> Vec<ModelInfo>) = match platform.as_deref() {
         Some("gemini") => (format!("{trimmed_base}/v1beta/models"), parse_gemini_models),
         Some("openai") => (format!("{trimmed_base}/v1/models"), parse_openai_models),
@@ -612,7 +641,6 @@ pub async fn fetch_models_by_api_key(
 
     log::debug!("Requesting models from {url}");
 
-    let client = reqwest::Client::new();
     let response = client
         .get(&url)
         .header("Authorization", format!("Bearer {api_key}"))
@@ -656,7 +684,9 @@ fn parse_gemini_models(data: &Value) -> Vec<ModelInfo> {
         .map(|arr| {
             arr.iter()
                 .filter_map(|m| {
-                    let id = m.get("name")?.as_str()?.to_string();
+                    let raw_id = m.get("name")?.as_str()?;
+                    // Strip "models/" prefix if present
+                    let id = raw_id.strip_prefix("models/").unwrap_or(raw_id).to_string();
                     let display_name = m
                         .get("displayName")
                         .and_then(|n| n.as_str())

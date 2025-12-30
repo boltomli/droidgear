@@ -170,7 +170,11 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
       // Skip if this model+key combination already exists
       if (isModelKeyExisting(modelId, selectedKey.key)) continue
 
-      const baseUrl = getBaseUrlForProvider(config.provider, channel.baseUrl)
+      const baseUrl = getBaseUrlForProvider(
+        config.provider,
+        channel.baseUrl,
+        selectedKey?.platform
+      )
 
       // Determine display name: custom alias > prefix+model+suffix > model
       let displayName = modelId

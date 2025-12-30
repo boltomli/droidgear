@@ -54,6 +54,18 @@ describe('inferProviderFromPlatformAndModel', () => {
     )
   })
 
+  it('handles antigravity platform based on model name', () => {
+    expect(
+      inferProviderFromPlatformAndModel('antigravity', 'claude-3-opus')
+    ).toBe('anthropic')
+    expect(
+      inferProviderFromPlatformAndModel('antigravity', 'gemini-1.5-pro')
+    ).toBe('generic-chat-completion-api')
+    expect(
+      inferProviderFromPlatformAndModel('antigravity', 'unknown-model')
+    ).toBe('anthropic') // defaults to Claude
+  })
+
   it('uses model name prefix matching when platform is null', () => {
     expect(inferProviderFromPlatformAndModel(null, 'claude-3-opus')).toBe(
       'anthropic'
@@ -109,5 +121,25 @@ describe('getBaseUrlForProvider', () => {
         'https://api.example.com'
       )
     ).toBe('https://api.example.com')
+  })
+
+  it('handles antigravity platform for anthropic provider', () => {
+    expect(
+      getBaseUrlForProvider(
+        'anthropic',
+        'https://api.example.com',
+        'antigravity'
+      )
+    ).toBe('https://api.example.com/antigravity')
+  })
+
+  it('handles antigravity platform for generic provider (Gemini)', () => {
+    expect(
+      getBaseUrlForProvider(
+        'generic-chat-completion-api',
+        'https://api.example.com',
+        'antigravity'
+      )
+    ).toBe('https://api.example.com/antigravity/v1beta')
   })
 })
