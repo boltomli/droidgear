@@ -80,25 +80,25 @@ export function ModelCard({
       )}
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <span className="font-medium truncate">{displayName}</span>
           <Badge variant="secondary" className={providerColors[model.provider]}>
             {providerLabels[model.provider]}
           </Badge>
           {isDefault && (
-            <>
-              <Badge variant="default" className="bg-yellow-500 text-white">
-                {t('models.default')}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {t('models.defaultHint')}
-              </span>
-            </>
+            <Badge variant="default" className="bg-yellow-500 text-white">
+              {t('models.default')}
+            </Badge>
           )}
         </div>
         <div className="text-sm text-muted-foreground truncate">
           {model.model} • {model.baseUrl}
         </div>
+        {isDefault && (
+          <div className="text-xs text-muted-foreground mt-1">
+            {t('models.defaultHint')}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-1">
