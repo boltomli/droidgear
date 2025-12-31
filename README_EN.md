@@ -159,6 +159,10 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 - Fixed confirm save prompt when switching with unsaved changes
 - Fixed channel name mapping
 
+## Acknowledgements
+
+This project is based on [tauri-template](https://github.com/dannysmith/tauri-template) by Danny Smith. Thanks for the excellent template!
+
 ## License
 
 [MIT](LICENSE.md)

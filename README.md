@@ -159,6 +159,10 @@ DroidGear 重视您的隐私安全。您的用户名、密码、API 密钥等敏
 - 修复切换时未保存确认提示
 - 修复频道名称映射问题
 
+## 致谢
+
+本项目基于 [tauri-template](https://github.com/dannysmith/tauri-template) 开发，感谢 Danny Smith 提供的优秀模板。
+
 ## 许可证
 
 [MIT](LICENSE.md)

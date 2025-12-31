@@ -24,6 +24,15 @@
   "preferences.general": "通用",
   "preferences.appearance": "外观",
   "preferences.advanced": "高级",
+  "preferences.about": "关于",
+
+  "preferences.about.description": "Factory Droid 全功能辅助增强工具",
+  "preferences.about.projectUrl": "项目地址",
+  "preferences.about.license": "许可证",
+  "preferences.about.copyright": "版权",
+  "preferences.about.techStack": "技术栈",
+  "preferences.about.acknowledgements": "致谢",
+  "preferences.about.templateCredit": "基于 Danny Smith 的 tauri-template 开发",
 
   "preferences.general.keyboardShortcuts": "键盘快捷键",
   "preferences.general.quickPaneEnabled": "启用快捷面板",

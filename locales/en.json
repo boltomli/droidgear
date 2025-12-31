@@ -24,6 +24,15 @@
   "preferences.general": "General",
   "preferences.appearance": "Appearance",
   "preferences.advanced": "Advanced",
+  "preferences.about": "About",
+
+  "preferences.about.description": "A full-featured companion tool for Factory Droid",
+  "preferences.about.projectUrl": "Project URL",
+  "preferences.about.license": "License",
+  "preferences.about.copyright": "Copyright",
+  "preferences.about.techStack": "Built with",
+  "preferences.about.acknowledgements": "Acknowledgements",
+  "preferences.about.templateCredit": "Based on tauri-template by Danny Smith",
 
   "preferences.general.keyboardShortcuts": "Keyboard Shortcuts",
   "preferences.general.quickPaneEnabled": "Enable Quick Pane",
