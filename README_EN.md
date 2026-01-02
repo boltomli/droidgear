@@ -86,6 +86,18 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ## Changelog
 
+### v0.1.1
+
+**New Features**
+
+- Cloud session sync toggle
+- Add install instruction area
+- Ensure unique display name
+
+**Bug Fixes**
+
+- Fix default tab: droid
+
 ### v0.1.0
 
 **New Features**
