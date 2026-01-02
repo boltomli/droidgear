@@ -37,7 +37,7 @@ export const useUIStore = create<UIState>()(
         commandPaletteOpen: false,
         preferencesOpen: false,
         lastQuickPaneEntry: null,
-        currentView: 'channels',
+        currentView: 'droid',
         droidSubView: 'models',
         lastSpecExportPath: null,
 
