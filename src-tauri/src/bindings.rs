@@ -2,7 +2,7 @@ use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
-        channel, config, env, notifications, preferences, quick_pane, recovery, specs,
+        channel, config, env, mcp, notifications, preferences, quick_pane, recovery, specs,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -57,6 +57,10 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         specs::delete_spec,
         specs::start_specs_watcher,
         specs::stop_specs_watcher,
+        mcp::load_mcp_servers,
+        mcp::save_mcp_server,
+        mcp::delete_mcp_server,
+        mcp::toggle_mcp_server,
     ])
 }
 

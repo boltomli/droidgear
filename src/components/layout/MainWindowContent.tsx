@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { ModelConfigPage } from '@/components/models'
-import { DroidHelpersPage, SpecsPage } from '@/components/droid'
+import { DroidHelpersPage, SpecsPage, McpPage } from '@/components/droid'
 import { ChannelDetail, ChannelDialog } from '@/components/channels'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
@@ -51,6 +51,9 @@ export function MainWindowContent({
       }
       if (droidSubView === 'specs') {
         return <SpecsPage />
+      }
+      if (droidSubView === 'mcp') {
+        return <McpPage />
       }
       return <DroidHelpersPage />
     }

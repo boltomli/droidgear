@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 
 type NavigationView = 'droid' | 'channels'
-export type DroidSubView = 'models' | 'helpers' | 'specs'
+export type DroidSubView = 'models' | 'helpers' | 'specs' | 'mcp'
 
 interface UIState {
   leftSidebarVisible: boolean

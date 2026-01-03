@@ -564,6 +564,50 @@ async stopSpecsWatcher() : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Loads all MCP servers from ~/.factory/mcp.json
+ */
+async loadMcpServers() : Promise<Result<McpServer[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("load_mcp_servers") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Saves an MCP server (creates or updates)
+ */
+async saveMcpServer(server: McpServer) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_mcp_server", { server }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Deletes an MCP server by name
+ */
+async deleteMcpServer(name: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_mcp_server", { name }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Toggles an MCP server's disabled state
+ */
+async toggleMcpServer(name: string, disabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("toggle_mcp_server", { name, disabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -719,6 +763,54 @@ extraArgs?: Partial<{ [key in string]: JsonValue }> | null;
  */
 extraHeaders?: Partial<{ [key in string]: string }> | null }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
+/**
+ * MCP server entry with name
+ */
+export type McpServer = { 
+/**
+ * Server name (unique identifier)
+ */
+name: string; 
+/**
+ * Server configuration
+ */
+config: McpServerConfig }
+/**
+ * MCP server configuration
+ */
+export type McpServerConfig = { 
+/**
+ * Server type (stdio or http)
+ */
+type: McpServerType; 
+/**
+ * Whether the server is disabled
+ */
+disabled?: boolean; 
+/**
+ * Command to run (stdio only)
+ */
+command?: string | null; 
+/**
+ * Command arguments (stdio only)
+ */
+args?: string[] | null; 
+/**
+ * Environment variables (stdio only)
+ */
+env?: Partial<{ [key in string]: string }> | null; 
+/**
+ * HTTP URL (http only)
+ */
+url?: string | null; 
+/**
+ * HTTP headers (http only)
+ */
+headers?: Partial<{ [key in string]: string }> | null }
+/**
+ * MCP server type
+ */
+export type McpServerType = "stdio" | "http"
 /**
  * Model info returned from API
  */

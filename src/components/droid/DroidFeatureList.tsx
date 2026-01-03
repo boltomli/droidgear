@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Cpu, LifeBuoy, FileText } from 'lucide-react'
+import { Cpu, LifeBuoy, FileText, Plug } from 'lucide-react'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -30,6 +30,7 @@ const features: FeatureItem[] = [
   { id: 'models', labelKey: 'droid.features.models', icon: Cpu },
   { id: 'helpers', labelKey: 'droid.features.helpers', icon: LifeBuoy },
   { id: 'specs', labelKey: 'droid.features.specs', icon: FileText },
+  { id: 'mcp', labelKey: 'droid.features.mcp', icon: Plug },
 ]
 
 export function DroidFeatureList() {
