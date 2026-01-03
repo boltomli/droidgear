@@ -47,6 +47,10 @@ import {
   inferProviderFromPlatformAndModel,
   getBaseUrlForSub2Api,
 } from '@/lib/sub2api-platform'
+import {
+  inferProviderForNewApi,
+  getBaseUrlForNewApi,
+} from '@/lib/newapi-platform'
 import { containsBrackets, getDefaultMaxOutputTokens } from '@/lib/utils'
 
 const channelTypeI18nKeys: Record<ChannelType, string> = {
@@ -125,10 +129,10 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
       if (next.has(modelId)) {
         next.delete(modelId)
       } else {
-        const defaultProvider = inferProviderFromPlatformAndModel(
-          selectedKey?.platform,
-          modelId
-        )
+        const defaultProvider =
+          channel.type === 'new-api'
+            ? inferProviderForNewApi(modelId)
+            : inferProviderFromPlatformAndModel(selectedKey?.platform, modelId)
         next.set(modelId, { alias: '', provider: defaultProvider })
       }
       return next
@@ -171,11 +175,14 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
       // Skip if this model+key combination already exists
       if (isModelKeyExisting(modelId, selectedKey.key)) continue
 
-      const baseUrl = getBaseUrlForSub2Api(
-        config.provider,
-        channel.baseUrl,
-        selectedKey?.platform
-      )
+      const baseUrl =
+        channel.type === 'new-api'
+          ? getBaseUrlForNewApi(config.provider, channel.baseUrl)
+          : getBaseUrlForSub2Api(
+              config.provider,
+              channel.baseUrl,
+              selectedKey?.platform
+            )
 
       // Determine display name: custom alias > prefix+model+suffix > model
       let displayName = modelId
@@ -356,10 +363,13 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
                           { alias: string; provider: Provider }
                         >()
                         selectableModels.forEach(m => {
-                          const provider = inferProviderFromPlatformAndModel(
-                            selectedKey?.platform,
-                            m.id
-                          )
+                          const provider =
+                            channel.type === 'new-api'
+                              ? inferProviderForNewApi(m.id)
+                              : inferProviderFromPlatformAndModel(
+                                  selectedKey?.platform,
+                                  m.id
+                                )
                           newMap.set(m.id, { alias: '', provider })
                         })
                         setSelectedModels(newMap)
