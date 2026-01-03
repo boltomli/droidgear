@@ -4,6 +4,7 @@ import {
   getProviderConfigFromPlatform,
   inferProviderFromPlatformAndModel,
   getBaseUrlForProvider,
+  getBaseUrlForSub2Api,
 } from './sub2api-platform'
 
 describe('sub2api platform mapping', () => {
@@ -136,6 +137,52 @@ describe('getBaseUrlForProvider', () => {
   it('handles antigravity platform for generic provider (Gemini)', () => {
     expect(
       getBaseUrlForProvider(
+        'generic-chat-completion-api',
+        'https://api.example.com',
+        'antigravity'
+      )
+    ).toBe('https://api.example.com/antigravity/v1beta')
+  })
+})
+
+describe('getBaseUrlForSub2Api', () => {
+  it('does not append /v1 for openai provider', () => {
+    expect(getBaseUrlForSub2Api('openai', 'https://api.example.com')).toBe(
+      'https://api.example.com'
+    )
+    expect(getBaseUrlForSub2Api('openai', 'https://api.example.com/')).toBe(
+      'https://api.example.com/'
+    )
+  })
+
+  it('preserves url for anthropic provider', () => {
+    expect(getBaseUrlForSub2Api('anthropic', 'https://api.example.com')).toBe(
+      'https://api.example.com'
+    )
+  })
+
+  it('preserves url for generic provider', () => {
+    expect(
+      getBaseUrlForSub2Api(
+        'generic-chat-completion-api',
+        'https://api.example.com'
+      )
+    ).toBe('https://api.example.com')
+  })
+
+  it('handles antigravity platform for anthropic provider', () => {
+    expect(
+      getBaseUrlForSub2Api(
+        'anthropic',
+        'https://api.example.com',
+        'antigravity'
+      )
+    ).toBe('https://api.example.com/antigravity')
+  })
+
+  it('handles antigravity platform for generic provider (Gemini)', () => {
+    expect(
+      getBaseUrlForSub2Api(
         'generic-chat-completion-api',
         'https://api.example.com',
         'antigravity'

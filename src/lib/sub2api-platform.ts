@@ -54,6 +54,22 @@ export const getBaseUrlForProvider = (
   return baseUrl
 }
 
+export const getBaseUrlForSub2Api = (
+  provider: Provider,
+  baseUrl: string,
+  platform?: string | null
+): string => {
+  if (platform === 'antigravity') {
+    if (provider === 'anthropic') {
+      return normalizeBaseUrl(baseUrl, '/antigravity')
+    }
+    if (provider === 'generic-chat-completion-api') {
+      return normalizeBaseUrl(baseUrl, '/antigravity/v1beta')
+    }
+  }
+  return baseUrl
+}
+
 export const normalizeBaseUrl = (baseUrl: string, suffix: string): string => {
   const trimmed = baseUrl.replace(/\/+$/, '')
   if (!suffix) return trimmed

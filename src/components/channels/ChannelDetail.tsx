@@ -45,7 +45,7 @@ import {
 } from '@/lib/bindings'
 import {
   inferProviderFromPlatformAndModel,
-  getBaseUrlForProvider,
+  getBaseUrlForSub2Api,
 } from '@/lib/sub2api-platform'
 import { containsBrackets, getDefaultMaxOutputTokens } from '@/lib/utils'
 
@@ -171,7 +171,7 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
       // Skip if this model+key combination already exists
       if (isModelKeyExisting(modelId, selectedKey.key)) continue
 
-      const baseUrl = getBaseUrlForProvider(
+      const baseUrl = getBaseUrlForSub2Api(
         config.provider,
         channel.baseUrl,
         selectedKey?.platform
