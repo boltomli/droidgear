@@ -568,6 +568,10 @@ model: string;
  */
 id?: string | null; 
 /**
+ * Index of the model in the list
+ */
+index?: number | null; 
+/**
  * Human-friendly name shown in model selector
  */
 displayName?: string | null; 

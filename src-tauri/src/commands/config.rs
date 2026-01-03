@@ -48,6 +48,9 @@ pub struct CustomModel {
     /// Unique identifier for the model (e.g., "custom:ModelName-0")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
+    /// Index of the model in the list
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub index: Option<u32>,
     /// Human-friendly name shown in model selector
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,

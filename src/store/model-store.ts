@@ -65,6 +65,18 @@ function generateUniqueDisplayName(
   return `${baseDisplayName}-${suffix}`
 }
 
+function generateModelId(displayName: string, index: number): string {
+  return `custom:${displayName}-${index}`
+}
+
+function updateModelsIndexAndId(models: CustomModel[]): CustomModel[] {
+  return models.map((m, idx) => ({
+    ...m,
+    index: idx,
+    id: generateModelId(m.displayName || m.model, idx),
+  }))
+}
+
 export const useModelStore = create<ModelState>()(
   devtools(
     (set, get) => ({
@@ -217,11 +229,14 @@ export const useModelStore = create<ModelState>()(
               state.models,
               model
             )
-            const modelWithUniqueDisplayName = {
+            const newIndex = state.models.length
+            const modelWithIdAndIndex = {
               ...model,
               displayName: uniqueDisplayName,
+              id: generateModelId(uniqueDisplayName, newIndex),
+              index: newIndex,
             }
-            const newModels = [...state.models, modelWithUniqueDisplayName]
+            const newModels = [...state.models, modelWithIdAndIndex]
             return {
               models: newModels,
               hasChanges: !modelsEqual(newModels, state.originalModels),
@@ -250,7 +265,8 @@ export const useModelStore = create<ModelState>()(
       deleteModel: index => {
         set(
           state => {
-            const newModels = state.models.filter((_, i) => i !== index)
+            const filteredModels = state.models.filter((_, i) => i !== index)
+            const newModels = updateModelsIndexAndId(filteredModels)
             return {
               models: newModels,
               hasChanges: !modelsEqual(newModels, state.originalModels),
@@ -265,7 +281,10 @@ export const useModelStore = create<ModelState>()(
         set(
           state => {
             const indexSet = new Set(indices)
-            const newModels = state.models.filter((_, i) => !indexSet.has(i))
+            const filteredModels = state.models.filter(
+              (_, i) => !indexSet.has(i)
+            )
+            const newModels = updateModelsIndexAndId(filteredModels)
             return {
               models: newModels,
               hasChanges: !modelsEqual(newModels, state.originalModels),
@@ -279,11 +298,12 @@ export const useModelStore = create<ModelState>()(
       reorderModels: (fromIndex, toIndex) => {
         set(
           state => {
-            const newModels = [...state.models]
-            const removed = newModels.splice(fromIndex, 1)[0]
+            const reorderedModels = [...state.models]
+            const removed = reorderedModels.splice(fromIndex, 1)[0]
             if (removed) {
-              newModels.splice(toIndex, 0, removed)
+              reorderedModels.splice(toIndex, 0, removed)
             }
+            const newModels = updateModelsIndexAndId(reorderedModels)
             return {
               models: newModels,
               hasChanges: !modelsEqual(newModels, state.originalModels),
