@@ -86,6 +86,21 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ## Changelog
 
+### v0.1.2
+
+**New Features**
+
+- Add MCP presets
+- MCP servers management
+- Add more settings of droid
+- Prohibit use brackets in alias/displayName
+- Auto generate id and index, same rule with factory droid
+
+**Bug Fixes**
+
+- Does not append /v1 for sub2api openai models
+- Default fill maxOutputTokens
+
 ### v0.1.1
 
 **New Features**
