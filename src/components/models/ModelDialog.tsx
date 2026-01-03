@@ -26,7 +26,7 @@ import {
   type Provider,
   type ModelInfo,
 } from '@/lib/bindings'
-import { containsBrackets } from '@/lib/utils'
+import { containsBrackets, getDefaultMaxOutputTokens } from '@/lib/utils'
 
 interface ModelDialogProps {
   open: boolean
@@ -69,6 +69,13 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([])
   const [isFetching, setIsFetching] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
+
+  const handleModelIdChange = (newModelId: string) => {
+    setModelId(newModelId)
+    if (newModelId && !maxTokens) {
+      setMaxTokens(getDefaultMaxOutputTokens(newModelId).toString())
+    }
+  }
 
   const handleProviderChange = (value: Provider) => {
     setProvider(value)
@@ -183,7 +190,7 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
           <div className="grid gap-2">
             <Label htmlFor="model">{t('models.model')}</Label>
             {availableModels.length > 0 ? (
-              <Select value={modelId} onValueChange={setModelId}>
+              <Select value={modelId} onValueChange={handleModelIdChange}>
                 <SelectTrigger>
                   <SelectValue placeholder={t('models.selectModel')} />
                 </SelectTrigger>
@@ -199,7 +206,7 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
               <Input
                 id="model"
                 value={modelId}
-                onChange={e => setModelId(e.target.value)}
+                onChange={e => handleModelIdChange(e.target.value)}
                 placeholder="claude-sonnet-4-5-20250929"
               />
             )}

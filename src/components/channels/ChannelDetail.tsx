@@ -47,7 +47,7 @@ import {
   inferProviderFromPlatformAndModel,
   getBaseUrlForProvider,
 } from '@/lib/sub2api-platform'
-import { containsBrackets } from '@/lib/utils'
+import { containsBrackets, getDefaultMaxOutputTokens } from '@/lib/utils'
 
 const channelTypeI18nKeys: Record<ChannelType, string> = {
   'new-api': 'channels.typeNewApi',
@@ -191,6 +191,7 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
         apiKey: selectedKey.key,
         provider: config.provider,
         displayName,
+        maxOutputTokens: getDefaultMaxOutputTokens(modelId),
       }
       addModel(newModel)
     }

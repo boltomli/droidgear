@@ -8,3 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export function containsBrackets(value: string): boolean {
   return /[[\]]/.test(value)
 }
+
+export function getDefaultMaxOutputTokens(modelId: string): number {
+  return modelId.startsWith('claude-') ? 64000 : 16384
+}
