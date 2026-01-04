@@ -153,7 +153,8 @@ async function handleCheckForUpdates(): Promise<void> {
     if (update) {
       notifications.info(
         'Update Available',
-        `Version ${update.version} is available`
+        `Version ${update.version} is available` +
+          (update.body ? `\n\n${update.body}` : '')
       )
     } else {
       notifications.success('Up to Date', 'You are running the latest version')

@@ -236,20 +236,27 @@ export function GeneralPane() {
 
         {/* Update status display */}
         {updateStatus === 'idle' && availableUpdate && (
-          <SettingsField
-            label={t('preferences.general.updateAvailable', {
-              version: availableUpdate.version,
-            })}
-            description=""
-          >
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleDownloadAndInstall}
+          <>
+            <SettingsField
+              label={t('preferences.general.updateAvailable', {
+                version: availableUpdate.version,
+              })}
+              description=""
             >
-              {t('preferences.general.downloadAndInstall')}
-            </Button>
-          </SettingsField>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleDownloadAndInstall}
+              >
+                {t('preferences.general.downloadAndInstall')}
+              </Button>
+            </SettingsField>
+            {availableUpdate.body && (
+              <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto rounded-md border p-3">
+                {availableUpdate.body}
+              </div>
+            )}
+          </>
         )}
 
         {updateStatus === 'idle' && !availableUpdate && !updateError && (

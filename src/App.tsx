@@ -78,9 +78,10 @@ function App() {
         if (update) {
           logger.info(`Update available: ${update.version}`)
 
-          // Show confirmation dialog
+          // Show confirmation dialog with release notes
           const shouldUpdate = confirm(
-            i18n.t('update.available', { version: update.version })
+            i18n.t('update.available', { version: update.version }) +
+              (update.body ? `\n\n${update.body}` : '')
           )
 
           if (shouldUpdate) {
