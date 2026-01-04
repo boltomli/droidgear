@@ -219,6 +219,13 @@
   "droid.specs.deleteDescription": "确定要删除 \"{{name}}\" 吗？此操作无法撤销。",
   "droid.specs.deleteSuccess": "Spec 删除成功",
   "droid.specs.exportSuccess": "Spec 导出成功",
+  "droid.specs.copyAll": "复制全部",
+  "droid.specs.copySuccess": "Spec 内容已复制",
+  "droid.specs.editMode": "编辑",
+  "droid.specs.viewMode": "查看",
+  "droid.specs.saveSuccess": "Spec 保存成功",
+  "droid.specs.unsavedChanges": "您有未保存的更改，是否放弃？",
+  "droid.specs.discardChanges": "放弃更改",
 
   "mcp.title": "MCP 服务器管理",
   "mcp.noServers": "未配置 MCP 服务器",

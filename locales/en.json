@@ -219,6 +219,13 @@
   "droid.specs.deleteDescription": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
   "droid.specs.deleteSuccess": "Spec deleted successfully",
   "droid.specs.exportSuccess": "Spec exported successfully",
+  "droid.specs.copyAll": "Copy All",
+  "droid.specs.copySuccess": "Spec content copied",
+  "droid.specs.editMode": "Edit",
+  "droid.specs.viewMode": "View",
+  "droid.specs.saveSuccess": "Spec saved successfully",
+  "droid.specs.unsavedChanges": "You have unsaved changes. Do you want to discard them?",
+  "droid.specs.discardChanges": "Discard Changes",
 
   "mcp.title": "MCP Server Management",
   "mcp.noServers": "No MCP servers configured",

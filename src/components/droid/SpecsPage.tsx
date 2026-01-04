@@ -8,15 +8,20 @@ import {
   Pencil,
   Download,
   Trash2,
+  Copy,
+  Save,
+  X,
 } from 'lucide-react'
 import { Streamdown } from 'streamdown'
 import { listen } from '@tauri-apps/api/event'
 import { save } from '@tauri-apps/plugin-dialog'
 import { writeTextFile } from '@tauri-apps/plugin-fs'
+import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -84,6 +89,14 @@ export function SpecsPage() {
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteSpec, setDeleteSpec] = useState<SpecFile | null>(null)
+
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editContent, setEditContent] = useState('')
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
+  const [pendingSpecChange, setPendingSpecChange] = useState<SpecFile | null>(
+    null
+  )
 
   const loadSpecs = useCallback(async () => {
     setLoading(true)
@@ -241,6 +254,90 @@ export function SpecsPage() {
     }
   }
 
+  // Copy handler
+  const handleCopy = async (content: string) => {
+    try {
+      await writeText(content)
+      toast.success(t('droid.specs.copySuccess'))
+    } catch (err) {
+      toast.error(String(err))
+    }
+  }
+
+  // Edit mode handlers
+  const hasUnsavedChanges =
+    isEditing && selectedSpec && editContent !== selectedSpec.content
+
+  const handleEditClick = () => {
+    if (selectedSpec) {
+      setEditContent(selectedSpec.content)
+      setIsEditing(true)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    if (hasUnsavedChanges) {
+      setDiscardDialogOpen(true)
+    } else {
+      setIsEditing(false)
+      setEditContent('')
+    }
+  }
+
+  const handleDiscardConfirm = () => {
+    setIsEditing(false)
+    setEditContent('')
+    setDiscardDialogOpen(false)
+    // If there's a pending spec change, apply it
+    if (pendingSpecChange) {
+      setSelectedSpec(pendingSpecChange)
+      setPendingSpecChange(null)
+    }
+  }
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!selectedSpec) return
+
+    try {
+      const result = await commands.updateSpec(selectedSpec.path, editContent)
+      if (result.status === 'ok') {
+        toast.success(t('droid.specs.saveSuccess'))
+        setSelectedSpec(result.data)
+        setIsEditing(false)
+        setEditContent('')
+        loadSpecs()
+      } else {
+        toast.error(result.error)
+      }
+    } catch (err) {
+      toast.error(String(err))
+    }
+  }, [selectedSpec, editContent, loadSpecs, t])
+
+  // Handle spec selection with unsaved changes check
+  const handleSpecSelect = (spec: SpecFile) => {
+    if (hasUnsavedChanges) {
+      setPendingSpecChange(spec)
+      setDiscardDialogOpen(true)
+    } else {
+      setSelectedSpec(spec)
+      setIsEditing(false)
+      setEditContent('')
+    }
+  }
+
+  // Keyboard shortcut for save (Ctrl+S / Cmd+S)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's' && isEditing) {
+        e.preventDefault()
+        handleSaveEdit()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isEditing, handleSaveEdit])
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-4 border-b">
@@ -280,7 +377,7 @@ export function SpecsPage() {
                   <ContextMenu key={spec.path}>
                     <ContextMenuTrigger asChild>
                       <button
-                        onClick={() => setSelectedSpec(spec)}
+                        onClick={() => handleSpecSelect(spec)}
                         className={cn(
                           'w-full text-start p-2 rounded-md hover:bg-accent transition-colors',
                           selectedSpec?.path === spec.path && 'bg-accent'
@@ -323,19 +420,73 @@ export function SpecsPage() {
         <div className="flex-1 flex flex-col">
           {selectedSpec ? (
             <>
-              <div className="p-4 border-b">
-                <h2 className="font-medium">{selectedSpec.name}</h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formatDate(selectedSpec.modifiedAt)}
-                </p>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="p-4 px-6">
-                  <Streamdown shikiTheme={shikiTheme}>
-                    {selectedSpec.content}
-                  </Streamdown>
+              <div className="p-4 border-b flex items-center justify-between">
+                <div>
+                  <h2 className="font-medium">{selectedSpec.name}</h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDate(selectedSpec.modifiedAt)}
+                  </p>
                 </div>
-              </ScrollArea>
+                <div className="flex items-center gap-2">
+                  {isEditing ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={handleCancelEdit}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        {t('common.cancel')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={handleSaveEdit}
+                        disabled={!hasUnsavedChanges}
+                      >
+                        <Save className="h-4 w-4 mr-1" />
+                        {t('common.save')}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopy(selectedSpec.content)}
+                      >
+                        <Copy className="h-4 w-4 mr-1" />
+                        {t('droid.specs.copyAll')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleEditClick}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        {t('droid.specs.editMode')}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+              {isEditing ? (
+                <Textarea
+                  value={editContent}
+                  onChange={e => setEditContent(e.target.value)}
+                  className="flex-1 resize-none rounded-none border-0 font-mono text-sm p-4"
+                  placeholder="Enter spec content..."
+                />
+              ) : (
+                <ScrollArea className="flex-1">
+                  <div className="p-4 px-6 select-text">
+                    <Streamdown shikiTheme={shikiTheme}>
+                      {selectedSpec.content}
+                    </Streamdown>
+                  </div>
+                </ScrollArea>
+              )}
             </>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -391,6 +542,26 @@ export function SpecsPage() {
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>
               {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Discard Changes Confirmation Dialog */}
+      <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('droid.specs.discardChanges')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('droid.specs.unsavedChanges')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDiscardConfirm}>
+              {t('droid.specs.discardChanges')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

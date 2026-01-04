@@ -543,6 +543,17 @@ async deleteSpec(path: string) : Promise<Result<null, string>> {
 }
 },
 /**
+ * Updates a spec file content.
+ */
+async updateSpec(path: string, content: string) : Promise<Result<SpecFile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_spec", { path, content }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Starts watching the specs directory for changes.
  * Emits "specs-changed" event when files are added, modified, or removed.
  */

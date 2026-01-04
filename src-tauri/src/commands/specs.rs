@@ -242,6 +242,36 @@ pub async fn delete_spec(path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Updates a spec file content.
+#[tauri::command]
+#[specta::specta]
+pub async fn update_spec(path: String, content: String) -> Result<SpecFile, String> {
+    log::debug!("Updating spec file: {path}");
+
+    let specs_dir = get_specs_dir()?;
+    let path_buf = PathBuf::from(&path);
+
+    // Security check: ensure the file is in specs directory
+    if !path_buf.starts_with(&specs_dir) {
+        return Err("Invalid file path".to_string());
+    }
+
+    if !path_buf.exists() {
+        return Err("Spec file not found".to_string());
+    }
+
+    // Write the new content
+    fs::write(&path_buf, &content).map_err(|e| {
+        log::error!("Failed to write spec file: {e}");
+        format!("Failed to write file: {e}")
+    })?;
+
+    log::info!("Updated spec file: {path}");
+
+    // Return updated spec file
+    read_spec(path).await
+}
+
 /// State for the specs file watcher
 pub struct SpecsWatcherState(pub Mutex<Option<RecommendedWatcher>>);
 

@@ -55,6 +55,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         specs::read_spec,
         specs::rename_spec,
         specs::delete_spec,
+        specs::update_spec,
         specs::start_specs_watcher,
         specs::stop_specs_watcher,
         mcp::load_mcp_servers,

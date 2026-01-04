@@ -38,7 +38,9 @@
   /* Allow text selection in specific areas */
   input,
   textarea,
-  [contenteditable='true'] {
+  [contenteditable='true'],
+  .select-text,
+  .select-text * {
     user-select: text !important;
     -webkit-user-select: text !important;
     -moz-user-select: text !important;
@@ -55,5 +57,15 @@
   *[data-tauri-drag-region] {
     -webkit-app-region: drag;
     app-region: drag;
+  }
+
+  /* Streamdown code block overflow fix */
+  [data-streamdown='pre'] {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  [data-streamdown='code'] {
+    word-break: break-word;
   }
 }
