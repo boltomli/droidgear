@@ -66,7 +66,7 @@ jobs:
         run: |
           VERSION="${{ github.ref_name || inputs.version }}"
           # Extract changelog for current version (between ## vX.Y.Z and next ## vX.Y.Z)
-          NOTES=$(awk "/^## ${VERSION}/,/^## v[0-9]/" CHANGELOG.md | head -n -1)
+          NOTES=$(awk "/^## ${VERSION}/,/^## v[0-9]/" CHANGELOG.md | sed '$d')
           # If no next version found, get everything from current version to end
           if [ -z "$NOTES" ]; then
             NOTES=$(awk "/^## ${VERSION}/,0" CHANGELOG.md)
