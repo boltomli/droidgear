@@ -409,6 +409,18 @@
   "opencode.provider.testConnection": "Test Connection",
   "opencode.provider.testSuccess": "Connection successful",
   "opencode.provider.testFailed": "Connection failed",
+  "opencode.provider.load": "Load",
+  "opencode.provider.loadFromConfig": "Load providers from current OpenCode configuration",
+  "opencode.provider.importTitle": "Import Providers",
+  "opencode.provider.importDescription": "Select providers to import from your OpenCode configuration",
+  "opencode.provider.mergeStrategy": "Merge Strategy",
+  "opencode.provider.strategySkip": "Skip Duplicates",
+  "opencode.provider.strategyReplace": "Replace Duplicates",
+  "opencode.provider.conflict": "Conflict",
+  "opencode.provider.conflictWarning": "{{count}} provider(s) conflict with existing providers",
+  "opencode.provider.noProvidersToImport": "No providers found in configuration",
+  "opencode.provider.importCount": "Import ({{count}})",
+  "opencode.provider.importSuccess": "Providers imported successfully",
 
   "opencode.config.status": "Target Configuration Status",
 

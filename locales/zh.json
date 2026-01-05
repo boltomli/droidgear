@@ -409,6 +409,18 @@
   "opencode.provider.testConnection": "测试连接",
   "opencode.provider.testSuccess": "连接成功",
   "opencode.provider.testFailed": "连接失败",
+  "opencode.provider.load": "加载",
+  "opencode.provider.loadFromConfig": "从当前 OpenCode 配置加载 Provider",
+  "opencode.provider.importTitle": "导入 Provider",
+  "opencode.provider.importDescription": "选择要从 OpenCode 配置导入的 Provider",
+  "opencode.provider.mergeStrategy": "合并策略",
+  "opencode.provider.strategySkip": "跳过重复",
+  "opencode.provider.strategyReplace": "替换重复",
+  "opencode.provider.conflict": "冲突",
+  "opencode.provider.conflictWarning": "{{count}} 个 Provider 与现有配置冲突",
+  "opencode.provider.noProvidersToImport": "配置中未找到 Provider",
+  "opencode.provider.importCount": "导入 ({{count}})",
+  "opencode.provider.importSuccess": "Provider 导入成功",
 
   "opencode.config.status": "目标配置状态",
 

@@ -67,8 +67,8 @@ export function ProviderDialog({
         setBaseUrl(config?.options?.baseUrl ?? '')
         setTimeout(config?.options?.timeout?.toString() ?? '')
         setApiKey(
-          auth && typeof auth === 'object' && 'apiKey' in auth
-            ? String(auth.apiKey)
+          auth && typeof auth === 'object' && 'key' in auth
+            ? String(auth.key)
             : ''
         )
       } else {
@@ -127,7 +127,7 @@ export function ProviderDialog({
       },
     }
 
-    const auth = apiKey.trim() ? { apiKey: apiKey.trim() } : undefined
+    const auth = apiKey.trim() ? { type: 'api', key: apiKey.trim() } : undefined
 
     if (isEditing) {
       updateProvider(providerId, config, auth)

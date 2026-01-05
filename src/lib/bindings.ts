@@ -711,6 +711,7 @@ async getActiveOpencodeProfileId() : Promise<Result<string | null, string>> {
 },
 /**
  * Apply a profile to OpenCode config files (merge write)
+ * Supports both .json and .jsonc files, preferring .jsonc when both exist
  */
 async applyOpencodeProfile(id: string) : Promise<Result<null, string>> {
     try {
@@ -722,6 +723,7 @@ async applyOpencodeProfile(id: string) : Promise<Result<null, string>> {
 },
 /**
  * Get OpenCode config status
+ * Returns actual file paths, preferring .jsonc over .json when both exist
  */
 async getOpencodeConfigStatus() : Promise<Result<OpenCodeConfigStatus, string>> {
     try {
@@ -748,6 +750,19 @@ async getOpencodeProviderTemplates() : Promise<Result<ProviderTemplate[], string
 async testOpencodeProviderConnection(providerId: string, baseUrl: string, apiKey: string) : Promise<Result<boolean, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("test_opencode_provider_connection", { providerId, baseUrl, apiKey }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Read current OpenCode configuration from config files
+ * Returns providers from opencode.json/jsonc and auth from auth.json/jsonc
+ * Also extracts apiKey from provider.options.apiKey if auth.json doesn't have it
+ */
+async readOpencodeCurrentConfig() : Promise<Result<OpenCodeCurrentConfig, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("read_opencode_current_config") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -963,6 +978,10 @@ export type ModelInfo = { id: string; name: string | null }
  * Configuration status
  */
 export type OpenCodeConfigStatus = { configExists: boolean; authExists: boolean; configPath: string; authPath: string }
+/**
+ * Current OpenCode configuration (providers and auth from config files)
+ */
+export type OpenCodeCurrentConfig = { providers: Partial<{ [key in string]: OpenCodeProviderConfig }>; auth: Partial<{ [key in string]: JsonValue }> }
 /**
  * OpenCode Profile
  */

@@ -43,6 +43,11 @@ interface OpenCodeState {
     auth?: JsonValue
   ) => void
   deleteProvider: (id: string) => void
+  importProviders: (
+    providers: Record<string, OpenCodeProviderConfig | undefined>,
+    auth: Record<string, JsonValue | undefined>,
+    strategy: 'skip' | 'replace'
+  ) => void
   resetChanges: () => void
   setError: (error: string | null) => void
 }
@@ -382,6 +387,45 @@ export const useOpenCodeStore = create<OpenCodeState>()(
           },
           undefined,
           'deleteProvider'
+        )
+      },
+
+      importProviders: (providers, auth, strategy) => {
+        set(
+          state => {
+            if (!state.currentProfile) return {}
+
+            const newProviders = { ...state.currentProfile.providers }
+            const newAuth = { ...state.currentProfile.auth }
+
+            for (const [id, config] of Object.entries(providers)) {
+              if (!config) continue
+              const exists = id in state.currentProfile.providers
+              if (exists && strategy === 'skip') continue
+              // Replace or add new
+              newProviders[id] = config
+            }
+
+            for (const [id, authValue] of Object.entries(auth)) {
+              if (authValue === undefined) continue
+              const exists = id in state.currentProfile.auth
+              if (exists && strategy === 'skip') continue
+              // Replace or add new
+              newAuth[id] = authValue
+            }
+
+            const updated = {
+              ...state.currentProfile,
+              providers: newProviders,
+              auth: newAuth,
+            }
+            return {
+              currentProfile: updated,
+              hasChanges: !profilesEqual(updated, state.originalProfile),
+            }
+          },
+          undefined,
+          'importProviders'
         )
       },
 

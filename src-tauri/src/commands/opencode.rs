@@ -2,11 +2,13 @@
 //!
 //! Handles Profile CRUD and applying profiles to OpenCode config files.
 
+use json_comments::StripComments;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use specta::Type;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 // ============================================================================
@@ -74,6 +76,14 @@ pub struct ProviderTemplate {
     pub requires_api_key: bool,
 }
 
+/// Current OpenCode configuration (providers and auth from config files)
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenCodeCurrentConfig {
+    pub providers: HashMap<String, OpenCodeProviderConfig>,
+    pub auth: HashMap<String, Value>,
+}
+
 // ============================================================================
 // Path Helpers
 // ============================================================================
@@ -100,26 +110,54 @@ fn get_active_profile_path() -> Result<PathBuf, String> {
     Ok(dir.join("active-profile.txt"))
 }
 
-/// Gets ~/.config/opencode/opencode.json
-fn get_opencode_config_path() -> Result<PathBuf, String> {
+/// Gets ~/.config/opencode/ directory
+fn get_opencode_config_dir() -> Result<PathBuf, String> {
     let home = dirs::home_dir().ok_or("Failed to get home directory")?;
     let dir = home.join(".config").join("opencode");
     if !dir.exists() {
         std::fs::create_dir_all(&dir)
             .map_err(|e| format!("Failed to create opencode config directory: {e}"))?;
     }
-    Ok(dir.join("opencode.json"))
+    Ok(dir)
 }
 
-/// Gets ~/.local/share/opencode/auth.json
-fn get_opencode_auth_path() -> Result<PathBuf, String> {
+/// Gets ~/.local/share/opencode/ directory
+fn get_opencode_auth_dir() -> Result<PathBuf, String> {
     let home = dirs::home_dir().ok_or("Failed to get home directory")?;
     let dir = home.join(".local").join("share").join("opencode");
     if !dir.exists() {
         std::fs::create_dir_all(&dir)
             .map_err(|e| format!("Failed to create opencode auth directory: {e}"))?;
     }
-    Ok(dir.join("auth.json"))
+    Ok(dir)
+}
+
+/// Resolves actual config file path, preferring .jsonc over .json
+/// Returns (actual_path, default_path_if_none_exists)
+/// If .jsonc exists, returns .jsonc path
+/// If only .json exists, returns .json path
+/// If neither exists, returns .json path (default for new files)
+fn resolve_config_file(dir: &Path, base_name: &str) -> PathBuf {
+    let jsonc_path = dir.join(format!("{base_name}.jsonc"));
+    let json_path = dir.join(format!("{base_name}.json"));
+
+    if jsonc_path.exists() {
+        jsonc_path
+    } else {
+        json_path
+    }
+}
+
+/// Gets the actual opencode config file path (prefers .jsonc over .json)
+fn get_opencode_config_path() -> Result<PathBuf, String> {
+    let dir = get_opencode_config_dir()?;
+    Ok(resolve_config_file(&dir, "opencode"))
+}
+
+/// Gets the actual opencode auth file path (prefers .jsonc over .json)
+fn get_opencode_auth_path() -> Result<PathBuf, String> {
+    let dir = get_opencode_auth_dir()?;
+    Ok(resolve_config_file(&dir, "auth"))
 }
 
 /// Atomic write helper
@@ -132,15 +170,29 @@ fn atomic_write(path: &PathBuf, content: &str) -> Result<(), String> {
     })
 }
 
-/// Read JSON file or return empty object
+/// Read JSON/JSONC file or return empty object
+/// Supports JSONC format (JSON with // and /* */ comments)
 fn read_json_file(path: &PathBuf) -> Value {
     if !path.exists() {
         return serde_json::json!({});
     }
-    std::fs::read_to_string(path)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or(serde_json::json!({}))
+
+    let content = match std::fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(_) => return serde_json::json!({}),
+    };
+
+    // Use StripComments to remove // and /* */ comments before parsing
+    let stripped = StripComments::new(content.as_bytes());
+    let mut buf = String::new();
+    if std::io::BufReader::new(stripped)
+        .read_to_string(&mut buf)
+        .is_err()
+    {
+        return serde_json::json!({});
+    }
+
+    serde_json::from_str(&buf).unwrap_or(serde_json::json!({}))
 }
 
 // ============================================================================
@@ -294,12 +346,13 @@ pub async fn get_active_opencode_profile_id() -> Result<Option<String>, String> 
 }
 
 /// Apply a profile to OpenCode config files (merge write)
+/// Supports both .json and .jsonc files, preferring .jsonc when both exist
 #[tauri::command]
 #[specta::specta]
 pub async fn apply_opencode_profile(id: String) -> Result<(), String> {
     let profile = get_opencode_profile(id.clone()).await?;
 
-    // 1. Merge providers into opencode.json
+    // 1. Merge providers into opencode config (json or jsonc)
     let config_path = get_opencode_config_path()?;
     let mut config = read_json_file(&config_path);
 
@@ -326,7 +379,7 @@ pub async fn apply_opencode_profile(id: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to serialize config: {e}"))?;
     atomic_write(&config_path, &config_content)?;
 
-    // 2. Merge auth into auth.json
+    // 2. Merge auth into auth config (json or jsonc)
     let auth_path = get_opencode_auth_path()?;
     let mut auth = read_json_file(&auth_path);
 
@@ -355,6 +408,7 @@ pub async fn apply_opencode_profile(id: String) -> Result<(), String> {
 // ============================================================================
 
 /// Get OpenCode config status
+/// Returns actual file paths, preferring .jsonc over .json when both exist
 #[tauri::command]
 #[specta::specta]
 pub async fn get_opencode_config_status() -> Result<OpenCodeConfigStatus, String> {
@@ -414,4 +468,81 @@ pub async fn test_opencode_provider_connection(
         Ok(resp) => Ok(resp.status().is_success()),
         Err(e) => Err(format!("Connection failed: {e}")),
     }
+}
+
+/// Read current OpenCode configuration from config files
+/// Returns providers from opencode.json/jsonc and auth from auth.json/jsonc
+/// Also extracts apiKey from provider.options.apiKey if auth.json doesn't have it
+#[tauri::command]
+#[specta::specta]
+pub async fn read_opencode_current_config() -> Result<OpenCodeCurrentConfig, String> {
+    // Read providers from opencode config (as raw JSON to preserve all fields)
+    let config_path = get_opencode_config_path()?;
+    let config = read_json_file(&config_path);
+    let provider_value = config.get("provider").cloned().unwrap_or(serde_json::json!({}));
+
+    // Normalize provider options: convert baseURL to baseUrl for consistency
+    let normalized_provider = normalize_provider_options(&provider_value);
+
+    let providers: HashMap<String, OpenCodeProviderConfig> =
+        serde_json::from_value(normalized_provider.clone()).unwrap_or_default();
+
+    // Read auth from auth config
+    let auth_path = get_opencode_auth_path()?;
+    let auth_value = read_json_file(&auth_path);
+    let mut auth: HashMap<String, Value> = auth_value
+        .as_object()
+        .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+        .unwrap_or_default();
+
+    // Extract apiKey from provider.options.apiKey if auth doesn't have it
+    if let Some(provider_obj) = normalized_provider.as_object() {
+        for (provider_id, provider_config) in provider_obj {
+            if auth.contains_key(provider_id) {
+                continue;
+            }
+            // Check for apiKey in options
+            if let Some(api_key) = provider_config
+                .get("options")
+                .and_then(|opts| opts.get("apiKey"))
+                .and_then(|k| k.as_str())
+            {
+                if !api_key.is_empty() {
+                    auth.insert(
+                        provider_id.clone(),
+                        serde_json::json!({
+                            "type": "api",
+                            "key": api_key
+                        }),
+                    );
+                }
+            }
+        }
+    }
+
+    log::info!(
+        "Read {} providers and {} auth entries from OpenCode config",
+        providers.len(),
+        auth.len()
+    );
+
+    Ok(OpenCodeCurrentConfig { providers, auth })
+}
+
+/// Normalize provider options: convert baseURL to baseUrl for consistency
+fn normalize_provider_options(provider_value: &Value) -> Value {
+    let mut result = provider_value.clone();
+    if let Some(providers) = result.as_object_mut() {
+        for (_provider_id, provider_config) in providers.iter_mut() {
+            if let Some(options) = provider_config.get_mut("options") {
+                if let Some(options_obj) = options.as_object_mut() {
+                    // Convert baseURL to baseUrl
+                    if let Some(base_url) = options_obj.remove("baseURL") {
+                        options_obj.insert("baseUrl".to_string(), base_url);
+                    }
+                }
+            }
+        }
+    }
+    result
 }

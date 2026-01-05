@@ -8,6 +8,7 @@ import {
   Play,
   Copy,
   Trash2,
+  FolderInput,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -42,7 +43,15 @@ import {
 import { useOpenCodeStore } from '@/store/opencode-store'
 import { ProviderCard } from './ProviderCard'
 import { ProviderDialog } from './ProviderDialog'
+import { ProviderImportDialog } from './ProviderImportDialog'
+import type { ImportMergeStrategy } from './ProviderImportDialog'
 import { ConfigStatus } from './ConfigStatus'
+import {
+  commands,
+  type OpenCodeCurrentConfig,
+  type OpenCodeProviderConfig,
+  type JsonValue,
+} from '@/lib/bindings'
 
 export function OpenCodeConfigPage() {
   const { t } = useTranslation()
@@ -75,6 +84,7 @@ export function OpenCodeConfigPage() {
   const deleteProvider = useOpenCodeStore(state => state.deleteProvider)
   const resetChanges = useOpenCodeStore(state => state.resetChanges)
   const setError = useOpenCodeStore(state => state.setError)
+  const importProviders = useOpenCodeStore(state => state.importProviders)
 
   const [providerDialogOpen, setProviderDialogOpen] = useState(false)
   const [editingProviderId, setEditingProviderId] = useState<string | null>(
@@ -88,10 +98,16 @@ export function OpenCodeConfigPage() {
   const [showDuplicateProfileDialog, setShowDuplicateProfileDialog] =
     useState(false)
   const [newProfileName, setNewProfileName] = useState('')
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importConfig, setImportConfig] =
+    useState<OpenCodeCurrentConfig | null>(null)
 
   useEffect(() => {
-    loadProfiles()
-    loadActiveProfileId()
+    const init = async () => {
+      await loadProfiles()
+      await loadActiveProfileId()
+    }
+    init()
     loadConfigStatus()
     loadProviderTemplates()
   }, [
@@ -152,6 +168,35 @@ export function OpenCodeConfigPage() {
       deleteProvider(deleteProviderId)
       setDeleteProviderId(null)
     }
+  }
+
+  const handleLoadFromConfig = async () => {
+    try {
+      const result = await commands.readOpencodeCurrentConfig()
+      if (result.status === 'ok') {
+        const config = result.data
+        // Check if there's anything to import
+        if (Object.keys(config.providers).length === 0) {
+          toast.info(t('opencode.provider.noProvidersToImport'))
+          return
+        }
+        setImportConfig(config)
+        setImportDialogOpen(true)
+      } else {
+        toast.error(result.error)
+      }
+    } catch (e) {
+      toast.error(String(e))
+    }
+  }
+
+  const handleImportConfirm = (
+    providers: Record<string, OpenCodeProviderConfig | undefined>,
+    auth: Record<string, JsonValue | undefined>,
+    strategy: ImportMergeStrategy
+  ) => {
+    importProviders(providers, auth, strategy)
+    toast.success(t('opencode.provider.importSuccess'))
   }
 
   const providerEntries = currentProfile
@@ -316,15 +361,27 @@ export function OpenCodeConfigPage() {
             <h2 className="text-lg font-medium">
               {t('opencode.features.providers')}
             </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddProvider}
-              disabled={!currentProfile}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {t('opencode.provider.add')}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLoadFromConfig}
+                disabled={!currentProfile || !configStatus?.configExists}
+                title={t('opencode.provider.loadFromConfig')}
+              >
+                <FolderInput className="h-4 w-4 mr-2" />
+                {t('opencode.provider.load')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddProvider}
+                disabled={!currentProfile}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {t('opencode.provider.add')}
+              </Button>
+            </div>
           </div>
 
           {providerEntries.length === 0 ? (
@@ -358,6 +415,17 @@ export function OpenCodeConfigPage() {
         editingProviderId={editingProviderId}
         currentProfile={currentProfile}
       />
+
+      {/* Provider Import Dialog */}
+      {importConfig && (
+        <ProviderImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          importConfig={importConfig}
+          existingProviderIds={Object.keys(currentProfile?.providers ?? {})}
+          onImport={handleImportConfirm}
+        />
+      )}
 
       {/* Apply Confirmation */}
       <AlertDialog open={showApplyConfirm} onOpenChange={setShowApplyConfirm}>

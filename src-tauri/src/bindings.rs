@@ -75,6 +75,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         opencode::get_opencode_config_status,
         opencode::get_opencode_provider_templates,
         opencode::test_opencode_provider_connection,
+        opencode::read_opencode_current_config,
     ])
 }
 

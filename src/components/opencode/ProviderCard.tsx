@@ -21,7 +21,7 @@ export function ProviderCard({
 }: ProviderCardProps) {
   const { t } = useTranslation()
 
-  const hasApiKey = auth && typeof auth === 'object' && 'apiKey' in auth
+  const hasApiKey = auth && typeof auth === 'object' && 'key' in auth
 
   return (
     <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
