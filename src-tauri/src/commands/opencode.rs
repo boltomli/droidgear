@@ -479,7 +479,10 @@ pub async fn read_opencode_current_config() -> Result<OpenCodeCurrentConfig, Str
     // Read providers from opencode config (as raw JSON to preserve all fields)
     let config_path = get_opencode_config_path()?;
     let config = read_json_file(&config_path);
-    let provider_value = config.get("provider").cloned().unwrap_or(serde_json::json!({}));
+    let provider_value = config
+        .get("provider")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
 
     // Normalize provider options: convert baseURL to baseUrl for consistency
     let normalized_provider = normalize_provider_options(&provider_value);
