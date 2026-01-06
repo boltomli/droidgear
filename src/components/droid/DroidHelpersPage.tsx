@@ -214,6 +214,22 @@ export function DroidHelpersPage() {
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-6">
+          {/* Environment Variable Conflict Warning */}
+          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-md space-y-2">
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              <span className="font-medium">
+                {t('droid.helpers.envConflict.title')}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t('droid.helpers.envConflict.description')}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {t('droid.helpers.envConflict.solution')}
+            </p>
+          </div>
+
           {/* Cloud Session Sync Section */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
