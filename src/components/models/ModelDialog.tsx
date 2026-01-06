@@ -29,6 +29,7 @@ import {
 import {
   containsRegexSpecialChars,
   getDefaultMaxOutputTokens,
+  isOfficialModelName,
 } from '@/lib/utils'
 
 interface ModelDialogProps {
@@ -128,7 +129,12 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
     onSave(newModel)
   }
 
-  const isValid = modelId && baseUrl && apiKey
+  const isValid =
+    modelId &&
+    baseUrl &&
+    apiKey &&
+    !containsRegexSpecialChars(displayName) &&
+    !isOfficialModelName(displayName)
 
   return (
     <>
@@ -228,6 +234,11 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
             {containsRegexSpecialChars(displayName) && (
               <p className="text-sm text-destructive">
                 {t('validation.bracketsNotAllowed')}
+              </p>
+            )}
+            {isOfficialModelName(displayName) && (
+              <p className="text-sm text-destructive">
+                {t('validation.officialModelNameNotAllowed')}
               </p>
             )}
           </div>

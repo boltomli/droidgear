@@ -54,6 +54,7 @@ import {
 import {
   containsRegexSpecialChars,
   getDefaultMaxOutputTokens,
+  isOfficialModelName,
 } from '@/lib/utils'
 
 const channelTypeI18nKeys: Record<ChannelType, string> = {
@@ -455,6 +456,15 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
                                 ) && (
                                   <p className="text-xs text-destructive">
                                     {t('validation.bracketsNotAllowed')}
+                                  </p>
+                                )}
+                                {isOfficialModelName(
+                                  modelConfig?.alias ?? ''
+                                ) && (
+                                  <p className="text-xs text-destructive">
+                                    {t(
+                                      'validation.officialModelNameNotAllowed'
+                                    )}
                                   </p>
                                 )}
                               </div>

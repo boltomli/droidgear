@@ -375,6 +375,7 @@
   "update.failed": "Update failed: There was a problem with the automatic download.\n\n{{error}}",
 
   "validation.bracketsNotAllowed": "Special characters that may affect regex are not recommended and may cause unexpected issues",
+  "validation.officialModelNameNotAllowed": "This name is reserved for official models",
 
   "sidebar.opencode": "OpenCode",
 
