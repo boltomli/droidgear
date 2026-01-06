@@ -183,6 +183,7 @@
   "droid.helpers.skipLogin.manualSetupWindows": "Could not auto-configure. Please add the following line to your PowerShell profile ($PROFILE) manually:",
   "droid.helpers.skipLogin.manualSetupUnix": "Could not detect your shell. Please add the following line to your shell config file (e.g., ~/.zshrc or ~/.bashrc) manually:",
   "droid.helpers.skipLogin.copyCommand": "Copy command",
+  "droid.helpers.skipLogin.toolLimitationHint": "After bypassing login with a Key, some tools (e.g., WebSearch) may not be available. It's recommended to log in with an actual account for full functionality. Use /status in Droid to check current authentication status.",
 
   "droid.helpers.cloudSessionSync.title": "Cloud Session Sync",
   "droid.helpers.cloudSessionSync.description": "When enabled, sessions will be automatically synced to the cloud",

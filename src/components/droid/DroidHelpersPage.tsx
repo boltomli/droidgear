@@ -267,6 +267,12 @@ export function DroidHelpersPage() {
                 {t('droid.helpers.skipLogin.setupButton')}
               </Button>
             </div>
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <p className="text-xs">
+                {t('droid.helpers.skipLogin.toolLimitationHint')}
+              </p>
+            </div>
           </div>
 
           {/* Session Settings Section */}
