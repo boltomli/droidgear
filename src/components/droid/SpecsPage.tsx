@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { BundledTheme } from 'shiki'
 import {
@@ -101,6 +101,21 @@ export function SpecsPage() {
   // Inline rename state (for content header)
   const [isRenamingInline, setIsRenamingInline] = useState(false)
   const [inlineNewName, setInlineNewName] = useState('')
+
+  // Ref for content scroll area
+  const contentScrollRef = useRef<HTMLDivElement>(null)
+
+  // Reset scroll position when selected spec changes
+  useEffect(() => {
+    if (selectedSpec && contentScrollRef.current) {
+      const viewport = contentScrollRef.current.querySelector(
+        '[data-slot="scroll-area-viewport"]'
+      )
+      if (viewport) {
+        viewport.scrollTo(0, 0)
+      }
+    }
+  }, [selectedSpec])
 
   const loadSpecs = useCallback(async () => {
     setLoading(true)
@@ -545,7 +560,7 @@ export function SpecsPage() {
                   placeholder="Enter spec content..."
                 />
               ) : (
-                <ScrollArea className="flex-1 min-w-0">
+                <ScrollArea ref={contentScrollRef} className="flex-1 min-w-0">
                   <div className="p-4 px-6 select-text">
                     <Streamdown shikiTheme={shikiTheme}>
                       {selectedSpec.content}
