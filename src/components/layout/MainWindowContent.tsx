@@ -7,6 +7,7 @@ import {
   SpecsPage,
   McpPage,
   SessionsPage,
+  TerminalPage,
 } from '@/components/droid'
 import { OpenCodeConfigPage } from '@/components/opencode'
 import { ChannelDetail, ChannelDialog } from '@/components/channels'
@@ -63,6 +64,9 @@ export function MainWindowContent({
       }
       if (droidSubView === 'sessions') {
         return <SessionsPage />
+      }
+      if (droidSubView === 'terminal') {
+        return <TerminalPage />
       }
       return <DroidHelpersPage />
     }

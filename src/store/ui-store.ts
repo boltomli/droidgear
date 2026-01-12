@@ -3,7 +3,13 @@ import { devtools, persist } from 'zustand/middleware'
 
 type NavigationView = 'droid' | 'channels' | 'opencode'
 type ToolView = 'droid' | 'opencode'
-export type DroidSubView = 'models' | 'helpers' | 'specs' | 'mcp' | 'sessions'
+export type DroidSubView =
+  | 'models'
+  | 'helpers'
+  | 'specs'
+  | 'mcp'
+  | 'sessions'
+  | 'terminal'
 export type OpenCodeSubView = 'providers'
 
 export interface PendingUpdate {

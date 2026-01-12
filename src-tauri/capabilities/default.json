@@ -25,6 +25,7 @@
     "notification:default",
     "process:default",
     "os:default",
-    "global-shortcut:default"
+    "global-shortcut:default",
+    "pty:default"
   ]
 }

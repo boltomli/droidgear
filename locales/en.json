@@ -169,6 +169,7 @@
   "droid.features.specs": "Specs",
   "droid.features.mcp": "MCP Servers",
   "droid.features.sessions": "Sessions",
+  "droid.features.terminal": "Terminal",
   "droid.helpers.title": "Helpers",
   "droid.helpers.envConflict.title": "Environment Variable Conflict",
   "droid.helpers.envConflict.description": "If you're using Claude Code and encounter 401 errors with custom models, it may be caused by the ANTHROPIC_AUTH_TOKEN environment variable conflicting with your custom model's API key.",
@@ -242,6 +243,15 @@
   "droid.sessions.followModeOff": "Click to follow new messages",
   "droid.sessions.expandThinkingOn": "Thinking expanded by default",
   "droid.sessions.expandThinkingOff": "Click to expand thinking by default",
+
+  "droid.terminal.title": "Terminal",
+  "droid.terminal.newTerminal": "New Terminal",
+  "droid.terminal.newTerminalInDir": "New Terminal in Directory",
+  "droid.terminal.selectDirectory": "Select Directory",
+  "droid.terminal.noTerminals": "No terminals open",
+  "droid.terminal.selectOrCreate": "Select a terminal or create a new one",
+  "droid.terminal.rename": "Rename",
+  "droid.terminal.close": "Close",
 
   "mcp.title": "MCP Server Management",
   "mcp.noServers": "No MCP servers configured",

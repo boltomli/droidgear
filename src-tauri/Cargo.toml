@@ -40,6 +40,7 @@ notify = { version = "6", default-features = false, features = ["macos_fsevent"]
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
 json_comments = "0.2"
+tauri-plugin-pty = "0.2.0"
 
 # Type-safe Tauri command bindings
 specta = { version = "=2.0.0-rc.22", features = ["derive", "serde_json"] }

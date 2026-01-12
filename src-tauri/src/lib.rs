@@ -96,6 +96,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_pty::init())
         .manage(commands::specs::SpecsWatcherState(Mutex::new(None)))
         .manage(commands::sessions::SessionsWatcherState(Mutex::new(None)))
         .setup(|app| {

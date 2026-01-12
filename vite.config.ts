@@ -22,6 +22,10 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'tauri-pty': path.resolve(
+        __dirname,
+        './node_modules/tauri-pty/dist/index.es.js'
+      ),
     },
   },
   build: {
