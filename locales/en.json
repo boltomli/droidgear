@@ -168,6 +168,7 @@
   "droid.features.helpers": "Helpers",
   "droid.features.specs": "Specs",
   "droid.features.mcp": "MCP Servers",
+  "droid.features.sessions": "Sessions",
   "droid.helpers.title": "Helpers",
   "droid.helpers.envConflict.title": "Environment Variable Conflict",
   "droid.helpers.envConflict.description": "If you're using Claude Code and encounter 401 errors with custom models, it may be caused by the ANTHROPIC_AUTH_TOKEN environment variable conflicting with your custom model's API key.",
@@ -230,6 +231,15 @@
   "droid.specs.saveSuccess": "Spec saved successfully",
   "droid.specs.unsavedChanges": "You have unsaved changes. Do you want to discard them?",
   "droid.specs.discardChanges": "Discard Changes",
+
+  "droid.sessions.title": "Sessions",
+  "droid.sessions.noSessions": "No sessions found",
+  "droid.sessions.selectSessionHint": "Select a session from the list to view",
+  "droid.sessions.listView": "List View",
+  "droid.sessions.groupedView": "Grouped by Project",
+  "droid.sessions.thinking": "Thinking...",
+  "droid.sessions.followModeOn": "Following (auto-scroll)",
+  "droid.sessions.followModeOff": "Click to follow new messages",
 
   "mcp.title": "MCP Server Management",
   "mcp.noServers": "No MCP servers configured",

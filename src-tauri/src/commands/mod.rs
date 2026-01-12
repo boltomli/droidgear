@@ -12,4 +12,5 @@ pub mod opencode;
 pub mod preferences;
 pub mod quick_pane;
 pub mod recovery;
+pub mod sessions;
 pub mod specs;

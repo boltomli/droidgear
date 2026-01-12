@@ -3,7 +3,7 @@ use tauri_specta::{collect_commands, Builder};
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
         channel, config, env, mcp, notifications, opencode, preferences, quick_pane, recovery,
-        specs,
+        sessions, specs,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -76,6 +76,11 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         opencode::get_opencode_provider_templates,
         opencode::test_opencode_provider_connection,
         opencode::read_opencode_current_config,
+        sessions::list_session_projects,
+        sessions::list_sessions,
+        sessions::get_session_detail,
+        sessions::start_sessions_watcher,
+        sessions::stop_sessions_watcher,
     ])
 }
 

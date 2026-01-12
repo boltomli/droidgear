@@ -767,6 +767,61 @@ async readOpencodeCurrentConfig() : Promise<Result<OpenCodeCurrentConfig, string
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Lists all session projects from ~/.factory/sessions directory.
+ */
+async listSessionProjects() : Promise<Result<SessionProject[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_session_projects") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Lists all sessions, optionally filtered by project.
+ */
+async listSessions(project: string | null) : Promise<Result<SessionSummary[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_sessions", { project }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Gets detailed session information including messages.
+ */
+async getSessionDetail(sessionPath: string) : Promise<Result<SessionDetail, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_session_detail", { sessionPath }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Starts watching the sessions directory for changes.
+ */
+async startSessionsWatcher() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_sessions_watcher") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Stops watching the sessions directory.
+ */
+async stopSessionsWatcher() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_sessions_watcher") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -873,6 +928,10 @@ platform: string | null }
  * Channel types supported
  */
 export type ChannelType = "new-api" | "sub-2-api"
+/**
+ * Message content block
+ */
+export type ContentBlock = { type: string; text?: string | null; thinking?: string | null }
 /**
  * Custom model configuration
  */
@@ -1027,6 +1086,66 @@ export type RecoveryError =
  */
 { type: "ParseError"; message: string }
 /**
+ * Session detail with messages
+ */
+export type SessionDetail = { id: string; title: string; project: string; model: string; cwd: string; modifiedAt: number; tokenUsage: TokenUsage; messages: SessionMessage[] }
+/**
+ * Session message
+ */
+export type SessionMessage = { id: string; role: string; content: ContentBlock[]; timestamp: string }
+/**
+ * Session project (directory containing sessions)
+ */
+export type SessionProject = { 
+/**
+ * Directory name (e.g., "-Users-sunshow-GIT-sunshow-quickcast-api")
+ */
+name: string; 
+/**
+ * Full path to the directory
+ */
+path: string; 
+/**
+ * Number of sessions in this project
+ */
+sessionCount: number; 
+/**
+ * Last modified timestamp in milliseconds
+ */
+modifiedAt: number }
+/**
+ * Session summary for list view
+ */
+export type SessionSummary = { 
+/**
+ * Session UUID
+ */
+id: string; 
+/**
+ * Session title
+ */
+title: string; 
+/**
+ * Project directory name
+ */
+project: string; 
+/**
+ * Model used
+ */
+model: string; 
+/**
+ * Last modified timestamp in milliseconds
+ */
+modifiedAt: number; 
+/**
+ * Token usage
+ */
+tokenUsage: TokenUsage; 
+/**
+ * Full path to the session files (without extension)
+ */
+path: string }
+/**
  * Spec file metadata
  */
 export type SpecFile = { 
@@ -1046,6 +1165,10 @@ content: string;
  * Last modified timestamp in milliseconds
  */
 modifiedAt: number }
+/**
+ * Token usage statistics
+ */
+export type TokenUsage = { inputTokens: number; outputTokens: number; cacheCreationTokens: number; cacheReadTokens: number; thinkingTokens: number }
 
 /** tauri-specta globals **/
 

@@ -2,7 +2,12 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { ModelConfigPage } from '@/components/models'
-import { DroidHelpersPage, SpecsPage, McpPage } from '@/components/droid'
+import {
+  DroidHelpersPage,
+  SpecsPage,
+  McpPage,
+  SessionsPage,
+} from '@/components/droid'
 import { OpenCodeConfigPage } from '@/components/opencode'
 import { ChannelDetail, ChannelDialog } from '@/components/channels'
 import { useUIStore } from '@/store/ui-store'
@@ -55,6 +60,9 @@ export function MainWindowContent({
       }
       if (droidSubView === 'mcp') {
         return <McpPage />
+      }
+      if (droidSubView === 'sessions') {
+        return <SessionsPage />
       }
       return <DroidHelpersPage />
     }

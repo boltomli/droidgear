@@ -168,6 +168,7 @@
   "droid.features.helpers": "辅助工具",
   "droid.features.specs": "Specs",
   "droid.features.mcp": "MCP 服务器",
+  "droid.features.sessions": "会话",
   "droid.helpers.title": "辅助工具",
   "droid.helpers.envConflict.title": "环境变量冲突",
   "droid.helpers.envConflict.description": "如果您正在使用 Claude Code 并且自定义模型出现 401 错误，可能是因为 ANTHROPIC_AUTH_TOKEN 环境变量与自定义模型的 API Key 产生冲突。",
@@ -230,6 +231,15 @@
   "droid.specs.saveSuccess": "Spec 保存成功",
   "droid.specs.unsavedChanges": "您有未保存的更改，是否放弃？",
   "droid.specs.discardChanges": "放弃更改",
+
+  "droid.sessions.title": "会话",
+  "droid.sessions.noSessions": "没有找到会话",
+  "droid.sessions.selectSessionHint": "从列表中选择一个会话查看",
+  "droid.sessions.listView": "列表视图",
+  "droid.sessions.groupedView": "按项目分组",
+  "droid.sessions.thinking": "思考中...",
+  "droid.sessions.followModeOn": "追踪中（自动滚动）",
+  "droid.sessions.followModeOff": "点击追踪新消息",
 
   "mcp.title": "MCP 服务器管理",
   "mcp.noServers": "未配置 MCP 服务器",
