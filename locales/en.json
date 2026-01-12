@@ -240,6 +240,8 @@
   "droid.sessions.thinking": "Thinking...",
   "droid.sessions.followModeOn": "Following (auto-scroll)",
   "droid.sessions.followModeOff": "Click to follow new messages",
+  "droid.sessions.expandThinkingOn": "Thinking expanded by default",
+  "droid.sessions.expandThinkingOff": "Click to expand thinking by default",
 
   "mcp.title": "MCP Server Management",
   "mcp.noServers": "No MCP servers configured",

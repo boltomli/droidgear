@@ -12,6 +12,7 @@ import {
   User,
   Bot,
   ArrowDownToLine,
+  Brain,
 } from 'lucide-react'
 import { Streamdown } from 'streamdown'
 import { listen } from '@tauri-apps/api/event'
@@ -53,6 +54,10 @@ export function SessionsPage() {
     new Set()
   )
   const [followMode, setFollowMode] = useState(false)
+  const [expandThinking, setExpandThinking] = useState(() => {
+    const saved = localStorage.getItem('sessions-expand-thinking')
+    return saved === 'true'
+  })
 
   const [systemPrefersDark, setSystemPrefersDark] = useState(
     () => window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -103,39 +108,20 @@ export function SessionsPage() {
       messageCount > prevMessageCountRef.current &&
       contentScrollRef.current
     ) {
-      const viewport = contentScrollRef.current.querySelector(
-        '[data-slot="scroll-area-viewport"]'
-      )
-      if (viewport) {
-        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' })
-      }
+      // Use setTimeout to ensure DOM is fully rendered before scrolling
+      const timeoutId = setTimeout(() => {
+        const viewport = contentScrollRef.current?.querySelector(
+          '[data-slot="scroll-area-viewport"]'
+        )
+        if (viewport) {
+          viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' })
+        }
+      }, 50)
+      prevMessageCountRef.current = messageCount
+      return () => clearTimeout(timeoutId)
     }
     prevMessageCountRef.current = messageCount
   }, [followMode, messageCount])
-
-  // Handle scroll to detect manual scrolling and disable follow mode
-  const handleScroll = useCallback(
-    (e: Event) => {
-      if (!followMode) return
-      const target = e.target as HTMLElement
-      const isAtBottom =
-        target.scrollHeight - target.scrollTop - target.clientHeight < 50
-      if (!isAtBottom) {
-        setFollowMode(false)
-      }
-    },
-    [followMode]
-  )
-
-  useEffect(() => {
-    const viewport = contentScrollRef.current?.querySelector(
-      '[data-slot="scroll-area-viewport"]'
-    )
-    if (viewport) {
-      viewport.addEventListener('scroll', handleScroll)
-      return () => viewport.removeEventListener('scroll', handleScroll)
-    }
-  }, [handleScroll])
 
   const loadSessions = useCallback(async () => {
     setLoading(true)
@@ -162,22 +148,30 @@ export function SessionsPage() {
     }
   }, [])
 
-  const loadSessionDetail = useCallback(async (path: string) => {
-    setDetailLoading(true)
-    setSelectedSessionPath(path)
-    try {
-      const result = await commands.getSessionDetail(path)
-      if (result.status === 'ok') {
-        setSelectedSession(result.data)
-      } else {
-        setError(result.error)
+  const loadSessionDetail = useCallback(
+    async (path: string, isRefresh = false) => {
+      // Don't show loading when refreshing the same session to avoid unmounting ScrollArea
+      if (!isRefresh) {
+        setDetailLoading(true)
       }
-    } catch (err) {
-      setError(String(err))
-    } finally {
-      setDetailLoading(false)
-    }
-  }, [])
+      setSelectedSessionPath(path)
+      try {
+        const result = await commands.getSessionDetail(path)
+        if (result.status === 'ok') {
+          setSelectedSession(result.data)
+        } else {
+          setError(result.error)
+        }
+      } catch (err) {
+        setError(String(err))
+      } finally {
+        if (!isRefresh) {
+          setDetailLoading(false)
+        }
+      }
+    },
+    []
+  )
 
   // Store selectedSessionPath in a ref for use in event listener
   const selectedSessionPathRef = useRef<string | null>(null)
@@ -195,7 +189,7 @@ export function SessionsPage() {
       loadSessions()
       // Also refresh current session detail if one is selected
       if (selectedSessionPathRef.current) {
-        loadSessionDetail(selectedSessionPathRef.current)
+        loadSessionDetail(selectedSessionPathRef.current, true)
       }
     })
 
@@ -227,6 +221,12 @@ export function SessionsPage() {
         viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' })
       }
     }
+  }
+
+  const handleExpandThinkingToggle = () => {
+    const newExpandThinking = !expandThinking
+    setExpandThinking(newExpandThinking)
+    localStorage.setItem('sessions-expand-thinking', String(newExpandThinking))
   }
 
   const toggleProject = (projectName: string) => {
@@ -375,6 +375,23 @@ export function SessionsPage() {
             </TooltipTrigger>
             <TooltipContent>{t('droid.sessions.groupedView')}</TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={expandThinking ? 'secondary' : 'outline'}
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleExpandThinkingToggle}
+              >
+                <Brain className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {expandThinking
+                ? t('droid.sessions.expandThinkingOn')
+                : t('droid.sessions.expandThinkingOff')}
+            </TooltipContent>
+          </Tooltip>
           <Button
             variant="outline"
             size="sm"
@@ -488,7 +505,10 @@ export function SessionsPage() {
                         {message.content.map((block, idx) => (
                           <div key={idx} className="select-text">
                             {block.type === 'thinking' && block.thinking ? (
-                              <details className="text-xs opacity-70 mb-2">
+                              <details
+                                open={expandThinking}
+                                className="text-xs opacity-70 mb-2"
+                              >
                                 <summary className="cursor-pointer">
                                   {t('droid.sessions.thinking')}
                                 </summary>
