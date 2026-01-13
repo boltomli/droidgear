@@ -140,7 +140,9 @@ export function TerminalPage() {
       title: t('droid.terminal.selectDirectory'),
     })
     if (selected) {
-      createTerminal(undefined, selected as string)
+      const dirPath = selected as string
+      const dirName = dirPath.split(/[/\\]/).filter(Boolean).pop() || undefined
+      createTerminal(dirName, dirPath)
     }
   }
 
