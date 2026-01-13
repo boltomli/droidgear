@@ -11,7 +11,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { spawn, type IPty } from 'tauri-pty'
-import { writeText } from '@tauri-apps/plugin-clipboard-manager'
+import { writeText, readText } from '@tauri-apps/plugin-clipboard-manager'
 import { useTheme } from '@/hooks/use-theme'
 import { platform } from '@tauri-apps/plugin-os'
 import { usePreferences } from '@/services/preferences'
@@ -190,6 +190,42 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       })
 
       ptyRef.current = pty
+
+      // Custom key event handler for special shortcuts
+      terminal.attachCustomKeyEventHandler(event => {
+        if (event.type !== 'keydown') return true
+
+        // Shift+Enter: send newline for multi-line input
+        if (event.key === 'Enter' && event.shiftKey) {
+          pty.write('\n')
+          return false
+        }
+
+        // Ctrl+Shift+C: copy selection (Linux/Windows)
+        if (event.key === 'C' && event.ctrlKey && event.shiftKey) {
+          const selection = terminal.getSelection()
+          if (selection) {
+            writeText(selection).catch(() => {
+              // Ignore clipboard errors
+            })
+          }
+          return false
+        }
+
+        // Ctrl+Shift+V: paste from clipboard (Linux/Windows)
+        if (event.key === 'V' && event.ctrlKey && event.shiftKey) {
+          readText()
+            .then(text => {
+              if (text) pty.write(text)
+            })
+            .catch(() => {
+              // Ignore clipboard errors
+            })
+          return false
+        }
+
+        return true
+      })
 
       // Connect PTY output to terminal
       pty.onData(data => {
