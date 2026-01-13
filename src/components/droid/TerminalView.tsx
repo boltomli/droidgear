@@ -25,7 +25,10 @@ interface TerminalViewProps {
   cwd?: string
   forceDark?: boolean
   copyOnSelect?: boolean
+  prefillCommand?: string
+  autoExecute?: boolean
   onExit?: (exitCode: number) => void
+  onReady?: () => void
 }
 
 export interface TerminalViewRef {
@@ -35,7 +38,16 @@ export interface TerminalViewRef {
 
 export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
   function TerminalView(
-    { terminalId, cwd, forceDark, copyOnSelect, onExit },
+    {
+      terminalId,
+      cwd,
+      forceDark,
+      copyOnSelect,
+      prefillCommand,
+      autoExecute,
+      onExit,
+      onReady,
+    },
     ref
   ) {
     const containerRef = useRef<HTMLDivElement>(null)
@@ -43,9 +55,12 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
     const fitAddonRef = useRef<FitAddon | null>(null)
     const ptyRef = useRef<IPty | null>(null)
     const onExitRef = useRef(onExit)
+    const onReadyRef = useRef(onReady)
     const initialCwdRef = useRef(cwd)
     const initialForceDarkRef = useRef(forceDark)
     const copyOnSelectRef = useRef(copyOnSelect)
+    const initialPrefillCommandRef = useRef(prefillCommand)
+    const initialAutoExecuteRef = useRef(autoExecute)
     const isInitializedRef = useRef(false)
     const { theme } = useTheme()
     const initialThemeRef = useRef(theme)
@@ -87,6 +102,11 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
     useEffect(() => {
       onExitRef.current = onExit
     }, [onExit])
+
+    // Keep onReady ref updated
+    useEffect(() => {
+      onReadyRef.current = onReady
+    }, [onReady])
 
     // Keep copyOnSelect ref updated
     useEffect(() => {
@@ -300,6 +320,25 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
           if (newDims) {
             ptyRef.current.resize(newDims.cols, newDims.rows)
           }
+        }
+
+        // Prefill command after terminal is ready
+        if (initialPrefillCommandRef.current && ptyRef.current) {
+          // Small delay to ensure shell prompt is ready
+          setTimeout(() => {
+            const command = initialPrefillCommandRef.current
+            if (command && ptyRef.current) {
+              ptyRef.current.write(command)
+              if (initialAutoExecuteRef.current) {
+                ptyRef.current.write('\r')
+              }
+            }
+            // Call onReady after prefill command is written
+            onReadyRef.current?.()
+          }, 200)
+        } else {
+          // Call onReady immediately if no prefill command
+          onReadyRef.current?.()
         }
       }, 100)
 

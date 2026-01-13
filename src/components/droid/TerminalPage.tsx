@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
 import { TerminalView, type TerminalViewRef } from './TerminalView'
+import { DerivedTerminalBar } from './DerivedTerminalBar'
 import { useTerminalStore } from '@/store/terminal-store'
 
 export function TerminalPage() {
@@ -53,19 +54,70 @@ export function TerminalPage() {
     state => state.setTerminalCopyOnSelect
   )
 
+  // Derived terminal actions
+  const createDerivedTerminal = useTerminalStore(
+    state => state.createDerivedTerminal
+  )
+  const closeDerivedTerminal = useTerminalStore(
+    state => state.closeDerivedTerminal
+  )
+  const selectDerivedTerminal = useTerminalStore(
+    state => state.selectDerivedTerminal
+  )
+  const setDerivedTerminalNotification = useTerminalStore(
+    state => state.setDerivedTerminalNotification
+  )
+
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
+  // Map key format: terminalId or terminalId:derivedId
   const terminalRefs = useRef<Map<string, TerminalViewRef>>(new Map())
+
+  // Track which derived terminals are newly created (for autoExecute)
+  const [newlyCreatedDerived, setNewlyCreatedDerived] = useState<Set<string>>(
+    new Set()
+  )
+
+  // Track which terminals are ready (for sequential derived terminal rendering)
+  const [readyTerminals, setReadyTerminals] = useState<Set<string>>(new Set())
+
+  // Get the currently selected terminal
+  const selectedTerminal = terminals.find(t => t.id === selectedTerminalId)
+
+  // Helper to check if a derived terminal can be rendered
+  const canRenderDerived = (
+    terminalId: string,
+    derivedTerminals: (typeof terminals)[0]['derivedTerminals'],
+    derivedIndex: number
+  ) => {
+    if (derivedIndex === 0) {
+      // First derived can render when main terminal is ready
+      return readyTerminals.has(terminalId)
+    }
+    // Subsequent derived can render when previous derived is ready
+    const prevDerived = derivedTerminals[derivedIndex - 1]
+    if (!prevDerived) return false
+    return readyTerminals.has(`${terminalId}:${prevDerived.id}`)
+  }
+
+  // Handle terminal ready callback
+  const handleTerminalReady = (refKey: string) => {
+    setReadyTerminals(prev => new Set(prev).add(refKey))
+  }
 
   // Focus terminal when selection changes
   useEffect(() => {
     if (selectedTerminalId) {
+      const terminal = terminals.find(t => t.id === selectedTerminalId)
+      const refKey = terminal?.selectedDerivedId
+        ? `${selectedTerminalId}:${terminal.selectedDerivedId}`
+        : selectedTerminalId
       // Small delay to ensure terminal is visible
       setTimeout(() => {
-        terminalRefs.current.get(selectedTerminalId)?.focus()
+        terminalRefs.current.get(refKey)?.focus()
       }, 50)
     }
-  }, [selectedTerminalId])
+  }, [selectedTerminalId, selectedTerminal?.selectedDerivedId, terminals])
 
   const handleCreateTerminal = () => {
     createTerminal()
@@ -118,6 +170,48 @@ export function TerminalPage() {
       setTerminalNotification(terminalId, true)
     }
     console.log(`Terminal ${terminalId} exited with code ${exitCode}`)
+  }
+
+  const handleDerivedTerminalExit = (
+    parentId: string,
+    derivedId: string,
+    exitCode: number
+  ) => {
+    const terminal = terminals.find(t => t.id === parentId)
+    // Show notification if this derived terminal is not currently selected
+    if (
+      selectedTerminalId !== parentId ||
+      terminal?.selectedDerivedId !== derivedId
+    ) {
+      setDerivedTerminalNotification(parentId, derivedId, true)
+    }
+    console.log(
+      `Derived terminal ${derivedId} of ${parentId} exited with code ${exitCode}`
+    )
+  }
+
+  const handleCreateDerived = (
+    parentId: string,
+    command: string,
+    name?: string
+  ) => {
+    const derivedId = createDerivedTerminal(parentId, command, name)
+    // Mark as newly created for autoExecute
+    setNewlyCreatedDerived(prev => new Set(prev).add(derivedId))
+  }
+
+  const handleCloseDerived = (parentId: string, derivedId: string) => {
+    closeDerivedTerminal(parentId, derivedId)
+    // Clean up from newly created set
+    setNewlyCreatedDerived(prev => {
+      const next = new Set(prev)
+      next.delete(derivedId)
+      return next
+    })
+  }
+
+  const handleSelectDerived = (parentId: string, derivedId: string | null) => {
+    selectDerivedTerminal(parentId, derivedId)
   }
 
   const getStatusIcon = (isSelected: boolean) => {
@@ -272,24 +366,95 @@ export function TerminalPage() {
               <div
                 key={terminal.id}
                 className={cn(
-                  'h-full w-full',
+                  'h-full w-full flex flex-col',
                   terminal.id !== selectedTerminalId && 'hidden'
                 )}
               >
-                <TerminalView
-                  ref={ref => {
-                    if (ref) {
-                      terminalRefs.current.set(terminal.id, ref)
-                    } else {
-                      terminalRefs.current.delete(terminal.id)
-                    }
-                  }}
+                {/* Derived Terminal Bar */}
+                <DerivedTerminalBar
                   terminalId={terminal.id}
-                  cwd={terminal.cwd || undefined}
-                  forceDark={terminalForceDark}
-                  copyOnSelect={terminalCopyOnSelect}
-                  onExit={exitCode => handleTerminalExit(terminal.id, exitCode)}
+                  derivedTerminals={terminal.derivedTerminals}
+                  selectedDerivedId={terminal.selectedDerivedId}
+                  onSelectDerived={derivedId =>
+                    handleSelectDerived(terminal.id, derivedId)
+                  }
+                  onCloseDerived={derivedId =>
+                    handleCloseDerived(terminal.id, derivedId)
+                  }
+                  onCreateDerived={(command, name) =>
+                    handleCreateDerived(terminal.id, command, name)
+                  }
                 />
+
+                {/* Main Terminal */}
+                <div
+                  className={cn(
+                    'flex-1 min-h-0',
+                    terminal.selectedDerivedId !== null && 'hidden'
+                  )}
+                >
+                  <TerminalView
+                    ref={ref => {
+                      if (ref) {
+                        terminalRefs.current.set(terminal.id, ref)
+                      } else {
+                        terminalRefs.current.delete(terminal.id)
+                      }
+                    }}
+                    terminalId={terminal.id}
+                    cwd={terminal.cwd || undefined}
+                    forceDark={terminalForceDark}
+                    copyOnSelect={terminalCopyOnSelect}
+                    onExit={exitCode =>
+                      handleTerminalExit(terminal.id, exitCode)
+                    }
+                    onReady={() => handleTerminalReady(terminal.id)}
+                  />
+                </div>
+
+                {/* Derived Terminals - rendered sequentially */}
+                {terminal.derivedTerminals.map((derived, index) => {
+                  const refKey = `${terminal.id}:${derived.id}`
+                  const canRender = canRenderDerived(
+                    terminal.id,
+                    terminal.derivedTerminals,
+                    index
+                  )
+                  if (!canRender) return null
+                  return (
+                    <div
+                      key={derived.id}
+                      className={cn(
+                        'flex-1 min-h-0',
+                        terminal.selectedDerivedId !== derived.id && 'hidden'
+                      )}
+                    >
+                      <TerminalView
+                        ref={ref => {
+                          if (ref) {
+                            terminalRefs.current.set(refKey, ref)
+                          } else {
+                            terminalRefs.current.delete(refKey)
+                          }
+                        }}
+                        terminalId={derived.id}
+                        cwd={terminal.cwd || undefined}
+                        forceDark={terminalForceDark}
+                        copyOnSelect={terminalCopyOnSelect}
+                        prefillCommand={derived.command}
+                        autoExecute={newlyCreatedDerived.has(derived.id)}
+                        onExit={exitCode =>
+                          handleDerivedTerminalExit(
+                            terminal.id,
+                            derived.id,
+                            exitCode
+                          )
+                        }
+                        onReady={() => handleTerminalReady(refKey)}
+                      />
+                    </div>
+                  )
+                })}
               </div>
             ))
           ) : (

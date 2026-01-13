@@ -1,6 +1,16 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 
+// Derived terminal (child of a main terminal)
+export interface DerivedTerminal {
+  id: string
+  name: string
+  command: string
+  status: 'running' | 'completed'
+  hasNotification: boolean
+  createdAt: number
+}
+
 // Terminal instance managed by frontend
 export interface TerminalInstance {
   id: string
@@ -9,6 +19,8 @@ export interface TerminalInstance {
   status: 'running' | 'completed'
   hasNotification: boolean
   createdAt: number
+  derivedTerminals: DerivedTerminal[]
+  selectedDerivedId: string | null // null = main terminal
 }
 
 interface TerminalState {
@@ -27,6 +39,30 @@ interface TerminalState {
   clearNotification: (id: string) => void
   setTerminalForceDark: (forceDark: boolean) => void
   setTerminalCopyOnSelect: (enabled: boolean) => void
+
+  // Derived terminal actions
+  createDerivedTerminal: (
+    parentId: string,
+    command: string,
+    name?: string
+  ) => string
+  closeDerivedTerminal: (parentId: string, derivedId: string) => void
+  selectDerivedTerminal: (parentId: string, derivedId: string | null) => void
+  renameDerivedTerminal: (
+    parentId: string,
+    derivedId: string,
+    name: string
+  ) => void
+  updateDerivedTerminalStatus: (
+    parentId: string,
+    derivedId: string,
+    status: 'running' | 'completed'
+  ) => void
+  setDerivedTerminalNotification: (
+    parentId: string,
+    derivedId: string,
+    hasNotification: boolean
+  ) => void
 }
 
 let terminalCounter = 0
@@ -59,6 +95,8 @@ export const useTerminalStore = create<TerminalState>()(
             status: 'running',
             hasNotification: false,
             createdAt: Date.now(),
+            derivedTerminals: [],
+            selectedDerivedId: null,
           }
           set(
             state => ({
@@ -163,6 +201,156 @@ export const useTerminalStore = create<TerminalState>()(
             'setTerminalCopyOnSelect'
           )
         },
+
+        // Derived terminal actions
+        createDerivedTerminal: (
+          parentId: string,
+          command: string,
+          name?: string
+        ) => {
+          const derivedId = `derived-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+          const derivedName =
+            name || command.split(' ')[0] || `Derived ${derivedId.slice(-4)}`
+          const derived: DerivedTerminal = {
+            id: derivedId,
+            name: derivedName,
+            command,
+            status: 'running',
+            hasNotification: false,
+            createdAt: Date.now(),
+          }
+          set(
+            state => ({
+              terminals: state.terminals.map(t =>
+                t.id === parentId
+                  ? {
+                      ...t,
+                      derivedTerminals: [...t.derivedTerminals, derived],
+                      selectedDerivedId: derivedId,
+                    }
+                  : t
+              ),
+            }),
+            undefined,
+            'createDerivedTerminal'
+          )
+          return derivedId
+        },
+
+        closeDerivedTerminal: (parentId: string, derivedId: string) => {
+          set(
+            state => ({
+              terminals: state.terminals.map(t => {
+                if (t.id !== parentId) return t
+                const newDerived = t.derivedTerminals.filter(
+                  d => d.id !== derivedId
+                )
+                const newSelectedId =
+                  t.selectedDerivedId === derivedId
+                    ? null // Go back to main terminal
+                    : t.selectedDerivedId
+                return {
+                  ...t,
+                  derivedTerminals: newDerived,
+                  selectedDerivedId: newSelectedId,
+                }
+              }),
+            }),
+            undefined,
+            'closeDerivedTerminal'
+          )
+        },
+
+        selectDerivedTerminal: (parentId: string, derivedId: string | null) => {
+          set(
+            state => ({
+              terminals: state.terminals.map(t =>
+                t.id === parentId ? { ...t, selectedDerivedId: derivedId } : t
+              ),
+            }),
+            undefined,
+            'selectDerivedTerminal'
+          )
+          // Clear notification when selecting
+          if (derivedId) {
+            const terminal = get().terminals.find(t => t.id === parentId)
+            const derived = terminal?.derivedTerminals.find(
+              d => d.id === derivedId
+            )
+            if (derived?.hasNotification) {
+              get().setDerivedTerminalNotification(parentId, derivedId, false)
+            }
+          }
+        },
+
+        renameDerivedTerminal: (
+          parentId: string,
+          derivedId: string,
+          name: string
+        ) => {
+          set(
+            state => ({
+              terminals: state.terminals.map(t =>
+                t.id === parentId
+                  ? {
+                      ...t,
+                      derivedTerminals: t.derivedTerminals.map(d =>
+                        d.id === derivedId ? { ...d, name } : d
+                      ),
+                    }
+                  : t
+              ),
+            }),
+            undefined,
+            'renameDerivedTerminal'
+          )
+        },
+
+        updateDerivedTerminalStatus: (
+          parentId: string,
+          derivedId: string,
+          status: 'running' | 'completed'
+        ) => {
+          set(
+            state => ({
+              terminals: state.terminals.map(t =>
+                t.id === parentId
+                  ? {
+                      ...t,
+                      derivedTerminals: t.derivedTerminals.map(d =>
+                        d.id === derivedId ? { ...d, status } : d
+                      ),
+                    }
+                  : t
+              ),
+            }),
+            undefined,
+            'updateDerivedTerminalStatus'
+          )
+        },
+
+        setDerivedTerminalNotification: (
+          parentId: string,
+          derivedId: string,
+          hasNotification: boolean
+        ) => {
+          set(
+            state => ({
+              terminals: state.terminals.map(t =>
+                t.id === parentId
+                  ? {
+                      ...t,
+                      derivedTerminals: t.derivedTerminals.map(d =>
+                        d.id === derivedId ? { ...d, hasNotification } : d
+                      ),
+                    }
+                  : t
+              ),
+            }),
+            undefined,
+            'setDerivedTerminalNotification'
+          )
+        },
       }),
       {
         name: 'terminal-store',
@@ -174,11 +362,29 @@ export const useTerminalStore = create<TerminalState>()(
             status: 'completed' as const,
             hasNotification: false,
             createdAt: t.createdAt,
+            derivedTerminals: t.derivedTerminals.map(d => ({
+              ...d,
+              status: 'completed' as const,
+              hasNotification: false,
+            })),
+            selectedDerivedId: t.selectedDerivedId,
           })),
           selectedTerminalId: state.selectedTerminalId,
           terminalForceDark: state.terminalForceDark,
           terminalCopyOnSelect: state.terminalCopyOnSelect,
         }),
+        merge: (persistedState, currentState) => {
+          const persisted = persistedState as Partial<TerminalState>
+          return {
+            ...currentState,
+            ...persisted,
+            terminals: (persisted.terminals ?? []).map(t => ({
+              ...t,
+              derivedTerminals: t.derivedTerminals ?? [],
+              selectedDerivedId: t.selectedDerivedId ?? null,
+            })),
+          }
+        },
       }
     ),
     { name: 'terminal-store' }
