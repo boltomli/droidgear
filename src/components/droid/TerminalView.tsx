@@ -16,6 +16,7 @@ import { useTheme } from '@/hooks/use-theme'
 import { platform } from '@tauri-apps/plugin-os'
 import { usePreferences } from '@/services/preferences'
 import { notify } from '@/lib/notifications'
+import { commands } from '@/lib/bindings'
 
 // Default fallback fonts for terminal
 const DEFAULT_TERMINAL_FONTS = 'Menlo, Monaco, "Courier New", monospace'
@@ -66,7 +67,26 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
     const initialThemeRef = useRef(theme)
     const { data: preferences } = usePreferences()
     const initialFontFamilyRef = useRef<string | null | undefined>(undefined)
+    const shellEnvRef = useRef<Record<string, string> | null>(null)
     const [reloadKey, setReloadKey] = useState(0)
+    const [shellEnvLoaded, setShellEnvLoaded] = useState(false)
+
+    // Fetch shell environment variables on mount (for GUI apps that don't inherit shell env)
+    useEffect(() => {
+      commands.getShellEnv().then(result => {
+        if (result.status === 'ok') {
+          // Convert Partial<Record> to Record by filtering out undefined values
+          const env: Record<string, string> = {}
+          for (const [key, value] of Object.entries(result.data)) {
+            if (value !== undefined) {
+              env[key] = value
+            }
+          }
+          shellEnvRef.current = env
+        }
+        setShellEnvLoaded(true)
+      })
+    }, [])
 
     // Capture initial font family from preferences (only once when preferences first loads)
     useEffect(() => {
@@ -144,6 +164,8 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
 
     // Initialize terminal only once when component mounts or reloads
     useEffect(() => {
+      // Wait for shell environment to be loaded
+      if (!shellEnvLoaded) return
       // Skip if already initialized
       if (isInitializedRef.current) return
       if (!containerRef.current) return
@@ -195,6 +217,9 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       const currentPlatform = platform()
       const shell =
         currentPlatform === 'windows' ? 'powershell.exe' : '/bin/zsh'
+      // Use login + interactive mode on Unix to load user's shell config files
+      // (.zshenv -> .zprofile -> .zshrc -> .zlogin)
+      const shellArgs = currentPlatform === 'windows' ? [] : ['-l', '-i']
 
       // Get initial dimensions
       const dims = fitAddon.proposeDimensions()
@@ -202,11 +227,20 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       const rows = dims?.rows || 24
 
       // Spawn PTY using tauri-pty with initial cwd from ref
-      // Don't pass env to inherit system environment variables (PATH, HOME, etc.)
-      const pty = spawn(shell, [], {
+      // Pass shell environment variables for GUI apps that don't inherit shell env
+      // Manually add TERM since passing env replaces PTY defaults
+      const envToPass = shellEnvRef.current
+        ? {
+            ...shellEnvRef.current,
+            TERM: 'xterm-256color',
+            COLORTERM: 'truecolor',
+          }
+        : { TERM: 'xterm-256color', COLORTERM: 'truecolor' }
+      const pty = spawn(shell, shellArgs, {
         cols,
         rows,
         cwd: initialCwdRef.current || undefined,
+        env: envToPass,
       })
 
       ptyRef.current = pty
@@ -288,13 +322,15 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       // Handle resize
       const container = containerRef.current
       const resizeObserver = new ResizeObserver(() => {
-        if (fitAddonRef.current && ptyRef.current) {
-          fitAddonRef.current.fit()
-          const newDims = fitAddonRef.current.proposeDimensions()
-          if (newDims) {
-            ptyRef.current.resize(newDims.cols, newDims.rows)
+        requestAnimationFrame(() => {
+          if (fitAddonRef.current && ptyRef.current) {
+            fitAddonRef.current.fit()
+            const newDims = fitAddonRef.current.proposeDimensions()
+            if (newDims?.cols && newDims?.rows) {
+              ptyRef.current.resize(newDims.cols, newDims.rows)
+            }
           }
-        }
+        })
       })
 
       resizeObserver.observe(container)
@@ -317,7 +353,7 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
         if (fitAddonRef.current && ptyRef.current) {
           fitAddonRef.current.fit()
           const newDims = fitAddonRef.current.proposeDimensions()
-          if (newDims) {
+          if (newDims?.cols && newDims?.rows) {
             ptyRef.current.resize(newDims.cols, newDims.rows)
           }
         }
@@ -354,7 +390,7 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
         ptyRef.current = null
         isInitializedRef.current = false
       }
-    }, [reloadKey, terminalId])
+    }, [reloadKey, terminalId, shellEnvLoaded])
 
     // Update theme when it changes
     useEffect(() => {

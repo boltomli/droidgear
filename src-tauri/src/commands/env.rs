@@ -1,5 +1,6 @@
 //! Environment variable commands.
 
+use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
@@ -127,4 +128,44 @@ fn setup_env_in_shell_config_unix(key: &str, value: &str) -> Result<String, Stri
         .map_err(|e| format!("Failed to write to {}: {e}", config_file.display()))?;
 
     Ok(config_file.display().to_string())
+}
+
+/// Gets environment variables from a login shell.
+/// This is useful for GUI apps that don't inherit shell environment.
+#[tauri::command]
+#[specta::specta]
+pub fn get_shell_env() -> Result<HashMap<String, String>, String> {
+    #[cfg(target_os = "windows")]
+    {
+        // Windows doesn't have this issue, return current env
+        Ok(std::env::vars().collect())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        use std::process::Command;
+
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+
+        // Run login shell to get environment, then print it
+        let output = Command::new(&shell)
+            .args(["-l", "-i", "-c", "env"])
+            .output()
+            .map_err(|e| format!("Failed to run shell: {e}"))?;
+
+        if !output.status.success() {
+            return Err("Shell command failed".to_string());
+        }
+
+        let env_str = String::from_utf8_lossy(&output.stdout);
+        let env_map: HashMap<String, String> = env_str
+            .lines()
+            .filter_map(|line| {
+                let (key, value) = line.split_once('=')?;
+                Some((key.to_string(), value.to_string()))
+            })
+            .collect();
+
+        Ok(env_map)
+    }
 }

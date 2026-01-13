@@ -446,6 +446,18 @@ async setupEnvInShellConfig(key: string, value: string) : Promise<Result<string,
 }
 },
 /**
+ * Gets environment variables from a login shell.
+ * This is useful for GUI apps that don't inherit shell environment.
+ */
+async getShellEnv() : Promise<Result<Partial<{ [key in string]: string }>, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_shell_env") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Lists all spec files from ~/.factory/specs directory.
  * Returns files sorted by modification time (newest first).
  */
