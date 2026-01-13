@@ -12,9 +12,6 @@ mod utils;
 use std::sync::Mutex;
 use tauri::Manager;
 
-// Re-export only what's needed externally
-pub use types::DEFAULT_QUICK_PANE_SHORTCUT;
-
 /// Application entry point. Sets up all plugins and initializes the app.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -40,14 +37,13 @@ pub fn run() {
     }
 
     // Window state plugin - saves/restores window position and size
-    // Note: Disabled on macOS due to conflict with tauri-nspanel causing panic
-    // See: https://github.com/tauri-apps/plugins-workspace/issues/1546
-    #[cfg(all(desktop, not(target_os = "macos")))]
+    // Exclude VISIBLE flag to prevent white screen on startup - frontend will show window after loading
+    #[cfg(desktop)]
     {
+        use tauri_plugin_window_state::StateFlags;
         app_builder = app_builder.plugin(
             tauri_plugin_window_state::Builder::new()
-                .with_state_flags(tauri_plugin_window_state::StateFlags::all())
-                .skip_initial_state("quick-pane")
+                .with_state_flags(StateFlags::all() & !StateFlags::VISIBLE)
                 .build(),
         );
     }
@@ -83,12 +79,6 @@ pub fn run() {
                 .build(),
         );
 
-    // macOS: Add NSPanel plugin for native panel behavior
-    #[cfg(target_os = "macos")]
-    {
-        app_builder = app_builder.plugin(tauri_nspanel::init());
-    }
-
     app_builder
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_persisted_scope::init())
@@ -113,35 +103,6 @@ pub fn run() {
                 use tauri_plugin_global_shortcut::Builder;
 
                 app.handle().plugin(Builder::new().build())?;
-            }
-
-            // Load saved preferences and register the quick pane shortcut if enabled
-            #[cfg(desktop)]
-            {
-                let quick_pane_enabled =
-                    commands::preferences::load_quick_pane_enabled(app.handle());
-
-                if quick_pane_enabled {
-                    let saved_shortcut =
-                        commands::preferences::load_quick_pane_shortcut(app.handle());
-                    let shortcut_to_register = saved_shortcut
-                        .as_deref()
-                        .unwrap_or(DEFAULT_QUICK_PANE_SHORTCUT);
-
-                    log::info!("Registering quick pane shortcut: {shortcut_to_register}");
-                    commands::quick_pane::register_quick_pane_shortcut(
-                        app.handle(),
-                        shortcut_to_register,
-                    )?;
-                } else {
-                    log::info!("Quick pane is disabled, skipping shortcut registration");
-                }
-            }
-
-            // Create the quick pane window (hidden) - must be done on main thread
-            if let Err(e) = commands::quick_pane::init_quick_pane(app.handle()) {
-                log::error!("Failed to create quick pane: {e}");
-                // Non-fatal: app can still run without quick pane
             }
 
             // NOTE: Application menu is built from JavaScript for i18n support

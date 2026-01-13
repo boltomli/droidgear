@@ -59,7 +59,7 @@ export function ThemeProvider({
     setTheme: (newTheme: Theme) => {
       localStorage.setItem(storageKey, newTheme)
       setTheme(newTheme)
-      // Notify other windows (e.g., quick pane) of theme change
+      // Notify other windows of theme change
       emit('theme-changed', { theme: newTheme })
     },
   }

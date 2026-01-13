@@ -98,70 +98,6 @@ async cleanupOldRecoveryFiles() : Promise<Result<number, RecoveryError>> {
 }
 },
 /**
- * Shows the quick pane window and makes it the key window (for keyboard input).
- */
-async showQuickPane() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("show_quick_pane") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Dismisses the quick pane window.
- * On macOS, resigns key window status before hiding to avoid activating main window.
- */
-async dismissQuickPane() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("dismiss_quick_pane") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Toggles the quick pane window visibility.
- */
-async toggleQuickPane() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("toggle_quick_pane") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Returns the default shortcut constant for frontend use.
- */
-async getDefaultQuickPaneShortcut() : Promise<string> {
-    return await TAURI_INVOKE("get_default_quick_pane_shortcut");
-},
-/**
- * Updates the global shortcut for the quick pane.
- * Pass None to reset to default.
- */
-async updateQuickPaneShortcut(shortcut: string | null) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("update_quick_pane_shortcut", { shortcut }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Updates the quick pane enabled state.
- * When disabled, unregisters the shortcut. When enabled, registers the shortcut.
- */
-async updateQuickPaneEnabled(enabled: boolean, shortcut: string | null) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("update_quick_pane_enabled", { enabled, shortcut }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Gets the path to the Factory config file
  */
 async getConfigPath() : Promise<Result<string, string>> {
@@ -840,16 +776,6 @@ async stopSessionsWatcher() : Promise<Result<null, string>> {
  * Only contains settings that should be saved between sessions.
  */
 export type AppPreferences = { theme: string; 
-/**
- * Whether the quick pane feature is enabled
- * If None, defaults to false (disabled)
- */
-quick_pane_enabled?: boolean | null; 
-/**
- * Global shortcut for quick pane (e.g., "CommandOrControl+Shift+.")
- * If None, uses the default shortcut
- */
-quick_pane_shortcut: string | null; 
 /**
  * User's preferred language (e.g., "en", "es", "de")
  * If None, uses system locale detection

@@ -34,11 +34,6 @@
   "preferences.about.acknowledgements": "Acknowledgements",
   "preferences.about.templateCredit": "Based on tauri-template by Danny Smith",
 
-  "preferences.general.keyboardShortcuts": "Keyboard Shortcuts",
-  "preferences.general.quickPaneEnabled": "Enable Quick Pane",
-  "preferences.general.quickPaneEnabledDescription": "Enable or disable the quick pane feature and its global shortcut",
-  "preferences.general.quickPaneShortcut": "Quick Pane Shortcut",
-  "preferences.general.quickPaneShortcutDescription": "Global keyboard shortcut to toggle the quick pane from any application",
   "preferences.general.exampleSettings": "Example Settings",
   "preferences.general.exampleText": "Example Text Setting",
   "preferences.general.exampleTextDescription": "This is an example text input setting (not persisted)",
@@ -398,8 +393,6 @@
   "models.import.noValidModels": "No valid models found in the file.",
   "models.export.button": "Export",
   "models.export.success": "Models exported successfully",
-
-  "quickPane.placeholder": "Enter text...",
 
   "update.available": "Update available: {{version}}\n\nWould you like to install this update now?",
   "update.availableNotification": "Update available: v{{version}}",

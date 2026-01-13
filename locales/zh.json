@@ -34,11 +34,6 @@
   "preferences.about.acknowledgements": "致谢",
   "preferences.about.templateCredit": "基于 Danny Smith 的 tauri-template 开发",
 
-  "preferences.general.keyboardShortcuts": "键盘快捷键",
-  "preferences.general.quickPaneEnabled": "启用快捷面板",
-  "preferences.general.quickPaneEnabledDescription": "启用或禁用快捷面板功能及其全局快捷键",
-  "preferences.general.quickPaneShortcut": "快捷面板快捷键",
-  "preferences.general.quickPaneShortcutDescription": "从任何应用程序切换快捷面板的全局键盘快捷键",
   "preferences.general.exampleSettings": "示例设置",
   "preferences.general.exampleText": "示例文本设置",
   "preferences.general.exampleTextDescription": "这是一个示例文本输入设置（不会保存）",
@@ -398,8 +393,6 @@
   "models.import.noValidModels": "文件中没有找到有效的模型。",
   "models.export.button": "导出",
   "models.export.success": "模型导出成功",
-
-  "quickPane.placeholder": "输入文本...",
 
   "update.available": "有可用更新：{{version}}\n\n是否立即安装此更新？",
   "update.availableNotification": "有可用更新：v{{version}}",

@@ -22,7 +22,6 @@ interface UIState {
   rightSidebarVisible: boolean
   commandPaletteOpen: boolean
   preferencesOpen: boolean
-  lastQuickPaneEntry: string | null
   currentView: NavigationView
   lastToolView: ToolView
   droidSubView: DroidSubView
@@ -38,7 +37,6 @@ interface UIState {
   setCommandPaletteOpen: (open: boolean) => void
   togglePreferences: () => void
   setPreferencesOpen: (open: boolean) => void
-  setLastQuickPaneEntry: (text: string) => void
   setCurrentView: (view: NavigationView) => void
   setDroidSubView: (view: DroidSubView) => void
   setOpenCodeSubView: (view: OpenCodeSubView) => void
@@ -55,7 +53,6 @@ export const useUIStore = create<UIState>()(
         rightSidebarVisible: false,
         commandPaletteOpen: false,
         preferencesOpen: false,
-        lastQuickPaneEntry: null,
         currentView: 'droid',
         lastToolView: 'droid',
         droidSubView: 'models',
@@ -110,9 +107,6 @@ export const useUIStore = create<UIState>()(
 
         setPreferencesOpen: open =>
           set({ preferencesOpen: open }, undefined, 'setPreferencesOpen'),
-
-        setLastQuickPaneEntry: text =>
-          set({ lastQuickPaneEntry: text }, undefined, 'setLastQuickPaneEntry'),
 
         setCurrentView: view =>
           set(
