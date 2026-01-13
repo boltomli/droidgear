@@ -27,7 +27,7 @@ jobs:
           - platform: 'macos-latest'
             args: '--bundles app,dmg --target x86_64-apple-darwin'
           - platform: 'windows-latest'
-            args: '--bundles msi'
+            args: '--bundles msi --config src-tauri/tauri.windows.conf.json'
           - platform: 'ubuntu-22.04'
             args: '--bundles appimage'
 
