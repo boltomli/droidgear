@@ -405,28 +405,25 @@ export function SessionsPage() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={viewMode === 'list' ? 'secondary' : 'outline'}
+                variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => setViewMode('list')}
+                onClick={() =>
+                  setViewMode(viewMode === 'list' ? 'grouped' : 'list')
+                }
               >
-                <List className="h-4 w-4" />
+                {viewMode === 'list' ? (
+                  <List className="h-4 w-4" />
+                ) : (
+                  <FolderTree className="h-4 w-4" />
+                )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('droid.sessions.listView')}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={viewMode === 'grouped' ? 'secondary' : 'outline'}
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setViewMode('grouped')}
-              >
-                <FolderTree className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('droid.sessions.groupedView')}</TooltipContent>
+            <TooltipContent>
+              {viewMode === 'list'
+                ? t('droid.sessions.listView')
+                : t('droid.sessions.groupedView')}
+            </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
