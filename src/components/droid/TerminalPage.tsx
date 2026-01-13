@@ -71,6 +71,7 @@ export function TerminalPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const renameInputRef = useRef<HTMLInputElement>(null)
+  const isEnteringRenameRef = useRef(false)
   // Map key format: terminalId or terminalId:derivedId
   const terminalRefs = useRef<Map<string, TerminalViewRef>>(new Map())
 
@@ -120,14 +121,11 @@ export function TerminalPage() {
     }
   }, [selectedTerminalId, selectedTerminal?.selectedDerivedId, terminals])
 
-  // Focus rename input when editing starts
+  // Focus rename input when editing starts (fallback for non-context-menu triggers)
   useEffect(() => {
-    if (editingId) {
-      // Delay to ensure ContextMenu is fully closed
-      setTimeout(() => {
-        renameInputRef.current?.focus()
-        renameInputRef.current?.select()
-      }, 0)
+    if (editingId && !isEnteringRenameRef.current) {
+      renameInputRef.current?.focus()
+      renameInputRef.current?.select()
     }
   }, [editingId])
 
@@ -155,6 +153,7 @@ export function TerminalPage() {
   }
 
   const handleStartRename = (id: string, currentName: string) => {
+    isEnteringRenameRef.current = true
     setEditingId(id)
     setEditingName(currentName)
   }
@@ -333,7 +332,16 @@ export function TerminalPage() {
                         )}
                       </button>
                     </ContextMenuTrigger>
-                    <ContextMenuContent>
+                    <ContextMenuContent
+                      onCloseAutoFocus={e => {
+                        if (isEnteringRenameRef.current) {
+                          e.preventDefault()
+                          isEnteringRenameRef.current = false
+                          renameInputRef.current?.focus()
+                          renameInputRef.current?.select()
+                        }
+                      }}
+                    >
                       <ContextMenuItem
                         onClick={() =>
                           handleStartRename(terminal.id, terminal.name)

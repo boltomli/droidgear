@@ -17,6 +17,7 @@ import { platform } from '@tauri-apps/plugin-os'
 import { usePreferences } from '@/services/preferences'
 import { notify } from '@/lib/notifications'
 import { commands } from '@/lib/bindings'
+import { logger } from '@/lib/logger'
 
 // Default fallback fonts for terminal
 const DEFAULT_TERMINAL_FONTS = 'Menlo, Monaco, "Courier New", monospace'
@@ -73,19 +74,27 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
 
     // Fetch shell environment variables on mount (for GUI apps that don't inherit shell env)
     useEffect(() => {
-      commands.getShellEnv().then(result => {
-        if (result.status === 'ok') {
-          // Convert Partial<Record> to Record by filtering out undefined values
-          const env: Record<string, string> = {}
-          for (const [key, value] of Object.entries(result.data)) {
-            if (value !== undefined) {
-              env[key] = value
+      commands
+        .getShellEnv()
+        .then(result => {
+          if (result.status === 'ok') {
+            // Convert Partial<Record> to Record by filtering out undefined values
+            const env: Record<string, string> = {}
+            for (const [key, value] of Object.entries(result.data)) {
+              if (value !== undefined) {
+                env[key] = value
+              }
             }
+            shellEnvRef.current = env
+          } else {
+            logger.error('Failed to get shell env', { error: result.error })
           }
-          shellEnvRef.current = env
-        }
-        setShellEnvLoaded(true)
-      })
+          setShellEnvLoaded(true)
+        })
+        .catch(error => {
+          logger.error('getShellEnv exception', { error })
+          setShellEnvLoaded(true)
+        })
     }, [])
 
     // Capture initial font family from preferences (only once when preferences first loads)
@@ -236,12 +245,29 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
             COLORTERM: 'truecolor',
           }
         : { TERM: 'xterm-256color', COLORTERM: 'truecolor' }
-      const pty = spawn(shell, shellArgs, {
-        cols,
-        rows,
-        cwd: initialCwdRef.current || undefined,
-        env: envToPass,
-      })
+
+      let pty: IPty
+      try {
+        logger.debug('Spawning PTY', {
+          shell,
+          shellArgs,
+          cwd: initialCwdRef.current,
+        })
+        pty = spawn(shell, shellArgs, {
+          cols,
+          rows,
+          cwd: initialCwdRef.current || undefined,
+          env: envToPass,
+        })
+      } catch (error) {
+        logger.error('Failed to spawn PTY', { error, shell, shellArgs })
+        terminal.write(`\r\n[Error: Failed to spawn terminal: ${error}]\r\n`)
+        terminal.write(`\r\nShell: ${shell}\r\n`)
+        terminal.write(
+          `\r\nPlease check if the shell is available on your system.\r\n`
+        )
+        return
+      }
 
       ptyRef.current = pty
 
