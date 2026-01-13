@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.2.0
+
+**New Features / 新功能**
+
+- Terminal support OSC 9 notifications / 终端支持 OSC 9 通知
+- Use single button to toggle session list/grouped view / 使用单个按钮切换会话列表/分组视图
+- Sessions hide empty groups / 会话隐藏空分组
+- Use different indicators for Terminal active and notification / 终端活动和通知使用不同的指示器
+- Terminal add copy-on-select / 终端添加选中即复制功能
+- Fix left panel width / 修复左侧面板宽度
+
 ## v0.1.9
 
 **New Features / 新功能**

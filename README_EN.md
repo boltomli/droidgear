@@ -86,6 +86,17 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ## Changelog
 
+### v0.2.0
+
+**New Features**
+
+- Terminal support OSC 9 notifications
+- Use single button to toggle session list/grouped view
+- Sessions hide empty groups
+- Use different indicators for Terminal active and notification
+- Terminal add copy-on-select
+- Fix left panel width
+
 ### v0.1.9
 
 **New Features**
