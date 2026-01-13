@@ -120,8 +120,8 @@ export function TerminalPage() {
     console.log(`Terminal ${terminalId} exited with code ${exitCode}`)
   }
 
-  const getStatusIcon = (hasNotification: boolean) => {
-    if (hasNotification) {
+  const getStatusIcon = (isSelected: boolean) => {
+    if (isSelected) {
       return <Circle className="h-3 w-3 fill-primary text-primary" />
     }
     return <Circle className="h-3 w-3 text-muted-foreground" />
@@ -195,12 +195,15 @@ export function TerminalPage() {
                       <button
                         onClick={() => selectTerminal(terminal.id)}
                         className={cn(
-                          'w-full text-start p-2 rounded-lg hover:bg-accent transition-colors overflow-hidden',
+                          'relative w-full text-start p-2 rounded-lg hover:bg-accent transition-colors overflow-hidden',
                           selectedTerminalId === terminal.id && 'bg-accent'
                         )}
                       >
+                        {terminal.hasNotification && (
+                          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-orange-500" />
+                        )}
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(terminal.hasNotification)}
+                          {getStatusIcon(selectedTerminalId === terminal.id)}
                           {editingId === terminal.id ? (
                             <Input
                               value={editingName}
