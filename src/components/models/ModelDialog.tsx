@@ -122,7 +122,7 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
       baseUrl: baseUrl,
       apiKey: apiKey,
       provider,
-      displayName: displayName,
+      displayName: displayName || undefined,
       maxOutputTokens: maxTokens ? parseInt(maxTokens) : undefined,
       supportsImages: supportsImages || undefined,
     }
@@ -134,9 +134,9 @@ function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
     modelId &&
     baseUrl &&
     apiKey &&
-    displayName &&
-    !containsRegexSpecialChars(displayName) &&
-    !isOfficialModelName(displayName)
+    (!displayName ||
+      (!containsRegexSpecialChars(displayName) &&
+        !isOfficialModelName(displayName)))
 
   return (
     <>
