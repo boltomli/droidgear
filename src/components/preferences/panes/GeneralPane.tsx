@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -23,15 +23,8 @@ export function GeneralPane() {
   // Read pending update from global store (set by auto-updater in App.tsx)
   const pendingUpdate = useUIStore(state => state.pendingUpdate)
 
-  // Sync pending update from store to local state on mount
-  useEffect(() => {
-    if (pendingUpdate && !availableUpdate) {
-      // We have a pending update from auto-check, show it
-      logger.info('Displaying pending update from auto-check', {
-        version: pendingUpdate.version,
-      })
-    }
-  }, [pendingUpdate, availableUpdate])
+  // Track if we've already triggered auto-check for pending update
+  const hasAutoChecked = useRef(false)
 
   // Get current app version
   const { data: appVersion } = useQuery({
@@ -69,6 +62,49 @@ export function GeneralPane() {
       setUpdateStatus('idle')
     }
   }
+
+  // When there's a pending update but no availableUpdate, auto-fetch the full Update object
+  useEffect(() => {
+    const fetchUpdate = async () => {
+      if (
+        pendingUpdate &&
+        !availableUpdate &&
+        updateStatus === 'idle' &&
+        !hasAutoChecked.current
+      ) {
+        hasAutoChecked.current = true
+        logger.info('Fetching full update object for pending update', {
+          version: pendingUpdate.version,
+        })
+
+        setUpdateStatus('checking')
+        setUpdateError(null)
+
+        try {
+          const update = await check()
+          if (update) {
+            setAvailableUpdate(update)
+            useUIStore.getState().setPendingUpdate({
+              version: update.version,
+              body: update.body ?? undefined,
+            })
+            logger.info('Update available', { version: update.version })
+          } else {
+            logger.info('No updates available')
+          }
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error)
+          setUpdateError(errorMessage)
+          logger.error('Failed to check for updates', { error: errorMessage })
+        } finally {
+          setUpdateStatus('idle')
+        }
+      }
+    }
+
+    fetchUpdate()
+  }, [pendingUpdate, availableUpdate, updateStatus])
 
   const handleDownloadAndInstall = async () => {
     if (!availableUpdate) return
