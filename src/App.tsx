@@ -8,6 +8,7 @@ import { initializeLanguage } from './i18n/language-init'
 import i18n from './i18n/config'
 import { logger } from './lib/logger'
 import { cleanupOldFiles } from './lib/recovery'
+import { preloadShellEnv } from './services/shell-env'
 import { commands } from './lib/tauri-bindings'
 import { useUIStore } from './store/ui-store'
 import './App.css'
@@ -35,6 +36,9 @@ function App() {
     logger.info('🚀 Frontend application starting up')
     initializeCommandSystem()
     logger.debug('Command system initialized')
+
+    // Preload shell environment early to avoid delay when first terminal is created
+    preloadShellEnv()
 
     // Initialize language based on saved preference or system locale
     const initLanguageAndMenu = async () => {

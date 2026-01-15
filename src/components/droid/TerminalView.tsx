@@ -16,7 +16,7 @@ import { useTheme } from '@/hooks/use-theme'
 import { platform } from '@tauri-apps/plugin-os'
 import { usePreferences } from '@/services/preferences'
 import { notify } from '@/lib/notifications'
-import { commands } from '@/lib/bindings'
+import { getShellEnv } from '@/services/shell-env'
 import { logger } from '@/lib/logger'
 
 // Default fallback fonts for terminal
@@ -69,27 +69,18 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
     const initialThemeRef = useRef(theme)
     const { data: preferences } = usePreferences()
     const initialFontFamilyRef = useRef<string | null | undefined>(undefined)
-    const shellEnvRef = useRef<Record<string, string> | null>(null)
     const [reloadKey, setReloadKey] = useState(0)
     const [shellEnvLoaded, setShellEnvLoaded] = useState(false)
+    const [shellEnvData, setShellEnvData] = useState<Record<
+      string,
+      string
+    > | null>(null)
 
-    // Fetch shell environment variables on mount (for GUI apps that don't inherit shell env)
+    // Fetch shell environment variables using cached service
     useEffect(() => {
-      commands
-        .getShellEnv()
-        .then(result => {
-          if (result.status === 'ok') {
-            // Convert Partial<Record> to Record by filtering out undefined values
-            const env: Record<string, string> = {}
-            for (const [key, value] of Object.entries(result.data)) {
-              if (value !== undefined) {
-                env[key] = value
-              }
-            }
-            shellEnvRef.current = env
-          } else {
-            logger.error('Failed to get shell env', { error: result.error })
-          }
+      getShellEnv()
+        .then(env => {
+          setShellEnvData(env)
           setShellEnvLoaded(true)
         })
         .catch(error => {
@@ -242,9 +233,9 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       // Spawn PTY using tauri-pty with initial cwd from ref
       // Pass shell environment variables for GUI apps that don't inherit shell env
       // Manually add TERM since passing env replaces PTY defaults
-      const envToPass = shellEnvRef.current
+      const envToPass = shellEnvData
         ? {
-            ...shellEnvRef.current,
+            ...shellEnvData,
             TERM: 'xterm-256color',
             COLORTERM: 'truecolor',
           }
@@ -420,7 +411,7 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
         ptyRef.current = null
         isInitializedRef.current = false
       }
-    }, [reloadKey, terminalId, shellEnvLoaded])
+    }, [reloadKey, terminalId, shellEnvLoaded, shellEnvData])
 
     // Update theme when it changes
     useEffect(() => {

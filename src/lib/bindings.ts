@@ -448,6 +448,7 @@ async setupEnvInShellConfig(key: string, value: string) : Promise<Result<string,
 /**
  * Gets environment variables from a login shell.
  * This is useful for GUI apps that don't inherit shell environment.
+ * Uses non-interactive mode for faster execution.
  */
 async getShellEnv() : Promise<Result<Partial<{ [key in string]: string }>, string>> {
     try {

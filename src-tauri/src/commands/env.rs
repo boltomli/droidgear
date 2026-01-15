@@ -132,9 +132,10 @@ fn setup_env_in_shell_config_unix(key: &str, value: &str) -> Result<String, Stri
 
 /// Gets environment variables from a login shell.
 /// This is useful for GUI apps that don't inherit shell environment.
+/// Uses non-interactive mode for faster execution.
 #[tauri::command]
 #[specta::specta]
-pub fn get_shell_env() -> Result<HashMap<String, String>, String> {
+pub async fn get_shell_env() -> Result<HashMap<String, String>, String> {
     #[cfg(target_os = "windows")]
     {
         // Windows doesn't have this issue, return current env
@@ -145,27 +146,34 @@ pub fn get_shell_env() -> Result<HashMap<String, String>, String> {
     {
         use std::process::Command;
 
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+        // Run in blocking thread pool to avoid blocking the async runtime
+        tauri::async_runtime::spawn_blocking(|| {
+            let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
 
-        // Run login shell to get environment, then print it
-        let output = Command::new(&shell)
-            .args(["-l", "-i", "-c", "env"])
-            .output()
-            .map_err(|e| format!("Failed to run shell: {e}"))?;
+            // Run login shell (non-interactive) to get environment, then print it
+            // Using -l (login) without -i (interactive) is much faster as it skips
+            // interactive-only initialization like prompt setup
+            let output = Command::new(&shell)
+                .args(["-l", "-c", "env"])
+                .output()
+                .map_err(|e| format!("Failed to run shell: {e}"))?;
 
-        if !output.status.success() {
-            return Err("Shell command failed".to_string());
-        }
+            if !output.status.success() {
+                return Err("Shell command failed".to_string());
+            }
 
-        let env_str = String::from_utf8_lossy(&output.stdout);
-        let env_map: HashMap<String, String> = env_str
-            .lines()
-            .filter_map(|line| {
-                let (key, value) = line.split_once('=')?;
-                Some((key.to_string(), value.to_string()))
-            })
-            .collect();
+            let env_str = String::from_utf8_lossy(&output.stdout);
+            let env_map: HashMap<String, String> = env_str
+                .lines()
+                .filter_map(|line| {
+                    let (key, value) = line.split_once('=')?;
+                    Some((key.to_string(), value.to_string()))
+                })
+                .collect();
 
-        Ok(env_map)
+            Ok(env_map)
+        })
+        .await
+        .map_err(|e| format!("Task join error: {e}"))?
     }
 }
