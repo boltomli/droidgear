@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.2.3
+
+**New Features / 新功能**
+
+- Ctrl/Cmd + W to close terminal tab / Ctrl/Cmd + W 关闭终端标签页
+- Show toggle left sidebar button / 显示切换左侧边栏按钮
+- Add Snippets on Terminal pages / 终端页面添加代码片段功能
+- Default use directory name as Terminal name / 默认使用目录名作为终端名称
+
+**Bug Fixes / 问题修复**
+
+- Ctrl/Cmd+W only bind in Terminal page / Ctrl/Cmd+W 仅在终端页面绑定
+- Allow empty derived terminal / 允许空的派生终端
+- Big performance improvement for terminal loading / 终端加载性能大幅提升
+- Update status checking / 更新状态检查
+- Auto generate display name / 自动生成显示名称
+- Rename terminal on Windows / 修复 Windows 下终端重命名
+- Use windows custom config for github actions / GitHub Actions 使用 Windows 自定义配置
+
 ## v0.2.2
 
 **Bug Fixes / 问题修复**

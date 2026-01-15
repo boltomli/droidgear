@@ -124,6 +124,25 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ## Changelog
 
+### v0.2.3
+
+**New Features**
+
+- Ctrl/Cmd + W to close terminal tab
+- Show toggle left sidebar button
+- Add Snippets on Terminal pages
+- Default use directory name as Terminal name
+
+**Bug Fixes**
+
+- Ctrl/Cmd+W only bind in Terminal page
+- Allow empty derived terminal
+- Big performance improvement for terminal loading
+- Update status checking
+- Auto generate display name
+- Rename terminal on Windows
+- Use windows custom config for github actions
+
 ### v0.2.2
 
 **Bug Fixes**
