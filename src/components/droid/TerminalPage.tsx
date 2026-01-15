@@ -52,9 +52,12 @@ import { TerminalView, type TerminalViewRef } from './TerminalView'
 import { DerivedTerminalBar } from './DerivedTerminalBar'
 import { TerminalSnippetDialog } from './TerminalSnippetDialog'
 import { useTerminalStore } from '@/store/terminal-store'
+import { useUIStore } from '@/store/ui-store'
 
 export function TerminalPage() {
   const { t } = useTranslation()
+  const currentView = useUIStore(state => state.currentView)
+  const droidSubView = useUIStore(state => state.droidSubView)
   const terminals = useTerminalStore(state => state.terminals)
   const selectedTerminalId = useTerminalStore(state => state.selectedTerminalId)
   const createTerminal = useTerminalStore(state => state.createTerminal)
@@ -235,6 +238,9 @@ export function TerminalPage() {
   // and close terminal tab (Ctrl/Cmd + W)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Only respond when Terminal page is active
+      if (currentView !== 'droid' || droidSubView !== 'terminal') return
+
       // Only respond when there's a selected terminal
       if (!selectedTerminalId) return
 
@@ -258,7 +264,7 @@ export function TerminalPage() {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTerminalId, handleCloseCurrentTab])
+  }, [selectedTerminalId, handleCloseCurrentTab, currentView, droidSubView])
 
   const handleReloadTerminal = (id: string) => {
     terminalRefs.current.get(id)?.reload()
