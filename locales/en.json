@@ -276,6 +276,11 @@
   "droid.terminal.snippets.contentPlaceholder": "Enter command or text to insert",
   "droid.terminal.snippets.autoExecute": "Auto Execute (press Enter)",
 
+  "droid.terminal.closeConfirmTitle": "Confirm Close",
+  "droid.terminal.closeConfirmDescription": "There are running tasks in this terminal. Are you sure you want to close it?",
+  "droid.terminal.closeConfirmCancel": "Cancel",
+  "droid.terminal.closeConfirmAction": "Close",
+
   "mcp.title": "MCP Server Management",
   "mcp.noServers": "No MCP servers configured",
   "mcp.noServersHint": "Add MCP servers to extend Droid's capabilities",

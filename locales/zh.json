@@ -276,6 +276,11 @@
   "droid.terminal.snippets.contentPlaceholder": "输入要插入的命令或文本",
   "droid.terminal.snippets.autoExecute": "自动执行（按回车）",
 
+  "droid.terminal.closeConfirmTitle": "确认关闭",
+  "droid.terminal.closeConfirmDescription": "终端中有正在运行的任务，确定要关闭吗？",
+  "droid.terminal.closeConfirmCancel": "取消",
+  "droid.terminal.closeConfirmAction": "关闭",
+
   "mcp.title": "MCP 服务器管理",
   "mcp.noServers": "未配置 MCP 服务器",
   "mcp.noServersHint": "添加 MCP 服务器以扩展 Droid 的功能",

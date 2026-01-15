@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus,
@@ -37,6 +37,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuShortcut,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { TerminalView, type TerminalViewRef } from './TerminalView'
 import { DerivedTerminalBar } from './DerivedTerminalBar'
@@ -86,6 +96,12 @@ export function TerminalPage() {
   const [editingName, setEditingName] = useState('')
   const [snippetDialogOpen, setSnippetDialogOpen] = useState(false)
   const [snippetDropdownOpen, setSnippetDropdownOpen] = useState(false)
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false)
+  const [pendingClose, setPendingClose] = useState<{
+    type: 'main' | 'derived'
+    terminalId: string
+    derivedId?: string
+  } | null>(null)
   const renameInputRef = useRef<HTMLInputElement>(null)
   const isEnteringRenameRef = useRef(false)
   // Map key format: terminalId or terminalId:derivedId
@@ -145,27 +161,6 @@ export function TerminalPage() {
     }
   }, [editingId])
 
-  // Keyboard shortcut to open Snippets dropdown (Ctrl/Cmd + Shift + S)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only respond when there's a selected terminal
-      if (!selectedTerminalId) return
-
-      // Ctrl/Cmd + Shift + S to open Snippets
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        e.key.toLowerCase() === 's'
-      ) {
-        e.preventDefault()
-        setSnippetDropdownOpen(true)
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTerminalId])
-
   const handleCreateTerminal = () => {
     createTerminal()
   }
@@ -186,6 +181,84 @@ export function TerminalPage() {
   const handleCloseTerminal = (id: string) => {
     closeTerminal(id)
   }
+
+  const handleCloseDerived = (parentId: string, derivedId: string) => {
+    closeDerivedTerminal(parentId, derivedId)
+    // Clean up from newly created set
+    setNewlyCreatedDerived(prev => {
+      const next = new Set(prev)
+      next.delete(derivedId)
+      return next
+    })
+  }
+
+  // Handle Cmd+W / Ctrl+W to close current tab - always show confirmation
+  const handleCloseCurrentTab = useCallback(() => {
+    if (!selectedTerminalId) return
+
+    const terminal = terminals.find(t => t.id === selectedTerminalId)
+    if (!terminal) return
+
+    if (terminal.selectedDerivedId !== null) {
+      // Close derived terminal - show confirmation
+      setPendingClose({
+        type: 'derived',
+        terminalId: selectedTerminalId,
+        derivedId: terminal.selectedDerivedId,
+      })
+      setCloseConfirmOpen(true)
+    } else {
+      // Close main terminal (and all derived) - show confirmation
+      setPendingClose({
+        type: 'main',
+        terminalId: selectedTerminalId,
+      })
+      setCloseConfirmOpen(true)
+    }
+  }, [selectedTerminalId, terminals])
+
+  // Confirm close action from dialog
+  const handleConfirmClose = () => {
+    if (!pendingClose) return
+
+    if (pendingClose.type === 'derived' && pendingClose.derivedId) {
+      handleCloseDerived(pendingClose.terminalId, pendingClose.derivedId)
+    } else {
+      handleCloseTerminal(pendingClose.terminalId)
+    }
+
+    setPendingClose(null)
+    setCloseConfirmOpen(false)
+  }
+
+  // Keyboard shortcut to open Snippets dropdown (Ctrl/Cmd + Shift + S)
+  // and close terminal tab (Ctrl/Cmd + W)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only respond when there's a selected terminal
+      if (!selectedTerminalId) return
+
+      // Ctrl/Cmd + Shift + S to open Snippets
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === 's'
+      ) {
+        e.preventDefault()
+        setSnippetDropdownOpen(true)
+        return
+      }
+
+      // Ctrl/Cmd + W to close current tab
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'w') {
+        e.preventDefault()
+        handleCloseCurrentTab()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [selectedTerminalId, handleCloseCurrentTab])
 
   const handleReloadTerminal = (id: string) => {
     terminalRefs.current.get(id)?.reload()
@@ -248,16 +321,6 @@ export function TerminalPage() {
     const derivedId = createDerivedTerminal(parentId, command, name)
     // Mark as newly created for autoExecute
     setNewlyCreatedDerived(prev => new Set(prev).add(derivedId))
-  }
-
-  const handleCloseDerived = (parentId: string, derivedId: string) => {
-    closeDerivedTerminal(parentId, derivedId)
-    // Clean up from newly created set
-    setNewlyCreatedDerived(prev => {
-      const next = new Set(prev)
-      next.delete(derivedId)
-      return next
-    })
   }
 
   const handleSelectDerived = (parentId: string, derivedId: string | null) => {
@@ -639,6 +702,32 @@ export function TerminalPage() {
         open={snippetDialogOpen}
         onOpenChange={setSnippetDialogOpen}
       />
+
+      {/* Close Confirmation Dialog */}
+      <AlertDialog open={closeConfirmOpen} onOpenChange={setCloseConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('droid.terminal.closeConfirmTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('droid.terminal.closeConfirmDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setPendingClose(null)
+              }}
+            >
+              {t('droid.terminal.closeConfirmCancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClose}>
+              {t('droid.terminal.closeConfirmAction')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
