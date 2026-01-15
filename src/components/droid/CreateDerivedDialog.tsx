@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 interface CreateDerivedDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConfirm: (command: string, name?: string) => void
+  onConfirm: (command?: string, name?: string) => void
 }
 
 export function CreateDerivedDialog({
@@ -27,14 +27,13 @@ export function CreateDerivedDialog({
   const [name, setName] = useState('')
 
   const handleConfirm = () => {
-    if (!command.trim()) return
-    onConfirm(command.trim(), name.trim() || undefined)
+    onConfirm(command.trim() || undefined, name.trim() || undefined)
     setCommand('')
     setName('')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && command.trim()) {
+    if (e.key === 'Enter') {
       e.preventDefault()
       handleConfirm()
     }
@@ -84,9 +83,7 @@ export function CreateDerivedDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={handleConfirm} disabled={!command.trim()}>
-            {t('common.create')}
-          </Button>
+          <Button onClick={handleConfirm}>{t('common.create')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -17,7 +17,7 @@ interface DerivedTerminalBarProps {
   selectedDerivedId: string | null
   onSelectDerived: (derivedId: string | null) => void
   onCloseDerived: (derivedId: string) => void
-  onCreateDerived: (command: string, name?: string) => void
+  onCreateDerived: (command?: string, name?: string) => void
 }
 
 export function DerivedTerminalBar({
@@ -31,7 +31,7 @@ export function DerivedTerminalBar({
   const { t } = useTranslation()
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const handleCreate = (command: string, name?: string) => {
+  const handleCreate = (command?: string, name?: string) => {
     onCreateDerived(command, name)
     setDialogOpen(false)
   }
@@ -73,14 +73,18 @@ export function DerivedTerminalBar({
             <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-500" />
           )}
           <GitBranch className="h-3 w-3 flex-shrink-0" />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="max-w-[120px] truncate">{derived.name}</span>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p className="font-mono text-xs">{derived.command}</p>
-            </TooltipContent>
-          </Tooltip>
+          {derived.command ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="max-w-[120px] truncate">{derived.name}</span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="font-mono text-xs">{derived.command}</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="max-w-[120px] truncate">{derived.name}</span>
+          )}
           <button
             onClick={e => {
               e.stopPropagation()

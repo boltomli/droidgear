@@ -242,7 +242,7 @@ export function TerminalPage() {
 
   const handleCreateDerived = (
     parentId: string,
-    command: string,
+    command?: string,
     name?: string
   ) => {
     const derivedId = createDerivedTerminal(parentId, command, name)

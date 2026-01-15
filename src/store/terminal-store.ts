@@ -52,7 +52,7 @@ interface TerminalState {
   // Derived terminal actions
   createDerivedTerminal: (
     parentId: string,
-    command: string,
+    command?: string,
     name?: string
   ) => string
   closeDerivedTerminal: (parentId: string, derivedId: string) => void
@@ -224,16 +224,18 @@ export const useTerminalStore = create<TerminalState>()(
         // Derived terminal actions
         createDerivedTerminal: (
           parentId: string,
-          command: string,
+          command?: string,
           name?: string
         ) => {
           const derivedId = `derived-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
           const derivedName =
-            name || command.split(' ')[0] || `Derived ${derivedId.slice(-4)}`
+            name ||
+            (command ? command.split(' ')[0] : null) ||
+            `Derived ${derivedId.slice(-4)}`
           const derived: DerivedTerminal = {
             id: derivedId,
             name: derivedName,
-            command,
+            command: command || '',
             status: 'running',
             hasNotification: false,
             createdAt: Date.now(),
