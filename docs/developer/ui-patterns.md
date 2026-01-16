@@ -344,6 +344,55 @@ For panels that toggle visibility, prefer CSS over conditional rendering:
 
 This preserves scroll position, form state, and resize dimensions.
 
+## ActionButton (IME Compatibility)
+
+### Problem
+
+When Chinese/Japanese/Korean IME (Input Method Editor) is active, clicking standard `<Button>` or `<button>` elements requires two clicks - the first click closes the IME composition, the second click triggers the action.
+
+### Solution
+
+Use `ActionButton` component which executes the click handler in `onMouseDown` event with `preventDefault()`, bypassing IME interference.
+
+### Usage
+
+```tsx
+import { ActionButton } from '@/components/ui/action-button'
+
+// Instead of <Button onClick={...}>
+;<ActionButton onClick={handleClick}>Click Me</ActionButton>
+```
+
+### When to Use
+
+- **Use ActionButton**: For all interactive buttons in the UI that users may click while IME is active
+- **Use Button**: For form submit buttons inside `<form>` elements (where default form behavior is needed)
+
+### Available Components
+
+| Component                | Replaces           | Location                                    |
+| ------------------------ | ------------------ | ------------------------------------------- |
+| `ActionButton`           | `Button`           | `@/components/ui/action-button`             |
+| `ActionDropdownMenuItem` | `DropdownMenuItem` | `@/components/ui/action-dropdown-menu-item` |
+
+### Implementation
+
+Both components wrap their base components and move the `onClick` execution to `onMouseDown`:
+
+```tsx
+export function ActionButton({ onClick, ...props }) {
+  return (
+    <Button
+      onMouseDown={e => {
+        e.preventDefault()
+        onClick?.(e as unknown as React.MouseEvent<HTMLButtonElement>)
+      }}
+      {...props}
+    />
+  )
+}
+```
+
 ## Best Practices
 
 ### Do

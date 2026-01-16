@@ -3,7 +3,7 @@ import { Server } from 'lucide-react'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { ActionButton } from '@/components/ui/action-button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useUIStore, type OpenCodeSubView } from '@/store/ui-store'
 import { useIsWindows } from '@/hooks/use-platform'
@@ -33,7 +33,7 @@ export function OpenCodeFeatureList() {
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-1 p-2">
         {features.map(feature => (
-          <Button
+          <ActionButton
             key={feature.id}
             variant={opencodeSubView === feature.id ? 'secondary' : 'ghost'}
             size="sm"
@@ -42,7 +42,7 @@ export function OpenCodeFeatureList() {
           >
             <feature.icon className="h-4 w-4 mr-2" />
             {t(feature.labelKey)}
-          </Button>
+          </ActionButton>
         ))}
       </div>
 

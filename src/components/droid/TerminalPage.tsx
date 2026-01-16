@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { open } from '@tauri-apps/plugin-dialog'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
-import { Button } from '@/components/ui/button'
+import { ActionButton } from '@/components/ui/action-button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -417,9 +417,13 @@ export function TerminalPage() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-8 w-8">
+                  <ActionButton
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                  >
                     <FileCode className="h-4 w-4" />
-                  </Button>
+                  </ActionButton>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
               <TooltipContent>
@@ -482,33 +486,27 @@ export function TerminalPage() {
           </DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
+              <ActionButton
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                onMouseDown={e => {
-                  e.preventDefault()
-                  handleCreateTerminalWithDir()
-                }}
+                onClick={handleCreateTerminalWithDir}
               >
                 <FolderOpen className="h-4 w-4" />
-              </Button>
+              </ActionButton>
             </TooltipTrigger>
             <TooltipContent>
               {t('droid.terminal.newTerminalInDir')}
             </TooltipContent>
           </Tooltip>
-          <Button
+          <ActionButton
             variant="outline"
             size="sm"
-            onMouseDown={e => {
-              e.preventDefault()
-              handleCreateTerminal()
-            }}
+            onClick={handleCreateTerminal}
           >
             <Plus className="h-4 w-4 mr-2" />
             {t('droid.terminal.newTerminal')}
-          </Button>
+          </ActionButton>
         </div>
       </div>
 
@@ -525,20 +523,18 @@ export function TerminalPage() {
                 terminals.map(terminal => (
                   <ContextMenu key={terminal.id}>
                     <ContextMenuTrigger>
-                      <button
-                        onMouseDown={e => {
-                          e.preventDefault()
-                          selectTerminal(terminal.id)
-                        }}
+                      <ActionButton
+                        variant="ghost"
+                        onClick={() => selectTerminal(terminal.id)}
                         className={cn(
-                          'relative w-full text-start p-2 rounded-lg hover:bg-accent transition-colors overflow-hidden',
+                          'relative w-full text-start p-2 rounded-lg hover:bg-accent transition-colors overflow-hidden h-auto justify-start flex-col items-start',
                           selectedTerminalId === terminal.id && 'bg-accent'
                         )}
                       >
                         {terminal.hasNotification && (
                           <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-orange-500" />
                         )}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full">
                           {getStatusIcon(selectedTerminalId === terminal.id)}
                           {editingId === terminal.id ? (
                             <Input
@@ -557,11 +553,11 @@ export function TerminalPage() {
                           )}
                         </div>
                         {terminal.cwd && (
-                          <div className="text-xs text-muted-foreground mt-1 truncate pl-5">
+                          <div className="text-xs text-muted-foreground mt-1 truncate pl-5 w-full">
                             {terminal.cwd}
                           </div>
                         )}
-                      </button>
+                      </ActionButton>
                     </ContextMenuTrigger>
                     <ContextMenuContent
                       onCloseAutoFocus={e => {

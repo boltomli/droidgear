@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Server, Bot, Terminal, ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { ActionButton } from '@/components/ui/action-button'
+import { ActionDropdownMenuItem } from '@/components/ui/action-dropdown-menu-item'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -12,10 +13,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ChannelList, ChannelDialog } from '@/components/channels'
@@ -169,7 +170,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
     >
       {/* Navigation Tabs */}
       <div className="flex items-center gap-1 p-2 border-b">
-        <Button
+        <ActionButton
           variant={currentView === 'channels' ? 'secondary' : 'ghost'}
           size="sm"
           className="flex-1"
@@ -177,29 +178,29 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
         >
           <Server className="h-4 w-4 mr-2" />
           {t('sidebar.channels')}
-        </Button>
+        </ActionButton>
 
         {/* Droid/OpenCode Switcher - conditional rendering based on current view */}
         {currentView === 'channels' ? (
           // Simple button when in Channels - direct switch to lastToolView
-          <Button
+          <ActionButton
             variant="ghost"
             size="sm"
             className="flex-1"
             onClick={() => handleViewChange(lastToolView)}
           >
             {toolButtonContent}
-          </Button>
+          </ActionButton>
         ) : (
           // Dropdown menu when in Droid/OpenCode - allow switching between tools
           <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="sm" className="flex-1">
+              <ActionButton variant="secondary" size="sm" className="flex-1">
                 {toolButtonContent}
-              </Button>
+              </ActionButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem
+              <ActionDropdownMenuItem
                 onClick={() => {
                   handleViewChange('droid')
                   setDropdownOpen(false)
@@ -210,8 +211,8 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                 {lastToolView === 'droid' && (
                   <Check className="h-4 w-4 ml-auto" />
                 )}
-              </DropdownMenuItem>
-              <DropdownMenuItem
+              </ActionDropdownMenuItem>
+              <ActionDropdownMenuItem
                 onClick={() => {
                   handleViewChange('opencode')
                   setDropdownOpen(false)
@@ -222,7 +223,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                 {lastToolView === 'opencode' && (
                   <Check className="h-4 w-4 ml-auto" />
                 )}
-              </DropdownMenuItem>
+              </ActionDropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}

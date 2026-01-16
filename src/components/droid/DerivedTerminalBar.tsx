@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, X, Terminal as TerminalIcon, GitBranch } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { ActionButton } from '@/components/ui/action-button'
 import {
   Tooltip,
   TooltipContent,
@@ -39,13 +39,11 @@ export function DerivedTerminalBar({
   return (
     <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/30 overflow-x-auto">
       {/* Main terminal tab - always first, with distinct styling */}
-      <button
-        onMouseDown={e => {
-          e.preventDefault()
-          onSelectDerived(null)
-        }}
+      <ActionButton
+        variant="ghost"
+        onClick={() => onSelectDerived(null)}
         className={cn(
-          'flex items-center gap-1.5 px-3 py-1 rounded text-sm whitespace-nowrap transition-colors',
+          'flex items-center gap-1.5 px-3 py-1 rounded text-sm whitespace-nowrap transition-colors h-auto',
           selectedDerivedId === null
             ? 'bg-primary/10 text-primary border border-primary/30 shadow-sm font-medium'
             : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
@@ -53,7 +51,7 @@ export function DerivedTerminalBar({
       >
         <TerminalIcon className="h-3.5 w-3.5" />
         <span>{t('droid.terminal.mainTerminal')}</span>
-      </button>
+      </ActionButton>
 
       {/* Separator when there are derived terminals */}
       {derivedTerminals.length > 0 && (
@@ -106,17 +104,14 @@ export function DerivedTerminalBar({
       {/* Add derived terminal button */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
+          <ActionButton
             variant="ghost"
             size="icon"
             className="h-6 w-6 ml-1"
-            onMouseDown={e => {
-              e.preventDefault()
-              setDialogOpen(true)
-            }}
+            onClick={() => setDialogOpen(true)}
           >
             <Plus className="h-3.5 w-3.5" />
-          </Button>
+          </ActionButton>
         </TooltipTrigger>
         <TooltipContent>{t('droid.terminal.newDerived')}</TooltipContent>
       </Tooltip>

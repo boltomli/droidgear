@@ -11,7 +11,7 @@ import {
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { ActionButton } from '@/components/ui/action-button'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -89,7 +89,7 @@ export function DroidFeatureList() {
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-1 p-2">
         {features.map(feature => (
-          <Button
+          <ActionButton
             key={feature.id}
             variant={droidSubView === feature.id ? 'secondary' : 'ghost'}
             size="sm"
@@ -98,7 +98,7 @@ export function DroidFeatureList() {
           >
             <feature.icon className="h-4 w-4 mr-2" />
             {t(feature.labelKey)}
-          </Button>
+          </ActionButton>
         ))}
       </div>
 
@@ -163,12 +163,15 @@ export function DroidFeatureList() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleDiscardAndSwitch}>
+            <ActionButton
+              variant="destructive"
+              onClick={handleDiscardAndSwitch}
+            >
               {t('sidebar.unsavedChanges.discard')}
-            </Button>
-            <Button onClick={handleSaveAndSwitch}>
+            </ActionButton>
+            <ActionButton onClick={handleSaveAndSwitch}>
               {t('sidebar.unsavedChanges.save')}
-            </Button>
+            </ActionButton>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

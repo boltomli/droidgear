@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Server } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { ActionButton } from '@/components/ui/action-button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { useChannelStore } from '@/store/channel-store'
@@ -22,10 +22,11 @@ function ChannelItem({
 }) {
   const { t } = useTranslation()
   return (
-    <button
+    <ActionButton
+      variant="ghost"
       onClick={onClick}
       className={cn(
-        'w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors text-start',
+        'w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors text-start justify-start h-auto',
         isSelected
           ? 'bg-accent text-accent-foreground'
           : 'hover:bg-accent/50 text-muted-foreground hover:text-foreground'
@@ -38,7 +39,7 @@ function ChannelItem({
           ({t('common.disabled')})
         </span>
       )}
-    </button>
+    </ActionButton>
   )
 }
 
@@ -57,14 +58,14 @@ export function ChannelList({ onAddChannel }: ChannelListProps) {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b">
         <span className="text-sm font-medium">{t('channels.title')}</span>
-        <Button
+        <ActionButton
           variant="ghost"
           size="icon"
           className="h-7 w-7"
           onClick={onAddChannel}
         >
           <Plus className="h-4 w-4" />
-        </Button>
+        </ActionButton>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
