@@ -1,23 +1,24 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { check, type Update } from '@tauri-apps/plugin-updater'
-import { relaunch } from '@tauri-apps/plugin-process'
+import { check } from '@tauri-apps/plugin-updater'
 import { Button } from '@/components/ui/button'
 import { SettingsField, SettingsSection } from '../shared/SettingsComponents'
 import { commands } from '@/lib/tauri-bindings'
 import { logger } from '@/lib/logger'
 import { useUIStore } from '@/store/ui-store'
+import {
+  getCachedUpdate,
+  setCachedUpdate,
+  downloadAndInstallUpdate,
+} from '@/services/updater'
 
 export function GeneralPane() {
   const { t } = useTranslation()
 
   // Update state
-  const [updateStatus, setUpdateStatus] = useState<
-    'idle' | 'checking' | 'downloading' | 'installing'
-  >('idle')
-  const [availableUpdate, setAvailableUpdate] = useState<Update | null>(null)
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking'>('idle')
+  const [hasUpdate, setHasUpdate] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
 
   // Read pending update from global store (set by auto-updater in App.tsx)
@@ -38,12 +39,13 @@ export function GeneralPane() {
   const handleCheckForUpdates = async () => {
     setUpdateStatus('checking')
     setUpdateError(null)
-    setAvailableUpdate(null)
+    setHasUpdate(false)
 
     try {
       const update = await check()
       if (update) {
-        setAvailableUpdate(update)
+        setHasUpdate(true)
+        setCachedUpdate(update)
         // Also update global store
         useUIStore.getState().setPendingUpdate({
           version: update.version,
@@ -63,15 +65,17 @@ export function GeneralPane() {
     }
   }
 
-  // When there's a pending update but no availableUpdate, auto-fetch the full Update object
+  // When there's a pending update, check if we have the cached Update object
   useEffect(() => {
     const fetchUpdate = async () => {
-      if (
-        pendingUpdate &&
-        !availableUpdate &&
-        updateStatus === 'idle' &&
-        !hasAutoChecked.current
-      ) {
+      if (pendingUpdate && !hasAutoChecked.current) {
+        // Check if we already have the cached update
+        const cached = getCachedUpdate()
+        if (cached && cached.version === pendingUpdate.version) {
+          setHasUpdate(true)
+          return
+        }
+
         hasAutoChecked.current = true
         logger.info('Fetching full update object for pending update', {
           version: pendingUpdate.version,
@@ -83,7 +87,8 @@ export function GeneralPane() {
         try {
           const update = await check()
           if (update) {
-            setAvailableUpdate(update)
+            setHasUpdate(true)
+            setCachedUpdate(update)
             useUIStore.getState().setPendingUpdate({
               version: update.version,
               body: update.body ?? undefined,
@@ -104,36 +109,10 @@ export function GeneralPane() {
     }
 
     fetchUpdate()
-  }, [pendingUpdate, availableUpdate, updateStatus])
+  }, [pendingUpdate])
 
   const handleDownloadAndInstall = async () => {
-    if (!availableUpdate) return
-
-    setUpdateStatus('downloading')
-    try {
-      await availableUpdate.downloadAndInstall(event => {
-        if (event.event === 'Started') {
-          logger.info('Download started', {
-            contentLength: event.data.contentLength,
-          })
-        } else if (event.event === 'Progress') {
-          logger.debug('Download progress', {
-            chunkLength: event.data.chunkLength,
-          })
-        } else if (event.event === 'Finished') {
-          logger.info('Download finished')
-          setUpdateStatus('installing')
-        }
-      })
-      toast.success(t('update.completed'))
-      await relaunch()
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error)
-      setUpdateError(errorMessage)
-      setUpdateStatus('idle')
-      logger.error('Failed to download/install update', { error: errorMessage })
-    }
+    downloadAndInstallUpdate()
   }
 
   return (
@@ -146,7 +125,7 @@ export function GeneralPane() {
           description=""
         >
           {/* Only show check button when no update is available */}
-          {!availableUpdate && !pendingUpdate && (
+          {!hasUpdate && !pendingUpdate && (
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -156,26 +135,22 @@ export function GeneralPane() {
               >
                 {updateStatus === 'checking'
                   ? t('preferences.general.checking')
-                  : updateStatus === 'downloading'
-                    ? t('preferences.general.downloading')
-                    : updateStatus === 'installing'
-                      ? t('preferences.general.installing')
-                      : t('preferences.general.checkForUpdates')}
+                  : t('preferences.general.checkForUpdates')}
               </Button>
             </div>
           )}
         </SettingsField>
 
-        {/* Update status display - show availableUpdate (from manual check) or pendingUpdate (from auto-check) */}
-        {updateStatus === 'idle' && (availableUpdate || pendingUpdate) && (
+        {/* Update status display - show when update is available */}
+        {updateStatus === 'idle' && (hasUpdate || pendingUpdate) && (
           <>
             <SettingsField
               label={t('preferences.general.updateAvailable', {
-                version: availableUpdate?.version ?? pendingUpdate?.version,
+                version: pendingUpdate?.version,
               })}
               description=""
             >
-              {availableUpdate ? (
+              {hasUpdate ? (
                 <Button
                   variant="default"
                   size="sm"
@@ -197,7 +172,7 @@ export function GeneralPane() {
         )}
 
         {updateStatus === 'idle' &&
-          !availableUpdate &&
+          !hasUpdate &&
           !pendingUpdate &&
           !updateError && (
             <p className="text-sm text-muted-foreground">
@@ -212,9 +187,9 @@ export function GeneralPane() {
         )}
 
         {/* Always show release notes if available */}
-        {(availableUpdate?.body ?? pendingUpdate?.body) && (
+        {pendingUpdate?.body && (
           <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto rounded-md border p-3">
-            {availableUpdate?.body ?? pendingUpdate?.body}
+            {pendingUpdate.body}
           </div>
         )}
       </SettingsSection>

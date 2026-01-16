@@ -1,16 +1,14 @@
 import { useEffect } from 'react'
 import { check } from '@tauri-apps/plugin-updater'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { toast } from 'sonner'
 import { initializeCommandSystem } from './lib/commands'
 import { buildAppMenu, setupMenuLanguageListener } from './lib/menu'
 import { initializeLanguage } from './i18n/language-init'
-import i18n from './i18n/config'
 import { logger } from './lib/logger'
 import { cleanupOldFiles } from './lib/recovery'
 import { preloadShellEnv } from './services/shell-env'
+import { showUpdateNotification } from './services/updater'
 import { commands } from './lib/tauri-bindings'
-import { useUIStore } from './store/ui-store'
 import './App.css'
 import { MainWindow } from './components/layout/MainWindow'
 import { ThemeProvider } from './components/ThemeProvider'
@@ -82,26 +80,7 @@ function App() {
         const update = await check()
         if (update) {
           logger.info(`Update available: ${update.version}`)
-
-          // Store update info for GeneralPane to display
-          useUIStore.getState().setPendingUpdate({
-            version: update.version,
-            body: update.body ?? undefined,
-          })
-
-          // Show non-blocking toast notification with action to view details
-          toast.info(
-            i18n.t('update.availableNotification', { version: update.version }),
-            {
-              duration: Infinity,
-              action: {
-                label: i18n.t('update.viewDetails'),
-                onClick: () => {
-                  useUIStore.getState().setPreferencesOpen(true)
-                },
-              },
-            }
-          )
+          showUpdateNotification(update)
         }
       } catch (checkError) {
         logger.error(`Update check failed: ${String(checkError)}`)
