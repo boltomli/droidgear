@@ -252,13 +252,21 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       // Spawn PTY using tauri-pty with initial cwd from ref
       // Pass shell environment variables for GUI apps that don't inherit shell env
       // Manually add TERM since passing env replaces PTY defaults
+      // Ensure locale is set for proper CJK character display
       const envToPass = shellEnvData
         ? {
             ...shellEnvData,
             TERM: 'xterm-256color',
             COLORTERM: 'truecolor',
+            LANG: shellEnvData.LANG || 'en_US.UTF-8',
+            LC_ALL: shellEnvData.LC_ALL || shellEnvData.LANG || 'en_US.UTF-8',
           }
-        : { TERM: 'xterm-256color', COLORTERM: 'truecolor' }
+        : {
+            TERM: 'xterm-256color',
+            COLORTERM: 'truecolor',
+            LANG: 'en_US.UTF-8',
+            LC_ALL: 'en_US.UTF-8',
+          }
 
       let pty: IPty
       try {
