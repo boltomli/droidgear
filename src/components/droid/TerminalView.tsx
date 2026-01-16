@@ -289,6 +289,9 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       terminal.attachCustomKeyEventHandler(event => {
         if (event.type !== 'keydown') return true
 
+        // 如果正在IME组合输入中，不拦截任何按键
+        if (event.isComposing) return true
+
         // Shift+Enter: send newline for multi-line input
         if (event.key === 'Enter' && event.shiftKey) {
           pty.write('\n')
@@ -443,7 +446,7 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       <div
         ref={containerRef}
         className="h-full w-full"
-        onMouseDown={e => {
+        onPointerDown={e => {
           e.preventDefault()
           terminalRef.current?.focus()
         }}
