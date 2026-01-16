@@ -66,6 +66,9 @@
   "preferences.appearance.terminalFontDescription": "Custom font for terminal (supports Nerd Font icons)",
   "preferences.appearance.terminalFontPlaceholder": "Select a font",
   "preferences.appearance.terminalFont.default": "System Default",
+  "preferences.appearance.terminalShell": "Terminal Shell (Windows)",
+  "preferences.appearance.terminalShellDescription": "Custom shell command for terminal (e.g., cmd.exe, pwsh.exe, bash.exe -l -i)",
+  "preferences.appearance.terminalShellPlaceholder": "powershell.exe (default)",
 
   "preferences.advanced.title": "Example Advanced Settings",
   "preferences.advanced.toggle": "Example Advanced Toggle",

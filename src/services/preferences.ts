@@ -27,6 +27,7 @@ export function usePreferences() {
           language: null,
           skip_login_enabled: null,
           terminal_font_family: null,
+          terminal_shell_command: null,
         }
       }
 

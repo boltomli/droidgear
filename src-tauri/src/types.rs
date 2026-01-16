@@ -35,15 +35,20 @@ pub struct AppPreferences {
     /// If None, uses default monospace fonts
     #[serde(default)]
     pub terminal_font_family: Option<String>,
+    /// Custom shell command for terminal (Windows only, e.g., "cmd.exe", "pwsh.exe")
+    /// If None, uses default PowerShell on Windows
+    #[serde(default)]
+    pub terminal_shell_command: Option<String>,
 }
 
 impl Default for AppPreferences {
     fn default() -> Self {
         Self {
             theme: "system".to_string(),
-            language: None,             // None means use system locale
-            skip_login_enabled: None,   // None means disabled (default)
-            terminal_font_family: None, // None means use default fonts
+            language: None,               // None means use system locale
+            skip_login_enabled: None,     // None means disabled (default)
+            terminal_font_family: None,   // None means use default fonts
+            terminal_shell_command: None, // None means use default shell
         }
     }
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { locale } from '@tauri-apps/plugin-os'
+import { locale, platform } from '@tauri-apps/plugin-os'
 import { getSystemFonts } from 'tauri-plugin-system-fonts-api'
 import { toast } from 'sonner'
 import {
@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { useTheme } from '@/hooks/use-theme'
 import { SettingsField, SettingsSection } from '../shared/SettingsComponents'
 import { usePreferences, useSavePreferences } from '@/services/preferences'
@@ -29,6 +30,20 @@ export function AppearancePane() {
   const savePreferences = useSavePreferences()
   const [systemFonts, setSystemFonts] = useState<string[]>([])
   const [fontsLoading, setFontsLoading] = useState(true)
+  const [isWindows, setIsWindows] = useState(false)
+  const [shellCommand, setShellCommand] = useState('')
+
+  // Detect platform on mount
+  useEffect(() => {
+    setIsWindows(platform() === 'windows')
+  }, [])
+
+  // Sync shell command with preferences
+  useEffect(() => {
+    if (preferences?.terminal_shell_command !== undefined) {
+      setShellCommand(preferences.terminal_shell_command ?? '')
+    }
+  }, [preferences?.terminal_shell_command])
 
   // Load system fonts on mount
   useEffect(() => {
@@ -103,6 +118,20 @@ export function AppearancePane() {
         ...preferences,
         terminal_font_family: fontFamily,
       })
+    }
+  }
+
+  const handleShellCommandBlur = () => {
+    const command = shellCommand.trim() || null
+
+    // Only save if value changed
+    if (command !== (preferences?.terminal_shell_command ?? null)) {
+      if (preferences) {
+        savePreferences.mutate({
+          ...preferences,
+          terminal_shell_command: command,
+        })
+      }
     }
   }
 
@@ -195,6 +224,23 @@ export function AppearancePane() {
           </Select>
         </SettingsField>
       </SettingsSection>
+
+      {isWindows && (
+        <SettingsSection title={t('preferences.appearance.terminalShell')}>
+          <SettingsField
+            label={t('preferences.appearance.terminalShell')}
+            description={t('preferences.appearance.terminalShellDescription')}
+          >
+            <Input
+              value={shellCommand}
+              onChange={e => setShellCommand(e.target.value)}
+              onBlur={handleShellCommandBlur}
+              placeholder={t('preferences.appearance.terminalShellPlaceholder')}
+              disabled={savePreferences.isPending}
+            />
+          </SettingsField>
+        </SettingsSection>
+      )}
     </div>
   )
 }

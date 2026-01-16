@@ -69,6 +69,7 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
     const initialThemeRef = useRef(theme)
     const { data: preferences } = usePreferences()
     const initialFontFamilyRef = useRef<string | null | undefined>(undefined)
+    const initialShellCommandRef = useRef<string | null | undefined>(undefined)
     const [reloadKey, setReloadKey] = useState(0)
     const [shellEnvLoaded, setShellEnvLoaded] = useState(false)
     const [shellEnvData, setShellEnvData] = useState<Record<
@@ -96,6 +97,8 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
         preferences !== undefined
       ) {
         initialFontFamilyRef.current = preferences.terminal_font_family ?? null
+        initialShellCommandRef.current =
+          preferences.terminal_shell_command ?? null
       }
     }, [preferences])
 
@@ -219,11 +222,27 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
 
       // Determine shell based on platform
       const currentPlatform = platform()
-      const shell =
-        currentPlatform === 'windows' ? 'powershell.exe' : '/bin/zsh'
-      // Use login + interactive mode on Unix to load user's shell config files
-      // (.zshenv -> .zprofile -> .zshrc -> .zlogin)
-      const shellArgs = currentPlatform === 'windows' ? [] : ['-l', '-i']
+      let shell: string
+      let shellArgs: string[]
+
+      if (currentPlatform === 'windows') {
+        // Windows: use custom shell command if set, otherwise default to PowerShell
+        const customShellCommand = initialShellCommandRef.current
+        if (customShellCommand) {
+          // Parse command and arguments (split by spaces, respecting quotes would be complex)
+          const parts = customShellCommand.trim().split(/\s+/)
+          shell = parts[0] ?? 'powershell.exe'
+          shellArgs = parts.slice(1)
+        } else {
+          shell = 'powershell.exe'
+          shellArgs = []
+        }
+      } else {
+        // Unix: use default zsh with login + interactive mode
+        // (.zshenv -> .zprofile -> .zshrc -> .zlogin)
+        shell = '/bin/zsh'
+        shellArgs = ['-l', '-i']
+      }
 
       // Get initial dimensions
       const dims = fitAddon.proposeDimensions()

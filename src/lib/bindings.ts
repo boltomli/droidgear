@@ -803,7 +803,12 @@ skip_login_enabled?: boolean | null;
  * Custom font family for terminal (e.g., "Cascadia Mono NF")
  * If None, uses default monospace fonts
  */
-terminal_font_family?: string | null }
+terminal_font_family?: string | null; 
+/**
+ * Custom shell command for terminal (Windows only, e.g., "cmd.exe", "pwsh.exe")
+ * If None, uses default PowerShell on Windows
+ */
+terminal_shell_command?: string | null }
 /**
  * Channel configuration
  */
