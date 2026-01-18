@@ -258,6 +258,7 @@ export function SessionsPage() {
         setSelectedSession(null)
         setSelectedSessionPath(null)
       }
+      loadSessions()
     } else {
       setError(result.error)
     }
