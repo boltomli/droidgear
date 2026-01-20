@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Pencil, Trash2, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -39,11 +40,19 @@ import {
 } from '@/lib/bindings'
 
 // MCP Server Presets for Quick Add
+interface McpPresetApiKeyConfig {
+  placeholder: string
+  urlParam: string
+  getKeyUrl: string
+  getKeyUrlLabelKey: string
+}
+
 interface McpPreset {
   id: string
   name: string
   descriptionKey: string
   config: Omit<McpServerConfig, 'disabled'>
+  requiresApiKey?: McpPresetApiKeyConfig
 }
 
 const MCP_PRESETS: McpPreset[] = [
@@ -65,6 +74,21 @@ const MCP_PRESETS: McpPreset[] = [
       type: 'stdio',
       command: 'npx',
       args: ['-y', 'chrome-devtools-mcp@latest'],
+    },
+  },
+  {
+    id: 'exa',
+    name: 'Exa Web Search',
+    descriptionKey: 'mcp.presets.exa.description',
+    config: {
+      type: 'http',
+      url: 'https://mcp.exa.ai/mcp',
+    },
+    requiresApiKey: {
+      placeholder: 'exa-xxx...',
+      urlParam: 'exaApiKey',
+      getKeyUrl: 'https://dashboard.exa.ai/api-keys',
+      getKeyUrlLabelKey: 'mcp.presets.exa.getKeyLink',
     },
   },
 ]
@@ -92,6 +116,11 @@ export function McpPage() {
   const [envVars, setEnvVars] = useState<KeyValuePair[]>([])
   const [url, setUrl] = useState('')
   const [headers, setHeaders] = useState<KeyValuePair[]>([])
+
+  // API Key dialog state for presets that require API key
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false)
+  const [apiKeyInput, setApiKeyInput] = useState('')
+  const [pendingPreset, setPendingPreset] = useState<McpPreset | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -290,7 +319,17 @@ export function McpPage() {
     return server.config.url ?? ''
   }
 
-  const handleAddPreset = async (preset: McpPreset) => {
+  const handleAddPreset = (preset: McpPreset) => {
+    if (preset.requiresApiKey) {
+      setPendingPreset(preset)
+      setApiKeyInput('')
+      setApiKeyDialogOpen(true)
+    } else {
+      savePresetDirectly(preset)
+    }
+  }
+
+  const savePresetDirectly = async (preset: McpPreset) => {
     const result = await commands.saveMcpServer({
       name: preset.id,
       config: { ...preset.config, disabled: false } as McpServerConfig,
@@ -301,6 +340,45 @@ export function McpPage() {
       loadServers()
     } else {
       toast.error(result.error)
+    }
+  }
+
+  const handleApiKeyDialogConfirm = async () => {
+    if (!pendingPreset || !pendingPreset.requiresApiKey) return
+
+    if (!apiKeyInput.trim()) {
+      toast.error(t('mcp.presets.apiKeyDialog.validation.required'))
+      return
+    }
+
+    const baseUrl = pendingPreset.config.url ?? ''
+    const urlWithKey = `${baseUrl}?${pendingPreset.requiresApiKey.urlParam}=${apiKeyInput.trim()}`
+
+    const result = await commands.saveMcpServer({
+      name: pendingPreset.id,
+      config: {
+        ...pendingPreset.config,
+        url: urlWithKey,
+        disabled: false,
+      } as McpServerConfig,
+    })
+
+    if (result.status === 'ok') {
+      toast.success(t('common.save'))
+      loadServers()
+      setApiKeyDialogOpen(false)
+      setPendingPreset(null)
+      setApiKeyInput('')
+    } else {
+      toast.error(result.error)
+    }
+  }
+
+  const handleOpenExternalLink = async (url: string) => {
+    try {
+      await openUrl(url)
+    } catch (error) {
+      console.error('Failed to open URL:', error)
     }
   }
 
@@ -334,47 +412,59 @@ export function McpPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {servers.map(server => (
-                  <div
-                    key={server.name}
-                    className="border rounded-lg p-4 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{server.name}</span>
-                        <Badge variant="secondary">{server.config.type}</Badge>
+                {servers.map(server => {
+                  const matchedPreset = MCP_PRESETS.find(
+                    p => p.id === server.name
+                  )
+                  return (
+                    <div
+                      key={server.name}
+                      className="border rounded-lg p-4 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{server.name}</span>
+                          <Badge variant="secondary">
+                            {server.config.type}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={!server.config.disabled}
+                            onCheckedChange={checked =>
+                              handleToggle(server.name, !checked)
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(server)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setServerToDelete(server.name)
+                              setDeleteDialogOpen(true)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={!server.config.disabled}
-                          onCheckedChange={checked =>
-                            handleToggle(server.name, !checked)
-                          }
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(server)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setServerToDelete(server.name)
-                            setDeleteDialogOpen(true)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <p className="text-sm text-muted-foreground font-mono truncate">
+                        {getServerDescription(server)}
+                      </p>
+                      {matchedPreset && (
+                        <p className="text-sm text-muted-foreground">
+                          {t(matchedPreset.descriptionKey)}
+                        </p>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground font-mono truncate">
-                      {getServerDescription(server)}
-                    </p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 
@@ -600,6 +690,71 @@ export function McpPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* API Key Dialog for presets that require API key */}
+      <Dialog
+        open={apiKeyDialogOpen}
+        onOpenChange={open => {
+          setApiKeyDialogOpen(open)
+          if (!open) {
+            setPendingPreset(null)
+            setApiKeyInput('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('mcp.presets.apiKeyDialog.title')}</DialogTitle>
+            <DialogDescription>
+              {t('mcp.presets.apiKeyDialog.description')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {pendingPreset?.requiresApiKey && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() =>
+                  handleOpenExternalLink(
+                    pendingPreset.requiresApiKey?.getKeyUrl ?? ''
+                  )
+                }
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                {t(pendingPreset.requiresApiKey.getKeyUrlLabelKey)}
+              </Button>
+            )}
+
+            <div className="space-y-2">
+              <Label>{t('mcp.presets.apiKeyDialog.inputLabel')}</Label>
+              <Input
+                value={apiKeyInput}
+                onChange={e => setApiKeyInput(e.target.value)}
+                placeholder={pendingPreset?.requiresApiKey?.placeholder ?? ''}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    handleApiKeyDialogConfirm()
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setApiKeyDialogOpen(false)}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleApiKeyDialogConfirm}>
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -308,6 +308,12 @@
   "mcp.presets.add": "Add",
   "mcp.presets.playwright.description": "Browser automation with accessibility snapshots",
   "mcp.presets.chromeDevtools.description": "Debugging and performance analysis",
+  "mcp.presets.exa.description": "AI-powered web search to replace built-in WebSearch",
+  "mcp.presets.exa.getKeyLink": "Get API Key from Exa Dashboard",
+  "mcp.presets.apiKeyDialog.title": "Enter API Key",
+  "mcp.presets.apiKeyDialog.description": "This server requires an API key to function",
+  "mcp.presets.apiKeyDialog.inputLabel": "API Key",
+  "mcp.presets.apiKeyDialog.validation.required": "API Key is required",
 
   "droid.install.title": "Install",
   "droid.install.learnMore": "Learn more at factory.ai",
