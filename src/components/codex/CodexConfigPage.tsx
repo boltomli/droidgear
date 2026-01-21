@@ -46,7 +46,9 @@ export function CodexConfigPage() {
   const applyProfile = useCodexStore(state => state.applyProfile)
   const resetChanges = useCodexStore(state => state.resetChanges)
   const updateProfileName = useCodexStore(state => state.updateProfileName)
-  const updateProfileDescription = useCodexStore(state => state.updateProfileDescription)
+  const updateProfileDescription = useCodexStore(
+    state => state.updateProfileDescription
+  )
   const updateAuthValue = useCodexStore(state => state.updateAuthValue)
   const updateConfigToml = useCodexStore(state => state.updateConfigToml)
   const loadFromLiveConfig = useCodexStore(state => state.loadFromLiveConfig)
@@ -60,7 +62,10 @@ export function CodexConfigPage() {
   const [duplicateName, setDuplicateName] = useState('')
 
   const apiKey = useMemo(() => {
-    const auth = (currentProfile?.auth || {}) as Record<string, JsonValue | undefined>
+    const auth = (currentProfile?.auth || {}) as Record<
+      string,
+      JsonValue | undefined
+    >
     const value = auth.OPENAI_API_KEY
     return typeof value === 'string' ? value : ''
   }, [currentProfile])
@@ -73,7 +78,8 @@ export function CodexConfigPage() {
       await loadConfigStatus()
       if (cancelled) return
       const state = useCodexStore.getState()
-      if (!state.currentProfile && state.profiles[0]) state.selectProfile(state.profiles[0].id)
+      if (!state.currentProfile && state.profiles[0])
+        state.selectProfile(state.profiles[0].id)
     })()
     return () => {
       cancelled = true
@@ -120,7 +126,9 @@ export function CodexConfigPage() {
     const isActive = activeProfileId === currentProfile.id
     return (
       <div className="flex items-center gap-2">
-        {isActive && <Badge variant="outline">{t('codex.profile.active')}</Badge>}
+        {isActive && (
+          <Badge variant="outline">{t('codex.profile.active')}</Badge>
+        )}
         {hasChanges && <Badge variant="secondary">{t('common.unsaved')}</Badge>}
       </div>
     )
@@ -264,7 +272,9 @@ export function CodexConfigPage() {
                 <span>{t('codex.live.authPath')}</span>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">
-                    {configStatus?.authExists ? t('common.exists') : t('common.missing')}
+                    {configStatus?.authExists
+                      ? t('common.exists')
+                      : t('common.missing')}
                   </Badge>
                   <Button
                     variant="ghost"
@@ -280,7 +290,9 @@ export function CodexConfigPage() {
                 <span>{t('codex.live.configPath')}</span>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">
-                    {configStatus?.configExists ? t('common.exists') : t('common.missing')}
+                    {configStatus?.configExists
+                      ? t('common.exists')
+                      : t('common.missing')}
                   </Badge>
                   <Button
                     variant="ghost"

@@ -2,7 +2,7 @@ use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
-        channel, config, codex, env, mcp, notifications, opencode, preferences, recovery, sessions,
+        channel, codex, config, env, mcp, notifications, opencode, preferences, recovery, sessions,
         specs,
     };
 

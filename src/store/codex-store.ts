@@ -36,7 +36,10 @@ interface CodexState {
   setError: (error: string | null) => void
 }
 
-function profilesEqual(a: CodexProfile | null, b: CodexProfile | null): boolean {
+function profilesEqual(
+  a: CodexProfile | null,
+  b: CodexProfile | null
+): boolean {
   if (!a || !b) return a === b
   return JSON.stringify(a) === JSON.stringify(b)
 }
@@ -54,7 +57,11 @@ export const useCodexStore = create<CodexState>()(
       configStatus: null,
 
       loadProfiles: async () => {
-        set({ isLoading: true, error: null }, undefined, 'codex/loadProfiles/start')
+        set(
+          { isLoading: true, error: null },
+          undefined,
+          'codex/loadProfiles/start'
+        )
         try {
           const result = await commands.listCodexProfiles()
           if (result.status === 'ok') {
@@ -65,12 +72,24 @@ export const useCodexStore = create<CodexState>()(
                 profiles = [created.data]
               }
             }
-            set({ profiles, isLoading: false }, undefined, 'codex/loadProfiles/success')
+            set(
+              { profiles, isLoading: false },
+              undefined,
+              'codex/loadProfiles/success'
+            )
           } else {
-            set({ error: result.error, isLoading: false }, undefined, 'codex/loadProfiles/error')
+            set(
+              { error: result.error, isLoading: false },
+              undefined,
+              'codex/loadProfiles/error'
+            )
           }
         } catch (e) {
-          set({ error: String(e), isLoading: false }, undefined, 'codex/loadProfiles/exception')
+          set(
+            { error: String(e), isLoading: false },
+            undefined,
+            'codex/loadProfiles/exception'
+          )
         }
       },
 
@@ -78,7 +97,11 @@ export const useCodexStore = create<CodexState>()(
         try {
           const result = await commands.getActiveCodexProfileId()
           if (result.status === 'ok') {
-            set({ activeProfileId: result.data }, undefined, 'codex/loadActiveProfileId')
+            set(
+              { activeProfileId: result.data },
+              undefined,
+              'codex/loadActiveProfileId'
+            )
             if (result.data) get().selectProfile(result.data)
           }
         } catch {
@@ -90,7 +113,11 @@ export const useCodexStore = create<CodexState>()(
         try {
           const result = await commands.getCodexConfigStatus()
           if (result.status === 'ok') {
-            set({ configStatus: result.data }, undefined, 'codex/loadConfigStatus')
+            set(
+              { configStatus: result.data },
+              undefined,
+              'codex/loadConfigStatus'
+            )
           }
         } catch {
           // ignore
@@ -101,8 +128,12 @@ export const useCodexStore = create<CodexState>()(
         const profile = get().profiles.find(p => p.id === id) || null
         set(
           {
-            currentProfile: profile ? JSON.parse(JSON.stringify(profile)) : null,
-            originalProfile: profile ? JSON.parse(JSON.stringify(profile)) : null,
+            currentProfile: profile
+              ? JSON.parse(JSON.stringify(profile))
+              : null,
+            originalProfile: profile
+              ? JSON.parse(JSON.stringify(profile))
+              : null,
             hasChanges: false,
           },
           undefined,
@@ -152,7 +183,11 @@ export const useCodexStore = create<CodexState>()(
       duplicateProfile: async (id, newName) => {
         const result = await commands.duplicateCodexProfile(id, newName)
         if (result.status !== 'ok') {
-          set({ error: result.error }, undefined, 'codex/duplicateProfile/error')
+          set(
+            { error: result.error },
+            undefined,
+            'codex/duplicateProfile/error'
+          )
           return
         }
         await get().loadProfiles()
@@ -174,7 +209,11 @@ export const useCodexStore = create<CodexState>()(
         if (!currentProfile) return
         const result = await commands.readCodexCurrentConfig()
         if (result.status !== 'ok') {
-          set({ error: result.error }, undefined, 'codex/loadFromLiveConfig/error')
+          set(
+            { error: result.error },
+            undefined,
+            'codex/loadFromLiveConfig/error'
+          )
           return
         }
         const live: CodexCurrentConfig = result.data
@@ -197,9 +236,16 @@ export const useCodexStore = create<CodexState>()(
       updateProfileName: name => {
         const { currentProfile } = get()
         if (!currentProfile) return
-        const updated = { ...currentProfile, name, updatedAt: new Date().toISOString() }
+        const updated = {
+          ...currentProfile,
+          name,
+          updatedAt: new Date().toISOString(),
+        }
         set(
-          { currentProfile: updated, hasChanges: !profilesEqual(updated, get().originalProfile) },
+          {
+            currentProfile: updated,
+            hasChanges: !profilesEqual(updated, get().originalProfile),
+          },
           undefined,
           'codex/updateProfileName'
         )
@@ -208,9 +254,16 @@ export const useCodexStore = create<CodexState>()(
       updateProfileDescription: description => {
         const { currentProfile } = get()
         if (!currentProfile) return
-        const updated = { ...currentProfile, description, updatedAt: new Date().toISOString() }
+        const updated = {
+          ...currentProfile,
+          description,
+          updatedAt: new Date().toISOString(),
+        }
         set(
-          { currentProfile: updated, hasChanges: !profilesEqual(updated, get().originalProfile) },
+          {
+            currentProfile: updated,
+            hasChanges: !profilesEqual(updated, get().originalProfile),
+          },
           undefined,
           'codex/updateProfileDescription'
         )
@@ -221,9 +274,16 @@ export const useCodexStore = create<CodexState>()(
         if (!currentProfile) return
         const auth = { ...(currentProfile.auth as Record<string, JsonValue>) }
         auth[key] = value
-        const updated = { ...currentProfile, auth, updatedAt: new Date().toISOString() }
+        const updated = {
+          ...currentProfile,
+          auth,
+          updatedAt: new Date().toISOString(),
+        }
         set(
-          { currentProfile: updated, hasChanges: !profilesEqual(updated, get().originalProfile) },
+          {
+            currentProfile: updated,
+            hasChanges: !profilesEqual(updated, get().originalProfile),
+          },
           undefined,
           'codex/updateAuthValue'
         )
@@ -232,9 +292,16 @@ export const useCodexStore = create<CodexState>()(
       updateConfigToml: toml => {
         const { currentProfile } = get()
         if (!currentProfile) return
-        const updated = { ...currentProfile, configToml: toml, updatedAt: new Date().toISOString() }
+        const updated = {
+          ...currentProfile,
+          configToml: toml,
+          updatedAt: new Date().toISOString(),
+        }
         set(
-          { currentProfile: updated, hasChanges: !profilesEqual(updated, get().originalProfile) },
+          {
+            currentProfile: updated,
+            hasChanges: !profilesEqual(updated, get().originalProfile),
+          },
           undefined,
           'codex/updateConfigToml'
         )
@@ -244,7 +311,9 @@ export const useCodexStore = create<CodexState>()(
         const { originalProfile } = get()
         set(
           {
-            currentProfile: originalProfile ? JSON.parse(JSON.stringify(originalProfile)) : null,
+            currentProfile: originalProfile
+              ? JSON.parse(JSON.stringify(originalProfile))
+              : null,
             hasChanges: false,
             error: null,
           },
@@ -258,4 +327,3 @@ export const useCodexStore = create<CodexState>()(
     { name: 'codex-store' }
   )
 )
-

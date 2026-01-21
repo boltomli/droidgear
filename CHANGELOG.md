@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.7
+
+**New Features / 新功能**
+
+- Codex CLI config support / Codex CLI 配置支持
+- [sub2api] Display remote group name for API keys / [sub2api] 显示远程分组名称
+
 ## v0.2.6
 
 **New Features / 新功能**

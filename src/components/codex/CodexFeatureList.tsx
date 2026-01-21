@@ -33,8 +33,16 @@ export function CodexFeatureList() {
   }[] = [
     { id: 'config', labelKey: 'codex.title', icon: Wrench },
     { id: 'mcp', labelKey: 'droid.features.mcp', icon: Plug },
-    { id: 'sessions', labelKey: 'droid.features.sessions', icon: MessageSquare },
-    { id: 'terminal', labelKey: 'droid.features.terminal', icon: TerminalSquare },
+    {
+      id: 'sessions',
+      labelKey: 'droid.features.sessions',
+      icon: MessageSquare,
+    },
+    {
+      id: 'terminal',
+      labelKey: 'droid.features.terminal',
+      icon: TerminalSquare,
+    },
   ]
 
   const handleSubViewChange = (view: CodexSubView) => {
@@ -90,14 +98,19 @@ export function CodexFeatureList() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('sidebar.unsavedChanges.title')}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t('sidebar.unsavedChanges.title')}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t('sidebar.unsavedChanges.description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <ActionButton variant="destructive" onClick={handleDiscardAndSwitch}>
+            <ActionButton
+              variant="destructive"
+              onClick={handleDiscardAndSwitch}
+            >
               {t('sidebar.unsavedChanges.discard')}
             </ActionButton>
             <ActionButton onClick={handleSaveAndSwitch}>

@@ -130,6 +130,13 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ## Changelog
 
+### v0.2.7
+
+**New Features**
+
+- Codex CLI config support
+- [sub2api] Display remote group name for API keys
+
 ### v0.2.6
 
 **New Features**

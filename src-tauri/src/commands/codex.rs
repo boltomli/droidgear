@@ -141,8 +141,7 @@ fn read_json_object_file(path: &Path) -> Result<HashMap<String, Value>, String> 
     if !path.exists() {
         return Ok(HashMap::new());
     }
-    let s =
-        std::fs::read_to_string(path).map_err(|e| format!("Failed to read file: {e}"))?;
+    let s = std::fs::read_to_string(path).map_err(|e| format!("Failed to read file: {e}"))?;
     if s.trim().is_empty() {
         return Ok(HashMap::new());
     }
@@ -155,7 +154,8 @@ fn read_json_object_file(path: &Path) -> Result<HashMap<String, Value>, String> 
 
 fn write_json_object_file(path: &Path, obj: &HashMap<String, Value>) -> Result<(), String> {
     let v = Value::Object(obj.clone().into_iter().collect());
-    let s = serde_json::to_string_pretty(&v).map_err(|e| format!("Failed to serialize JSON: {e}"))?;
+    let s =
+        serde_json::to_string_pretty(&v).map_err(|e| format!("Failed to serialize JSON: {e}"))?;
     atomic_write(path, s.as_bytes())
 }
 
@@ -175,10 +175,7 @@ fn validate_toml(text: &str) -> Result<(), String> {
         .map_err(|e| format!("Invalid TOML: {e}"))
 }
 
-fn write_codex_live_atomic(
-    auth: &HashMap<String, Value>,
-    config_toml: &str,
-) -> Result<(), String> {
+fn write_codex_live_atomic(auth: &HashMap<String, Value>, config_toml: &str) -> Result<(), String> {
     validate_toml(config_toml)?;
 
     let auth_path = get_codex_auth_path()?;
@@ -190,9 +187,7 @@ fn write_codex_live_atomic(
         None
     };
     let old_config = if config_path.exists() {
-        Some(
-            std::fs::read(&config_path).map_err(|e| format!("Failed to read config.toml: {e}"))?,
-        )
+        Some(std::fs::read(&config_path).map_err(|e| format!("Failed to read config.toml: {e}"))?)
     } else {
         None
     };

@@ -4,8 +4,8 @@
 //! Import specific commands via their submodule (e.g., `commands::preferences::greet`).
 
 pub mod channel;
-pub mod config;
 pub mod codex;
+pub mod config;
 pub mod env;
 pub mod mcp;
 pub mod notifications;
