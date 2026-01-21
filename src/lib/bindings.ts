@@ -593,7 +593,7 @@ async listCodexProfiles() : Promise<Result<CodexProfile[], string>> {
 }
 },
 /**
- * 获取指定 Codex Profile
+ * 获取指定 Profile
  */
 async getCodexProfile(id: string) : Promise<Result<CodexProfile, string>> {
     try {
@@ -604,7 +604,7 @@ async getCodexProfile(id: string) : Promise<Result<CodexProfile, string>> {
 }
 },
 /**
- * 保存 Codex Profile
+ * 保存 Profile（新建或更新）
  */
 async saveCodexProfile(profile: CodexProfile) : Promise<Result<null, string>> {
     try {
@@ -615,7 +615,7 @@ async saveCodexProfile(profile: CodexProfile) : Promise<Result<null, string>> {
 }
 },
 /**
- * 删除 Codex Profile
+ * 删除 Profile
  */
 async deleteCodexProfile(id: string) : Promise<Result<null, string>> {
     try {
@@ -626,7 +626,7 @@ async deleteCodexProfile(id: string) : Promise<Result<null, string>> {
 }
 },
 /**
- * 复制 Codex Profile
+ * 复制 Profile
  */
 async duplicateCodexProfile(id: string, newName: string) : Promise<Result<CodexProfile, string>> {
     try {
@@ -637,7 +637,7 @@ async duplicateCodexProfile(id: string, newName: string) : Promise<Result<CodexP
 }
 },
 /**
- * 创建默认 Codex Profile
+ * 创建默认 Profile（当无 Profile 时调用）
  */
 async createDefaultCodexProfile() : Promise<Result<CodexProfile, string>> {
     try {
@@ -648,7 +648,7 @@ async createDefaultCodexProfile() : Promise<Result<CodexProfile, string>> {
 }
 },
 /**
- * 获取当前生效的 Codex Profile ID
+ * 读取 active Profile ID
  */
 async getActiveCodexProfileId() : Promise<Result<string | null, string>> {
     try {
@@ -659,7 +659,7 @@ async getActiveCodexProfileId() : Promise<Result<string | null, string>> {
 }
 },
 /**
- * 应用 Codex Profile（写入 ~/.codex/*）
+ * 应用指定 Profile 到 `~/.codex/*`
  */
 async applyCodexProfile(id: string) : Promise<Result<null, string>> {
     try {
@@ -670,7 +670,7 @@ async applyCodexProfile(id: string) : Promise<Result<null, string>> {
 }
 },
 /**
- * 获取 Codex Live 配置状态
+ * 获取 Codex Live 配置状态（文件是否存在及路径）
  */
 async getCodexConfigStatus() : Promise<Result<CodexConfigStatus, string>> {
     try {
@@ -681,7 +681,7 @@ async getCodexConfigStatus() : Promise<Result<CodexConfigStatus, string>> {
 }
 },
 /**
- * 读取当前 ~/.codex/* 配置
+ * 读取当前 `~/.codex/*` 配置（若不存在则返回空）
  */
 async readCodexCurrentConfig() : Promise<Result<CodexCurrentConfig, string>> {
     try {
@@ -1003,6 +1003,18 @@ groupName: string | null }
  */
 export type ChannelType = "new-api" | "sub-2-api"
 /**
+ * Codex Live 配置状态
+ */
+export type CodexConfigStatus = { authExists: boolean; configExists: boolean; authPath: string; configPath: string }
+/**
+ * 当前 Codex Live 配置（从 `~/.codex/*` 读取）
+ */
+export type CodexCurrentConfig = { auth?: Partial<{ [key in string]: JsonValue }>; configToml?: string }
+/**
+ * Codex Profile（用于在 DroidGear 内部保存并切换）
+ */
+export type CodexProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; auth?: Partial<{ [key in string]: JsonValue }>; configToml?: string }
+/**
  * Message content block
  */
 export type ContentBlock = { type: string; text?: string | null; thinking?: string | null }
@@ -1107,18 +1119,6 @@ export type McpServerType = "stdio" | "http"
  * Model info returned from API
  */
 export type ModelInfo = { id: string; name: string | null }
-/**
- * Codex Live 配置状态
- */
-export type CodexConfigStatus = { authExists: boolean; configExists: boolean; authPath: string; configPath: string }
-/**
- * 当前 Codex Live 配置（从 ~/.codex/* 读取）
- */
-export type CodexCurrentConfig = { auth: Partial<{ [key in string]: JsonValue }>; configToml: string }
-/**
- * Codex Profile
- */
-export type CodexProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; auth: Partial<{ [key in string]: JsonValue }>; configToml: string }
 /**
  * Configuration status
  */

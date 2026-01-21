@@ -2,7 +2,9 @@
 
 [中文](README.md)
 
-A desktop application for configuring custom AI models in [Factory Droid](https://factory.ai) using BYOK (Bring Your Own Key).
+A desktop enhancement tool for [Factory Droid](https://factory.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai).
+
+Supports custom AI models (BYOK), embedded terminal, session & specs management, MCP server configuration, and more.
 
 ## Installation
 
@@ -24,7 +26,8 @@ Run the installer directly.
 
 - **Multi-Provider Support** - Configure models from Anthropic, OpenAI, or any Generic Chat Completion API
 - **Visual Model Management** - Add, edit, delete, and reorder custom models with drag-and-drop
-- **API Model Discovery** - Fetch available models directly from provider APIs
+- **Batch Operations** - Copy models, filter and batch delete, set default model
+- **API Model Discovery** - Fetch available models directly from provider APIs with auto-generated IDs and display names
 - **Import/Export** - Support configuration import/export and batch management
 - **Multi-Platform Support** - Support sub2api, antigravity and other API proxy platforms
 
@@ -33,10 +36,12 @@ Run the installer directly.
 - **Built-in Terminal** - Integrated terminal with state save and restore
 - **Custom Configuration** - Custom font, force dark mode
 - **Convenient Operations** - Copy-on-select, OSC 9 notifications, derived sub-windows
+- **Keyboard Shortcuts** - Cmd/Ctrl+1~0 to switch terminals, Cmd/Ctrl+W to close tabs, Cmd/Ctrl+Shift+[ to switch tabs
+- **Code Snippets** - Snippets support on terminal pages
 
 ### Droid Session Management
 
-- **Session Viewer** - View and manage Droid sessions
+- **Session Viewer** - View and manage Droid sessions with delete support
 - **Multiple Views** - Toggle between list/grouped view, hide empty sessions
 - **Follow Mode** - Session follow mode with thinking expansion toggle
 - **Cloud Sync** - Cloud session sync toggle
@@ -46,10 +51,11 @@ Run the installer directly.
 - **File Browser** - View spec files in `~/.factory/specs` directory
 - **Markdown Rendering** - Support Markdown format rendering
 - **File Operations** - Rename, delete, save as, copy full path
+- **Edit Mode** - Support spec selection and edit mode
 
 ### MCP Server Management
 
-- **Presets** - Built-in MCP presets
+- **Presets** - Built-in MCP presets (including exa, etc.)
 - **Server Management** - MCP server configuration management
 
 ### OpenCode Support
@@ -66,7 +72,8 @@ Run the installer directly.
 ### Other Features
 
 - **Skip Login Helper** - Helper for skipping login flow
-- **Auto Update** - Version check and auto update notification
+- **Auto Update** - Version check, auto update notification and download progress
+- **Window State** - Save and restore window state
 - **Exit Protection** - Warns before closing with unsaved changes
 - **Cross-Platform** - Works on macOS, Windows, and Linux
 
@@ -132,285 +139,21 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ### v0.2.7
 
-**New Features**
-
 - Codex CLI config support
 - [sub2api] Display remote group name for API keys
 
 ### v0.2.6
 
-**New Features**
-
 - Universal multi models component for byok and channels
 - Add new preset mcp server exa to replace droid websearch
-
-**Bug Fixes**
-
-- Auto flush saveModels action #8
+- Auto flush saveModels action fix
 
 ### v0.2.5
 
-**New Features**
-
 - Cmd/Ctrl + Shift + [ to switch to previous tab
+- Fix session list not refreshing after deletion
 
-**Bug Fixes**
-
-- Fix session list not refreshing after deletion #7
-
-### v0.2.4
-
-**New Features**
-
-- Support Cmd/Ctrl+1/2/3..0 to switch terminal
-- Delete session
-- Update check improvements and downloading progress
-- Use custom ActionButton and ActionDropdownMenuItem
-- Allow Windows user specify custom terminal command
-
-**Bug Fixes**
-
-- Ensure locale is set for proper CJK character display
-- Wrong selection active if IME active
-- IME compatibility
-
-### v0.2.3
-
-**New Features**
-
-- Ctrl/Cmd + W to close terminal tab
-- Show toggle left sidebar button
-- Add Snippets on Terminal pages
-- Default use directory name as Terminal name
-
-**Bug Fixes**
-
-- Ctrl/Cmd+W only bind in Terminal page
-- Allow empty derived terminal
-- Big performance improvement for terminal loading
-- Update status checking
-- Auto generate display name
-- Rename terminal on Windows
-- Use windows custom config for github actions
-
-### v0.2.2
-
-**Bug Fixes**
-
-- Fix TERM/COLORTERM environment variable injection
-
-### v0.2.1
-
-**New Features**
-
-- Terminal support open derived sub window
-- Support shift+enter on macOS and ctrl+shift+c/v on Windows/Linux
-
-**Bug Fixes**
-
-- Auto focus and selection while rename Terminal name
-- Allow use dot in model name
-- Terminal bottom style and model maxTokens step size
-- Save and restore window state
-- Remove custom env to inherit system environment
-
-### v0.2.0
-
-**New Features**
-
-- Terminal support OSC 9 notifications
-- Use single button to toggle session list/grouped view
-- Sessions hide empty groups
-- Use different indicators for Terminal active and notification
-- Terminal add copy-on-select
-- Fix left panel width
-
-### v0.1.9
-
-**New Features**
-
-- Terminal add reload and remove state control
-- Custom terminal font
-- Sessions support hiding empty
-- Terminal inject envs and add force dark mode
-
-### v0.1.8
-
-**New Features**
-
-- Save and restore terminal status
-- Embedded terminals support
-- More powerful session follow mode and toggle thinking expansion
-
-### v0.1.7
-
-**New Features**
-
-- Support droid sessions
-
-### v0.1.6
-
-**New Features**
-
-- Copy spec full path
-- Auto set displayName
-
-### v0.1.5
-
-**New Features**
-
-- Add tips about websearch tool-call issue if skip login
-- Add environment variable conflict hinter
-- Use toast instead of confirm while check update
-
-**Bug Fixes**
-
-- Prevent the use of system model names
-- Add more special chars for droid display name
-- Fix scroll top if switch spec
-- Fix wrong command in windows
-- Disable autoCorrect autoComplete autoCapitalize spellCheck
-
-### v0.1.4
-
-**New Features**
-
-- Add OpenCode support for AI development
-- Load and save OpenCode providers/auth to profiles
-- Click Spec title to rename
-- Use resizable dialog for OpenCode provider
-
-**Bug Fixes**
-
-- Fix window size and tab width issues
-- Fix spec render causing window overflow
-- Fix try skip login behavior changed
-
-### v0.1.3
-
-**New Features**
-
-- Support spec selection and edit mode
-- Add hourly check update
-- Updater add release notes display
-- Support new-api OpenAI models detection
-
-**Bug Fixes**
-
-- Do not empty API URL if switch provider type
-
-### v0.1.2
-
-**New Features**
-
-- Add MCP presets
-- MCP servers management
-- Add more settings of droid
-- Prohibit use brackets in alias/displayName
-- Auto generate id and index, same rule with factory droid
-
-**Bug Fixes**
-
-- Does not append /v1 for sub2api openai models
-- Default fill maxOutputTokens
-
-### v0.1.1
-
-**New Features**
-
-- Cloud session sync toggle
-- Add install instruction area
-- Ensure unique display name
-
-**Bug Fixes**
-
-- Fix default tab: droid
-
-### v0.1.0
-
-**New Features**
-
-- Add about page, remove examples
-- Support antigravity platform of sub2api
-
-**Bug Fixes**
-
-- Fix style lint
-- Fix text align center
-- Fix fetch all pages of keys
-
-### v0.0.9
-
-**New Features**
-
-- Add tips to use /model to switch model
-- Support setting default model and mark current default
-- Enhanced dialog dragging functionality
-
-**Bug Fixes**
-
-- Fix fetch keys bug
-- Fix wrong channels saved path (does not affect Droid settings)
-- Fix losing changes while switching Droid tabs
-- Fix dark color issue while rendering code block
-
-### v0.0.8
-
-**New Features**
-
-- Specs panel supports rename, delete, and save as operations
-
-**Bug Fixes**
-
-- Disable global context menu
-
-### v0.0.7
-
-**New Features**
-
-- Added Specs panel to view spec files from ~/.factory/specs directory
-- Support Markdown rendering for spec file content
-
-### v0.0.6
-
-**New Features**
-
-- Added skip login helper
-
-**Bug Fixes**
-
-- Fixed uploadPlainBinary issue
-- Fixed Anthropic model fetching: now supports OpenAI-style Bearer token auth for third-party proxy services
-
-### v0.0.5
-
-**New Features**
-
-- Copy model functionality
-- Filter and batch delete functionality
-- Import/export configuration
-- Added sub2api platform support
-- Provider selection when adding models from channels
-
-**Bug Fixes**
-
-- Fixed codex/gemini platform support (gemini now only supports v1beta/models)
-- Fixed API path issue when no platform is set
-- Fixed model scrolling issue during import
-
-### v0.0.4
-
-**New Features**
-
-- Version check and upgrade notification
-- Quick panel disabled by default
-
-**Bug Fixes**
-
-- Fixed model key uniqueness issue
-- Fixed overflow layout issue
-- Fixed confirm save prompt when switching with unsaved changes
-- Fixed channel name mapping
+See full changelog at [CHANGELOG.md](CHANGELOG.md)
 
 ## Acknowledgements
 
