@@ -57,6 +57,12 @@ xattr -cr /Applications/DroidGear.app
 - **AI 开发集成** - OpenCode 工具集成
 - **配置管理** - 服务商/认证配置的加载和保存
 
+### Codex 支持
+
+- **Codex CLI 集成** - Codex 配置 Profile 管理
+- **配置管理** - 认证与 `config.toml` 的加载和保存（`~/.codex`）
+- **管理入口** - 在 Codex 入口下提供 MCP 服务器 / 会话 / 终端 管理子页
+
 ### 其他功能
 
 - **跳过登录辅助** - 辅助跳过登录流程

@@ -57,6 +57,12 @@ Run the installer directly.
 - **AI Development Integration** - OpenCode tool integration
 - **Configuration Management** - Load and save provider/auth configurations
 
+### Codex Support
+
+- **Codex CLI Integration** - Manage Codex configuration profiles
+- **Configuration Management** - Load and save auth/config.toml (`~/.codex`)
+- **Management Pages** - MCP servers / sessions / terminal subpages under Codex
+
 ### Other Features
 
 - **Skip Login Helper** - Helper for skipping login flow

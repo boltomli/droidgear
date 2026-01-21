@@ -1077,6 +1077,7 @@ dependencies = [
  "tauri-plugin-updater",
  "tauri-plugin-window-state",
  "tauri-specta",
+ "toml 0.8.2",
  "uuid",
 ]
 

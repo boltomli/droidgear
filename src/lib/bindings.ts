@@ -582,6 +582,116 @@ async toggleMcpServer(name: string, disabled: boolean) : Promise<Result<null, st
 }
 },
 /**
+ * 列出所有 Codex Profiles
+ */
+async listCodexProfiles() : Promise<Result<CodexProfile[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_codex_profiles") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取指定 Codex Profile
+ */
+async getCodexProfile(id: string) : Promise<Result<CodexProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_codex_profile", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 保存 Codex Profile
+ */
+async saveCodexProfile(profile: CodexProfile) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_codex_profile", { profile }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 删除 Codex Profile
+ */
+async deleteCodexProfile(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_codex_profile", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 复制 Codex Profile
+ */
+async duplicateCodexProfile(id: string, newName: string) : Promise<Result<CodexProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("duplicate_codex_profile", { id, newName }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 创建默认 Codex Profile
+ */
+async createDefaultCodexProfile() : Promise<Result<CodexProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_default_codex_profile") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取当前生效的 Codex Profile ID
+ */
+async getActiveCodexProfileId() : Promise<Result<string | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_active_codex_profile_id") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 应用 Codex Profile（写入 ~/.codex/*）
+ */
+async applyCodexProfile(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("apply_codex_profile", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取 Codex Live 配置状态
+ */
+async getCodexConfigStatus() : Promise<Result<CodexConfigStatus, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_codex_config_status") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 读取当前 ~/.codex/* 配置
+ */
+async readCodexCurrentConfig() : Promise<Result<CodexCurrentConfig, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("read_codex_current_config") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * List all profiles
  */
 async listOpencodeProfiles() : Promise<Result<OpenCodeProfile[], string>> {
@@ -997,6 +1107,18 @@ export type McpServerType = "stdio" | "http"
  * Model info returned from API
  */
 export type ModelInfo = { id: string; name: string | null }
+/**
+ * Codex Live 配置状态
+ */
+export type CodexConfigStatus = { authExists: boolean; configExists: boolean; authPath: string; configPath: string }
+/**
+ * 当前 Codex Live 配置（从 ~/.codex/* 读取）
+ */
+export type CodexCurrentConfig = { auth: Partial<{ [key in string]: JsonValue }>; configToml: string }
+/**
+ * Codex Profile
+ */
+export type CodexProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; auth: Partial<{ [key in string]: JsonValue }>; configToml: string }
 /**
  * Configuration status
  */
