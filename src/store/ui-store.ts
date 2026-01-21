@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 
-type NavigationView = 'droid' | 'channels' | 'opencode'
-type ToolView = 'droid' | 'opencode'
+type NavigationView = 'droid' | 'channels' | 'opencode' | 'codex'
+type ToolView = 'droid' | 'opencode' | 'codex'
 export type DroidSubView =
   | 'models'
   | 'helpers'
@@ -11,6 +11,7 @@ export type DroidSubView =
   | 'sessions'
   | 'terminal'
 export type OpenCodeSubView = 'providers'
+export type CodexSubView = 'config' | 'mcp' | 'sessions' | 'terminal'
 
 export interface PendingUpdate {
   version: string
@@ -26,6 +27,7 @@ interface UIState {
   lastToolView: ToolView
   droidSubView: DroidSubView
   opencodeSubView: OpenCodeSubView
+  codexSubView: CodexSubView
   lastSpecExportPath: string | null
   pendingUpdate: PendingUpdate | null
 
@@ -40,6 +42,7 @@ interface UIState {
   setCurrentView: (view: NavigationView) => void
   setDroidSubView: (view: DroidSubView) => void
   setOpenCodeSubView: (view: OpenCodeSubView) => void
+  setCodexSubView: (view: CodexSubView) => void
   setLastSpecExportPath: (path: string) => void
   setPendingUpdate: (update: PendingUpdate | null) => void
   clearPendingUpdate: () => void
@@ -57,6 +60,7 @@ export const useUIStore = create<UIState>()(
         lastToolView: 'droid',
         droidSubView: 'models',
         opencodeSubView: 'providers',
+        codexSubView: 'config',
         lastSpecExportPath: null,
         pendingUpdate: null,
 
@@ -112,9 +116,9 @@ export const useUIStore = create<UIState>()(
           set(
             state => ({
               currentView: view,
-              // Update lastToolView when switching to droid/opencode
+              // Update lastToolView when switching tools
               lastToolView:
-                view === 'droid' || view === 'opencode'
+                view === 'droid' || view === 'opencode' || view === 'codex'
                   ? view
                   : state.lastToolView,
             }),
@@ -127,6 +131,9 @@ export const useUIStore = create<UIState>()(
 
         setOpenCodeSubView: view =>
           set({ opencodeSubView: view }, undefined, 'setOpenCodeSubView'),
+
+        setCodexSubView: view =>
+          set({ codexSubView: view }, undefined, 'setCodexSubView'),
 
         setLastSpecExportPath: path =>
           set({ lastSpecExportPath: path }, undefined, 'setLastSpecExportPath'),
@@ -143,6 +150,7 @@ export const useUIStore = create<UIState>()(
           lastSpecExportPath: state.lastSpecExportPath,
           currentView: state.currentView,
           lastToolView: state.lastToolView,
+          codexSubView: state.codexSubView,
           leftSidebarVisible: state.leftSidebarVisible,
           rightSidebarVisible: state.rightSidebarVisible,
         }),

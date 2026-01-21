@@ -84,6 +84,11 @@
   "common.reset": "Reset",
   "common.cancel": "Cancel",
   "common.save": "Save",
+  "common.saved": "Saved",
+  "common.unsaved": "Unsaved",
+  "common.exists": "Exists",
+  "common.missing": "Missing",
+  "common.copy": "Copy",
   "common.add": "Add",
   "common.create": "Create",
   "common.edit": "Edit",
@@ -160,6 +165,7 @@
 
   "sidebar.channels": "Channels",
   "sidebar.droid": "Droid",
+  "sidebar.codex": "Codex",
   "sidebar.models": "Models",
   "sidebar.selectModelHint": "Select a model from the main panel to edit",
   "sidebar.unsavedChanges.title": "Unsaved Changes",
@@ -502,5 +508,45 @@
   "opencode.actions.saveSuccess": "Profile saved successfully",
   "opencode.actions.apply": "Apply Profile",
   "opencode.actions.applyConfirm": "Apply this profile? This will update your OpenCode configuration files (opencode.json and auth.json).",
-  "opencode.actions.applySuccess": "Profile applied successfully"
+  "opencode.actions.applySuccess": "Profile applied successfully",
+
+  "codex.title": "Codex",
+
+  "codex.features.title": "Codex",
+  "codex.features.profiles": "Profiles",
+  "codex.features.hint": "Manage Codex CLI configuration (auth.json / config.toml).",
+
+  "codex.profile.active": "Active",
+  "codex.profile.noProfile": "No profile available",
+  "codex.profile.select": "Select Profile",
+  "codex.profile.name": "Name",
+  "codex.profile.description": "Description",
+  "codex.profile.create": "Create Profile",
+  "codex.profile.createPlaceholder": "New profile name",
+  "codex.profile.createAction": "Create",
+  "codex.profile.duplicate": "Duplicate Profile",
+  "codex.profile.duplicatePlaceholder": "Duplicate name",
+  "codex.profile.duplicateAction": "Duplicate",
+  "codex.profile.delete": "Delete Profile",
+  "codex.profile.deleteAction": "Delete",
+  "codex.profile.created": "Profile created",
+  "codex.profile.duplicated": "Profile duplicated",
+  "codex.profile.deleted": "Profile deleted",
+
+  "codex.live.status": "Live Config",
+  "codex.live.authPath": "auth.json",
+  "codex.live.configPath": "config.toml",
+
+  "codex.auth.apiKey": "OPENAI_API_KEY",
+  "codex.auth.apiKeyPlaceholder": "sk-...",
+  "codex.auth.apiKeyHint": "Saved to ~/.codex/auth.json (local only).",
+
+  "codex.configToml": "config.toml",
+  "codex.configTomlHint": "Saved to ~/.codex/config.toml. Valid TOML is required.",
+
+  "codex.actions.apply": "Apply",
+  "codex.actions.applyConfirm": "Apply this profile? This will update your Codex CLI configuration files (~/.codex/auth.json and ~/.codex/config.toml).",
+  "codex.actions.applied": "Applied",
+  "codex.actions.loadFromLive": "Load Live",
+  "codex.actions.loadedFromLive": "Loaded from live config"
 }

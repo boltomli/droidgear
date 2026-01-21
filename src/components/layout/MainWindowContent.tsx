@@ -10,6 +10,7 @@ import {
   TerminalPage,
 } from '@/components/droid'
 import { OpenCodeConfigPage } from '@/components/opencode'
+import { CodexConfigPage } from '@/components/codex'
 import { ChannelDetail, ChannelDialog } from '@/components/channels'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
@@ -27,6 +28,7 @@ export function MainWindowContent({
   const { t } = useTranslation()
   const currentView = useUIStore(state => state.currentView)
   const droidSubView = useUIStore(state => state.droidSubView)
+  const codexSubView = useUIStore(state => state.codexSubView)
   const channels = useChannelStore(state => state.channels)
   const selectedChannelId = useChannelStore(state => state.selectedChannelId)
   const saveChannels = useChannelStore(state => state.saveChannels)
@@ -68,6 +70,16 @@ export function MainWindowContent({
       return <OpenCodeConfigPage />
     }
 
+    if (currentView === 'codex') {
+      return (
+        <>
+          {codexSubView === 'config' && <CodexConfigPage />}
+          {codexSubView === 'mcp' && <McpPage />}
+          {codexSubView === 'sessions' && <SessionsPage />}
+        </>
+      )
+    }
+
     // Channels view
     if (selectedChannel) {
       return (
@@ -98,7 +110,10 @@ export function MainWindowContent({
       {/* Terminal is always mounted across all views, hidden when not active */}
       <div
         className={cn(
-          !(currentView === 'droid' && droidSubView === 'terminal') && 'hidden',
+          !(
+            (currentView === 'droid' && droidSubView === 'terminal') ||
+            (currentView === 'codex' && codexSubView === 'terminal')
+          ) && 'hidden',
           'absolute inset-0'
         )}
       >

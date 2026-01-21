@@ -5,6 +5,7 @@
 
 pub mod channel;
 pub mod config;
+pub mod codex;
 pub mod env;
 pub mod mcp;
 pub mod notifications;
