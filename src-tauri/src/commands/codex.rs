@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+use super::paths;
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -82,9 +84,9 @@ fn get_active_profile_path() -> Result<PathBuf, String> {
     Ok(dir.join("active-profile.txt"))
 }
 
-/// `~/.codex/`
+/// `~/.codex/` (or custom path)
 fn get_codex_config_dir() -> Result<PathBuf, String> {
-    let dir = get_home_dir()?.join(".codex");
+    let dir = paths::get_codex_home()?;
     if !dir.exists() {
         std::fs::create_dir_all(&dir)
             .map_err(|e| format!("Failed to create codex config directory: {e}"))?;

@@ -9,6 +9,8 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
 
+use super::paths;
+
 /// Spec file metadata
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -25,8 +27,8 @@ pub struct SpecFile {
 
 /// Gets the path to the specs directory (~/.factory/specs).
 fn get_specs_dir() -> Result<PathBuf, String> {
-    let home_dir = dirs::home_dir().ok_or_else(|| "Failed to get home directory".to_string())?;
-    Ok(home_dir.join(".factory").join("specs"))
+    let factory_dir = paths::get_factory_home()?;
+    Ok(factory_dir.join("specs"))
 }
 
 /// Lists all spec files from ~/.factory/specs directory.

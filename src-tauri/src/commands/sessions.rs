@@ -11,6 +11,8 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
 
+use super::paths;
+
 /// Session project (directory containing sessions)
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -94,8 +96,8 @@ pub struct SessionDetail {
 
 /// Gets the path to the sessions directory (~/.factory/sessions).
 fn get_sessions_dir() -> Result<PathBuf, String> {
-    let home_dir = dirs::home_dir().ok_or_else(|| "Failed to get home directory".to_string())?;
-    Ok(home_dir.join(".factory").join("sessions"))
+    let factory_dir = paths::get_factory_home()?;
+    Ok(factory_dir.join("sessions"))
 }
 
 /// Lists all session projects from ~/.factory/sessions directory.

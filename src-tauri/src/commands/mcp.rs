@@ -8,6 +8,8 @@ use specta::Type;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use super::paths;
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -63,8 +65,7 @@ pub struct McpServer {
 
 /// Gets the path to ~/.factory/mcp.json
 fn get_mcp_config_path() -> Result<PathBuf, String> {
-    let home_dir = dirs::home_dir().ok_or("Failed to get home directory")?;
-    let factory_dir = home_dir.join(".factory");
+    let factory_dir = paths::get_factory_home()?;
 
     // Ensure .factory directory exists
     if !factory_dir.exists() {

@@ -892,6 +892,61 @@ async deleteSession(sessionPath: string) : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Gets the current configuration paths (custom values only)
+ */
+async getConfigPaths() : Promise<Result<ConfigPaths, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_config_paths") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Gets all effective paths with default indicators
+ */
+async getEffectivePaths() : Promise<Result<EffectivePaths, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_effective_paths") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Saves a single configuration path
+ */
+async saveConfigPath(key: string, path: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_config_path", { key, path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Resets a single configuration path to default
+ */
+async resetConfigPath(key: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("reset_config_path", { key }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Gets the default paths (for UI display)
+ */
+async getDefaultPaths() : Promise<Result<EffectivePaths, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_default_paths") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -1015,6 +1070,10 @@ export type CodexCurrentConfig = { auth?: Partial<{ [key in string]: JsonValue }
  */
 export type CodexProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; auth?: Partial<{ [key in string]: JsonValue }>; configToml?: string }
 /**
+ * User-defined configuration paths (only stores explicitly set paths)
+ */
+export type ConfigPaths = { factory?: string | null; opencode?: string | null; opencodeAuth?: string | null; codex?: string | null }
+/**
  * Message content block
  */
 export type ContentBlock = { type: string; text?: string | null; thinking?: string | null }
@@ -1066,6 +1125,14 @@ extraArgs?: Partial<{ [key in string]: JsonValue }> | null;
  * Additional HTTP headers
  */
 extraHeaders?: Partial<{ [key in string]: string }> | null }
+/**
+ * Effective path info with default indicator
+ */
+export type EffectivePath = { key: string; path: string; isDefault: boolean }
+/**
+ * All effective paths
+ */
+export type EffectivePaths = { factory: EffectivePath; opencode: EffectivePath; opencodeAuth: EffectivePath; codex: EffectivePath }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 /**
  * MCP server entry with name

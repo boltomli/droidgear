@@ -11,6 +11,8 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+use super::paths;
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -112,8 +114,7 @@ fn get_active_profile_path() -> Result<PathBuf, String> {
 
 /// Gets ~/.config/opencode/ directory
 fn get_opencode_config_dir() -> Result<PathBuf, String> {
-    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
-    let dir = home.join(".config").join("opencode");
+    let dir = paths::get_opencode_config_dir()?;
     if !dir.exists() {
         std::fs::create_dir_all(&dir)
             .map_err(|e| format!("Failed to create opencode config directory: {e}"))?;
@@ -123,8 +124,7 @@ fn get_opencode_config_dir() -> Result<PathBuf, String> {
 
 /// Gets ~/.local/share/opencode/ directory
 fn get_opencode_auth_dir() -> Result<PathBuf, String> {
-    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
-    let dir = home.join(".local").join("share").join("opencode");
+    let dir = paths::get_opencode_auth_dir()?;
     if !dir.exists() {
         std::fs::create_dir_all(&dir)
             .map_err(|e| format!("Failed to create opencode auth directory: {e}"))?;

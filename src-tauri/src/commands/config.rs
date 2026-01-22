@@ -9,6 +9,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use tauri::AppHandle;
 
+use super::paths;
+
 // ============================================================================
 // Config Read Result
 // ============================================================================
@@ -87,8 +89,7 @@ pub struct ModelInfo {
 
 /// Gets the path to ~/.factory/settings.json
 fn get_factory_config_path() -> Result<PathBuf, String> {
-    let home_dir = dirs::home_dir().ok_or("Failed to get home directory")?;
-    let factory_dir = home_dir.join(".factory");
+    let factory_dir = paths::get_factory_home()?;
 
     // Ensure .factory directory exists
     if !factory_dir.exists() {
@@ -241,8 +242,8 @@ pub async fn save_custom_models(models: Vec<CustomModel>) -> Result<(), String> 
 #[tauri::command]
 #[specta::specta]
 pub async fn check_legacy_config() -> Result<bool, String> {
-    let home_dir = dirs::home_dir().ok_or("Failed to get home directory")?;
-    let config_path = home_dir.join(".factory").join("config.json");
+    let factory_dir = paths::get_factory_home()?;
+    let config_path = factory_dir.join("config.json");
 
     // Check if legacy config.json exists
     if !config_path.exists() {
@@ -267,8 +268,8 @@ pub async fn check_legacy_config() -> Result<bool, String> {
 #[tauri::command]
 #[specta::specta]
 pub async fn delete_legacy_config() -> Result<(), String> {
-    let home_dir = dirs::home_dir().ok_or("Failed to get home directory")?;
-    let config_path = home_dir.join(".factory").join("config.json");
+    let factory_dir = paths::get_factory_home()?;
+    let config_path = factory_dir.join("config.json");
 
     if config_path.exists() {
         std::fs::remove_file(&config_path)

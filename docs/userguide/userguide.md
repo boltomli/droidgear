@@ -35,6 +35,7 @@ Press **Cmd+,** to open preferences:
 - **Theme**: Light, Dark, or System
 - **Language**: Select your preferred language
 - **Keyboard Shortcuts**: Customize the Quick Pane shortcut
+- **Paths**: [Configure custom paths](./config-paths.md) for Droid/Factory, OpenCode, and Codex
 
 ### Native Menus
 

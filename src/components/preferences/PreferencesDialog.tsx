@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Settings, Palette, Info } from 'lucide-react'
+import { Settings, Palette, Info, FolderCog } from 'lucide-react'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -28,9 +28,10 @@ import {
 import { useUIStore } from '@/store/ui-store'
 import { GeneralPane } from './panes/GeneralPane'
 import { AppearancePane } from './panes/AppearancePane'
+import { PathsPane } from './panes/PathsPane'
 import { AboutPane } from './panes/AboutPane'
 
-type PreferencePane = 'general' | 'appearance' | 'about'
+type PreferencePane = 'general' | 'appearance' | 'paths' | 'about'
 
 const navigationItems = [
   {
@@ -42,6 +43,11 @@ const navigationItems = [
     id: 'appearance' as const,
     labelKey: 'preferences.appearance',
     icon: Palette,
+  },
+  {
+    id: 'paths' as const,
+    labelKey: 'preferences.paths',
+    icon: FolderCog,
   },
   {
     id: 'about' as const,
@@ -120,6 +126,7 @@ export function PreferencesDialog() {
             <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pt-0 max-h-[calc(600px-4rem)]">
               {activePane === 'general' && <GeneralPane />}
               {activePane === 'appearance' && <AppearancePane />}
+              {activePane === 'paths' && <PathsPane />}
               {activePane === 'about' && <AboutPane />}
             </div>
           </main>

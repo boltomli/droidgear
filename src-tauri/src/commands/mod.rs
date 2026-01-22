@@ -10,6 +10,7 @@ pub mod env;
 pub mod mcp;
 pub mod notifications;
 pub mod opencode;
+pub mod paths;
 pub mod preferences;
 pub mod recovery;
 pub mod sessions;
