@@ -137,6 +137,12 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ## Changelog
 
+### v0.2.9
+
+- Fix all platform tips for skipping login of droid
+- Fix i18n CN message of models.alreadyAddedForKey
+- Fix fetch model action on copy/edit mode
+
 ### v0.2.8
 
 - Support custom config path for WSL

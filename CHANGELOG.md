@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.9
+
+**Bug Fixes / 问题修复**
+
+- Fix all platform tips for skipping login of droid / 修复所有平台跳过 Droid 登录的提示
+- Fix i18n CN message of models.alreadyAddedForKey / 修复 models.alreadyAddedForKey 的中文翻译
+- Fix fetch model action on copy/edit mode / 修复复制/编辑模式下获取模型的操作
+
 ## v0.2.8
 
 **New Features / 新功能**
