@@ -399,7 +399,7 @@
   "models.noModelsAvailable": "此密钥没有可用的模型。",
   "models.selectModelsToAdd": "选择要添加的模型（已选 {{count}} 个）",
   "models.alreadyAdded": "（已添加）",
-  "models.alreadyAddedForKey": "（此密钥已添加）",
+  "models.alreadyAddedForKey": "（此模型已添加）",
   "models.alias": "别名",
   "models.aliasPlaceholder": "输入别名（可选）",
   "models.prefix": "前缀",
