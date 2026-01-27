@@ -173,7 +173,11 @@ function ModelForm({
   const handleSelectAll = () => {
     const newMap = new Map<string, BatchModelConfig>()
     const selectableModels = availableModels.filter(
-      m => !existingModels.some(em => em.model === m.id && em.apiKey === apiKey)
+      m =>
+        !existingModels.some(
+          em =>
+            em.model === m.id && em.baseUrl === baseUrl && em.apiKey === apiKey
+        )
     )
     selectableModels.forEach(m => {
       newMap.set(m.id, { alias: '', provider })
