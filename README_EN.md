@@ -137,6 +137,13 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ## Changelog
 
+### v0.3.0
+
+- Auto detect channel type
+- Detect display name use droid official name as prefix
+- Add base url to dedup
+- Fix isWindows detection
+
 ### v0.2.9
 
 - Fix all platform tips for skipping login of droid

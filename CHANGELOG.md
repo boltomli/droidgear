@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.0
+
+**New Features / 新功能**
+
+- Auto detect channel type / 自动检测频道类型
+- Detect display name use droid official name as prefix / 检测显示名称时使用 Droid 官方名称作为前缀
+
+**Bug Fixes / 问题修复**
+
+- Add base url to dedup / 添加 baseUrl 到去重逻辑
+- Fix isWindows detection / 修复 isWindows 检测
+
 ## v0.2.9
 
 **Bug Fixes / 问题修复**
