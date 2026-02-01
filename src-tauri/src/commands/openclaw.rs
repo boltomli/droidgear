@@ -240,10 +240,7 @@ fn build_openclaw_config(profile: &OpenClawProfile) -> Value {
                             );
                         }
                         if let Some(cw) = m.context_window {
-                            model_obj.insert(
-                                "contextWindow".to_string(),
-                                Value::Number(cw.into()),
-                            );
+                            model_obj.insert("contextWindow".to_string(), Value::Number(cw.into()));
                         }
                         if let Some(mt) = m.max_tokens {
                             model_obj.insert("maxTokens".to_string(), Value::Number(mt.into()));
@@ -265,7 +262,9 @@ fn build_openclaw_config(profile: &OpenClawProfile) -> Value {
 }
 
 /// Parse OpenClaw config JSON into profile fields
-fn parse_openclaw_config(config: &Value) -> (Option<String>, HashMap<String, OpenClawProviderConfig>) {
+fn parse_openclaw_config(
+    config: &Value,
+) -> (Option<String>, HashMap<String, OpenClawProviderConfig>) {
     let mut default_model = None;
     let mut providers = HashMap::new();
 
