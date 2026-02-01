@@ -838,7 +838,7 @@ async listOpenclawProfiles() : Promise<Result<OpenClawProfile[], string>> {
 }
 },
 /**
- * Get a single OpenClaw profile by ID
+ * Get a single profile by ID
  */
 async getOpenclawProfile(id: string) : Promise<Result<OpenClawProfile, string>> {
     try {
@@ -849,7 +849,7 @@ async getOpenclawProfile(id: string) : Promise<Result<OpenClawProfile, string>> 
 }
 },
 /**
- * Save an OpenClaw profile (create or update)
+ * Save a profile (create or update)
  */
 async saveOpenclawProfile(profile: OpenClawProfile) : Promise<Result<null, string>> {
     try {
@@ -860,7 +860,7 @@ async saveOpenclawProfile(profile: OpenClawProfile) : Promise<Result<null, strin
 }
 },
 /**
- * Delete an OpenClaw profile
+ * Delete a profile
  */
 async deleteOpenclawProfile(id: string) : Promise<Result<null, string>> {
     try {
@@ -871,7 +871,7 @@ async deleteOpenclawProfile(id: string) : Promise<Result<null, string>> {
 }
 },
 /**
- * Duplicate an OpenClaw profile
+ * Duplicate a profile
  */
 async duplicateOpenclawProfile(id: string, newName: string) : Promise<Result<OpenClawProfile, string>> {
     try {
@@ -882,7 +882,7 @@ async duplicateOpenclawProfile(id: string, newName: string) : Promise<Result<Ope
 }
 },
 /**
- * Create default OpenClaw profile (when no profiles exist)
+ * Create default profile (when no profiles exist)
  */
 async createDefaultOpenclawProfile() : Promise<Result<OpenClawProfile, string>> {
     try {
@@ -893,7 +893,7 @@ async createDefaultOpenclawProfile() : Promise<Result<OpenClawProfile, string>> 
 }
 },
 /**
- * Get active OpenClaw profile ID
+ * Get active profile ID
  */
 async getActiveOpenclawProfileId() : Promise<Result<string | null, string>> {
     try {
@@ -904,7 +904,7 @@ async getActiveOpenclawProfileId() : Promise<Result<string | null, string>> {
 }
 },
 /**
- * Apply an OpenClaw profile to ~/.openclaw/openclaw.json
+ * Apply a profile to `~/.openclaw/openclaw.json`
  */
 async applyOpenclawProfile(id: string) : Promise<Result<null, string>> {
     try {
@@ -1175,26 +1175,6 @@ export type CodexConfigStatus = { authExists: boolean; configExists: boolean; au
  */
 export type CodexCurrentConfig = { auth?: Partial<{ [key in string]: JsonValue }>; configToml?: string }
 /**
- * OpenClaw Model definition
- */
-export type OpenClawModel = { id: string; name?: string | null; reasoning: boolean; input: string[]; contextWindow?: number | null; maxTokens?: number | null }
-/**
- * OpenClaw Provider configuration
- */
-export type OpenClawProviderConfig = { baseUrl?: string | null; apiKey?: string | null; api?: string | null; models: OpenClawModel[] }
-/**
- * OpenClaw Profile
- */
-export type OpenClawProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; defaultModel?: string | null; providers: Partial<{ [key in string]: OpenClawProviderConfig }> }
-/**
- * OpenClaw config status
- */
-export type OpenClawConfigStatus = { configExists: boolean; configPath: string }
-/**
- * Current OpenClaw configuration
- */
-export type OpenClawCurrentConfig = { defaultModel?: string | null; providers: Partial<{ [key in string]: OpenClawProviderConfig }> }
-/**
  * Codex Profile（用于在 DroidGear 内部保存并切换）
  */
 export type CodexProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; auth?: Partial<{ [key in string]: JsonValue }>; configToml?: string }
@@ -1315,6 +1295,26 @@ export type McpServerType = "stdio" | "http"
  * Model info returned from API
  */
 export type ModelInfo = { id: string; name: string | null }
+/**
+ * OpenClaw config status
+ */
+export type OpenClawConfigStatus = { configExists: boolean; configPath: string }
+/**
+ * Current OpenClaw configuration (from config files)
+ */
+export type OpenClawCurrentConfig = { defaultModel?: string | null; providers?: Partial<{ [key in string]: OpenClawProviderConfig }> }
+/**
+ * OpenClaw Model definition
+ */
+export type OpenClawModel = { id: string; name?: string | null; reasoning?: boolean; input?: string[]; contextWindow?: number | null; maxTokens?: number | null }
+/**
+ * OpenClaw Profile (stored in DroidGear)
+ */
+export type OpenClawProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; defaultModel?: string | null; providers?: Partial<{ [key in string]: OpenClawProviderConfig }> }
+/**
+ * OpenClaw Provider configuration
+ */
+export type OpenClawProviderConfig = { baseUrl?: string | null; apiKey?: string | null; api?: string | null; models?: OpenClawModel[] }
 /**
  * Configuration status
  */
