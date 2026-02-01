@@ -2,7 +2,7 @@
 
 [中文](README.md)
 
-A desktop enhancement tool for [Factory Droid](https://factory.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai).
+A desktop enhancement tool for [Factory Droid](https://factory.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai).
 
 Supports custom AI models (BYOK), embedded terminal, session & specs management, MCP server configuration, and more.
 
@@ -62,6 +62,12 @@ Run the installer directly.
 
 - **AI Development Integration** - OpenCode tool integration
 - **Configuration Management** - Load and save provider/auth configurations
+
+### OpenClaw Support
+
+- **AI Development Integration** - OpenClaw tool integration
+- **Configuration Management** - Load and save provider configurations
+- **Installation Helper** - Built-in installation commands for macOS/Linux/Windows
 
 ### Codex Support
 
@@ -136,44 +142,6 @@ npm run tauri build
 DroidGear values your privacy. Your username, password, API keys, and other sensitive data are stored locally on your device only and are never uploaded to any server.
 
 ## Changelog
-
-### v0.3.1
-
-- OpenClaw provider/model configuration support
-- OpenClaw config improvements
-
-### v0.3.0
-
-- Auto detect channel type
-- Detect display name use droid official name as prefix
-- Add base url to dedup
-- Fix isWindows detection
-
-### v0.2.9
-
-- Fix all platform tips for skipping login of droid
-- Fix i18n CN message of models.alreadyAddedForKey
-- Fix fetch model action on copy/edit mode
-
-### v0.2.8
-
-- Support custom config path for WSL
-
-### v0.2.7
-
-- Codex CLI config support
-- [sub2api] Display remote group name for API keys
-
-### v0.2.6
-
-- Universal multi models component for byok and channels
-- Add new preset mcp server exa to replace droid websearch
-- Auto flush saveModels action fix
-
-### v0.2.5
-
-- Cmd/Ctrl + Shift + [ to switch to previous tab
-- Fix session list not refreshing after deletion
 
 See full changelog at [CHANGELOG.md](CHANGELOG.md)
 

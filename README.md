@@ -2,7 +2,7 @@
 
 [English](README_EN.md)
 
-[Factory Droid](https://factory.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) 的桌面增强管理工具。
+[Factory Droid](https://factory.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) 的桌面增强管理工具。
 
 支持自定义 AI 模型（BYOK）、嵌入式终端、会话与 Specs 管理、MCP 服务器配置等。
 
@@ -62,6 +62,12 @@ xattr -cr /Applications/DroidGear.app
 
 - **AI 开发集成** - OpenCode 工具集成
 - **配置管理** - 服务商/认证配置的加载和保存
+
+### OpenClaw 支持
+
+- **AI 开发集成** - OpenClaw 工具集成
+- **配置管理** - 服务商配置的加载和保存
+- **安装辅助** - 内置 macOS/Linux/Windows 安装命令
 
 ### Codex 支持
 
@@ -136,44 +142,6 @@ npm run tauri build
 DroidGear 重视您的隐私安全。您的用户名、密码、API 密钥等敏感数据仅存储在本地设备，不会上传至任何服务器。
 
 ## 更新日志
-
-### v0.3.1
-
-- OpenClaw 服务商/模型配置支持
-- OpenClaw 配置改进
-
-### v0.3.0
-
-- 自动检测频道类型
-- 检测显示名称时使用 Droid 官方名称作为前缀
-- 添加 baseUrl 到去重逻辑
-- 修复 isWindows 检测
-
-### v0.2.9
-
-- 修复所有平台跳过 Droid 登录的提示
-- 修复 models.alreadyAddedForKey 的中文翻译
-- 修复复制/编辑模式下获取模型的操作
-
-### v0.2.8
-
-- 支持 WSL 自定义配置路径
-
-### v0.2.7
-
-- Codex CLI 配置支持
-- [sub2api] 显示远程分组名称
-
-### v0.2.6
-
-- 通用多模型组件，支持 BYOK 和频道
-- 添加新的预设 MCP 服务器 exa 替代 droid websearch
-- 修复自动刷新 saveModels 操作
-
-### v0.2.5
-
-- Cmd/Ctrl + Shift + [ 切换到上一个标签页
-- 修复删除会话后列表不刷新的问题
 
 查看完整更新日志请访问 [CHANGELOG.md](CHANGELOG.md)
 

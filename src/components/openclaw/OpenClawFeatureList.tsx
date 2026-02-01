@@ -63,20 +63,24 @@ export function OpenClawFeatureList() {
             <code
               className="block bg-muted p-2 rounded text-xs break-all cursor-pointer hover:bg-muted/80 transition-colors"
               onClick={() =>
-                handleCopyCommand('curl -fsSL https://openclaw.ai/install | sh')
+                handleCopyCommand(
+                  'curl -fsSL https://openclaw.ai/install.sh | bash'
+                )
               }
             >
-              curl -fsSL https://openclaw.ai/install | sh
+              curl -fsSL https://openclaw.ai/install.sh | bash
             </code>
           </TabsContent>
           <TabsContent value="windows">
             <code
               className="block bg-muted p-2 rounded text-xs break-all cursor-pointer hover:bg-muted/80 transition-colors"
               onClick={() =>
-                handleCopyCommand('irm https://openclaw.ai/install.ps1 | iex')
+                handleCopyCommand(
+                  'iwr -useb https://openclaw.ai/install.ps1 | iex'
+                )
               }
             >
-              irm https://openclaw.ai/install.ps1 | iex
+              iwr -useb https://openclaw.ai/install.ps1 | iex
             </code>
           </TabsContent>
         </Tabs>
