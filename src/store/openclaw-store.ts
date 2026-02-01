@@ -65,6 +65,11 @@ export const useOpenClawStore = create<OpenClawState>()(
               undefined,
               'openclaw/loadProfiles/success'
             )
+            // Auto-select first profile if no current profile is selected
+            const { currentProfile } = get()
+            if (!currentProfile && profiles.length > 0 && profiles[0]) {
+              get().selectProfile(profiles[0].id)
+            }
           } else {
             set(
               { error: result.error, isLoading: false },
@@ -85,12 +90,20 @@ export const useOpenClawStore = create<OpenClawState>()(
         try {
           const result = await commands.getActiveOpenclawProfileId()
           if (result.status === 'ok') {
+            const activeId = result.data
             set(
-              { activeProfileId: result.data },
+              { activeProfileId: activeId },
               undefined,
               'openclaw/loadActiveProfileId'
             )
-            if (result.data) get().selectProfile(result.data)
+            // Select active profile if it exists in profiles list
+            if (activeId) {
+              const { profiles } = get()
+              const activeProfile = profiles.find(p => p.id === activeId)
+              if (activeProfile) {
+                get().selectProfile(activeId)
+              }
+            }
           }
         } catch {
           // ignore

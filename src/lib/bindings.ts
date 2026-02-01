@@ -883,6 +883,7 @@ async duplicateOpenclawProfile(id: string, newName: string) : Promise<Result<Ope
 },
 /**
  * Create default profile (when no profiles exist)
+ * If openclaw.json exists, initialize profile from its content
  */
 async createDefaultOpenclawProfile() : Promise<Result<OpenClawProfile, string>> {
     try {

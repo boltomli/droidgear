@@ -186,17 +186,54 @@ fn load_profile_by_id(id: &str) -> Result<OpenClawProfile, String> {
 // Config File Helpers
 // ============================================================================
 
+/// Deep merge two JSON values. Overlay values are merged into base.
+fn deep_merge_json(base: &mut Value, overlay: &Value) {
+    match (base, overlay) {
+        (Value::Object(base_map), Value::Object(overlay_map)) => {
+            for (key, overlay_val) in overlay_map {
+                match base_map.get_mut(key) {
+                    Some(base_val) => deep_merge_json(base_val, overlay_val),
+                    None => {
+                        base_map.insert(key.clone(), overlay_val.clone());
+                    }
+                }
+            }
+        }
+        (base, overlay) => *base = overlay.clone(),
+    }
+}
+
 /// Build OpenClaw config JSON structure from profile
 fn build_openclaw_config(profile: &OpenClawProfile) -> Value {
     let mut config = serde_json::Map::new();
 
-    // agents.defaults.model.primary
-    if let Some(ref model) = profile.default_model {
+    // Collect all model refs from providers for agents.defaults.models
+    let mut all_model_refs: Vec<String> = Vec::new();
+    for (provider_id, provider) in &profile.providers {
+        for model in &provider.models {
+            all_model_refs.push(format!("{provider_id}/{}", model.id));
+        }
+    }
+
+    // agents.defaults.model.primary and agents.defaults.models
+    if profile.default_model.is_some() || !all_model_refs.is_empty() {
         let mut agents = serde_json::Map::new();
         let mut defaults = serde_json::Map::new();
-        let mut model_obj = serde_json::Map::new();
-        model_obj.insert("primary".to_string(), Value::String(model.clone()));
-        defaults.insert("model".to_string(), Value::Object(model_obj));
+
+        if let Some(ref model) = profile.default_model {
+            let mut model_obj = serde_json::Map::new();
+            model_obj.insert("primary".to_string(), Value::String(model.clone()));
+            defaults.insert("model".to_string(), Value::Object(model_obj));
+        }
+
+        if !all_model_refs.is_empty() {
+            let mut models_map = serde_json::Map::new();
+            for model_ref in all_model_refs {
+                models_map.insert(model_ref, Value::Object(serde_json::Map::new()));
+            }
+            defaults.insert("models".to_string(), Value::Object(models_map));
+        }
+
         agents.insert("defaults".to_string(), Value::Object(defaults));
         config.insert("agents".to_string(), Value::Object(agents));
     }
@@ -348,10 +385,26 @@ fn parse_openclaw_config(
     (default_model, providers)
 }
 
+/// Read existing openclaw.json config file as JSON Value
+fn read_openclaw_config_raw() -> Result<Value, String> {
+    let config_path = get_openclaw_config_path()?;
+    if !config_path.exists() {
+        return Ok(Value::Object(serde_json::Map::new()));
+    }
+    let s = std::fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read config file: {e}"))?;
+    serde_json::from_str(&s).map_err(|e| format!("Invalid config JSON: {e}"))
+}
+
 fn write_openclaw_config(profile: &OpenClawProfile) -> Result<(), String> {
     let config_path = get_openclaw_config_path()?;
-    let config = build_openclaw_config(profile);
-    let s = serde_json::to_string_pretty(&config)
+
+    // Read existing config and deep merge with profile config
+    let mut base_config = read_openclaw_config_raw()?;
+    let overlay_config = build_openclaw_config(profile);
+    deep_merge_json(&mut base_config, &overlay_config);
+
+    let s = serde_json::to_string_pretty(&base_config)
         .map_err(|e| format!("Failed to serialize config: {e}"))?;
     atomic_write(&config_path, s.as_bytes())
 }
@@ -444,11 +497,27 @@ pub async fn duplicate_openclaw_profile(
 }
 
 /// Create default profile (when no profiles exist)
+/// If openclaw.json exists, initialize profile from its content
 #[tauri::command]
 #[specta::specta]
 pub async fn create_default_openclaw_profile() -> Result<OpenClawProfile, String> {
     let id = Uuid::new_v4().to_string();
     let now = now_rfc3339();
+
+    // Try to read existing openclaw.json config
+    let config_path = get_openclaw_config_path()?;
+    let (default_model, providers) = if config_path.exists() {
+        let s = std::fs::read_to_string(&config_path)
+            .map_err(|e| format!("Failed to read config file: {e}"))?;
+        let config: Value =
+            serde_json::from_str(&s).map_err(|e| format!("Invalid config JSON: {e}"))?;
+        parse_openclaw_config(&config)
+    } else {
+        (
+            Some("anthropic/claude-sonnet-4-20250514".to_string()),
+            HashMap::new(),
+        )
+    };
 
     let profile = OpenClawProfile {
         id,
@@ -456,8 +525,8 @@ pub async fn create_default_openclaw_profile() -> Result<OpenClawProfile, String
         description: Some("Default OpenClaw profile".to_string()),
         created_at: now.clone(),
         updated_at: now,
-        default_model: Some("anthropic/claude-sonnet-4-20250514".to_string()),
-        providers: HashMap::new(),
+        default_model,
+        providers,
     };
 
     write_profile_file(&profile)?;

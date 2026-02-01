@@ -83,12 +83,17 @@ function ProviderForm({
       {
         id: '',
         name: null,
-        reasoning: false,
-        input: ['text'],
-        contextWindow: null,
-        maxTokens: null,
+        reasoning: true,
+        input: ['text', 'image'],
+        contextWindow: 200000,
+        maxTokens: 8192,
       },
     ])
+    // Scroll to bottom after adding model
+    setTimeout(() => {
+      const container = document.querySelector('[data-models-container]')
+      container?.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+    }, 0)
   }
 
   const handleFetchModels = async () => {
@@ -135,10 +140,10 @@ function ProviderForm({
       return {
         id,
         name: info?.name ?? null,
-        reasoning: false,
-        input: ['text'],
-        contextWindow: null,
-        maxTokens: null,
+        reasoning: true,
+        input: ['text', 'image'],
+        contextWindow: 200000,
+        maxTokens: 8192,
       }
     })
     // Merge with existing models, avoiding duplicates
@@ -185,7 +190,7 @@ function ProviderForm({
 
   return (
     <>
-      <ResizableDialogBody>
+      <ResizableDialogBody data-models-container>
         <div className="space-y-4">
           {/* Provider ID */}
           <div className="space-y-2">
@@ -410,6 +415,66 @@ function ProviderForm({
                           placeholder="8192"
                           className="h-8"
                         />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`reasoning-${index}`}
+                          checked={model.reasoning}
+                          onCheckedChange={checked =>
+                            handleModelChange(index, 'reasoning', !!checked)
+                          }
+                        />
+                        <Label
+                          htmlFor={`reasoning-${index}`}
+                          className="text-xs cursor-pointer"
+                        >
+                          {t('openclaw.provider.reasoning')}
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">
+                          {t('openclaw.provider.inputTypes')}:
+                        </Label>
+                        <div className="flex items-center gap-1">
+                          <Checkbox
+                            id={`input-text-${index}`}
+                            checked={(model.input ?? []).includes('text')}
+                            onCheckedChange={checked => {
+                              const currentInput = model.input ?? []
+                              const newInput = checked
+                                ? [...new Set([...currentInput, 'text'])]
+                                : currentInput.filter(i => i !== 'text')
+                              handleModelChange(index, 'input', newInput)
+                            }}
+                          />
+                          <Label
+                            htmlFor={`input-text-${index}`}
+                            className="text-xs cursor-pointer"
+                          >
+                            {t('openclaw.provider.inputText')}
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Checkbox
+                            id={`input-image-${index}`}
+                            checked={(model.input ?? []).includes('image')}
+                            onCheckedChange={checked => {
+                              const currentInput = model.input ?? []
+                              const newInput = checked
+                                ? [...new Set([...currentInput, 'image'])]
+                                : currentInput.filter(i => i !== 'image')
+                              handleModelChange(index, 'input', newInput)
+                            }}
+                          />
+                          <Label
+                            htmlFor={`input-image-${index}`}
+                            className="text-xs cursor-pointer"
+                          >
+                            {t('openclaw.provider.inputImage')}
+                          </Label>
+                        </div>
                       </div>
                     </div>
                   </div>
