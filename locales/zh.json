@@ -582,6 +582,7 @@
 
   "openclaw.features.title": "OpenClaw",
   "openclaw.features.providers": "Provider 管理",
+  "openclaw.features.helpers": "辅助工具",
   "openclaw.features.hint": "管理 OpenClaw 配置（providers 和 models）。",
 
   "openclaw.install.title": "安装 OpenClaw",
@@ -649,5 +650,21 @@
   "openclaw.actions.applyConfirm": "确定应用该 Profile？这将更新 OpenClaw 配置文件（~/.openclaw/openclaw.json）。",
   "openclaw.actions.applySuccess": "Profile 应用成功",
   "openclaw.actions.saveSuccess": "Profile 保存成功",
-  "openclaw.actions.loadedFromLive": "已从当前配置读取"
+  "openclaw.actions.loadedFromLive": "已从当前配置读取",
+
+  "openclaw.helpers.title": "辅助工具",
+  "openclaw.helpers.blockStreaming.title": "流式输出设置",
+  "openclaw.helpers.blockStreaming.description": "配置消息分块发送行为，使 AI 响应能够边生成边发送",
+  "openclaw.helpers.blockStreaming.default": "总开关",
+  "openclaw.helpers.blockStreaming.break": "发送时机",
+  "openclaw.helpers.blockStreaming.break.textEnd": "生成过程中持续发送",
+  "openclaw.helpers.blockStreaming.break.messageEnd": "等整段结束再发送",
+  "openclaw.helpers.blockStreaming.minChars": "最小块大小",
+  "openclaw.helpers.blockStreaming.maxChars": "最大块大小",
+  "openclaw.helpers.blockStreaming.idleMs": "合并等待时间 (ms)",
+  "openclaw.helpers.telegram.title": "Telegram 设置",
+  "openclaw.helpers.telegram.blockStreaming": "启用分块",
+  "openclaw.helpers.telegram.chunkMode": "切分方式",
+  "openclaw.helpers.telegram.chunkMode.newline": "按段落切分",
+  "openclaw.helpers.telegram.chunkMode.chars": "按字符数切分"
 }

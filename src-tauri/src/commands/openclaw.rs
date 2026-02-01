@@ -47,6 +47,50 @@ pub struct OpenClawProviderConfig {
     pub models: Vec<OpenClawModel>,
 }
 
+/// Block streaming chunk configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockStreamingChunk {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_chars: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_chars: Option<u32>,
+}
+
+/// Block streaming coalesce configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockStreamingCoalesce {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idle_ms: Option<u32>,
+}
+
+/// Telegram channel configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TelegramChannelConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_streaming: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chunk_mode: Option<String>,
+}
+
+/// Block streaming configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockStreamingConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_streaming_default: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_streaming_break: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_streaming_chunk: Option<BlockStreamingChunk>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_streaming_coalesce: Option<BlockStreamingCoalesce>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub telegram_channel: Option<TelegramChannelConfig>,
+}
+
 /// OpenClaw Profile (stored in DroidGear)
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -61,6 +105,8 @@ pub struct OpenClawProfile {
     pub default_model: Option<String>,
     #[serde(default)]
     pub providers: HashMap<String, OpenClawProviderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_streaming_config: Option<BlockStreamingConfig>,
 }
 
 /// OpenClaw config status
@@ -295,6 +341,75 @@ fn build_openclaw_config(profile: &OpenClawProfile) -> Value {
         config.insert("models".to_string(), Value::Object(models));
     }
 
+    // Block streaming config (agents.defaults block streaming settings)
+    if let Some(ref bs_config) = profile.block_streaming_config {
+        let agents = config
+            .entry("agents".to_string())
+            .or_insert_with(|| Value::Object(serde_json::Map::new()));
+        if let Value::Object(agents_map) = agents {
+            let defaults = agents_map
+                .entry("defaults".to_string())
+                .or_insert_with(|| Value::Object(serde_json::Map::new()));
+            if let Value::Object(defaults_map) = defaults {
+                if let Some(ref val) = bs_config.block_streaming_default {
+                    defaults_map.insert(
+                        "blockStreamingDefault".to_string(),
+                        Value::String(val.clone()),
+                    );
+                }
+                if let Some(ref val) = bs_config.block_streaming_break {
+                    defaults_map.insert(
+                        "blockStreamingBreak".to_string(),
+                        Value::String(val.clone()),
+                    );
+                }
+                if let Some(ref chunk) = bs_config.block_streaming_chunk {
+                    let mut chunk_obj = serde_json::Map::new();
+                    if let Some(min) = chunk.min_chars {
+                        chunk_obj.insert("minChars".to_string(), Value::Number(min.into()));
+                    }
+                    if let Some(max) = chunk.max_chars {
+                        chunk_obj.insert("maxChars".to_string(), Value::Number(max.into()));
+                    }
+                    if !chunk_obj.is_empty() {
+                        defaults_map
+                            .insert("blockStreamingChunk".to_string(), Value::Object(chunk_obj));
+                    }
+                }
+                if let Some(ref coalesce) = bs_config.block_streaming_coalesce {
+                    if let Some(idle) = coalesce.idle_ms {
+                        let mut coalesce_obj = serde_json::Map::new();
+                        coalesce_obj.insert("idleMs".to_string(), Value::Number(idle.into()));
+                        defaults_map.insert(
+                            "blockStreamingCoalesce".to_string(),
+                            Value::Object(coalesce_obj),
+                        );
+                    }
+                }
+            }
+        }
+
+        // Telegram channel config (channels.telegram)
+        if let Some(ref telegram) = bs_config.telegram_channel {
+            let channels = config
+                .entry("channels".to_string())
+                .or_insert_with(|| Value::Object(serde_json::Map::new()));
+            if let Value::Object(channels_map) = channels {
+                let telegram_obj = channels_map
+                    .entry("telegram".to_string())
+                    .or_insert_with(|| Value::Object(serde_json::Map::new()));
+                if let Value::Object(telegram_map) = telegram_obj {
+                    if let Some(bs) = telegram.block_streaming {
+                        telegram_map.insert("blockStreaming".to_string(), Value::Bool(bs));
+                    }
+                    if let Some(ref mode) = telegram.chunk_mode {
+                        telegram_map.insert("chunkMode".to_string(), Value::String(mode.clone()));
+                    }
+                }
+            }
+        }
+    }
+
     Value::Object(config)
 }
 
@@ -527,6 +642,7 @@ pub async fn create_default_openclaw_profile() -> Result<OpenClawProfile, String
         updated_at: now,
         default_model,
         providers,
+        block_streaming_config: None,
     };
 
     write_profile_file(&profile)?;

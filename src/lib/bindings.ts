@@ -1096,6 +1096,18 @@ terminal_font_family?: string | null;
  */
 terminal_shell_command?: string | null }
 /**
+ * Block streaming chunk configuration
+ */
+export type BlockStreamingChunk = { minChars?: number | null; maxChars?: number | null }
+/**
+ * Block streaming coalesce configuration
+ */
+export type BlockStreamingCoalesce = { idleMs?: number | null }
+/**
+ * Block streaming configuration
+ */
+export type BlockStreamingConfig = { blockStreamingDefault?: string | null; blockStreamingBreak?: string | null; blockStreamingChunk?: BlockStreamingChunk | null; blockStreamingCoalesce?: BlockStreamingCoalesce | null; telegramChannel?: TelegramChannelConfig | null }
+/**
  * Channel configuration
  */
 export type Channel = { 
@@ -1311,7 +1323,7 @@ export type OpenClawModel = { id: string; name?: string | null; reasoning?: bool
 /**
  * OpenClaw Profile (stored in DroidGear)
  */
-export type OpenClawProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; defaultModel?: string | null; providers?: Partial<{ [key in string]: OpenClawProviderConfig }> }
+export type OpenClawProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; defaultModel?: string | null; providers?: Partial<{ [key in string]: OpenClawProviderConfig }>; blockStreamingConfig?: BlockStreamingConfig | null }
 /**
  * OpenClaw Provider configuration
  */
@@ -1448,6 +1460,10 @@ content: string;
  * Last modified timestamp in milliseconds
  */
 modifiedAt: number }
+/**
+ * Telegram channel configuration
+ */
+export type TelegramChannelConfig = { blockStreaming?: boolean | null; chunkMode?: string | null }
 /**
  * Token usage statistics
  */

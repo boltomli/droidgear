@@ -11,7 +11,7 @@ import {
 } from '@/components/droid'
 import { OpenCodeConfigPage } from '@/components/opencode'
 import { CodexConfigPage } from '@/components/codex'
-import { OpenClawConfigPage } from '@/components/openclaw'
+import { OpenClawConfigPage, OpenClawHelpersPage } from '@/components/openclaw'
 import { ChannelDetail, ChannelDialog } from '@/components/channels'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
@@ -30,6 +30,7 @@ export function MainWindowContent({
   const currentView = useUIStore(state => state.currentView)
   const droidSubView = useUIStore(state => state.droidSubView)
   const codexSubView = useUIStore(state => state.codexSubView)
+  const openclawSubView = useUIStore(state => state.openclawSubView)
   const channels = useChannelStore(state => state.channels)
   const selectedChannelId = useChannelStore(state => state.selectedChannelId)
   const saveChannels = useChannelStore(state => state.saveChannels)
@@ -82,7 +83,12 @@ export function MainWindowContent({
     }
 
     if (currentView === 'openclaw') {
-      return <OpenClawConfigPage />
+      return (
+        <>
+          {openclawSubView === 'providers' && <OpenClawConfigPage />}
+          {openclawSubView === 'helpers' && <OpenClawHelpersPage />}
+        </>
+      )
     }
 
     // Channels view

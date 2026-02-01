@@ -5,6 +5,7 @@ import {
   type OpenClawProfile,
   type OpenClawProviderConfig,
   type OpenClawConfigStatus,
+  type BlockStreamingConfig,
 } from '@/lib/bindings'
 
 interface OpenClawState {
@@ -31,6 +32,7 @@ interface OpenClawState {
   addProvider: (id: string, config: OpenClawProviderConfig) => Promise<void>
   updateProvider: (id: string, config: OpenClawProviderConfig) => Promise<void>
   deleteProvider: (id: string) => Promise<void>
+  updateBlockStreamingConfig: (config: BlockStreamingConfig) => Promise<void>
   setError: (error: string | null) => void
 }
 
@@ -315,6 +317,22 @@ export const useOpenClawStore = create<OpenClawState>()(
           updatedAt: new Date().toISOString(),
         }
         set({ currentProfile: updated }, undefined, 'openclaw/deleteProvider')
+        await get().saveProfile()
+      },
+
+      updateBlockStreamingConfig: async config => {
+        const { currentProfile } = get()
+        if (!currentProfile) return
+        const updated = {
+          ...currentProfile,
+          blockStreamingConfig: config,
+          updatedAt: new Date().toISOString(),
+        }
+        set(
+          { currentProfile: updated },
+          undefined,
+          'openclaw/updateBlockStreamingConfig'
+        )
         await get().saveProfile()
       },
 

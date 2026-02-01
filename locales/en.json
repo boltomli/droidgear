@@ -582,6 +582,7 @@
 
   "openclaw.features.title": "OpenClaw",
   "openclaw.features.providers": "Providers",
+  "openclaw.features.helpers": "Helpers",
   "openclaw.features.hint": "Manage OpenClaw configuration (providers and models).",
 
   "openclaw.install.title": "Install OpenClaw",
@@ -649,5 +650,21 @@
   "openclaw.actions.applyConfirm": "Apply this profile? This will update your OpenClaw configuration file (~/.openclaw/openclaw.json).",
   "openclaw.actions.applySuccess": "Profile applied successfully",
   "openclaw.actions.saveSuccess": "Profile saved successfully",
-  "openclaw.actions.loadedFromLive": "Loaded from live config"
+  "openclaw.actions.loadedFromLive": "Loaded from live config",
+
+  "openclaw.helpers.title": "Helpers",
+  "openclaw.helpers.blockStreaming.title": "Block Streaming Settings",
+  "openclaw.helpers.blockStreaming.description": "Configure message chunking behavior for streaming AI responses",
+  "openclaw.helpers.blockStreaming.default": "Enable",
+  "openclaw.helpers.blockStreaming.break": "Break Mode",
+  "openclaw.helpers.blockStreaming.break.textEnd": "During generation",
+  "openclaw.helpers.blockStreaming.break.messageEnd": "After message complete",
+  "openclaw.helpers.blockStreaming.minChars": "Min Chunk Size",
+  "openclaw.helpers.blockStreaming.maxChars": "Max Chunk Size",
+  "openclaw.helpers.blockStreaming.idleMs": "Coalesce Idle (ms)",
+  "openclaw.helpers.telegram.title": "Telegram Settings",
+  "openclaw.helpers.telegram.blockStreaming": "Enable Block Streaming",
+  "openclaw.helpers.telegram.chunkMode": "Chunk Mode",
+  "openclaw.helpers.telegram.chunkMode.newline": "By newline",
+  "openclaw.helpers.telegram.chunkMode.chars": "By character count"
 }

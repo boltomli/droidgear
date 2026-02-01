@@ -12,7 +12,7 @@ export type DroidSubView =
   | 'terminal'
 export type OpenCodeSubView = 'providers'
 export type CodexSubView = 'config' | 'mcp' | 'sessions' | 'terminal'
-export type OpenClawSubView = 'providers'
+export type OpenClawSubView = 'providers' | 'helpers'
 
 export interface PendingUpdate {
   version: string
