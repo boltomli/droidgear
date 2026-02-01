@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.1
+
+**New Features / 新功能**
+
+- OpenClaw provider/model configuration support / OpenClaw 服务商/模型配置支持
+- OpenClaw config improvements / OpenClaw 配置改进
+
 ## v0.3.0
 
 **New Features / 新功能**

@@ -137,6 +137,11 @@ DroidGear values your privacy. Your username, password, API keys, and other sens
 
 ## Changelog
 
+### v0.3.1
+
+- OpenClaw provider/model configuration support
+- OpenClaw config improvements
+
 ### v0.3.0
 
 - Auto detect channel type
