@@ -232,13 +232,41 @@ fn load_profile_by_id(id: &str) -> Result<OpenClawProfile, String> {
 // Config File Helpers
 // ============================================================================
 
-/// Deep merge two JSON values. Overlay values are merged into base.
-fn deep_merge_json(base: &mut Value, overlay: &Value) {
+/// Paths that should be replaced instead of deep merged
+const REPLACE_PATHS: &[&[&str]] = &[
+    &["models", "providers"],
+    &["agents", "defaults", "models"],
+    &["agents", "defaults", "blockStreamingDefault"],
+    &["agents", "defaults", "blockStreamingBreak"],
+    &["agents", "defaults", "blockStreamingChunk"],
+    &["agents", "defaults", "blockStreamingCoalesce"],
+];
+
+/// Deep merge with path-based replacement strategy.
+/// Paths in REPLACE_PATHS are replaced entirely instead of deep merged.
+fn deep_merge_with_replace(base: &mut Value, overlay: &Value, current_path: &[String]) {
+    // Check if current path should be replaced
+    let should_replace = REPLACE_PATHS.iter().any(|replace_path| {
+        replace_path.len() == current_path.len()
+            && replace_path
+                .iter()
+                .zip(current_path.iter())
+                .all(|(a, b)| *a == b)
+    });
+
+    if should_replace {
+        *base = overlay.clone();
+        return;
+    }
+
     match (base, overlay) {
         (Value::Object(base_map), Value::Object(overlay_map)) => {
             for (key, overlay_val) in overlay_map {
+                let mut new_path = current_path.to_vec();
+                new_path.push(key.clone());
+
                 match base_map.get_mut(key) {
-                    Some(base_val) => deep_merge_json(base_val, overlay_val),
+                    Some(base_val) => deep_merge_with_replace(base_val, overlay_val, &new_path),
                     None => {
                         base_map.insert(key.clone(), overlay_val.clone());
                     }
@@ -514,10 +542,10 @@ fn read_openclaw_config_raw() -> Result<Value, String> {
 fn write_openclaw_config(profile: &OpenClawProfile) -> Result<(), String> {
     let config_path = get_openclaw_config_path()?;
 
-    // Read existing config and deep merge with profile config
+    // Read existing config and merge with replace strategy for model configs
     let mut base_config = read_openclaw_config_raw()?;
     let overlay_config = build_openclaw_config(profile);
-    deep_merge_json(&mut base_config, &overlay_config);
+    deep_merge_with_replace(&mut base_config, &overlay_config, &[]);
 
     let s = serde_json::to_string_pretty(&base_config)
         .map_err(|e| format!("Failed to serialize config: {e}"))?;
