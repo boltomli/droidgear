@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.3.3
+
+**New Features / 新功能**
+
+- Add CLI Proxy API channel type support / 添加 CLI Proxy API 频道类型支持
+- Add ChannelModelPicker for quick model import from channels / 添加 ChannelModelPicker 用于从频道快速导入模型
+
+**Bug Fixes / 问题修复**
+
+- Relax displayName validation to allow hyphen/underscore separators / 放宽 displayName 验证以允许连字符/下划线分隔符
+- Fix specs page delete race condition and add error recovery / 修复 specs 页面删除竞态条件并添加错误恢复
+- Fix OpenClaw profile apply policy / 修复 OpenClaw 配置应用策略
+
 ## v0.3.2
 
 **New Features / 新功能**
