@@ -52,15 +52,13 @@ description: Commit staged changes with conventional commit message. Use when us
      - `docs: update changelog for v0.3.2`
      - `style: format Rust code`
 
-7. Show suggested commit message to user, allow modification before proceeding
-
-8. Execute commit:
+7. Execute commit:
 
    ```bash
    git commit -m "<type>: <description>"
    ```
 
-9. If commit fails due to pre-commit hooks:
+8. If commit fails due to pre-commit hooks:
    - Review hook output
    - Fix issues or include auto-fixed files
    - Retry commit once
