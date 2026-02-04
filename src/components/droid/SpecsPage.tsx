@@ -275,7 +275,7 @@ export function SpecsPage() {
         if (selectedSpec?.path === deleteSpec.path) {
           setSelectedSpec(null)
         }
-        loadSpecs()
+        // File watcher will automatically trigger loadSpecs()
       } else {
         toast.error(result.error)
       }
@@ -482,7 +482,15 @@ export function SpecsPage() {
 
         {/* Spec Content */}
         <div className="flex-1 flex flex-col min-w-0">
-          {selectedSpec ? (
+          {error ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <p className="text-destructive mb-4">{error}</p>
+              <Button variant="outline" size="sm" onClick={handleRefresh}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {t('common.refresh')}
+              </Button>
+            </div>
+          ) : selectedSpec ? (
             <>
               <div className="p-4 border-b flex items-center justify-between">
                 <div>
