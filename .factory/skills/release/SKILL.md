@@ -19,10 +19,11 @@ description: Generate changelog from commits since last tag and release new vers
    git log <latest-tag>..HEAD --oneline
    ```
 
-3. Calculate next version automatically:
-   - Parse current version vX.Y.Z
-   - Increment: Z+1, if Z=9 then Z=0 and Y+1, if Y=9 then Y=0 and X+1
-   - Examples: v0.0.8 → v0.0.9, v0.0.9 → v0.1.0, v0.9.9 → v1.0.0
+3. Calculate next version based on latest tag:
+   - Parse current version vX.Y.Z from step 1
+   - Default: increment patch (Z+1), e.g. v0.3.2 → v0.3.3
+   - Minor: increment minor, reset patch (Y+1, Z=0), e.g. v0.3.2 → v0.4.0
+   - Major: increment major, reset others (X+1, Y=0, Z=0), e.g. v0.3.2 → v1.0.0
 
 4. Show suggested version to user, allow modification before proceeding
 
