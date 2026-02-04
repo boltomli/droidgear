@@ -34,7 +34,7 @@ export function isOfficialModelName(value: string): boolean {
   )
 }
 
-const PREFIX_SEPARATORS = /^[\s\-_]/
+const PREFIX_SEPARATORS = /^\s/
 
 export function hasOfficialModelNamePrefix(value: string): boolean {
   const trimmed = value.trim().toLowerCase()
