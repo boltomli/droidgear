@@ -200,7 +200,16 @@ export function OpenClawConfigPage() {
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Button
-            onClick={() => setShowApplyConfirm(true)}
+            onClick={() => {
+              if (
+                !currentProfile?.defaultModel ||
+                !availableModelRefs.includes(currentProfile.defaultModel)
+              ) {
+                toast.warning(t('openclaw.defaultModel.required'))
+                return
+              }
+              setShowApplyConfirm(true)
+            }}
             disabled={!currentProfile || isLoading}
           >
             <Play className="h-4 w-4 mr-2" />
