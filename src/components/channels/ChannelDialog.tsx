@@ -99,13 +99,14 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
     }
   }
 
-  const handleDetectType = async () => {
-    if (!baseUrl.trim()) return
+  const runDetection = async (showErrorOnFail: boolean) => {
+    const trimmedUrl = baseUrl.trim()
+    if (!trimmedUrl || isDetecting) return
 
     setIsDetecting(true)
     setDetectMessage(null)
 
-    const result = await commands.detectChannelType(baseUrl.trim())
+    const result = await commands.detectChannelType(trimmedUrl)
 
     if (result.status === 'ok') {
       setChannelType(result.data)
@@ -125,7 +126,7 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
         type: 'success',
         text: t('channels.detectSuccess', { type: typeName }),
       })
-    } else {
+    } else if (showErrorOnFail) {
       setDetectMessage({
         type: 'error',
         text: t('channels.detectFailed'),
@@ -133,6 +134,26 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
     }
 
     setIsDetecting(false)
+  }
+
+  const handleDetectType = () => runDetection(true)
+
+  const handleBaseUrlBlur = () => {
+    const trimmedUrl = baseUrl.trim()
+    // Only auto-detect when:
+    // 1. URL is non-empty and looks like a valid URL
+    // 2. Not currently detecting
+    // 3. For edit mode, URL must differ from original
+    if (
+      !trimmedUrl ||
+      !/^https?:\/\//.test(trimmedUrl) ||
+      isDetecting ||
+      (channel && trimmedUrl === channel.baseUrl)
+    ) {
+      return
+    }
+
+    runDetection(false)
   }
 
   const handleSave = () => {
@@ -203,6 +224,7 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
                   setBaseUrl(e.target.value)
                   setDetectMessage(null)
                 }}
+                onBlur={handleBaseUrlBlur}
                 placeholder="https://api.example.com"
                 className="flex-1"
               />

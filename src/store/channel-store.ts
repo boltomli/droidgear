@@ -7,11 +7,17 @@ import {
   type ChannelType,
 } from '@/lib/bindings'
 
+interface KeysFetchState {
+  isLoading: boolean
+  error: string | null
+}
+
 interface ChannelState {
   channels: Channel[]
   originalChannels: Channel[]
   selectedChannelId: string | null
   keys: Record<string, ChannelToken[]>
+  keysFetchState: Record<string, KeysFetchState>
   hasChanges: boolean
   isLoading: boolean
   error: string | null
@@ -44,6 +50,7 @@ export const useChannelStore = create<ChannelState>()(
       originalChannels: [],
       selectedChannelId: null,
       keys: {},
+      keysFetchState: {},
       hasChanges: false,
       isLoading: false,
       error: null,
@@ -152,9 +159,12 @@ export const useChannelStore = create<ChannelState>()(
           state => {
             const newChannels = state.channels.filter(ch => ch.id !== id)
             const { [id]: _removed, ...remainingKeys } = state.keys
+            const { [id]: _removedFetch, ...remainingFetchState } =
+              state.keysFetchState
             return {
               channels: newChannels,
               keys: remainingKeys,
+              keysFetchState: remainingFetchState,
               selectedChannelId:
                 state.selectedChannelId === id ? null : state.selectedChannelId,
               hasChanges: !channelsEqual(newChannels, state.originalChannels),
@@ -170,7 +180,16 @@ export const useChannelStore = create<ChannelState>()(
       },
 
       fetchKeys: async (channelId, channelType, baseUrl) => {
-        set({ isLoading: true, error: null }, undefined, 'fetchKeys/start')
+        set(
+          state => ({
+            keysFetchState: {
+              ...state.keysFetchState,
+              [channelId]: { isLoading: true, error: null },
+            },
+          }),
+          undefined,
+          'fetchKeys/start'
+        )
         try {
           let username = ''
           let password = ''
@@ -182,8 +201,13 @@ export const useChannelStore = create<ChannelState>()(
               set(
                 state => ({
                   keys: { ...state.keys, [channelId]: [] },
-                  error: 'API key not found. Please set the API key first.',
-                  isLoading: false,
+                  keysFetchState: {
+                    ...state.keysFetchState,
+                    [channelId]: {
+                      isLoading: false,
+                      error: 'API key not found. Please set the API key first.',
+                    },
+                  },
                 }),
                 undefined,
                 'fetchKeys/noApiKey'
@@ -199,9 +223,14 @@ export const useChannelStore = create<ChannelState>()(
               set(
                 state => ({
                   keys: { ...state.keys, [channelId]: [] },
-                  error:
-                    'Credentials not found. Please set the username and password first.',
-                  isLoading: false,
+                  keysFetchState: {
+                    ...state.keysFetchState,
+                    [channelId]: {
+                      isLoading: false,
+                      error:
+                        'Credentials not found. Please set the username and password first.',
+                    },
+                  },
                 }),
                 undefined,
                 'fetchKeys/noCredentials'
@@ -221,21 +250,36 @@ export const useChannelStore = create<ChannelState>()(
             set(
               state => ({
                 keys: { ...state.keys, [channelId]: result.data },
-                isLoading: false,
+                keysFetchState: {
+                  ...state.keysFetchState,
+                  [channelId]: { isLoading: false, error: null },
+                },
               }),
               undefined,
               'fetchKeys/success'
             )
           } else {
             set(
-              { error: result.error, isLoading: false },
+              state => ({
+                keys: { ...state.keys, [channelId]: [] },
+                keysFetchState: {
+                  ...state.keysFetchState,
+                  [channelId]: { isLoading: false, error: result.error },
+                },
+              }),
               undefined,
               'fetchKeys/error'
             )
           }
         } catch (e) {
           set(
-            { error: String(e), isLoading: false },
+            state => ({
+              keys: { ...state.keys, [channelId]: [] },
+              keysFetchState: {
+                ...state.keysFetchState,
+                [channelId]: { isLoading: false, error: String(e) },
+              },
+            }),
             undefined,
             'fetchKeys/exception'
           )

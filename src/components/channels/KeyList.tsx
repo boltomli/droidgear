@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { RefreshCw, Copy, Check, Loader2 } from 'lucide-react'
+import { RefreshCw, Copy, Check, Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -56,9 +56,12 @@ export function KeyList({
 }: KeyListProps) {
   const { t } = useTranslation()
   const keysMap = useChannelStore(state => state.keys)
-  const isLoading = useChannelStore(state => state.isLoading)
+  const fetchState = useChannelStore(state => state.keysFetchState[channelId])
   const fetchKeys = useChannelStore(state => state.fetchKeys)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+
+  const isLoading = fetchState?.isLoading ?? false
+  const fetchError = fetchState?.error ?? null
 
   // Safely get keys array
   const keys: ChannelToken[] = keysMap?.[channelId] ?? []
@@ -99,12 +102,19 @@ export function KeyList({
         </Button>
       </div>
 
-      {keys.length === 0 ? (
+      {fetchError && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+          <span className="text-sm text-destructive">{fetchError}</span>
+        </div>
+      )}
+
+      {keys.length === 0 && !fetchError ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>{t('keys.noKeys')}</p>
           <p className="text-sm mt-1">{t('keys.noKeysHint')}</p>
         </div>
-      ) : (
+      ) : keys.length > 0 ? (
         <div className="border rounded-md">
           <Table>
             <TableHeader>
@@ -179,7 +189,7 @@ export function KeyList({
             </TableBody>
           </Table>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

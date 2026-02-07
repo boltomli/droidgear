@@ -185,11 +185,6 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
     await saveChannels()
     selectChannel(channel.id)
     setCurrentView('channels')
-
-    // Auto refresh tokens after saving channel
-    useChannelStore
-      .getState()
-      .fetchKeys(channel.id, channel.type, channel.baseUrl)
   }
 
   return (
