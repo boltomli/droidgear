@@ -13,8 +13,6 @@ interface OpenCodeState {
   profiles: OpenCodeProfile[]
   activeProfileId: string | null
   currentProfile: OpenCodeProfile | null
-  originalProfile: OpenCodeProfile | null
-  hasChanges: boolean
   isLoading: boolean
   error: string | null
   configStatus: OpenCodeConfigStatus | null
@@ -30,34 +28,25 @@ interface OpenCodeState {
   deleteProfile: (id: string) => Promise<void>
   duplicateProfile: (id: string, newName: string) => Promise<void>
   applyProfile: (id: string) => Promise<void>
-  updateProfileName: (name: string) => void
-  updateProfileDescription: (description: string) => void
+  updateProfileName: (name: string) => Promise<void>
+  updateProfileDescription: (description: string) => Promise<void>
   addProvider: (
     id: string,
     config: OpenCodeProviderConfig,
     auth?: JsonValue
-  ) => void
+  ) => Promise<void>
   updateProvider: (
     id: string,
     config: OpenCodeProviderConfig,
     auth?: JsonValue
-  ) => void
-  deleteProvider: (id: string) => void
+  ) => Promise<void>
+  deleteProvider: (id: string) => Promise<void>
   importProviders: (
     providers: Record<string, OpenCodeProviderConfig | undefined>,
     auth: Record<string, JsonValue | undefined>,
     strategy: 'skip' | 'replace'
-  ) => void
-  resetChanges: () => void
+  ) => Promise<void>
   setError: (error: string | null) => void
-}
-
-function profilesEqual(
-  a: OpenCodeProfile | null,
-  b: OpenCodeProfile | null
-): boolean {
-  if (!a || !b) return a === b
-  return JSON.stringify(a) === JSON.stringify(b)
 }
 
 export const useOpenCodeStore = create<OpenCodeState>()(
@@ -66,8 +55,6 @@ export const useOpenCodeStore = create<OpenCodeState>()(
       profiles: [],
       activeProfileId: null,
       currentProfile: null,
-      originalProfile: null,
-      hasChanges: false,
       isLoading: false,
       error: null,
       configStatus: null,
@@ -159,12 +146,9 @@ export const useOpenCodeStore = create<OpenCodeState>()(
         const { profiles } = get()
         const profile = profiles.find(p => p.id === id)
         if (profile) {
-          const copy = JSON.parse(JSON.stringify(profile))
           set(
             {
-              currentProfile: copy,
-              originalProfile: JSON.parse(JSON.stringify(profile)),
-              hasChanges: false,
+              currentProfile: JSON.parse(JSON.stringify(profile)),
             },
             undefined,
             'selectProfile'
@@ -200,33 +184,16 @@ export const useOpenCodeStore = create<OpenCodeState>()(
         const { currentProfile } = get()
         if (!currentProfile) return
 
-        set({ isLoading: true, error: null }, undefined, 'saveProfile/start')
         try {
           const result = await commands.saveOpencodeProfile(currentProfile)
           if (result.status === 'ok') {
-            set(
-              {
-                originalProfile: JSON.parse(JSON.stringify(currentProfile)),
-                hasChanges: false,
-                isLoading: false,
-              },
-              undefined,
-              'saveProfile/success'
-            )
             await get().loadProfiles()
+            get().selectProfile(currentProfile.id)
           } else {
-            set(
-              { error: result.error, isLoading: false },
-              undefined,
-              'saveProfile/error'
-            )
+            set({ error: result.error }, undefined, 'saveProfile/error')
           }
         } catch (e) {
-          set(
-            { error: String(e), isLoading: false },
-            undefined,
-            'saveProfile/exception'
-          )
+          set({ error: String(e) }, undefined, 'saveProfile/exception')
         }
       },
 
@@ -241,11 +208,7 @@ export const useOpenCodeStore = create<OpenCodeState>()(
               if (profiles.length > 0 && profiles[0]) {
                 get().selectProfile(profiles[0].id)
               } else {
-                set(
-                  { currentProfile: null, originalProfile: null },
-                  undefined,
-                  'deleteProfile/clear'
-                )
+                set({ currentProfile: null }, undefined, 'deleteProfile/clear')
               }
             }
           } else {
@@ -297,149 +260,104 @@ export const useOpenCodeStore = create<OpenCodeState>()(
         }
       },
 
-      updateProfileName: name => {
-        set(
-          state => {
-            if (!state.currentProfile) return state
-            const updated = { ...state.currentProfile, name }
-            return {
-              currentProfile: updated,
-              hasChanges: !profilesEqual(updated, state.originalProfile),
-            }
-          },
-          undefined,
-          'updateProfileName'
-        )
+      updateProfileName: async name => {
+        const { currentProfile } = get()
+        if (!currentProfile) return
+        const updated = {
+          ...currentProfile,
+          name,
+          updatedAt: new Date().toISOString(),
+        }
+        set({ currentProfile: updated }, undefined, 'updateProfileName')
+        await get().saveProfile()
       },
 
-      updateProfileDescription: description => {
-        set(
-          state => {
-            if (!state.currentProfile) return state
-            const updated = {
-              ...state.currentProfile,
-              description: description || null,
-            }
-            return {
-              currentProfile: updated,
-              hasChanges: !profilesEqual(updated, state.originalProfile),
-            }
-          },
-          undefined,
-          'updateProfileDescription'
-        )
+      updateProfileDescription: async description => {
+        const { currentProfile } = get()
+        if (!currentProfile) return
+        const updated = {
+          ...currentProfile,
+          description: description || null,
+          updatedAt: new Date().toISOString(),
+        }
+        set({ currentProfile: updated }, undefined, 'updateProfileDescription')
+        await get().saveProfile()
       },
 
-      addProvider: (id, config, auth) => {
-        set(
-          state => {
-            if (!state.currentProfile) return state
-            const updated = {
-              ...state.currentProfile,
-              providers: { ...state.currentProfile.providers, [id]: config },
-              auth: auth
-                ? { ...state.currentProfile.auth, [id]: auth }
-                : state.currentProfile.auth,
-            }
-            return {
-              currentProfile: updated,
-              hasChanges: !profilesEqual(updated, state.originalProfile),
-            }
-          },
-          undefined,
-          'addProvider'
-        )
+      addProvider: async (id, config, auth) => {
+        const { currentProfile } = get()
+        if (!currentProfile) return
+        const updated = {
+          ...currentProfile,
+          providers: { ...currentProfile.providers, [id]: config },
+          auth: auth
+            ? { ...currentProfile.auth, [id]: auth }
+            : currentProfile.auth,
+          updatedAt: new Date().toISOString(),
+        }
+        set({ currentProfile: updated }, undefined, 'addProvider')
+        await get().saveProfile()
       },
 
-      updateProvider: (id, config, auth) => {
-        set(
-          state => {
-            if (!state.currentProfile) return state
-            const updated = {
-              ...state.currentProfile,
-              providers: { ...state.currentProfile.providers, [id]: config },
-              auth: auth
-                ? { ...state.currentProfile.auth, [id]: auth }
-                : state.currentProfile.auth,
-            }
-            return {
-              currentProfile: updated,
-              hasChanges: !profilesEqual(updated, state.originalProfile),
-            }
-          },
-          undefined,
-          'updateProvider'
-        )
+      updateProvider: async (id, config, auth) => {
+        const { currentProfile } = get()
+        if (!currentProfile) return
+        const updated = {
+          ...currentProfile,
+          providers: { ...currentProfile.providers, [id]: config },
+          auth: auth
+            ? { ...currentProfile.auth, [id]: auth }
+            : currentProfile.auth,
+          updatedAt: new Date().toISOString(),
+        }
+        set({ currentProfile: updated }, undefined, 'updateProvider')
+        await get().saveProfile()
       },
 
-      deleteProvider: id => {
-        set(
-          state => {
-            if (!state.currentProfile) return state
-            const { [id]: _removed, ...providers } =
-              state.currentProfile.providers
-            const { [id]: _removedAuth, ...auth } = state.currentProfile.auth
-            const updated = { ...state.currentProfile, providers, auth }
-            return {
-              currentProfile: updated,
-              hasChanges: !profilesEqual(updated, state.originalProfile),
-            }
-          },
-          undefined,
-          'deleteProvider'
-        )
+      deleteProvider: async id => {
+        const { currentProfile } = get()
+        if (!currentProfile) return
+        const { [id]: _removed, ...providers } = currentProfile.providers
+        const { [id]: _removedAuth, ...auth } = currentProfile.auth
+        const updated = {
+          ...currentProfile,
+          providers,
+          auth,
+          updatedAt: new Date().toISOString(),
+        }
+        set({ currentProfile: updated }, undefined, 'deleteProvider')
+        await get().saveProfile()
       },
 
-      importProviders: (providers, auth, strategy) => {
-        set(
-          state => {
-            if (!state.currentProfile) return {}
+      importProviders: async (providers, auth, strategy) => {
+        const { currentProfile } = get()
+        if (!currentProfile) return
 
-            const newProviders = { ...state.currentProfile.providers }
-            const newAuth = { ...state.currentProfile.auth }
+        const newProviders = { ...currentProfile.providers }
+        const newAuth = { ...currentProfile.auth }
 
-            for (const [id, config] of Object.entries(providers)) {
-              if (!config) continue
-              const exists = id in state.currentProfile.providers
-              if (exists && strategy === 'skip') continue
-              // Replace or add new
-              newProviders[id] = config
-            }
+        for (const [id, config] of Object.entries(providers)) {
+          if (!config) continue
+          const exists = id in currentProfile.providers
+          if (exists && strategy === 'skip') continue
+          newProviders[id] = config
+        }
 
-            for (const [id, authValue] of Object.entries(auth)) {
-              if (authValue === undefined) continue
-              const exists = id in state.currentProfile.auth
-              if (exists && strategy === 'skip') continue
-              // Replace or add new
-              newAuth[id] = authValue
-            }
+        for (const [id, authValue] of Object.entries(auth)) {
+          if (authValue === undefined) continue
+          const exists = id in currentProfile.auth
+          if (exists && strategy === 'skip') continue
+          newAuth[id] = authValue
+        }
 
-            const updated = {
-              ...state.currentProfile,
-              providers: newProviders,
-              auth: newAuth,
-            }
-            return {
-              currentProfile: updated,
-              hasChanges: !profilesEqual(updated, state.originalProfile),
-            }
-          },
-          undefined,
-          'importProviders'
-        )
-      },
-
-      resetChanges: () => {
-        set(
-          state => ({
-            currentProfile: state.originalProfile
-              ? JSON.parse(JSON.stringify(state.originalProfile))
-              : null,
-            hasChanges: false,
-          }),
-          undefined,
-          'resetChanges'
-        )
+        const updated = {
+          ...currentProfile,
+          providers: newProviders,
+          auth: newAuth,
+          updatedAt: new Date().toISOString(),
+        }
+        set({ currentProfile: updated }, undefined, 'importProviders')
+        await get().saveProfile()
       },
 
       setError: error => set({ error }, undefined, 'setError'),

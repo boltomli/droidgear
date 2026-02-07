@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus,
-  Save,
   AlertCircle,
   RefreshCw,
   Play,
@@ -58,7 +57,6 @@ export function OpenCodeConfigPage() {
   const profiles = useOpenCodeStore(state => state.profiles)
   const activeProfileId = useOpenCodeStore(state => state.activeProfileId)
   const currentProfile = useOpenCodeStore(state => state.currentProfile)
-  const hasChanges = useOpenCodeStore(state => state.hasChanges)
   const isLoading = useOpenCodeStore(state => state.isLoading)
   const error = useOpenCodeStore(state => state.error)
   const configStatus = useOpenCodeStore(state => state.configStatus)
@@ -73,7 +71,6 @@ export function OpenCodeConfigPage() {
   )
   const selectProfile = useOpenCodeStore(state => state.selectProfile)
   const createProfile = useOpenCodeStore(state => state.createProfile)
-  const saveProfile = useOpenCodeStore(state => state.saveProfile)
   const deleteProfile = useOpenCodeStore(state => state.deleteProfile)
   const duplicateProfile = useOpenCodeStore(state => state.duplicateProfile)
   const applyProfile = useOpenCodeStore(state => state.applyProfile)
@@ -82,7 +79,6 @@ export function OpenCodeConfigPage() {
     state => state.updateProfileDescription
   )
   const deleteProvider = useOpenCodeStore(state => state.deleteProvider)
-  const resetChanges = useOpenCodeStore(state => state.resetChanges)
   const setError = useOpenCodeStore(state => state.setError)
   const importProviders = useOpenCodeStore(state => state.importProviders)
 
@@ -101,6 +97,21 @@ export function OpenCodeConfigPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [importConfig, setImportConfig] =
     useState<OpenCodeCurrentConfig | null>(null)
+
+  // Use profile id as key to reset local editing state
+  const profileKey = currentProfile?.id ?? ''
+  const [editingName, setEditingName] = useState(currentProfile?.name ?? '')
+  const [editingDescription, setEditingDescription] = useState(
+    currentProfile?.description ?? ''
+  )
+
+  // Reset local state when profile changes
+  const [lastProfileKey, setLastProfileKey] = useState(profileKey)
+  if (profileKey !== lastProfileKey) {
+    setLastProfileKey(profileKey)
+    setEditingName(currentProfile?.name ?? '')
+    setEditingDescription(currentProfile?.description ?? '')
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -139,11 +150,6 @@ export function OpenCodeConfigPage() {
     if (!currentProfile) return
     await deleteProfile(currentProfile.id)
     setShowDeleteProfileConfirm(false)
-  }
-
-  const handleSave = async () => {
-    await saveProfile()
-    toast.success(t('opencode.actions.saveSuccess'))
   }
 
   const handleApply = async () => {
@@ -210,14 +216,6 @@ export function OpenCodeConfigPage() {
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold">{t('opencode.title')}</h1>
           <div className="flex items-center gap-2 mt-1">
-            {hasChanges && (
-              <Badge
-                variant="secondary"
-                className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-              >
-                {t('models.unsavedChanges')}
-              </Badge>
-            )}
             {currentProfile && activeProfileId === currentProfile.id && (
               <Badge variant="outline">{t('opencode.profile.active')}</Badge>
             )}
@@ -235,21 +233,6 @@ export function OpenCodeConfigPage() {
             title={t('common.refresh')}
           >
             <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            onClick={resetChanges}
-            disabled={!hasChanges || isLoading}
-          >
-            {t('common.reset')}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleSave}
-            disabled={!hasChanges || isLoading}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {t('common.save')}
           </Button>
           <Button
             onClick={() => setShowApplyConfirm(true)}
@@ -336,8 +319,13 @@ export function OpenCodeConfigPage() {
               <div className="flex items-center gap-2">
                 <Label className="w-20">{t('opencode.profile.name')}</Label>
                 <Input
-                  value={currentProfile.name}
-                  onChange={e => updateProfileName(e.target.value)}
+                  value={editingName}
+                  onChange={e => setEditingName(e.target.value)}
+                  onBlur={() => {
+                    if (editingName !== currentProfile.name) {
+                      updateProfileName(editingName)
+                    }
+                  }}
                   placeholder={t('opencode.profile.name')}
                 />
               </div>
@@ -346,8 +334,15 @@ export function OpenCodeConfigPage() {
                   {t('opencode.profile.description')}
                 </Label>
                 <Input
-                  value={currentProfile.description ?? ''}
-                  onChange={e => updateProfileDescription(e.target.value)}
+                  value={editingDescription}
+                  onChange={e => setEditingDescription(e.target.value)}
+                  onBlur={() => {
+                    if (
+                      editingDescription !== (currentProfile.description ?? '')
+                    ) {
+                      updateProfileDescription(editingDescription)
+                    }
+                  }}
                   placeholder={t('opencode.profile.descriptionPlaceholder')}
                 />
               </div>

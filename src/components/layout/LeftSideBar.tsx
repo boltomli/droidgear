@@ -35,7 +35,6 @@ import { OpenClawFeatureList } from '@/components/openclaw'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
-import { useOpenCodeStore } from '@/store/opencode-store'
 import { useCodexStore } from '@/store/codex-store'
 import { commands, type Channel } from '@/lib/bindings'
 
@@ -56,7 +55,6 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   const selectChannel = useChannelStore(state => state.selectChannel)
   const channelHasChanges = useChannelStore(state => state.hasChanges)
   const modelHasChanges = useModelStore(state => state.hasChanges)
-  const opencodeHasChanges = useOpenCodeStore(state => state.hasChanges)
   const codexHasChanges = useCodexStore(state => state.hasChanges)
 
   const [channelDialogOpen, setChannelDialogOpen] = useState(false)
@@ -102,7 +100,6 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
     const hasUnsavedChanges =
       (currentView === 'droid' && modelHasChanges) ||
       (currentView === 'channels' && channelHasChanges) ||
-      (currentView === 'opencode' && opencodeHasChanges) ||
       (currentView === 'codex' && codexHasChanges)
 
     if (hasUnsavedChanges) {
@@ -117,8 +114,6 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
       await useModelStore.getState().saveModels()
     } else if (currentView === 'channels') {
       await useChannelStore.getState().saveChannels()
-    } else if (currentView === 'opencode') {
-      await useOpenCodeStore.getState().saveProfile()
     } else if (currentView === 'codex') {
       await useCodexStore.getState().saveProfile()
     }
@@ -133,8 +128,6 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
       useModelStore.getState().resetChanges()
     } else if (currentView === 'channels') {
       useChannelStore.getState().resetChanges()
-    } else if (currentView === 'opencode') {
-      useOpenCodeStore.getState().resetChanges()
     } else if (currentView === 'codex') {
       useCodexStore.getState().resetChanges()
     }
