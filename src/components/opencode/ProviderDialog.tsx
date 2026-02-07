@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Loader2, CheckCircle, XCircle } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, FolderInput } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,7 +25,11 @@ import {
   commands,
   type OpenCodeProfile,
   type OpenCodeProviderConfig,
+  type CustomModel,
 } from '@/lib/bindings'
+import { ChannelModelPickerDialog } from '@/components/channels/ChannelModelPickerDialog'
+import type { ChannelProviderContext } from '@/components/channels'
+import { inferModelProtocol, protocolToOpenCodeNpm } from '@/lib/model-protocol'
 
 interface ProviderDialogProps {
   open: boolean
@@ -53,6 +57,7 @@ export function ProviderDialog({
   const [timeout, setTimeout] = useState('')
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
+  const [channelPickerOpen, setChannelPickerOpen] = useState(false)
 
   const isEditing = editingProviderId !== null
 
@@ -90,6 +95,41 @@ export function ProviderDialog({
       setName(template.name)
       setBaseUrl(template.defaultBaseUrl ?? '')
     }
+  }
+
+  const sanitizeProviderId = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+
+  const handleImportFromChannel = (
+    _models: CustomModel[],
+    context: ChannelProviderContext
+  ) => {
+    if (!isEditing) {
+      // When adding new provider, pre-fill all fields
+      const sanitizedId = sanitizeProviderId(context.channelName)
+
+      // Infer protocol from channel context
+      const protocol = inferModelProtocol(
+        context.channelType,
+        context.platform,
+        context.baseUrl
+      )
+
+      // Map protocol to npm package
+      const npmPackage = protocolToOpenCodeNpm(protocol)
+
+      setProviderId(sanitizedId)
+      setName(context.channelName)
+      setBaseUrl(context.baseUrl)
+      setApiKey(context.apiKey)
+      setNpm(npmPackage)
+    }
+    // Note: OpenCode doesn't have a models field in provider config like OpenClaw
+    // Models are configured separately in the models section
   }
 
   const handleTestConnection = async () => {
@@ -160,6 +200,19 @@ export function ProviderDialog({
 
         <ResizableDialogBody>
           <div className="space-y-4">
+            {/* Import from Channel */}
+            {!isEditing && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setChannelPickerOpen(true)}
+              >
+                <FolderInput className="h-4 w-4 mr-2" />
+                {t('opencode.provider.importFromChannel')}
+              </Button>
+            )}
+
             {/* Template Selection */}
             {!isEditing && providerTemplates.length > 0 && (
               <div className="space-y-2">
@@ -281,6 +334,18 @@ export function ProviderDialog({
           </Button>
         </ResizableDialogFooter>
       </ResizableDialogContent>
+
+      {/* Channel Model Picker Dialog */}
+      <ChannelModelPickerDialog
+        open={channelPickerOpen}
+        onOpenChange={setChannelPickerOpen}
+        mode="single"
+        onSelect={_models => {
+          // Provider-level import handled by onSelectWithContext
+        }}
+        onSelectWithContext={handleImportFromChannel}
+        showBatchConfig={false}
+      />
     </ResizableDialog>
   )
 }

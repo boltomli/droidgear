@@ -545,6 +545,7 @@
   "opencode.provider.noProvidersToImport": "No providers found in configuration",
   "opencode.provider.importCount": "Import ({{count}})",
   "opencode.provider.importSuccess": "Providers imported successfully",
+  "opencode.provider.importFromChannel": "Import from Channel",
 
   "opencode.config.status": "Target Configuration Status",
 

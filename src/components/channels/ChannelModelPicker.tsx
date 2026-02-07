@@ -16,6 +16,7 @@ import {
 import { useChannelStore } from '@/store/channel-store'
 import {
   commands,
+  type ChannelType,
   type CustomModel,
   type ModelInfo,
   type Provider,
@@ -38,6 +39,7 @@ export interface ChannelProviderContext {
   baseUrl: string
   apiKey: string
   platform: string | null
+  channelType: ChannelType
 }
 
 interface ChannelModelPickerProps {
@@ -207,6 +209,7 @@ export function ChannelModelPicker({
       baseUrl: selectedChannel.baseUrl,
       apiKey: selectedKey.key,
       platform: selectedKey.platform,
+      channelType: selectedChannel.type,
     }
   }
 

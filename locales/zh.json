@@ -545,6 +545,7 @@
   "opencode.provider.noProvidersToImport": "配置中未找到 Provider",
   "opencode.provider.importCount": "导入 ({{count}})",
   "opencode.provider.importSuccess": "Provider 导入成功",
+  "opencode.provider.importFromChannel": "从 Channel 导入",
 
   "opencode.config.status": "目标配置状态",
 
