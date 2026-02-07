@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Trash2, Loader2, FolderInput } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -206,11 +207,17 @@ function ProviderForm({
   const handleSave = () => {
     if (!providerId.trim()) return
 
+    const validModels = models.filter(m => m.id.trim())
+    if (validModels.length === 0) {
+      toast.warning(t('openclaw.provider.modelsRequired'))
+      return
+    }
+
     const config = {
       baseUrl: baseUrl.trim() || null,
       apiKey: apiKey.trim() || null,
       api: api || null,
-      models: models.filter(m => m.id.trim()),
+      models: validModels,
     }
 
     if (isEditing) {
