@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.6
+
+**Refactoring / 重构**
+
+- Complete rewrite of Codex provider management with structured architecture / 完全重写 Codex 服务商管理，采用结构化架构
+- Unify Codex Providers layout with OpenCode/OpenClaw / 统一 Codex 服务商布局与 OpenCode/OpenClaw 一致
+
+**Documentation / 文档**
+
+- Refactor AGENTS.md with progressive disclosure and split into docs/agents/ / 重构 AGENTS.md，采用渐进式披露并拆分到 docs/agents/
+
 ## v0.3.5
 
 **New Features / 新功能**
