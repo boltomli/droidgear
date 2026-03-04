@@ -35,9 +35,22 @@ export function clearCachedUpdate(): void {
 }
 
 /**
+ * Check if update checking is disabled via environment variable
+ */
+export function isUpdateCheckDisabled(): boolean {
+  const disableUpdate = import.meta.env.DROIDGEAR_DISABLE_UPDATE_CHECK
+  return disableUpdate === 'true' || disableUpdate === '1'
+}
+
+/**
  * Check for updates and return the Update object if available
  */
 export async function checkForUpdate(): Promise<Update | null> {
+  if (isUpdateCheckDisabled()) {
+    logger.debug('Update check disabled via environment variable')
+    return null
+  }
+
   try {
     const update = await check()
     if (update) {

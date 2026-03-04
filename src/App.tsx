@@ -7,7 +7,7 @@ import { initializeLanguage } from './i18n/language-init'
 import { logger } from './lib/logger'
 import { cleanupOldFiles } from './lib/recovery'
 import { preloadShellEnv } from './services/shell-env'
-import { showUpdateNotification } from './services/updater'
+import { showUpdateNotification, isUpdateCheckDisabled } from './services/updater'
 import { commands } from './lib/tauri-bindings'
 import './App.css'
 import { MainWindow } from './components/layout/MainWindow'
@@ -92,6 +92,18 @@ function App() {
 
     // Auto-updater logic - check for updates 5 seconds after app loads
     const checkForUpdates = async () => {
+      if (isUpdateCheckDisabled()) {
+        logger.debug('Update check disabled via environment variable')
+        return
+      }
+
+      // Check if auto-update is disabled in preferences
+      const prefsResult = await commands.loadPreferences()
+      if (prefsResult.status === 'ok' && prefsResult.data.disable_auto_update) {
+        logger.debug('Auto-update check disabled in preferences')
+        return
+      }
+
       try {
         const update = await check()
         if (update) {
