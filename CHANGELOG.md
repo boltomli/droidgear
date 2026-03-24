@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.2
+
+**New Features / 新功能**
+
+- Add support for configuring extra arguments and headers for models in both GUI and TUI / 支持在 GUI 和 TUI 中配置模型的额外参数和请求头
+- Add OpenClaw subagent management with list, detail, create, delete, toggle, and edit functionalities / 添加 OpenClaw 子智能体管理功能，支持列表、详情、创建、删除、启停和编辑操作
+
 ## v0.5.1
 
 **New Features / 新功能**
