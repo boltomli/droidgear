@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.5.4
+
+**New Features / 新功能**
+
+- Support portable updates on Windows / 支持 Windows 便携版更新
+
+**Bug Fixes / 问题修复**
+
+- Fix TUI editable input modal / 修复 TUI 可编辑输入模态框
+- Replace supportsImages with noImageSupport to default to image support enabled / 将 supportsImages 替换为 noImageSupport 以默认启用图片支持
+
 ## v0.5.3
 
 **New Features / 新功能**

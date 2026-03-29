@@ -758,7 +758,10 @@ fn draw_mcp_server(frame: &mut Frame, app: &app::App, area: Rect) {
         }
         droidgear_core::mcp::McpServerType::Http => {
             let headers_count = server.config.headers.as_ref().map(|m| m.len()).unwrap_or(0);
-            fields.push(("URL", not_set_if_blank(server.config.url.as_deref().unwrap_or(""))));
+            fields.push((
+                "URL",
+                not_set_if_blank(server.config.url.as_deref().unwrap_or("")),
+            ));
             fields.push(("Headers", format!("{headers_count}")));
         }
     }
@@ -2376,7 +2379,10 @@ fn draw_modal(frame: &mut Frame, modal: &app::Modal) {
             let total_width = Span::raw(body.as_str()).width();
             let cursor_col = Span::raw(&body[..cursor_byte]).width();
             let mut effective_cursor_col = cursor_col;
-            if cursor == body_len && total_width >= view_width && total_width > 0 && cursor_col == total_width
+            if cursor == body_len
+                && total_width >= view_width
+                && total_width > 0
+                && cursor_col == total_width
             {
                 // When the cursor is at EOF and there's no extra room to render the cell after the
                 // last character, place it on the last visible cell (like most terminal inputs).
@@ -2399,8 +2405,8 @@ fn draw_modal(frame: &mut Frame, modal: &app::Modal) {
             let hint = Paragraph::new(vec![hint_line(
                 "Left/Right: move  Backspace: delete  Enter: confirm  Esc: cancel",
             )])
-                .style(t.modal_style())
-                .wrap(Wrap { trim: true });
+            .style(t.modal_style())
+            .wrap(Wrap { trim: true });
             frame.render_widget(hint, hint_area);
 
             if input_area.width > 0 {

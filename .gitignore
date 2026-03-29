@@ -29,3 +29,4 @@ jscpd-report
 openspec/
 .iflow/
 .opencode/
+.factory/
