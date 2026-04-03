@@ -64,7 +64,10 @@ export const useCodexStore = create<CodexState>()(
               if (created.status === 'ok') {
                 // Re-list to keep ordering stable (official profile should remain first).
                 const refreshed = await commands.listCodexProfiles()
-                profiles = refreshed.status === 'ok' ? refreshed.data : [...profiles, created.data]
+                profiles =
+                  refreshed.status === 'ok'
+                    ? refreshed.data
+                    : [...profiles, created.data]
               }
             }
             set(

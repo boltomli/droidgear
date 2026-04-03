@@ -80,6 +80,23 @@ describe('inferProviderFromPlatformAndModel', () => {
     )
   })
 
+  it('handles case-insensitive model name matching', () => {
+    expect(inferProviderFromPlatformAndModel(null, 'GPT-5.4')).toBe('openai')
+    expect(inferProviderFromPlatformAndModel(null, 'GPT-4o')).toBe('openai')
+    expect(inferProviderFromPlatformAndModel(null, 'Claude-3-opus')).toBe(
+      'anthropic'
+    )
+  })
+
+  it('recognizes OpenAI o-series models', () => {
+    expect(inferProviderFromPlatformAndModel(null, 'o1')).toBe('openai')
+    expect(inferProviderFromPlatformAndModel(null, 'o1-mini')).toBe('openai')
+    expect(inferProviderFromPlatformAndModel(null, 'o1-pro')).toBe('openai')
+    expect(inferProviderFromPlatformAndModel(null, 'o3')).toBe('openai')
+    expect(inferProviderFromPlatformAndModel(null, 'o3-mini')).toBe('openai')
+    expect(inferProviderFromPlatformAndModel(null, 'o4-mini')).toBe('openai')
+  })
+
   it('uses model name prefix matching when platform is unknown', () => {
     expect(inferProviderFromPlatformAndModel('unknown', 'claude-3-opus')).toBe(
       'anthropic'

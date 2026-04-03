@@ -276,7 +276,9 @@ export function CodexConfigPage() {
               variant="outline"
               size="icon"
               onClick={() => setShowDeleteProfileConfirm(true)}
-              disabled={!currentProfile || profiles.length <= 1 || isOfficialProfile}
+              disabled={
+                !currentProfile || profiles.length <= 1 || isOfficialProfile
+              }
               title={t('codex.profile.delete')}
             >
               <Trash2 className="h-4 w-4" />

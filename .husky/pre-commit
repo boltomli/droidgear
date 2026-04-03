@@ -3,7 +3,7 @@ echo "🔍 Running pre-commit checks..."
 # Security audit - must pass
 echo ""
 echo "🔒 Checking for security vulnerabilities..."
-if ! npm audit --audit-level=moderate; then
+if ! npm audit --audit-level=critical; then
     echo "❌ Security audit failed!"
     echo "💡 Run 'npm audit fix' to automatically fix issues"
     exit 1

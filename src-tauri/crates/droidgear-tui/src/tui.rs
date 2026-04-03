@@ -186,11 +186,11 @@ fn refresh_codex(app: &mut app::App) {
     }
 
     let has_user_profiles = app.codex_profiles.iter().any(|p| p.id != "official");
-    if !has_user_profiles {
-        if droidgear_core::codex::create_default_codex_profile_for_home(&app.home_dir).is_ok() {
-            if let Ok(list) = droidgear_core::codex::list_codex_profiles_for_home(&app.home_dir) {
-                app.codex_profiles = list;
-            }
+    if !has_user_profiles
+        && droidgear_core::codex::create_default_codex_profile_for_home(&app.home_dir).is_ok()
+    {
+        if let Ok(list) = droidgear_core::codex::list_codex_profiles_for_home(&app.home_dir) {
+            app.codex_profiles = list;
         }
     }
 

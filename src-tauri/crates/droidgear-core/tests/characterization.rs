@@ -238,7 +238,10 @@ model = "gpt-5.2"
         profiles.iter().any(|p| p.id == "official"),
         "expected system official profile to exist"
     );
-    assert_eq!(profiles[0].id, "official", "official profile should be sorted first");
+    assert_eq!(
+        profiles[0].id, "official",
+        "official profile should be sorted first"
+    );
 
     // Ensure creating the default BYOK profile is still allowed when only official exists.
     let created = codex::create_default_codex_profile_for_home(home).unwrap();

@@ -19,14 +19,17 @@ export const inferProviderFromPlatformAndModel = (
   if (platform === 'gemini') return 'generic-chat-completion-api'
   if (platform === 'antigravity') {
     // Antigravity supports both Claude and Gemini, infer from model name
-    if (modelId.startsWith('claude-')) return 'anthropic'
-    if (modelId.startsWith('gemini-')) return 'generic-chat-completion-api'
+    const lower = modelId.toLowerCase()
+    if (lower.startsWith('claude-')) return 'anthropic'
+    if (lower.startsWith('gemini-')) return 'generic-chat-completion-api'
     return 'anthropic' // Default to Claude
   }
 
-  // 2. Model name prefix matching
-  if (modelId.startsWith('claude-')) return 'anthropic'
-  if (modelId.startsWith('gpt-')) return 'openai'
+  // 2. Model name prefix matching (case-insensitive)
+  const modelLower = modelId.toLowerCase()
+  if (modelLower.startsWith('claude-')) return 'anthropic'
+  if (modelLower.startsWith('gpt-') || /^o[134](-|$)/.test(modelLower))
+    return 'openai'
 
   // 3. Default to generic
   return 'generic-chat-completion-api'

@@ -382,13 +382,13 @@ pub fn list_codex_profiles_for_home(home_dir: &Path) -> Result<Vec<CodexProfile>
         }
     }
 
-    profiles.sort_by(|a, b| {
-        match (is_official_profile_id(&a.id), is_official_profile_id(&b.id)) {
+    profiles.sort_by(
+        |a, b| match (is_official_profile_id(&a.id), is_official_profile_id(&b.id)) {
             (true, false) => std::cmp::Ordering::Less,
             (false, true) => std::cmp::Ordering::Greater,
             _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-        }
-    });
+        },
+    );
     Ok(profiles)
 }
 

@@ -2,8 +2,10 @@ import type { Provider } from '@/lib/bindings'
 import { normalizeBaseUrl } from '@/lib/sub2api-platform'
 
 export const inferProviderForNewApi = (modelId: string): Provider => {
-  if (modelId.startsWith('claude-')) return 'anthropic'
-  if (modelId.startsWith('gpt-')) return 'openai'
+  const modelLower = modelId.toLowerCase()
+  if (modelLower.startsWith('claude-')) return 'anthropic'
+  if (modelLower.startsWith('gpt-') || /^o[134](-|$)/.test(modelLower))
+    return 'openai'
   return 'generic-chat-completion-api'
 }
 
