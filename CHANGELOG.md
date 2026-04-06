@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.6
+
+**New Features / 新功能**
+
+- Add DefaultModelDialog for configuring session-wide model and reasoning settings / 添加默认模型对话框，用于配置会话级别的模型和推理设置
+- Test connectivity for Droid BYOK models / 测试 Droid BYOK 模型的连通性
+- Improve connectivity panel layout and integrate connection testing into model list UI / 改进连通性面板布局并将连接测试集成到模型列表 UI
+
+**Other Changes / 其他变更**
+
+- Remove skip login feature and associated UI components / 移除跳过登录功能及相关 UI 组件
+
 ## v0.5.5
 
 **New Features / 新功能**
