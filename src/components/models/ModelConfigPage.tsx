@@ -12,7 +12,6 @@ import {
   Download,
   Upload,
   Wifi,
-  BarChart3,
 } from 'lucide-react'
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
@@ -417,7 +416,7 @@ export function ModelConfigPage() {
             onClick={() => setShowConnectivityPanel(!showConnectivityPanel)}
             title={t('connectivity.connectionStatus')}
           >
-            <BarChart3 className="h-4 w-4" />
+            <Wifi className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
@@ -571,6 +570,7 @@ export function ModelConfigPage() {
               onSelect={handleSelect}
               defaultModelId={defaultModelId}
               specModeModelId={sessionDefaultSettings?.specModeModel ?? null}
+              onTestConnection={() => setShowConnectivityPanel(true)}
             />
           </div>
         </div>

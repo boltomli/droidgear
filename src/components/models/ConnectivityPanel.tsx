@@ -75,32 +75,36 @@ export function ConnectivityPanel({
 
     return (
       <div key={result.modelId} className="py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            {getStatusIcon(diagnostics.success)}
-            <span className="font-medium truncate">{result.modelName}</span>
-            {diagnostics.testMode === 'inference' && (
-              <MessageSquare className="h-3 w-3 text-muted-foreground" />
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className={`text-xs ${getStatusColor(diagnostics.success)}`}>
-              {getStatusText(diagnostics.success)}
+        {/* Model name line */}
+        <div className="flex items-center gap-2 min-w-0">
+          {getStatusIcon(diagnostics.success)}
+          <span className="font-medium text-sm truncate">
+            {result.modelName}
+          </span>
+        </div>
+        {/* Test result line */}
+        <div className="flex items-center gap-2 mt-1 ml-6">
+          {diagnostics.testMode === 'inference' ? (
+            <MessageSquare className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+          ) : (
+            <Wifi className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+          )}
+          <span className={`text-xs ${getStatusColor(diagnostics.success)}`}>
+            {getStatusText(diagnostics.success)}
+          </span>
+          {diagnostics.success && (
+            <span className="text-xs text-muted-foreground">
+              {diagnostics.latencyMs}ms
             </span>
-            {diagnostics.success && (
-              <span className="text-xs text-muted-foreground">
-                {diagnostics.latencyMs}ms
-              </span>
-            )}
-          </div>
+          )}
         </div>
         {diagnostics.error && (
-          <div className="mt-1 text-xs text-red-600 dark:text-red-400 break-words">
+          <div className="mt-1 ml-6 text-xs text-red-600 dark:text-red-400 break-words">
             {diagnostics.error}
           </div>
         )}
         {diagnostics.responseText && (
-          <div className="mt-1 text-xs text-muted-foreground break-words bg-muted/50 rounded px-2 py-1">
+          <div className="mt-1 ml-6 text-xs text-muted-foreground break-words bg-muted/50 rounded px-2 py-1">
             <span className="font-medium">
               {t('connectivity.responseText')}:{' '}
             </span>

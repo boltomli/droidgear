@@ -28,6 +28,7 @@ interface ModelListProps {
   onDelete: (index: number) => void
   onCopy: (index: number) => void
   onSetDefault: (index: number) => void
+  onTestConnection?: (modelId: string) => void
   filteredModels?: FilteredModel[]
   selectionMode?: boolean
   selectedIndices?: Set<number>
@@ -41,6 +42,7 @@ export function ModelList({
   onDelete,
   onCopy,
   onSetDefault,
+  onTestConnection: onTestConnectionProp,
   filteredModels,
   selectionMode = false,
   selectedIndices = new Set(),
@@ -71,6 +73,9 @@ export function ModelList({
   const handleTestConnection = async (modelId: string | null | undefined) => {
     if (!modelId) return
     try {
+      if (onTestConnectionProp) {
+        onTestConnectionProp(modelId)
+      }
       await testSingleModel(modelId)
     } catch (error) {
       console.error('Failed to test model connection:', error)
