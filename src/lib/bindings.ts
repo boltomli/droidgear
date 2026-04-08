@@ -757,6 +757,116 @@ async readCodexCurrentConfig() : Promise<Result<CodexCurrentConfig, string>> {
 }
 },
 /**
+ * List all Hermes profiles
+ */
+async listHermesProfiles() : Promise<Result<HermesProfile[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_hermes_profiles") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Get a profile by ID
+ */
+async getHermesProfile(id: string) : Promise<Result<HermesProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_hermes_profile", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Save a profile (create or update)
+ */
+async saveHermesProfile(profile: HermesProfile) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_hermes_profile", { profile }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Delete a profile
+ */
+async deleteHermesProfile(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_hermes_profile", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Duplicate a profile
+ */
+async duplicateHermesProfile(id: string, newName: string) : Promise<Result<HermesProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("duplicate_hermes_profile", { id, newName }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Create default profile (when no profiles exist)
+ */
+async createDefaultHermesProfile() : Promise<Result<HermesProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_default_hermes_profile") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Get active profile ID
+ */
+async getActiveHermesProfileId() : Promise<Result<string | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_active_hermes_profile_id") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Apply a profile to `~/.hermes/config.yaml`
+ */
+async applyHermesProfile(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("apply_hermes_profile", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Get Hermes config status
+ */
+async getHermesConfigStatus() : Promise<Result<HermesConfigStatus, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_hermes_config_status") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Read current Hermes configuration from config files
+ */
+async readHermesCurrentConfig() : Promise<Result<HermesCurrentConfig, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("read_hermes_current_config") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * List all OpenCode profiles
  */
 async listOpencodeProfiles() : Promise<Result<OpenCodeProfile[], string>> {
@@ -1457,6 +1567,22 @@ export type EffectivePath = { key: string; path: string; isDefault: boolean }
  * All effective paths
  */
 export type EffectivePaths = { factory: EffectivePath; opencode: EffectivePath; opencodeAuth: EffectivePath; codex: EffectivePath; openclaw: EffectivePath }
+/**
+ * Hermes Live 配置状态
+ */
+export type HermesConfigStatus = { configExists: boolean; configPath: string }
+/**
+ * 当前 Hermes Live 配置（从 `~/.hermes/config.yaml` 读取）
+ */
+export type HermesCurrentConfig = { model: HermesModelConfig }
+/**
+ * Hermes model 配置（对应 config.yaml 中的 model 节）
+ */
+export type HermesModelConfig = { default?: string | null; provider?: string | null; baseUrl?: string | null; apiKey?: string | null }
+/**
+ * Hermes Profile（用于在 DroidGear 内部保存并切换）
+ */
+export type HermesProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; model: HermesModelConfig }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 /**
  * MCP server entry with name

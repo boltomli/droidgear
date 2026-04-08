@@ -2,8 +2,8 @@ use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
-        channel, codex, config, connectivity, env, mcp, notifications, openclaw, opencode, paths,
-        preferences, recovery, sessions, specs, updater,
+        channel, codex, config, connectivity, env, hermes, mcp, notifications, openclaw, opencode,
+        paths, preferences, recovery, sessions, specs, updater,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -75,6 +75,16 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         codex::apply_codex_profile,
         codex::get_codex_config_status,
         codex::read_codex_current_config,
+        hermes::list_hermes_profiles,
+        hermes::get_hermes_profile,
+        hermes::save_hermes_profile,
+        hermes::delete_hermes_profile,
+        hermes::duplicate_hermes_profile,
+        hermes::create_default_hermes_profile,
+        hermes::get_active_hermes_profile_id,
+        hermes::apply_hermes_profile,
+        hermes::get_hermes_config_status,
+        hermes::read_hermes_current_config,
         opencode::list_opencode_profiles,
         opencode::get_opencode_profile,
         opencode::save_opencode_profile,

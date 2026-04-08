@@ -8,6 +8,7 @@ pub mod codex;
 pub mod config;
 pub mod connectivity;
 pub mod env;
+pub mod hermes;
 pub mod mcp;
 pub mod notifications;
 pub mod openclaw;
