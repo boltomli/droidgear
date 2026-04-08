@@ -71,8 +71,12 @@ export function HermesConfigPage() {
     useState(false)
   const [newProfileName, setNewProfileName] = useState('')
 
-  // Local model field editing state
+  // Local editing state for profile fields and model fields
   const profileKey = currentProfile?.id ?? ''
+  const [editingName, setEditingName] = useState(currentProfile?.name ?? '')
+  const [editingDescription, setEditingDescription] = useState(
+    currentProfile?.description ?? ''
+  )
   const [editingDefaultModel, setEditingDefaultModel] = useState(
     currentProfile?.model.default ?? ''
   )
@@ -90,6 +94,8 @@ export function HermesConfigPage() {
   const [lastProfileKey, setLastProfileKey] = useState(profileKey)
   if (profileKey !== lastProfileKey) {
     setLastProfileKey(profileKey)
+    setEditingName(currentProfile?.name ?? '')
+    setEditingDescription(currentProfile?.description ?? '')
     setEditingDefaultModel(currentProfile?.model.default ?? '')
     setEditingProvider(currentProfile?.model.provider ?? '')
     setEditingBaseUrl(currentProfile?.model.baseUrl ?? '')
@@ -139,6 +145,26 @@ export function HermesConfigPage() {
   const handleLoadFromConfig = async () => {
     await loadFromLiveConfig()
     toast.success(t('hermes.actions.loadedFromLive'))
+  }
+
+  const handleProfileFieldBlur = async () => {
+    if (!currentProfile) return
+    const nameChanged = editingName !== currentProfile.name
+    const descChanged =
+      editingDescription !== (currentProfile.description ?? '')
+    if (!nameChanged && !descChanged) return
+    const updated = {
+      ...currentProfile,
+      name: editingName || currentProfile.name,
+      description: editingDescription || null,
+      updatedAt: new Date().toISOString(),
+    }
+    useHermesStore.setState(
+      { currentProfile: updated },
+      undefined,
+      'hermes/updateProfileFields'
+    )
+    await saveProfile()
   }
 
   const handleModelBlur = async () => {
@@ -265,6 +291,31 @@ export function HermesConfigPage() {
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
+
+          {currentProfile && (
+            <>
+              <div className="flex items-center gap-2">
+                <Label className="w-24">{t('hermes.profile.name')}</Label>
+                <Input
+                  value={editingName}
+                  onChange={e => setEditingName(e.target.value)}
+                  onBlur={handleProfileFieldBlur}
+                  placeholder={t('hermes.profile.namePlaceholder')}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="w-24">
+                  {t('hermes.profile.description')}
+                </Label>
+                <Input
+                  value={editingDescription}
+                  onChange={e => setEditingDescription(e.target.value)}
+                  onBlur={handleProfileFieldBlur}
+                  placeholder={t('hermes.profile.descriptionPlaceholder')}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Model Config Section */}
