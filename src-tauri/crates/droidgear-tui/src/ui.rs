@@ -389,6 +389,9 @@ fn draw_main(frame: &mut Frame, app: &app::App, area: Rect) {
         app::Screen::OpenClawHelpers => draw_openclaw_helpers(frame, app, area),
         app::Screen::OpenClawSubagents => draw_openclaw_subagents(frame, app, area),
         app::Screen::OpenClawSubagentDetail => draw_openclaw_subagent_detail(frame, app, area),
+        app::Screen::Hermes => draw_hermes_profiles(frame, app, area),
+        app::Screen::HermesProfile => draw_hermes_profile(frame, app, area),
+        app::Screen::HermesProvider => draw_hermes_provider(frame, app, area),
         app::Screen::Sessions => draw_sessions(frame, app, area),
         app::Screen::Specs => draw_specs(frame, app, area),
         app::Screen::Channels => draw_channels(frame, app, area),
@@ -2550,5 +2553,202 @@ fn draw_missions(frame: &mut Frame, app: &app::App, area: Rect) {
     render_list(frame, list, chunks[0], Some(app.mission_field_index));
 
     let help = help_paragraph("Up/Down: select  Enter/e: edit  r: refresh  q/Esc: back");
+    frame.render_widget(help, chunks[1]);
+}
+
+fn draw_hermes_profiles(frame: &mut Frame, app: &app::App, area: Rect) {
+    let active = app.hermes_active_id.as_deref();
+    let selected_index = app.hermes_index;
+    draw_profile_list(
+        frame,
+        area,
+        "Hermes Profiles",
+        app.hermes_profiles
+            .iter()
+            .map(|p| (p.name.as_str(), p.id.as_str())),
+        active,
+        selected_index,
+        "Up/Down: select  Enter/e: open  a: apply  n: new  c: copy  d: delete  r: refresh  q/Esc: back",
+    );
+}
+
+fn draw_hermes_profile(frame: &mut Frame, app: &app::App, area: Rect) {
+    let t = theme();
+    let Some(profile) = app.hermes_detail.as_ref() else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "Failed to load profile",
+            t.error_style(),
+        ))])
+        .block(block("Hermes Profile"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
+        .split(area);
+
+    let api_key_set = profile
+        .model
+        .api_key
+        .as_deref()
+        .is_some_and(|k| !k.trim().is_empty());
+
+    let fields: Vec<(&str, String)> = vec![
+        ("Name", profile.name.clone()),
+        (
+            "Description",
+            profile
+                .description
+                .clone()
+                .unwrap_or_else(|| "".to_string()),
+        ),
+        (
+            "Default Model",
+            profile
+                .model
+                .default
+                .clone()
+                .unwrap_or_else(|| "".to_string()),
+        ),
+        (
+            "Provider",
+            profile
+                .model
+                .provider
+                .clone()
+                .unwrap_or_else(|| "".to_string()),
+        ),
+        (
+            "Base URL",
+            profile
+                .model
+                .base_url
+                .clone()
+                .unwrap_or_else(|| "".to_string()),
+        ),
+        (
+            "API Key",
+            if api_key_set {
+                "********".to_string()
+            } else {
+                "(not set)".to_string()
+            },
+        ),
+    ];
+
+    let mut items: Vec<ListItem> = Vec::new();
+    for (i, (label, value)) in fields.into_iter().enumerate() {
+        let selected = i == app.hermes_detail_field_index;
+        let line = if selected {
+            Line::from(format!("{label:>16}: {value}"))
+        } else {
+            let custom_style = match label {
+                "API Key" if value == "********" => Some(t.success_fg_style()),
+                _ => None,
+            };
+            field_line_custom(label, &value, 16, custom_style)
+        };
+        items.push(ListItem::new(line));
+    }
+
+    let list = List::new(items)
+        .block(block(format!("Hermes Profile: {}", profile.name)))
+        .highlight_style(t.selected_row_style());
+    render_list(frame, list, chunks[0], Some(app.hermes_detail_field_index));
+
+    let help = help_paragraph(
+        "Up/Down: move  Enter/e: edit  m: model config  l: load live  a: apply  q/Esc: back",
+    );
+    frame.render_widget(help, chunks[1]);
+}
+
+fn draw_hermes_provider(frame: &mut Frame, app: &app::App, area: Rect) {
+    let t = theme();
+    let Some(profile) = app.hermes_detail.as_ref() else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "Failed to load profile",
+            t.error_style(),
+        ))])
+        .block(block("Hermes Model Config"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
+        .split(area);
+
+    let api_key_set = profile
+        .model
+        .api_key
+        .as_deref()
+        .is_some_and(|k| !k.trim().is_empty());
+
+    let fields: Vec<(&str, String)> = vec![
+        (
+            "Default Model",
+            profile
+                .model
+                .default
+                .clone()
+                .unwrap_or_else(|| "".to_string()),
+        ),
+        (
+            "Provider",
+            profile
+                .model
+                .provider
+                .clone()
+                .unwrap_or_else(|| "".to_string()),
+        ),
+        (
+            "Base URL",
+            profile
+                .model
+                .base_url
+                .clone()
+                .unwrap_or_else(|| "".to_string()),
+        ),
+        (
+            "API Key",
+            if api_key_set {
+                "********".to_string()
+            } else {
+                "(not set)".to_string()
+            },
+        ),
+    ];
+
+    let mut items: Vec<ListItem> = Vec::new();
+    for (i, (label, value)) in fields.into_iter().enumerate() {
+        let selected = i == app.hermes_provider_field_index;
+        let line = if selected {
+            Line::from(format!("{label:>16}: {value}"))
+        } else {
+            let custom_style = match label {
+                "API Key" if value == "********" => Some(t.success_fg_style()),
+                _ => None,
+            };
+            field_line_custom(label, &value, 16, custom_style)
+        };
+        items.push(ListItem::new(line));
+    }
+
+    let list = List::new(items)
+        .block(block(format!("Hermes Model Config: {}", profile.name)))
+        .highlight_style(t.selected_row_style());
+    render_list(
+        frame,
+        list,
+        chunks[0],
+        Some(app.hermes_provider_field_index),
+    );
+
+    let help = help_paragraph("Up/Down: select  Enter/e: edit  q/Esc: back");
     frame.render_widget(help, chunks[1]);
 }

@@ -146,6 +146,11 @@ fn refresh_screen_data(app: &mut app::App) {
         app::Screen::OpenClawSubagents | app::Screen::OpenClawSubagentDetail => {
             refresh_openclaw_subagents(app);
         }
+        app::Screen::Hermes => refresh_hermes(app),
+        app::Screen::HermesProfile | app::Screen::HermesProvider => {
+            refresh_hermes(app);
+            refresh_hermes_detail(app);
+        }
         app::Screen::Sessions => refresh_sessions(app),
         app::Screen::Specs => refresh_specs(app),
         app::Screen::Channels => refresh_channels(app),
@@ -391,6 +396,53 @@ fn refresh_missions(app: &mut app::App) {
     }
 }
 
+fn refresh_hermes(app: &mut app::App) {
+    match droidgear_core::hermes::list_hermes_profiles_for_home(&app.home_dir) {
+        Ok(list) => app.hermes_profiles = list,
+        Err(e) => app.set_toast(e, true),
+    }
+
+    if app.hermes_profiles.is_empty() {
+        if let Ok(p) = droidgear_core::hermes::create_default_hermes_profile_for_home(&app.home_dir)
+        {
+            app.hermes_profiles = vec![p];
+        }
+    }
+
+    match droidgear_core::hermes::get_active_hermes_profile_id_for_home(&app.home_dir) {
+        Ok(id) => app.hermes_active_id = id,
+        Err(e) => app.set_toast(e, true),
+    }
+}
+
+fn refresh_hermes_detail(app: &mut app::App) {
+    let Some(id) = app.hermes_detail_id.clone() else {
+        app.hermes_detail = None;
+        return;
+    };
+    match droidgear_core::hermes::get_hermes_profile_for_home(&app.home_dir, &id) {
+        Ok(profile) => {
+            app.hermes_detail = Some(profile);
+        }
+        Err(e) => {
+            app.hermes_detail = None;
+            app.set_toast(e, true);
+        }
+    }
+}
+
+fn hermes_load_from_live_config(app: &mut app::App, profile_id: &str) -> anyhow::Result<()> {
+    let live = droidgear_core::hermes::read_hermes_current_config_for_home(&app.home_dir)
+        .map_err(anyhow::Error::msg)?;
+    let mut profile =
+        droidgear_core::hermes::get_hermes_profile_for_home(&app.home_dir, profile_id)
+            .map_err(anyhow::Error::msg)?;
+    profile.model = live.model;
+    droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)
+        .map_err(anyhow::Error::msg)?;
+    Ok(())
+}
+
 fn handle_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
     if let Some(modal) = app.modal.clone() {
         handle_modal_key(app, code, modal);
@@ -420,6 +472,9 @@ fn handle_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
         app::Screen::OpenClawHelpers => handle_openclaw_helpers_key(app, code),
         app::Screen::OpenClawSubagents => handle_openclaw_subagents_key(app, code),
         app::Screen::OpenClawSubagentDetail => handle_openclaw_subagent_detail_key(app, code),
+        app::Screen::Hermes => handle_hermes_key(app, code),
+        app::Screen::HermesProfile => handle_hermes_profile_key(app, code),
+        app::Screen::HermesProvider => handle_hermes_provider_key(app, code),
         app::Screen::Sessions => handle_sessions_key(app, code),
         app::Screen::Specs => handle_specs_key(app, code),
         app::Screen::Channels => handle_channels_key(app, code),
@@ -3152,6 +3207,252 @@ fn openclaw_update_subagent(
     Ok(())
 }
 
+fn handle_hermes_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
+    match code {
+        KeyCode::Esc | KeyCode::Char('q') => app.screen = app::Screen::Main,
+        KeyCode::Down => app.hermes_index = app.hermes_index.saturating_add(1),
+        KeyCode::Up => app.hermes_index = app.hermes_index.saturating_sub(1),
+        KeyCode::Char('r') => refresh_hermes(app),
+        KeyCode::Char('n') => {
+            app.modal = Some(app::Modal::Input {
+                title: "New Hermes profile name".to_string(),
+                value: String::new(),
+                cursor: usize::MAX,
+                is_secret: false,
+                action: app::InputAction::HermesCreateProfile,
+            });
+        }
+        KeyCode::Enter | KeyCode::Char('e') => {
+            if let Some(p) = app.hermes_profiles.get(app.hermes_index) {
+                app.hermes_detail_id = Some(p.id.clone());
+                app.hermes_detail_field_index = 0;
+                app.hermes_provider_field_index = 0;
+                app.screen = app::Screen::HermesProfile;
+                refresh_hermes_detail(app);
+            }
+        }
+        KeyCode::Char('a') => {
+            if let Some(p) = app.hermes_profiles.get(app.hermes_index) {
+                app.modal = Some(app::Modal::Confirm {
+                    message: format!("Apply Hermes profile '{}'?", p.name),
+                    action: app::ConfirmAction::HermesApply { id: p.id.clone() },
+                });
+            }
+        }
+        KeyCode::Char('d') => {
+            if let Some(p) = app.hermes_profiles.get(app.hermes_index) {
+                app.modal = Some(app::Modal::Confirm {
+                    message: format!("Delete Hermes profile '{}'?", p.name),
+                    action: app::ConfirmAction::HermesDelete { id: p.id.clone() },
+                });
+            }
+        }
+        KeyCode::Char('c') => {
+            if let Some(p) = app.hermes_profiles.get(app.hermes_index) {
+                app.modal = Some(app::Modal::Input {
+                    title: "Duplicate profile name".to_string(),
+                    value: format!("{} (copy)", p.name),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::HermesDuplicate { id: p.id.clone() },
+                });
+            }
+        }
+        _ => {}
+    }
+    None
+}
+
+fn handle_hermes_profile_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
+    let Some(profile_id) = app.hermes_detail_id.clone() else {
+        app.screen = app::Screen::Hermes;
+        return None;
+    };
+    let Some(profile) = app.hermes_detail.as_ref() else {
+        return None;
+    };
+
+    match code {
+        KeyCode::Esc | KeyCode::Char('q') => {
+            app.screen = app::Screen::Hermes;
+        }
+        KeyCode::Down => {
+            app.hermes_detail_field_index = app.hermes_detail_field_index.saturating_add(1)
+        }
+        KeyCode::Up => {
+            app.hermes_detail_field_index = app.hermes_detail_field_index.saturating_sub(1)
+        }
+        KeyCode::Char('r') => refresh_hermes_detail(app),
+        KeyCode::Char('a') => {
+            app.modal = Some(app::Modal::Confirm {
+                message: format!("Apply Hermes profile '{}'?", profile.name),
+                action: app::ConfirmAction::HermesApply {
+                    id: profile_id.clone(),
+                },
+            });
+        }
+        KeyCode::Char('m') => {
+            // Navigate to the model config (HermesProvider) screen
+            app.hermes_provider_field_index = 0;
+            app.screen = app::Screen::HermesProvider;
+        }
+        KeyCode::Char('l') => {
+            if let Err(e) = hermes_load_from_live_config(app, &profile_id) {
+                app.set_toast(e.to_string(), true);
+            } else {
+                app.set_toast("Loaded from live config", false);
+                refresh_hermes_detail(app);
+            }
+        }
+        KeyCode::Enter | KeyCode::Char('e') => {
+            let profile_name = profile.name.clone();
+            let model = profile.model.clone();
+            match app.hermes_detail_field_index {
+                0 => {
+                    app.modal = Some(app::Modal::Input {
+                        title: "Profile name".to_string(),
+                        value: profile_name,
+                        cursor: usize::MAX,
+                        is_secret: false,
+                        action: app::InputAction::HermesSetProfileName {
+                            id: profile_id.clone(),
+                        },
+                    });
+                }
+                1 => {
+                    app.modal = Some(app::Modal::Input {
+                        title: "Profile description".to_string(),
+                        value: app
+                            .hermes_detail
+                            .as_ref()
+                            .and_then(|p| p.description.clone())
+                            .unwrap_or_default(),
+                        cursor: usize::MAX,
+                        is_secret: false,
+                        action: app::InputAction::HermesSetProfileDescription {
+                            id: profile_id.clone(),
+                        },
+                    });
+                }
+                2 => {
+                    app.modal = Some(app::Modal::Input {
+                        title: "Default model".to_string(),
+                        value: model.default.unwrap_or_default(),
+                        cursor: usize::MAX,
+                        is_secret: false,
+                        action: app::InputAction::HermesSetProfileDefaultModel {
+                            id: profile_id.clone(),
+                        },
+                    });
+                }
+                3 => {
+                    app.modal = Some(app::Modal::Input {
+                        title: "Provider".to_string(),
+                        value: model.provider.unwrap_or_default(),
+                        cursor: usize::MAX,
+                        is_secret: false,
+                        action: app::InputAction::HermesSetProfileProvider {
+                            id: profile_id.clone(),
+                        },
+                    });
+                }
+                4 => {
+                    app.modal = Some(app::Modal::Input {
+                        title: "Base URL".to_string(),
+                        value: model.base_url.unwrap_or_default(),
+                        cursor: usize::MAX,
+                        is_secret: false,
+                        action: app::InputAction::HermesSetProfileBaseUrl {
+                            id: profile_id.clone(),
+                        },
+                    });
+                }
+                5 => {
+                    app.modal = Some(app::Modal::Input {
+                        title: "API key".to_string(),
+                        value: model.api_key.unwrap_or_default(),
+                        cursor: usize::MAX,
+                        is_secret: true,
+                        action: app::InputAction::HermesSetProfileApiKey {
+                            id: profile_id.clone(),
+                        },
+                    });
+                }
+                _ => {}
+            }
+        }
+        _ => {}
+    }
+
+    None
+}
+
+fn handle_hermes_provider_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
+    let Some(_profile_id) = app.hermes_detail_id.clone() else {
+        app.screen = app::Screen::Hermes;
+        return None;
+    };
+    let Some(profile) = app.hermes_detail.as_ref() else {
+        return None;
+    };
+    let model = profile.model.clone();
+    let profile_id = app.hermes_detail_id.clone().unwrap_or_default();
+
+    match code {
+        KeyCode::Esc | KeyCode::Char('q') => {
+            app.screen = app::Screen::HermesProfile;
+        }
+        KeyCode::Down => {
+            app.hermes_provider_field_index = app.hermes_provider_field_index.saturating_add(1)
+        }
+        KeyCode::Up => {
+            app.hermes_provider_field_index = app.hermes_provider_field_index.saturating_sub(1)
+        }
+        KeyCode::Enter | KeyCode::Char('e') => match app.hermes_provider_field_index {
+            0 => {
+                app.modal = Some(app::Modal::Input {
+                    title: "Default model".to_string(),
+                    value: model.default.unwrap_or_default(),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::HermesSetProfileDefaultModel { id: profile_id },
+                });
+            }
+            1 => {
+                app.modal = Some(app::Modal::Input {
+                    title: "Provider".to_string(),
+                    value: model.provider.unwrap_or_default(),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::HermesSetProfileProvider { id: profile_id },
+                });
+            }
+            2 => {
+                app.modal = Some(app::Modal::Input {
+                    title: "Base URL".to_string(),
+                    value: model.base_url.unwrap_or_default(),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::HermesSetProfileBaseUrl { id: profile_id },
+                });
+            }
+            3 => {
+                app.modal = Some(app::Modal::Input {
+                    title: "API key".to_string(),
+                    value: model.api_key.unwrap_or_default(),
+                    cursor: usize::MAX,
+                    is_secret: true,
+                    action: app::InputAction::HermesSetProfileApiKey { id: profile_id },
+                });
+            }
+            _ => {}
+        },
+        _ => {}
+    }
+
+    None
+}
+
 fn handle_sessions_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
     match code {
         KeyCode::Esc | KeyCode::Char('q') => app.screen = app::Screen::Main,
@@ -4894,6 +5195,17 @@ fn run_confirm_action(app: &mut app::App, action: app::ConfirmAction) -> anyhow:
             refresh_openclaw_subagents(app);
             Ok(())
         }
+        app::ConfirmAction::HermesApply { id } => {
+            droidgear_core::hermes::apply_hermes_profile_for_home(&app.home_dir, &id)
+                .map_err(anyhow::Error::msg)?;
+            app.set_toast("Applied", false);
+            Ok(())
+        }
+        app::ConfirmAction::HermesDelete { id } => {
+            droidgear_core::hermes::delete_hermes_profile_for_home(&app.home_dir, &id)
+                .map_err(anyhow::Error::msg)?;
+            Ok(())
+        }
     }
 }
 
@@ -6225,6 +6537,134 @@ fn run_input_action(
                 };
             })
         }
+        app::InputAction::HermesCreateProfile => {
+            if trimmed.is_empty() {
+                return Err(anyhow::Error::msg("Profile name is required"));
+            }
+
+            let before = droidgear_core::hermes::list_hermes_profiles_for_home(&app.home_dir)
+                .map_err(anyhow::Error::msg)?;
+            let before_ids = before
+                .iter()
+                .map(|p| p.id.clone())
+                .collect::<std::collections::HashSet<String>>();
+
+            let profile = droidgear_core::hermes::HermesProfile {
+                id: String::new(),
+                name: trimmed.to_string(),
+                description: None,
+                created_at: String::new(),
+                updated_at: String::new(),
+                model: droidgear_core::hermes::HermesModelConfig {
+                    default: Some(String::new()),
+                    provider: Some(String::new()),
+                    base_url: Some(String::new()),
+                    api_key: Some(String::new()),
+                },
+            };
+
+            droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+
+            refresh_hermes(app);
+            if let Some((idx, p)) = app
+                .hermes_profiles
+                .iter()
+                .enumerate()
+                .find(|(_, p)| !before_ids.contains(&p.id))
+            {
+                app.hermes_index = idx;
+                app.hermes_detail_id = Some(p.id.clone());
+                app.hermes_detail_field_index = 0;
+                app.screen = app::Screen::HermesProfile;
+                refresh_hermes_detail(app);
+            }
+
+            Ok(())
+        }
+        app::InputAction::HermesDuplicate { id } => {
+            if trimmed.is_empty() {
+                return Err(anyhow::Error::msg("Profile name is required"));
+            }
+            let new_profile = droidgear_core::hermes::duplicate_hermes_profile_for_home(
+                &app.home_dir,
+                &id,
+                trimmed,
+            )
+            .map_err(anyhow::Error::msg)?;
+            refresh_hermes(app);
+            if let Some(idx) = app
+                .hermes_profiles
+                .iter()
+                .position(|p| p.id == new_profile.id)
+            {
+                app.hermes_index = idx;
+            }
+            Ok(())
+        }
+        app::InputAction::HermesSetProfileName { id } => {
+            if trimmed.is_empty() {
+                return Err(anyhow::Error::msg("Profile name is required"));
+            }
+            let mut profile =
+                droidgear_core::hermes::get_hermes_profile_for_home(&app.home_dir, &id)
+                    .map_err(anyhow::Error::msg)?;
+            profile.name = trimmed.to_string();
+            droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            app.set_toast("Saved", false);
+            Ok(())
+        }
+        app::InputAction::HermesSetProfileDescription { id } => {
+            let mut profile =
+                droidgear_core::hermes::get_hermes_profile_for_home(&app.home_dir, &id)
+                    .map_err(anyhow::Error::msg)?;
+            profile.description = (!trimmed.is_empty()).then(|| trimmed.to_string());
+            droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            app.set_toast("Saved", false);
+            Ok(())
+        }
+        app::InputAction::HermesSetProfileDefaultModel { id } => {
+            let mut profile =
+                droidgear_core::hermes::get_hermes_profile_for_home(&app.home_dir, &id)
+                    .map_err(anyhow::Error::msg)?;
+            profile.model.default = (!trimmed.is_empty()).then(|| trimmed.to_string());
+            droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            app.set_toast("Saved", false);
+            Ok(())
+        }
+        app::InputAction::HermesSetProfileProvider { id } => {
+            let mut profile =
+                droidgear_core::hermes::get_hermes_profile_for_home(&app.home_dir, &id)
+                    .map_err(anyhow::Error::msg)?;
+            profile.model.provider = (!trimmed.is_empty()).then(|| trimmed.to_string());
+            droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            app.set_toast("Saved", false);
+            Ok(())
+        }
+        app::InputAction::HermesSetProfileBaseUrl { id } => {
+            let mut profile =
+                droidgear_core::hermes::get_hermes_profile_for_home(&app.home_dir, &id)
+                    .map_err(anyhow::Error::msg)?;
+            profile.model.base_url = (!trimmed.is_empty()).then(|| trimmed.to_string());
+            droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            app.set_toast("Saved", false);
+            Ok(())
+        }
+        app::InputAction::HermesSetProfileApiKey { id } => {
+            let mut profile =
+                droidgear_core::hermes::get_hermes_profile_for_home(&app.home_dir, &id)
+                    .map_err(anyhow::Error::msg)?;
+            profile.model.api_key = (!trimmed.is_empty()).then(|| trimmed.to_string());
+            droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            app.set_toast("Saved", false);
+            Ok(())
+        }
     }
 }
 
@@ -6285,5 +6725,82 @@ mod tests {
         assert_eq!(models[0].id.as_deref(), Some("custom:My Model-0"));
         assert_eq!(models[1].index, Some(1));
         assert_eq!(models[1].id.as_deref(), Some("custom:m2-1"));
+    }
+
+    #[test]
+    fn hermes_screens_are_included_in_nav_items() {
+        let nav = app::App::nav_items();
+        let has_hermes = nav
+            .iter()
+            .any(|(label, screen)| *label == "Hermes" && *screen == app::Screen::Hermes);
+        assert!(has_hermes, "nav_items() should include Hermes entry");
+    }
+
+    #[test]
+    fn hermes_app_state_initializes_correctly() {
+        use std::path::PathBuf;
+        let app = app::App::new(PathBuf::from("/tmp/test-home"));
+        assert!(app.hermes_profiles.is_empty());
+        assert!(app.hermes_active_id.is_none());
+        assert_eq!(app.hermes_index, 0);
+        assert!(app.hermes_detail_id.is_none());
+        assert!(app.hermes_detail.is_none());
+        assert_eq!(app.hermes_detail_field_index, 0);
+        assert_eq!(app.hermes_provider_field_index, 0);
+    }
+
+    #[test]
+    fn hermes_clamp_indices_does_not_panic_on_empty_profiles() {
+        use std::path::PathBuf;
+        let mut app = app::App::new(PathBuf::from("/tmp/test-home"));
+        // Should not panic when hermes_profiles is empty
+        app.clamp_indices();
+        assert_eq!(app.hermes_index, 0);
+    }
+
+    #[test]
+    fn hermes_screen_variants_exist() {
+        // Validates M2-TUI-APP-001: Screen enum includes Hermes, HermesProfile, HermesProvider
+        let _hermes = app::Screen::Hermes;
+        let _hermes_profile = app::Screen::HermesProfile;
+        let _hermes_provider = app::Screen::HermesProvider;
+    }
+
+    #[test]
+    fn hermes_confirm_action_variants_exist() {
+        // Validates M2-TUI-APP-004: ConfirmAction includes Hermes variants
+        let _apply = app::ConfirmAction::HermesApply {
+            id: "test".to_string(),
+        };
+        let _delete = app::ConfirmAction::HermesDelete {
+            id: "test".to_string(),
+        };
+    }
+
+    #[test]
+    fn hermes_input_action_variants_exist() {
+        // Validates M2-TUI-APP-005: InputAction includes Hermes-specific variants
+        let _create = app::InputAction::HermesCreateProfile;
+        let _dup = app::InputAction::HermesDuplicate {
+            id: "x".to_string(),
+        };
+        let _name = app::InputAction::HermesSetProfileName {
+            id: "x".to_string(),
+        };
+        let _desc = app::InputAction::HermesSetProfileDescription {
+            id: "x".to_string(),
+        };
+        let _model = app::InputAction::HermesSetProfileDefaultModel {
+            id: "x".to_string(),
+        };
+        let _prov = app::InputAction::HermesSetProfileProvider {
+            id: "x".to_string(),
+        };
+        let _url = app::InputAction::HermesSetProfileBaseUrl {
+            id: "x".to_string(),
+        };
+        let _key = app::InputAction::HermesSetProfileApiKey {
+            id: "x".to_string(),
+        };
     }
 }

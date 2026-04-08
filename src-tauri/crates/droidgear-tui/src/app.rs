@@ -4,6 +4,7 @@ use droidgear_core::{
     channel::Channel,
     codex::CodexProfile,
     factory_settings::{CustomModel, MissionModelSettings},
+    hermes::HermesProfile,
     mcp::McpServer,
     openclaw::{OpenClawProfile, OpenClawSubAgent},
     opencode::OpenCodeProfile,
@@ -36,6 +37,9 @@ pub enum Screen {
     OpenClawHelpers,
     OpenClawSubagents,
     OpenClawSubagentDetail,
+    Hermes,
+    HermesProfile,
+    HermesProvider,
     Sessions,
     Specs,
     Channels,
@@ -142,6 +146,12 @@ pub enum ConfirmAction {
         id: String,
     },
     OpenClawSubagentToggleAllow {
+        id: String,
+    },
+    HermesApply {
+        id: String,
+    },
+    HermesDelete {
         id: String,
     },
 }
@@ -332,6 +342,28 @@ pub enum InputAction {
     OpenClawSubagentSetWorkspace {
         id: String,
     },
+    HermesCreateProfile,
+    HermesDuplicate {
+        id: String,
+    },
+    HermesSetProfileName {
+        id: String,
+    },
+    HermesSetProfileDescription {
+        id: String,
+    },
+    HermesSetProfileDefaultModel {
+        id: String,
+    },
+    HermesSetProfileProvider {
+        id: String,
+    },
+    HermesSetProfileBaseUrl {
+        id: String,
+    },
+    HermesSetProfileApiKey {
+        id: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -487,6 +519,14 @@ pub struct App {
     pub openclaw_subagent_detail: Option<OpenClawSubAgent>,
     pub openclaw_subagent_field_index: usize,
 
+    pub hermes_profiles: Vec<HermesProfile>,
+    pub hermes_active_id: Option<String>,
+    pub hermes_index: usize,
+    pub hermes_detail_id: Option<String>,
+    pub hermes_detail: Option<HermesProfile>,
+    pub hermes_detail_field_index: usize,
+    pub hermes_provider_field_index: usize,
+
     pub sessions: Vec<SessionSummary>,
     pub sessions_index: usize,
 
@@ -577,6 +617,13 @@ impl App {
             openclaw_subagents_index: 0,
             openclaw_subagent_detail: None,
             openclaw_subagent_field_index: 0,
+            hermes_profiles: Vec::new(),
+            hermes_active_id: None,
+            hermes_index: 0,
+            hermes_detail_id: None,
+            hermes_detail: None,
+            hermes_detail_field_index: 0,
+            hermes_provider_field_index: 0,
             sessions: Vec::new(),
             sessions_index: 0,
             specs: Vec::new(),
@@ -606,6 +653,7 @@ impl App {
             ("Codex", Screen::Codex),
             ("OpenCode", Screen::OpenCode),
             ("OpenClaw", Screen::OpenClaw),
+            ("Hermes", Screen::Hermes),
             ("Sessions", Screen::Sessions),
             ("Specs", Screen::Specs),
             ("Channels", Screen::Channels),
@@ -840,6 +888,19 @@ impl App {
         let mission_fields_count = 4;
         if self.mission_field_index >= mission_fields_count {
             self.mission_field_index = mission_fields_count.saturating_sub(1);
+        }
+        if self.hermes_index >= self.hermes_profiles.len() {
+            self.hermes_index = self.hermes_profiles.len().saturating_sub(1);
+        }
+        // HermesProfile screen has 6 fields: Name, Description, Default Model, Provider, Base URL, API Key
+        let hermes_detail_fields_count = 6;
+        if self.hermes_detail_field_index >= hermes_detail_fields_count {
+            self.hermes_detail_field_index = hermes_detail_fields_count.saturating_sub(1);
+        }
+        // HermesProvider screen has 4 fields: Default Model, Provider, Base URL, API Key
+        let hermes_provider_fields_count = 4;
+        if self.hermes_provider_field_index >= hermes_provider_fields_count {
+            self.hermes_provider_field_index = hermes_provider_fields_count.saturating_sub(1);
         }
     }
 }
