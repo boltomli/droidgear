@@ -2,7 +2,7 @@
 //!
 //! Core logic lives in `droidgear-core`.
 
-pub use droidgear_core::mcp::{McpServer, McpServerConfig, McpServerType};
+pub use droidgear_core::mcp::McpServer;
 
 /// Loads all MCP servers from ~/.factory/mcp.json
 #[tauri::command]

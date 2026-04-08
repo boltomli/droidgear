@@ -2,7 +2,7 @@
 //!
 //! Core logic lives in `droidgear-core`.
 
-pub use droidgear_core::paths::{ConfigPaths, EffectivePath, EffectivePaths, WslDistro, WslInfo};
+pub use droidgear_core::paths::{ConfigPaths, EffectivePaths, WslInfo};
 
 /// Gets the current configuration paths (custom values only)
 #[tauri::command]

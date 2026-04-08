@@ -2,9 +2,7 @@
 //!
 //! Core logic lives in `droidgear-core`.
 
-pub use droidgear_core::codex::{
-    CodexConfigStatus, CodexCurrentConfig, CodexProfile, CodexProviderConfig,
-};
+pub use droidgear_core::codex::{CodexConfigStatus, CodexCurrentConfig, CodexProfile};
 
 /// List all Codex profiles
 #[tauri::command]

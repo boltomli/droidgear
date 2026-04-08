@@ -3,8 +3,7 @@
 //! Core logic lives in `droidgear-core`.
 
 pub use droidgear_core::opencode::{
-    OpenCodeConfigStatus, OpenCodeCurrentConfig, OpenCodeModelConfig, OpenCodeModelLimit,
-    OpenCodeProfile, OpenCodeProviderConfig, OpenCodeProviderOptions, ProviderTemplate,
+    OpenCodeConfigStatus, OpenCodeCurrentConfig, OpenCodeProfile, ProviderTemplate,
 };
 
 /// List all OpenCode profiles

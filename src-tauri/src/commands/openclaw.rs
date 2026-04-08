@@ -3,10 +3,7 @@
 //! Core logic lives in `droidgear-core`.
 
 pub use droidgear_core::openclaw::{
-    BlockStreamingChunk, BlockStreamingCoalesce, BlockStreamingConfig, OpenClawConfigStatus,
-    OpenClawCurrentConfig, OpenClawModel, OpenClawProfile, OpenClawProviderConfig,
-    OpenClawSubAgent, OpenClawSubAgentIdentity, OpenClawSubAgentModel,
-    OpenClawSubAgentSubagentsConfig, OpenClawSubAgentTools, TelegramChannelConfig,
+    OpenClawConfigStatus, OpenClawCurrentConfig, OpenClawProfile, OpenClawSubAgent,
 };
 
 /// List all OpenClaw profiles

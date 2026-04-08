@@ -7,9 +7,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
 
-pub use droidgear_core::sessions::{
-    ContentBlock, SessionDetail, SessionMessage, SessionProject, SessionSummary, TokenUsage,
-};
+pub use droidgear_core::sessions::{SessionDetail, SessionProject, SessionSummary};
 
 fn sessions_dir() -> Result<PathBuf, String> {
     Ok(droidgear_core::paths::get_factory_home()?.join("sessions"))
