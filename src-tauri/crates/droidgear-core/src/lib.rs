@@ -2,6 +2,7 @@ pub mod channel;
 pub mod codex;
 pub mod connectivity;
 pub mod factory_settings;
+pub mod hermes;
 pub mod json;
 pub mod mcp;
 pub mod openclaw;
