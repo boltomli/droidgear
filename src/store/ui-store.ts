@@ -1,8 +1,14 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 
-type NavigationView = 'droid' | 'channels' | 'opencode' | 'codex' | 'openclaw'
-type ToolView = 'droid' | 'opencode' | 'codex' | 'openclaw'
+type NavigationView =
+  | 'droid'
+  | 'channels'
+  | 'opencode'
+  | 'codex'
+  | 'openclaw'
+  | 'hermes'
+type ToolView = 'droid' | 'opencode' | 'codex' | 'openclaw' | 'hermes'
 export type DroidSubView =
   | 'models'
   | 'helpers'
@@ -128,7 +134,8 @@ export const useUIStore = create<UIState>()(
                 view === 'droid' ||
                 view === 'opencode' ||
                 view === 'codex' ||
-                view === 'openclaw'
+                view === 'openclaw' ||
+                view === 'hermes'
                   ? view
                   : state.lastToolView,
             }),

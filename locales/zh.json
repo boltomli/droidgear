@@ -902,6 +902,49 @@
   "openclaw.subagents.allowAgentsPlaceholder": "输入代理 ID 后按回车添加",
   "openclaw.subagents.maxConcurrent": "最大并发数",
 
+  "sidebar.hermes": "Hermes",
+
+  "hermes.title": "Hermes 配置",
+
+  "hermes.features.title": "Hermes",
+  "hermes.features.model": "模型配置",
+  "hermes.features.hint": "管理 Hermes 代理配置（config.yaml）。",
+
+  "hermes.install.title": "安装 Hermes",
+  "hermes.install.learnMore": "了解更多",
+
+  "hermes.profile.active": "已激活",
+  "hermes.profile.noProfile": "暂无配置文件",
+  "hermes.profile.select": "配置文件",
+  "hermes.profile.name": "名称",
+  "hermes.profile.namePlaceholder": "输入配置文件名称",
+  "hermes.profile.description": "描述",
+  "hermes.profile.descriptionPlaceholder": "可选描述",
+  "hermes.profile.create": "创建配置文件",
+  "hermes.profile.createDescription": "创建新的配置文件以管理 Hermes 配置",
+  "hermes.profile.duplicate": "复制配置文件",
+  "hermes.profile.duplicateDescription": "创建当前配置文件的副本",
+  "hermes.profile.delete": "删除配置文件",
+  "hermes.profile.deleteConfirm": "确定要删除此配置文件吗？此操作无法撤销。",
+
+  "hermes.model.title": "模型配置",
+  "hermes.model.default": "默认模型",
+  "hermes.model.defaultPlaceholder": "例如 NousResearch/Hermes-3-Llama-3.1-70B",
+  "hermes.model.provider": "提供商",
+  "hermes.model.providerPlaceholder": "例如 openai",
+  "hermes.model.baseUrl": "API 地址",
+  "hermes.model.baseUrlPlaceholder": "例如 https://api.openai.com/v1",
+  "hermes.model.apiKey": "API 密钥",
+  "hermes.model.apiKeyPlaceholder": "输入 API 密钥",
+  "hermes.model.loadFromConfig": "从配置加载",
+
+  "hermes.configStatus.title": "配置状态",
+
+  "hermes.actions.apply": "应用配置文件",
+  "hermes.actions.applyConfirm": "应用此配置文件？这将更新您的 Hermes 配置文件（~/.hermes/config.yaml）。",
+  "hermes.actions.applySuccess": "配置文件已成功应用",
+  "hermes.actions.loadedFromLive": "已从当前配置加载",
+
   "connectivity.title": "连接性",
   "connectivity.summary": "概览",
   "connectivity.testControls": "测试控制",

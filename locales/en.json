@@ -902,6 +902,49 @@
   "openclaw.subagents.allowAgentsPlaceholder": "Type agent ID and press Enter",
   "openclaw.subagents.maxConcurrent": "Max Concurrent",
 
+  "sidebar.hermes": "Hermes",
+
+  "hermes.title": "Hermes Configuration",
+
+  "hermes.features.title": "Hermes",
+  "hermes.features.model": "Model Config",
+  "hermes.features.hint": "Manage Hermes agent configuration (config.yaml).",
+
+  "hermes.install.title": "Install Hermes",
+  "hermes.install.learnMore": "Learn more",
+
+  "hermes.profile.active": "Active",
+  "hermes.profile.noProfile": "No profile available",
+  "hermes.profile.select": "Profile",
+  "hermes.profile.name": "Name",
+  "hermes.profile.namePlaceholder": "Enter profile name",
+  "hermes.profile.description": "Description",
+  "hermes.profile.descriptionPlaceholder": "Optional description",
+  "hermes.profile.create": "Create Profile",
+  "hermes.profile.createDescription": "Create a new profile to manage Hermes configurations",
+  "hermes.profile.duplicate": "Duplicate Profile",
+  "hermes.profile.duplicateDescription": "Create a copy of the current profile",
+  "hermes.profile.delete": "Delete Profile",
+  "hermes.profile.deleteConfirm": "Are you sure you want to delete this profile? This action cannot be undone.",
+
+  "hermes.model.title": "Model Configuration",
+  "hermes.model.default": "Default",
+  "hermes.model.defaultPlaceholder": "e.g. NousResearch/Hermes-3-Llama-3.1-70B",
+  "hermes.model.provider": "Provider",
+  "hermes.model.providerPlaceholder": "e.g. openai",
+  "hermes.model.baseUrl": "Base URL",
+  "hermes.model.baseUrlPlaceholder": "e.g. https://api.openai.com/v1",
+  "hermes.model.apiKey": "API Key",
+  "hermes.model.apiKeyPlaceholder": "Enter API key",
+  "hermes.model.loadFromConfig": "Load from Config",
+
+  "hermes.configStatus.title": "Config Status",
+
+  "hermes.actions.apply": "Apply Profile",
+  "hermes.actions.applyConfirm": "Apply this profile? This will update your Hermes configuration file (~/.hermes/config.yaml).",
+  "hermes.actions.applySuccess": "Profile applied successfully",
+  "hermes.actions.loadedFromLive": "Loaded from live config",
+
   "connectivity.title": "Connectivity",
   "connectivity.summary": "Summary",
   "connectivity.testControls": "Test Controls",

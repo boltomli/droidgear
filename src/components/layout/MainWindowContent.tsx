@@ -18,6 +18,7 @@ import {
   OpenClawHelpersPage,
   SubagentsPage,
 } from '@/components/openclaw'
+import { HermesConfigPage } from '@/components/hermes'
 import { ChannelDetail, ChannelDialog } from '@/components/channels'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
@@ -91,6 +92,10 @@ export function MainWindowContent({
 
     if (currentView === 'codex') {
       return <CodexConfigPage />
+    }
+
+    if (currentView === 'hermes') {
+      return <HermesConfigPage />
     }
 
     if (currentView === 'openclaw') {

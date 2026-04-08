@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Check,
   Cog,
+  Cpu,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/components/ui/action-button'
@@ -32,13 +33,20 @@ import { DroidFeatureList } from '@/components/droid'
 import { OpenCodeFeatureList } from '@/components/opencode'
 import { CodexFeatureList } from '@/components/codex'
 import { OpenClawFeatureList } from '@/components/openclaw'
+import { HermesFeatureList } from '@/components/hermes'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
 import type { Channel } from '@/lib/bindings'
 import { saveChannelAuth } from '@/lib/channel-utils'
 
-type NavigationView = 'droid' | 'channels' | 'opencode' | 'codex' | 'openclaw'
+type NavigationView =
+  | 'droid'
+  | 'channels'
+  | 'opencode'
+  | 'codex'
+  | 'openclaw'
+  | 'hermes'
 
 interface LeftSideBarProps {
   children?: React.ReactNode
@@ -81,6 +89,11 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
         <>
           <Cog className="h-4 w-4 mr-2" />
           {t('sidebar.openclaw')}
+        </>
+      ) : lastToolView === 'hermes' ? (
+        <>
+          <Cpu className="h-4 w-4 mr-2" />
+          {t('sidebar.hermes')}
         </>
       ) : (
         <>
@@ -249,6 +262,18 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                   <Check className="h-4 w-4 ml-auto" />
                 )}
               </ActionDropdownMenuItem>
+              <ActionDropdownMenuItem
+                onClick={() => {
+                  handleViewChange('hermes')
+                  setDropdownOpen(false)
+                }}
+              >
+                <Cpu className="h-4 w-4 mr-2" />
+                {t('sidebar.hermes')}
+                {lastToolView === 'hermes' && (
+                  <Check className="h-4 w-4 ml-auto" />
+                )}
+              </ActionDropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -264,6 +289,8 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           <OpenCodeFeatureList />
         ) : currentView === 'openclaw' ? (
           <OpenClawFeatureList />
+        ) : currentView === 'hermes' ? (
+          <HermesFeatureList />
         ) : (
           <CodexFeatureList />
         )}
