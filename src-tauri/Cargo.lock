@@ -1237,7 +1237,7 @@ dependencies = [
 
 [[package]]
 name = "droidgear"
-version = "0.5.7"
+version = "0.5.8"
 dependencies = [
  "base64 0.22.1",
  "chrono",
