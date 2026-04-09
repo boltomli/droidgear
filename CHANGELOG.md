@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.9
+
+**Bug Fixes / 问题修复**
+
+- Fix release workflow to use pwsh on GitHub Actions / 修复发布工作流在 GitHub Actions 上使用 pwsh
+
 ## v0.5.8
 
 **Bug Fixes / 问题修复**
