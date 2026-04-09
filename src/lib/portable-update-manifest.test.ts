@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildPortableUpdateManifest,
-  encodePortableSignature,
   validatePortableSignatureContent,
 } from '../../scripts/create-portable-update-manifest.js'
 
-const validSignature = [
+const decodedSignature = [
   'untrusted comment: signature from tauri secret key',
   'RUTestPortableSignature==',
   'trusted comment: timestamp:1775437138\tfile:droidgear_windows_x64.exe',
   'PortableTrustedComment==',
   '',
 ].join('\n')
+const validSignature = Buffer.from(decodedSignature, 'utf8').toString('base64')
 
 describe('portable update manifest script', () => {
-  it('会将 .sig 文件正文原样编码到 manifest 的 signature 字段', () => {
+  it('会将 .sig 文件正文原样写入 manifest 的 signature 字段', () => {
     const manifest = buildPortableUpdateManifest({
       version: '0.5.7',
       pubDate: '2026-04-09T00:00:00Z',
@@ -30,7 +30,7 @@ describe('portable update manifest script', () => {
       notes: '',
       pub_date: '2026-04-09T00:00:00Z',
       url: 'https://example.com/droidgear_windows_x64.exe',
-      signature: Buffer.from(validSignature, 'utf8').toString('base64'),
+      signature: validSignature,
       sha256: 'abc123',
       release_url: 'https://example.com/releases/tag/v0.5.7',
     })
@@ -52,13 +52,23 @@ describe('portable update manifest script', () => {
     )
   })
 
-  it('会拒绝缺少 trusted comment 的签名内容', () => {
+  it('会拒绝误传解码后的 minisign 文本', () => {
+    expect(() => validatePortableSignatureContent(decodedSignature)).toThrow(
+      '.sig 文件正文必须是单行 base64 文本'
+    )
+  })
+
+  it('会拒绝解码后缺少 trusted comment 的 base64 签名正文', () => {
     expect(() =>
-      encodePortableSignature(
-        ['untrusted comment: signature from tauri secret key', 'RUTest=='].join(
-          '\n'
-        )
+      validatePortableSignatureContent(
+        Buffer.from(
+          [
+            'untrusted comment: signature from tauri secret key',
+            'RUTest==',
+          ].join('\n'),
+          'utf8'
+        ).toString('base64')
       )
-    ).toThrow('缺少 minisign 的 trusted comment 行')
+    ).toThrow('解码后缺少 minisign 的 trusted comment 行')
   })
 })

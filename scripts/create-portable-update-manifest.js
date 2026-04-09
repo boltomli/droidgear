@@ -8,9 +8,16 @@ const FORBIDDEN_SIGNATURE_SNIPPETS = [
   'Public signature:',
   'Make sure to include this into the signature field of your update server',
 ]
+const BASE64_SIGNATURE_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/
 
 function normalizeLineEndings(value) {
   return value.replace(/\r\n/g, '\n')
+}
+
+function normalizePortableSignatureContent(signatureContent) {
+  return normalizeLineEndings(signatureContent)
+    .replace(/^\uFEFF/, '')
+    .trim()
 }
 
 export function validatePortableSignatureContent(signatureContent) {
@@ -18,10 +25,8 @@ export function validatePortableSignatureContent(signatureContent) {
     throw new Error('便携版签名内容不能为空')
   }
 
-  const normalizedSignature = normalizeLineEndings(signatureContent).replace(
-    /^\uFEFF/,
-    ''
-  )
+  const normalizedSignature =
+    normalizePortableSignatureContent(signatureContent)
 
   for (const snippet of FORBIDDEN_SIGNATURE_SNIPPETS) {
     if (normalizedSignature.includes(snippet)) {
@@ -31,24 +36,40 @@ export function validatePortableSignatureContent(signatureContent) {
     }
   }
 
-  if (!normalizedSignature.startsWith('untrusted comment:')) {
+  if (normalizedSignature.includes('\n')) {
     throw new Error(
-      '便携版签名文件内容不合法：必须以 "untrusted comment:" 开头'
+      '便携版签名文件内容不合法：.sig 文件正文必须是单行 base64 文本'
     )
   }
 
-  if (!normalizedSignature.includes('\ntrusted comment:')) {
+  if (!BASE64_SIGNATURE_PATTERN.test(normalizedSignature)) {
     throw new Error(
-      '便携版签名文件内容不合法：缺少 minisign 的 trusted comment 行'
+      '便携版签名文件内容不合法：.sig 文件正文不是合法的 base64 文本'
     )
   }
 
-  return signatureContent
-}
+  let decodedSignature
+  try {
+    decodedSignature = Buffer.from(normalizedSignature, 'base64').toString(
+      'utf8'
+    )
+  } catch {
+    throw new Error('便携版签名文件内容不合法：base64 解码失败')
+  }
 
-export function encodePortableSignature(signatureContent) {
-  validatePortableSignatureContent(signatureContent)
-  return Buffer.from(signatureContent, 'utf8').toString('base64')
+  if (!decodedSignature.startsWith('untrusted comment:')) {
+    throw new Error(
+      '便携版签名文件内容不合法：解码后必须以 "untrusted comment:" 开头'
+    )
+  }
+
+  if (!decodedSignature.includes('\ntrusted comment:')) {
+    throw new Error(
+      '便携版签名文件内容不合法：解码后缺少 minisign 的 trusted comment 行'
+    )
+  }
+
+  return normalizedSignature
 }
 
 export function buildPortableUpdateManifest({
@@ -79,7 +100,7 @@ export function buildPortableUpdateManifest({
     notes,
     pub_date: pubDate,
     url,
-    signature: encodePortableSignature(signatureContent),
+    signature: validatePortableSignatureContent(signatureContent),
     sha256,
     release_url: releaseUrl,
   }
