@@ -680,6 +680,7 @@ impl App {
             &paths.opencode_auth,
             &paths.codex,
             &paths.openclaw,
+            &paths.hermes,
         ];
         keys.get(self.paths_index).map(|p| p.key.clone())
     }
@@ -692,6 +693,7 @@ impl App {
             &paths.opencode_auth,
             &paths.codex,
             &paths.openclaw,
+            &paths.hermes,
         ];
         entries.get(self.paths_index).copied()
     }
@@ -701,7 +703,7 @@ impl App {
             self.nav_index = Self::nav_items().len().saturating_sub(1);
         }
 
-        let paths_count = 5;
+        let paths_count = 6;
         if self.paths_index >= paths_count {
             self.paths_index = paths_count.saturating_sub(1);
         }

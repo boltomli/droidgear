@@ -36,7 +36,13 @@ import { useCodexStore } from '@/store/codex-store'
 import { useOpenCodeStore } from '@/store/opencode-store'
 import { usePlatform } from '@/hooks/use-platform'
 
-type PathKey = 'factory' | 'opencode' | 'opencodeAuth' | 'codex' | 'openclaw'
+type PathKey =
+  | 'factory'
+  | 'opencode'
+  | 'opencodeAuth'
+  | 'codex'
+  | 'openclaw'
+  | 'hermes'
 
 interface PathItem {
   key: PathKey
@@ -69,6 +75,11 @@ const pathItems: PathItem[] = [
     key: 'openclaw',
     labelKey: 'preferences.paths.openclaw',
     descriptionKey: 'preferences.paths.openclawDescription',
+  },
+  {
+    key: 'hermes',
+    labelKey: 'preferences.paths.hermes',
+    descriptionKey: 'preferences.paths.hermesDescription',
   },
 ]
 
@@ -215,14 +226,28 @@ function PathEditor({
   )
 }
 
+function wslSubdirForKey(key: PathKey): string {
+  const map: Record<PathKey, string> = {
+    factory: '.factory',
+    opencode: '.config/opencode',
+    opencodeAuth: '.local/share/opencode',
+    codex: '.codex',
+    openclaw: '.openclaw',
+    hermes: '.hermes',
+  }
+  return map[key]
+}
+
 function WslDialog({
   open,
   onOpenChange,
   onSelect,
+  configKey,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSelect: (path: string) => void
+  configKey: PathKey
 }) {
   const { t } = useTranslation()
   const [selectedDistro, setSelectedDistro] = useState<string>('')
@@ -269,7 +294,7 @@ function WslDialog({
       const result = await commands.buildWslPath(
         selectedDistro,
         username,
-        'openclaw'
+        configKey
       )
       if (result.status === 'ok') {
         onSelect(result.data)
@@ -366,7 +391,8 @@ function WslDialog({
                     {t('preferences.paths.wslDialog.preview')}
                   </p>
                   <p className="text-xs font-mono break-all">
-                    \\wsl${selectedDistro}\home\{username}\.openclaw
+                    \\wsl${selectedDistro}\home\{username}\
+                    {wslSubdirForKey(configKey)}
                   </p>
                 </div>
               )}
@@ -396,6 +422,7 @@ export function PathsPane() {
   const platform = usePlatform()
   const isWindows = platform === 'windows'
   const [wslDialogOpen, setWslDialogOpen] = useState(false)
+  const [wslDialogKey, setWslDialogKey] = useState<PathKey>('openclaw')
 
   const reloadAllConfigStatus = () => {
     useOpenClawStore.getState().loadConfigStatus()
@@ -476,7 +503,7 @@ export function PathsPane() {
   })
 
   const handleWslPathSelect = (path: string) => {
-    saveMutation.mutate({ key: 'openclaw', path })
+    saveMutation.mutate({ key: wslDialogKey, path })
   }
 
   const isLoading = isLoadingEffective || isLoadingDefault
@@ -525,13 +552,18 @@ export function PathsPane() {
         {pathItems.map(item => {
           const effective = getEffectivePath(item.key)
 
-          // WSL button only for OpenClaw on Windows with WSL available
+          // WSL button for OpenClaw and Hermes on Windows with WSL available
           const wslButton =
-            item.key === 'openclaw' && isWindows && wslInfo?.available ? (
+            (item.key === 'openclaw' || item.key === 'hermes') &&
+            isWindows &&
+            wslInfo?.available ? (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setWslDialogOpen(true)}
+                onClick={() => {
+                  setWslDialogKey(item.key)
+                  setWslDialogOpen(true)
+                }}
                 title={t('preferences.paths.useWsl')}
               >
                 WSL
@@ -562,6 +594,7 @@ export function PathsPane() {
         open={wslDialogOpen}
         onOpenChange={setWslDialogOpen}
         onSelect={handleWslPathSelect}
+        configKey={wslDialogKey}
       />
     </div>
   )

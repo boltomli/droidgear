@@ -231,11 +231,25 @@ pub fn get_effective_paths_for_home(home_dir: &Path) -> Result<EffectivePaths, S
 }
 
 pub fn get_effective_paths() -> Result<EffectivePaths, String> {
-    get_effective_paths_for_home(&get_home_dir()?)
+    let home = get_home_dir()?;
+    let mut paths = get_effective_paths_for_home(&home)?;
+    // On Windows, use WSL-aware default for Hermes when no custom path is set
+    if paths.hermes.is_default {
+        paths.hermes.path = default_hermes_home_with_wsl(&home)?
+            .to_string_lossy()
+            .to_string();
+    }
+    Ok(paths)
 }
 
 pub fn get_default_paths() -> Result<EffectivePaths, String> {
-    get_default_paths_for_home(&get_home_dir()?)
+    let home = get_home_dir()?;
+    let mut paths = get_default_paths_for_home(&home)?;
+    // On Windows, show WSL path as the default for Hermes
+    paths.hermes.path = default_hermes_home_with_wsl(&home)?
+        .to_string_lossy()
+        .to_string();
+    Ok(paths)
 }
 
 pub fn save_config_path(key: &str, path: &str) -> Result<(), String> {
@@ -336,6 +350,24 @@ fn default_hermes_home_for_home(home_dir: &Path) -> Result<PathBuf, String> {
     Ok(home_dir.join(".hermes"))
 }
 
+/// On Windows, try to resolve Hermes default path via WSL since Hermes
+/// doesn't support native Windows. Falls back to the local home directory.
+fn default_hermes_home_with_wsl(home_dir: &Path) -> Result<PathBuf, String> {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(wsl_info) = get_wsl_info() {
+            if let Some(distro) = wsl_info.distros.iter().find(|d| d.is_default) {
+                if let Ok(username) = get_wsl_username(&distro.name) {
+                    if let Ok(wsl_path) = build_wsl_path(&distro.name, &username, "hermes") {
+                        return Ok(PathBuf::from(wsl_path));
+                    }
+                }
+            }
+        }
+    }
+    default_hermes_home_for_home(home_dir)
+}
+
 // ============================================================================
 // Public path getters (honor overrides)
 // ============================================================================
@@ -417,7 +449,10 @@ pub fn get_openclaw_home_for_home(
 pub fn get_hermes_home() -> Result<PathBuf, String> {
     let home = get_home_dir()?;
     let config = load_config_paths_for_home(&home);
-    get_hermes_home_for_home(&home, &config)
+    match &config.hermes {
+        Some(custom) => Ok(PathBuf::from(custom)),
+        None => default_hermes_home_with_wsl(&home),
+    }
 }
 
 pub fn get_hermes_home_for_home(home_dir: &Path, config: &ConfigPaths) -> Result<PathBuf, String> {

@@ -428,6 +428,7 @@ fn draw_paths(frame: &mut Frame, app: &app::App, area: Rect) {
             &paths.opencode_auth,
             &paths.codex,
             &paths.openclaw,
+            &paths.hermes,
         ];
         for (i, p) in entries.iter().enumerate() {
             let selected = i == app.paths_index;

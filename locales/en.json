@@ -95,7 +95,7 @@
 
   "preferences.paths": "Paths",
   "preferences.paths.title": "Configuration Paths",
-  "preferences.paths.description": "Customize the configuration directories for Droid, OpenCode, Codex, and OpenClaw. Leave empty to use default paths.",
+  "preferences.paths.description": "Customize the configuration directories for Droid, OpenCode, Codex, OpenClaw, and Hermes. Leave empty to use default paths.",
   "preferences.paths.factory": "Droid/Factory",
   "preferences.paths.factoryDescription": "Configuration directory for Factory Droid (~/.factory)",
   "preferences.paths.opencode": "OpenCode Config",
@@ -106,6 +106,8 @@
   "preferences.paths.codexDescription": "Configuration directory for Codex CLI (~/.codex)",
   "preferences.paths.openclaw": "OpenClaw",
   "preferences.paths.openclawDescription": "Configuration directory for OpenClaw (~/.openclaw)",
+  "preferences.paths.hermes": "Hermes",
+  "preferences.paths.hermesDescription": "Configuration directory for Hermes Agent (~/.hermes)",
   "preferences.paths.browse": "Browse",
   "preferences.paths.default": "Default",
   "preferences.paths.custom": "Custom",
@@ -201,7 +203,7 @@
 
   "preferences.paths.useWsl": "Use WSL",
   "preferences.paths.wslDialog.title": "Select WSL Distribution",
-  "preferences.paths.wslDialog.description": "Choose a WSL distribution and username to configure the OpenClaw path.",
+  "preferences.paths.wslDialog.description": "Choose a WSL distribution and username to configure the WSL path.",
   "preferences.paths.wslDialog.notAvailable": "No WSL distributions found. Please install WSL first.",
   "preferences.paths.wslDialog.distro": "Distribution",
   "preferences.paths.wslDialog.selectDistro": "Select a distribution",
