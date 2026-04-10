@@ -325,7 +325,8 @@ async fn fetch_anthropic_models(
     base_url: &str,
     api_key: &str,
 ) -> Result<Vec<ModelInfo>, String> {
-    let url = format!("{}/v1/models", base_url.trim_end_matches('/'));
+    let base = base_url.trim_end_matches('/').trim_end_matches("/v1");
+    let url = format!("{base}/v1/models");
     log::debug!("FetchModels: requesting Anthropic models from {url}");
 
     let response = client
@@ -397,7 +398,8 @@ async fn fetch_openai_models(
     base_url: &str,
     api_key: &str,
 ) -> Result<Vec<ModelInfo>, String> {
-    let url = format!("{}/v1/models", base_url.trim_end_matches('/'));
+    let base = base_url.trim_end_matches('/').trim_end_matches("/v1");
+    let url = format!("{base}/v1/models");
     log::debug!("FetchModels: requesting OpenAI models from {url}");
 
     let response = client

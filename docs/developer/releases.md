@@ -76,6 +76,12 @@ Then GitHub Actions will:
 
 Finally, manually publish the draft release on GitHub.
 
+### Windows portable 自定义更新链路
+
+- `latest-portable.json.signature` 必须直接写入 `.sig` 文件正文；这段正文本身就是 base64 文本，不能再额外包一层 base64，也不能写路径或 URL。
+- 当前仓库会先读取 `droidgear_windows_x64.exe.sig`，再生成 `latest-portable.json`，并在工作流中校验：原始 `signature` 必须是单行 base64，解码后必须以 `untrusted comment:` 开头。
+- 如果 CI 日志里出现 `Public signature:`、`Your file was signed successfully` 或 `Make sure to include this into the signature field of your update server` 混入 `signature`，说明签名来源取错了，应直接失败而不是继续上传 release 资产。
+
 ### Manual Method
 
 ```bash

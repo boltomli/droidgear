@@ -110,13 +110,13 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
-          uploadUpdaterJson: true
+          includeUpdaterJson: true
           uploadPlainBinary: true
           args: ${{ matrix.args }}
 
       - name: Package portable updater assets
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
@@ -138,32 +138,58 @@ jobs:
             exit 1
           }
 
-          $signatureLines = & $tauri signer sign $portableAssetPath
+          & $tauri signer sign $portableAssetPath
           if (-not $?) {
-            Write-Error "Failed to sign portable asset"
+            Write-Error "便携版资产签名失败"
             exit 1
           }
-          $signature = ($signatureLines -join "`n")
 
-          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-          $sigPath = Join-Path $env:GITHUB_WORKSPACE "$portableAsset.sig"
-          [System.IO.File]::WriteAllText($sigPath, $signature, $utf8NoBom)
+          $sigPath = "$portableAssetPath.sig"
+          if (-not (Test-Path $sigPath)) {
+            Write-Error "缺少 Tauri 生成的便携版签名文件: $sigPath"
+            exit 1
+          }
 
-          $signatureBase64 = [Convert]::ToBase64String($utf8NoBom.GetBytes($signature))
           $sha256 = (Get-FileHash $portableAssetPath -Algorithm SHA256).Hash.ToLowerInvariant()
           $version = $env:RELEASE_TAG.TrimStart('v')
+          $pubDate = (Get-Date).ToUniversalTime().ToString("o")
           $manifestPath = Join-Path $env:GITHUB_WORKSPACE "latest-portable.json"
-          $manifest = @{
-            version = $version
-            notes = ""
-            pub_date = (Get-Date).ToUniversalTime().ToString("o")
-            url = "https://github.com/${{ github.repository }}/releases/latest/download/$portableAsset"
-            signature = $signatureBase64
-            sha256 = $sha256
-            release_url = "https://github.com/${{ github.repository }}/releases/tag/$env:RELEASE_TAG"
-          } | ConvertTo-Json -Depth 4
 
-          [System.IO.File]::WriteAllText($manifestPath, $manifest, $utf8NoBom)
+          node scripts/create-portable-update-manifest.js `
+            --signature-file "$sigPath" `
+            --output "$manifestPath" `
+            --version "$version" `
+            --pub-date "$pubDate" `
+            --url "https://github.com/${{ github.repository }}/releases/latest/download/$portableAsset" `
+            --sha256 "$sha256" `
+            --release-url "https://github.com/${{ github.repository }}/releases/tag/$env:RELEASE_TAG"
+          if (-not $?) {
+            exit 1
+          }
+
+          $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+          if ([string]::IsNullOrWhiteSpace($manifest.signature)) {
+            Write-Error "便携版 manifest 未生成 signature 字段"
+            exit 1
+          }
+
+          $decodedSignature = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($manifest.signature))
+          if (-not $decodedSignature.StartsWith("untrusted comment:")) {
+            Write-Error "便携版 manifest 的 signature 解码后未以 minisign 头开头"
+            exit 1
+          }
+          if ($decodedSignature.Contains("Public signature:")) {
+            Write-Error "便携版 manifest 的 signature 混入了 signer 控制台输出: Public signature"
+            exit 1
+          }
+          if ($decodedSignature.Contains("Your file was signed successfully")) {
+            Write-Error "便携版 manifest 的 signature 混入了 signer 控制台输出: 成功提示文案"
+            exit 1
+          }
+          if ($decodedSignature.Contains("Make sure to include this into the signature field of your update server")) {
+            Write-Error "便携版 manifest 的 signature 混入了 signer 控制台输出: 更新服务器提示文案"
+            exit 1
+          }
 
           gh release upload "$env:RELEASE_TAG" $portableAssetPath $sigPath $manifestPath --clobber
 
@@ -189,7 +215,7 @@ jobs:
 
       - name: Package droidgear-tui (zip)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: pwsh
         run: |
           $bin = "src-tauri/target/${{ matrix.target }}/release/droidgear-tui.exe"
           if (-not (Test-Path $bin)) {

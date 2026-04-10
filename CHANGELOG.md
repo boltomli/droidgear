@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.5.9
+
+**Bug Fixes / 问题修复**
+
+- Fix release workflow to use pwsh on GitHub Actions / 修复发布工作流在 GitHub Actions 上使用 pwsh
+
+## v0.5.8
+
+**Bug Fixes / 问题修复**
+
+- Fix portable update signature manifest generation / 修正 portable 更新签名清单
+
+## v0.5.7
+
+**New Features / 新功能**
+
+- Implement resizable panels for session list and detail view in SessionsPage / 会话页面的会话列表和详情视图支持可调整大小的面板
+
+**Bug Fixes / 问题修复**
+
+- Fix /v1 path duplication in Droid BYOK model fetching / 修复 Droid BYOK 获取模型列表时 /v1 路径重复拼接的问题
+- Fix Windows portable update signature manifest generation / 修复 Windows portable 更新签名清单生成
+- Fix text align center / 修复文本居中对齐
+
 ## v0.5.6
 
 **New Features / 新功能**
