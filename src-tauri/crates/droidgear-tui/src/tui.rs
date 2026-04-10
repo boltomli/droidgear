@@ -3447,6 +3447,25 @@ fn handle_hermes_provider_key(app: &mut app::App, code: KeyCode) -> Option<Actio
             }
             _ => {}
         },
+        KeyCode::Char('i') => {
+            // Import from channel: present channel list as a Select modal
+            let options: Vec<String> = app
+                .channels
+                .iter()
+                .filter(|c| c.enabled)
+                .map(|c| format!("{} ({})", c.name, c.base_url))
+                .collect();
+            if options.is_empty() {
+                app.set_toast("No channels configured", true);
+            } else {
+                app.modal = Some(app::Modal::Select {
+                    title: "Import from channel".to_string(),
+                    options,
+                    index: 0,
+                    action: app::SelectAction::HermesImportFromChannel { profile_id },
+                });
+            }
+        }
         _ => {}
     }
 
@@ -4928,6 +4947,30 @@ fn run_select_action(
                 app.mission_settings.clone(),
             )
             .map_err(anyhow::Error::msg)?;
+            Ok(())
+        }
+        app::SelectAction::HermesImportFromChannel { profile_id } => {
+            let Some(selected) = selected else {
+                return Ok(());
+            };
+            // Find the matching channel by reconstructing the display string
+            let channel = app
+                .channels
+                .iter()
+                .find(|c| c.enabled && format!("{} ({})", c.name, c.base_url) == selected);
+            let Some(channel) = channel else {
+                return Err(anyhow::anyhow!("Channel not found"));
+            };
+            // Store channel info as pending import state; prompt for API key next
+            app.hermes_import_pending_base_url = Some(channel.base_url.clone());
+            app.hermes_import_pending_provider = Some("openai".to_string());
+            app.modal = Some(app::Modal::Input {
+                title: "API key for import".to_string(),
+                value: String::new(),
+                cursor: usize::MAX,
+                is_secret: true,
+                action: app::InputAction::HermesImportSetApiKey { id: profile_id },
+            });
             Ok(())
         }
     }
@@ -6665,6 +6708,22 @@ fn run_input_action(
             app.set_toast("Saved", false);
             Ok(())
         }
+        app::InputAction::HermesImportSetApiKey { id } => {
+            // Complete the "import from channel" flow: apply stored base_url/provider + entered api_key
+            let base_url = app.hermes_import_pending_base_url.take();
+            let provider = app.hermes_import_pending_provider.take();
+            let mut profile =
+                droidgear_core::hermes::get_hermes_profile_for_home(&app.home_dir, &id)
+                    .map_err(anyhow::Error::msg)?;
+            profile.model.base_url = base_url;
+            profile.model.provider = provider;
+            profile.model.api_key = (!trimmed.is_empty()).then(|| trimmed.to_string());
+            droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile.clone())
+                .map_err(anyhow::Error::msg)?;
+            app.hermes_detail = Some(profile);
+            app.set_toast("Imported from channel", false);
+            Ok(())
+        }
     }
 }
 
@@ -6801,6 +6860,12 @@ mod tests {
         };
         let _key = app::InputAction::HermesSetProfileApiKey {
             id: "x".to_string(),
+        };
+        let _import_key = app::InputAction::HermesImportSetApiKey {
+            id: "x".to_string(),
+        };
+        let _import_channel = app::SelectAction::HermesImportFromChannel {
+            profile_id: "x".to_string(),
         };
     }
 }

@@ -364,6 +364,9 @@ pub enum InputAction {
     HermesSetProfileApiKey {
         id: String,
     },
+    HermesImportSetApiKey {
+        id: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -416,6 +419,9 @@ pub enum SelectAction {
     MissionsSetWorkerReasoningEffort,
     MissionsSetValidationWorkerModel,
     MissionsSetValidationWorkerReasoningEffort,
+    HermesImportFromChannel {
+        profile_id: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -526,6 +532,9 @@ pub struct App {
     pub hermes_detail: Option<HermesProfile>,
     pub hermes_detail_field_index: usize,
     pub hermes_provider_field_index: usize,
+    /// Temporary state used during "import from channel" flow in TUI
+    pub hermes_import_pending_base_url: Option<String>,
+    pub hermes_import_pending_provider: Option<String>,
 
     pub sessions: Vec<SessionSummary>,
     pub sessions_index: usize,
@@ -624,6 +633,8 @@ impl App {
             hermes_detail: None,
             hermes_detail_field_index: 0,
             hermes_provider_field_index: 0,
+            hermes_import_pending_base_url: None,
+            hermes_import_pending_provider: None,
             sessions: Vec::new(),
             sessions_index: 0,
             specs: Vec::new(),

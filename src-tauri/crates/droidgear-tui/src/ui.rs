@@ -2750,6 +2750,7 @@ fn draw_hermes_provider(frame: &mut Frame, app: &app::App, area: Rect) {
         Some(app.hermes_provider_field_index),
     );
 
-    let help = help_paragraph("Up/Down: select  Enter/e: edit  q/Esc: back");
+    let help =
+        help_paragraph("Up/Down: select  Enter/e: edit  i: import from channel  q/Esc: back");
     frame.render_widget(help, chunks[1]);
 }

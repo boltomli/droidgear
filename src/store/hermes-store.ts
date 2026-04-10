@@ -25,6 +25,12 @@ interface HermesState {
   duplicateProfile: (id: string, newName: string) => Promise<void>
   applyProfile: (id: string) => Promise<void>
   loadFromLiveConfig: () => Promise<void>
+  importFromChannel: (params: {
+    baseUrl: string
+    apiKey: string
+    provider: string
+    defaultModel?: string
+  }) => Promise<void>
 
   setError: (error: string | null) => void
 }
@@ -235,6 +241,28 @@ export const useHermesStore = create<HermesState>()(
           undefined,
           'hermes/loadFromLiveConfig/success'
         )
+        await get().saveProfile()
+      },
+
+      importFromChannel: async ({
+        baseUrl,
+        apiKey,
+        provider,
+        defaultModel,
+      }) => {
+        const { currentProfile } = get()
+        if (!currentProfile) return
+        const updated: HermesProfile = {
+          ...currentProfile,
+          model: {
+            default: defaultModel ?? null,
+            provider: provider || null,
+            baseUrl: baseUrl || null,
+            apiKey: apiKey || null,
+          },
+          updatedAt: new Date().toISOString(),
+        }
+        set({ currentProfile: updated }, undefined, 'hermes/importFromChannel')
         await get().saveProfile()
       },
 

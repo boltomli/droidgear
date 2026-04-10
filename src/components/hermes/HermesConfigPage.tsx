@@ -8,6 +8,7 @@ import {
   Copy,
   Trash2,
   Download,
+  CloudDownload,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -41,6 +42,7 @@ import {
 } from '@/components/ui/dialog'
 import { useHermesStore } from '@/store/hermes-store'
 import { ConfigStatus } from './ConfigStatus'
+import { ImportFromChannelDialog } from './ImportFromChannelDialog'
 
 export function HermesConfigPage() {
   const { t } = useTranslation()
@@ -60,6 +62,7 @@ export function HermesConfigPage() {
   const duplicateProfile = useHermesStore(state => state.duplicateProfile)
   const applyProfile = useHermesStore(state => state.applyProfile)
   const loadFromLiveConfig = useHermesStore(state => state.loadFromLiveConfig)
+  const importFromChannel = useHermesStore(state => state.importFromChannel)
   const saveProfile = useHermesStore(state => state.saveProfile)
   const setError = useHermesStore(state => state.setError)
 
@@ -68,6 +71,8 @@ export function HermesConfigPage() {
     useState(false)
   const [showCreateProfileDialog, setShowCreateProfileDialog] = useState(false)
   const [showDuplicateProfileDialog, setShowDuplicateProfileDialog] =
+    useState(false)
+  const [showImportFromChannelDialog, setShowImportFromChannelDialog] =
     useState(false)
   const [newProfileName, setNewProfileName] = useState('')
 
@@ -154,6 +159,20 @@ export function HermesConfigPage() {
       setEditingApiKey(updated.model.apiKey ?? '')
     }
     toast.success(t('hermes.actions.loadedFromLive'))
+  }
+
+  const handleImportFromChannel = async (result: {
+    baseUrl: string
+    apiKey: string
+    provider: string
+    defaultModel?: string
+  }) => {
+    await importFromChannel(result)
+    setEditingBaseUrl(result.baseUrl)
+    setEditingApiKey(result.apiKey)
+    setEditingProvider(result.provider)
+    setEditingDefaultModel(result.defaultModel ?? '')
+    toast.success(t('hermes.model.importDialog.imported'))
   }
 
   const handleProfileFieldBlur = async () => {
@@ -332,16 +351,27 @@ export function HermesConfigPage() {
           <div className="space-y-3 p-4 border rounded-lg">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium">{t('hermes.model.title')}</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLoadFromConfig}
-                disabled={!configStatus?.configExists}
-                title={t('hermes.model.loadFromConfig')}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {t('hermes.model.loadFromConfig')}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowImportFromChannelDialog(true)}
+                  title={t('hermes.model.importFromChannel')}
+                >
+                  <CloudDownload className="h-4 w-4 mr-2" />
+                  {t('hermes.model.importFromChannel')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLoadFromConfig}
+                  disabled={!configStatus?.configExists}
+                  title={t('hermes.model.loadFromConfig')}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {t('hermes.model.loadFromConfig')}
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -502,6 +532,13 @@ export function HermesConfigPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Import from Channel Dialog */}
+      <ImportFromChannelDialog
+        open={showImportFromChannelDialog}
+        onOpenChange={setShowImportFromChannelDialog}
+        onImported={handleImportFromChannel}
+      />
     </div>
   )
 }
