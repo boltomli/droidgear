@@ -87,7 +87,8 @@ fn active_profile_path_for_home(home_dir: &Path) -> Result<PathBuf, String> {
     Ok(dir.join("active-profile.txt"))
 }
 
-/// `~/.hermes/` (or custom path)
+/// `~/.hermes/` (or custom path) — NOT WSL-aware; used by `_for_home` variants
+/// and tests that pass a temp directory.
 fn hermes_config_dir_for_home(home_dir: &Path) -> Result<PathBuf, String> {
     let config_paths = paths::load_config_paths_for_home(home_dir);
     let dir = paths::get_hermes_home_for_home(home_dir, &config_paths)?;
@@ -100,6 +101,22 @@ fn hermes_config_dir_for_home(home_dir: &Path) -> Result<PathBuf, String> {
 
 fn hermes_config_path_for_home(home_dir: &Path) -> Result<PathBuf, String> {
     Ok(hermes_config_dir_for_home(home_dir)?.join("config.yaml"))
+}
+
+/// WSL-aware hermes config dir — uses `paths::get_hermes_home()` which
+/// resolves to the WSL path on Windows when WSL is available.
+fn hermes_config_dir() -> Result<PathBuf, String> {
+    let dir = paths::get_hermes_home()?;
+    if !dir.exists() {
+        std::fs::create_dir_all(&dir)
+            .map_err(|e| format!("Failed to create hermes config directory: {e}"))?;
+    }
+    Ok(dir)
+}
+
+/// WSL-aware hermes config.yaml path (system wrapper).
+fn hermes_config_path() -> Result<PathBuf, String> {
+    Ok(hermes_config_dir()?.join("config.yaml"))
 }
 
 fn validate_profile_id(id: &str) -> Result<(), String> {
@@ -275,17 +292,13 @@ fn set_active_profile_id_for_home(home_dir: &Path, id: &str) -> Result<(), Strin
 // Apply + status
 // ============================================================================
 
-/// 应用指定 Profile 到 `~/.hermes/config.yaml`
+/// Internal: write a profile's model config to the given config.yaml path.
 ///
 /// 采用读取-修改-写入模式：只替换 config.yaml 中的 model 节，保留其他所有配置。
-pub fn apply_hermes_profile_for_home(home_dir: &Path, id: &str) -> Result<(), String> {
-    let profile = load_profile_by_id(home_dir, id)?;
-
-    let config_path = hermes_config_path_for_home(home_dir)?;
-
+fn apply_profile_to_config_path(profile: &HermesProfile, config_path: &Path) -> Result<(), String> {
     // Read existing YAML as a generic Value to preserve all non-model sections.
     let mut config: Value = if config_path.exists() {
-        let s = std::fs::read_to_string(&config_path)
+        let s = std::fs::read_to_string(config_path)
             .map_err(|e| format!("Failed to read config.yaml: {e}"))?;
         if s.trim().is_empty() {
             Value::Mapping(serde_yaml::Mapping::new())
@@ -336,25 +349,13 @@ pub fn apply_hermes_profile_for_home(home_dir: &Path, id: &str) -> Result<(), St
 
     let yaml_str = serde_yaml::to_string(&config)
         .map_err(|e| format!("Failed to serialize config.yaml: {e}"))?;
-    storage::atomic_write(&config_path, yaml_str.as_bytes())?;
-
-    set_active_profile_id_for_home(home_dir, id)?;
-    Ok(())
+    storage::atomic_write(config_path, yaml_str.as_bytes())
 }
 
-pub fn get_hermes_config_status_for_home(home_dir: &Path) -> Result<HermesConfigStatus, String> {
-    let config_path = hermes_config_path_for_home(home_dir)?;
-    Ok(HermesConfigStatus {
-        config_exists: config_path.exists(),
-        config_path: config_path.to_string_lossy().to_string(),
-    })
-}
-
-pub fn read_hermes_current_config_for_home(home_dir: &Path) -> Result<HermesCurrentConfig, String> {
-    let config_path = hermes_config_path_for_home(home_dir)?;
-
+/// Internal: read current Hermes config from a specific config.yaml path.
+fn read_current_config_from_path(config_path: &Path) -> Result<HermesCurrentConfig, String> {
     let model = if config_path.exists() {
-        let s = std::fs::read_to_string(&config_path)
+        let s = std::fs::read_to_string(config_path)
             .map_err(|e| format!("Failed to read config.yaml: {e}"))?;
         if s.trim().is_empty() {
             HermesModelConfig {
@@ -395,6 +396,28 @@ pub fn read_hermes_current_config_for_home(home_dir: &Path) -> Result<HermesCurr
     Ok(HermesCurrentConfig { model })
 }
 
+/// 应用指定 Profile 到 `~/.hermes/config.yaml`（for_home variant, NOT WSL-aware）
+pub fn apply_hermes_profile_for_home(home_dir: &Path, id: &str) -> Result<(), String> {
+    let profile = load_profile_by_id(home_dir, id)?;
+    let config_path = hermes_config_path_for_home(home_dir)?;
+    apply_profile_to_config_path(&profile, &config_path)?;
+    set_active_profile_id_for_home(home_dir, id)?;
+    Ok(())
+}
+
+pub fn get_hermes_config_status_for_home(home_dir: &Path) -> Result<HermesConfigStatus, String> {
+    let config_path = hermes_config_path_for_home(home_dir)?;
+    Ok(HermesConfigStatus {
+        config_exists: config_path.exists(),
+        config_path: config_path.to_string_lossy().to_string(),
+    })
+}
+
+pub fn read_hermes_current_config_for_home(home_dir: &Path) -> Result<HermesCurrentConfig, String> {
+    let config_path = hermes_config_path_for_home(home_dir)?;
+    read_current_config_from_path(&config_path)
+}
+
 // ============================================================================
 // System wrappers (use system home dir)
 // ============================================================================
@@ -432,15 +455,25 @@ pub fn get_active_hermes_profile_id() -> Result<Option<String>, String> {
 }
 
 pub fn apply_hermes_profile(id: &str) -> Result<(), String> {
-    apply_hermes_profile_for_home(&system_home_dir()?, id)
+    let home = system_home_dir()?;
+    let profile = load_profile_by_id(&home, id)?;
+    let config_path = hermes_config_path()?;
+    apply_profile_to_config_path(&profile, &config_path)?;
+    set_active_profile_id_for_home(&home, id)?;
+    Ok(())
 }
 
 pub fn get_hermes_config_status() -> Result<HermesConfigStatus, String> {
-    get_hermes_config_status_for_home(&system_home_dir()?)
+    let config_path = hermes_config_path()?;
+    Ok(HermesConfigStatus {
+        config_exists: config_path.exists(),
+        config_path: config_path.to_string_lossy().to_string(),
+    })
 }
 
 pub fn read_hermes_current_config() -> Result<HermesCurrentConfig, String> {
-    read_hermes_current_config_for_home(&system_home_dir()?)
+    let config_path = hermes_config_path()?;
+    read_current_config_from_path(&config_path)
 }
 
 // ============================================================================

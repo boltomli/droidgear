@@ -144,6 +144,15 @@ export function HermesConfigPage() {
 
   const handleLoadFromConfig = async () => {
     await loadFromLiveConfig()
+    // Sync local editing state from the updated currentProfile in store,
+    // because the profile id doesn't change so the profileKey diff won't trigger.
+    const updated = useHermesStore.getState().currentProfile
+    if (updated) {
+      setEditingDefaultModel(updated.model.default ?? '')
+      setEditingProvider(updated.model.provider ?? '')
+      setEditingBaseUrl(updated.model.baseUrl ?? '')
+      setEditingApiKey(updated.model.apiKey ?? '')
+    }
     toast.success(t('hermes.actions.loadedFromLive'))
   }
 
