@@ -443,17 +443,41 @@ export function SpecsPage() {
                       <button
                         onClick={() => handleSpecSelect(spec)}
                         className={cn(
-                          'w-full text-start p-2 rounded-md hover:bg-accent transition-colors',
+                          'group relative w-full text-start p-2 rounded-md hover:bg-accent transition-colors',
                           selectedSpec?.path === spec.path && 'bg-accent'
                         )}
                       >
-                        <div className="font-medium text-sm truncate">
+                        <div className="font-medium text-sm truncate pr-6">
                           {spec.name}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                           <Clock className="h-3 w-3" />
                           {formatDate(spec.modifiedAt)}
                         </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-sm hover:bg-muted"
+                              onClick={e => {
+                                e.stopPropagation()
+                                handleExport(spec)
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.stopPropagation()
+                                  handleExport(spec)
+                                }
+                              }}
+                            >
+                              <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            {t('common.export')}
+                          </TooltipContent>
+                        </Tooltip>
                       </button>
                     </ContextMenuTrigger>
                     <ContextMenuContent>
