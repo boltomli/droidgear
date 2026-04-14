@@ -60,6 +60,7 @@ xattr -cr /Applications/DroidGear.app
 - **Markdown 渲染** - 支持 Markdown 格式渲染
 - **文件操作** - 重命名、删除、另存为、复制完整路径
 - **编辑模式** - 支持规格选择和编辑模式
+- **导出功能** - 支持导出规格项
 
 ### MCP 服务器管理
 
@@ -82,6 +83,11 @@ xattr -cr /Applications/DroidGear.app
 - **Codex CLI 集成** - Codex 配置 Profile 管理
 - **配置管理** - 认证与 `config.toml` 的加载和保存（`~/.codex`）
 - **管理入口** - 在 Codex 入口下提供 MCP 服务器 / 会话 / 终端 管理子页
+
+### Hermes Agent 支持
+
+- **配置管理** - Hermes Agent YAML Profile 配置管理
+- **渠道导入** - 支持从渠道导入 Hermes Agent 配置
 
 ### 其他功能
 

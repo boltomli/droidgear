@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.6.0
+
+**New Features / 新功能**
+
+- Add Hermes Agent configuration support with YAML profile management, frontend UI, and TUI / 添加 Hermes Agent 配置支持，包含 YAML 配置管理、前端 UI 和 TUI
+- Add export button to spec items in SpecsPage / Specs 页面规格项添加导出按钮
+
+**Bug Fixes / 问题修复**
+
+- Fix Hermes import from channel always uses custom provider / 修复 Hermes 从渠道导入时始终使用自定义服务商的问题
+
 ## v0.5.9
 
 **Bug Fixes / 问题修复**

@@ -60,6 +60,7 @@ Run the installer directly.
 - **Markdown Rendering** - Support Markdown format rendering
 - **File Operations** - Rename, delete, save as, copy full path
 - **Edit Mode** - Support spec selection and edit mode
+- **Export** - Export spec items
 
 ### MCP Server Management
 
@@ -82,6 +83,11 @@ Run the installer directly.
 - **Codex CLI Integration** - Manage Codex configuration profiles
 - **Configuration Management** - Load and save auth/config.toml (`~/.codex`)
 - **Management Pages** - MCP servers / sessions / terminal subpages under Codex
+
+### Hermes Agent Support
+
+- **Configuration Management** - Hermes Agent YAML profile management
+- **Channel Import** - Import Hermes Agent configuration from channels
 
 ### Other Features
 
