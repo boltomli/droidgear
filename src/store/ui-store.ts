@@ -11,7 +11,7 @@ type NavigationView =
 type ToolView = 'droid' | 'opencode' | 'codex' | 'openclaw' | 'hermes'
 export type DroidSubView =
   | 'models'
-  | 'helpers'
+  | 'settings'
   | 'specs'
   | 'mcp'
   | 'sessions'
@@ -40,7 +40,7 @@ interface UIState {
   openclawSubView: OpenClawSubView
   lastSpecExportPath: string | null
   pendingUpdate: PendingUpdate | null
-  droidHelpersScrollTarget: string | null
+  droidSettingsScrollTarget: string | null
 
   toggleLeftSidebar: () => void
   setLeftSidebarVisible: (visible: boolean) => void
@@ -57,7 +57,7 @@ interface UIState {
   setLastSpecExportPath: (path: string) => void
   setPendingUpdate: (update: PendingUpdate | null) => void
   clearPendingUpdate: () => void
-  setDroidHelpersScrollTarget: (target: string | null) => void
+  setDroidSettingsScrollTarget: (target: string | null) => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -75,7 +75,7 @@ export const useUIStore = create<UIState>()(
         openclawSubView: 'providers',
         lastSpecExportPath: null,
         pendingUpdate: null,
-        droidHelpersScrollTarget: null,
+        droidSettingsScrollTarget: null,
 
         toggleLeftSidebar: () =>
           set(
@@ -161,11 +161,11 @@ export const useUIStore = create<UIState>()(
         clearPendingUpdate: () =>
           set({ pendingUpdate: null }, undefined, 'clearPendingUpdate'),
 
-        setDroidHelpersScrollTarget: target =>
+        setDroidSettingsScrollTarget: target =>
           set(
-            { droidHelpersScrollTarget: target },
+            { droidSettingsScrollTarget: target },
             undefined,
-            'setDroidHelpersScrollTarget'
+            'setDroidSettingsScrollTarget'
           ),
       }),
       {

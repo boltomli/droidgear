@@ -75,8 +75,8 @@ export function LegacyVersionsPage() {
   const { t } = useTranslation()
   const appPlatform = usePlatform()
   const setDroidSubView = useUIStore(state => state.setDroidSubView)
-  const setDroidHelpersScrollTarget = useUIStore(
-    state => state.setDroidHelpersScrollTarget
+  const setDroidSettingsScrollTarget = useUIStore(
+    state => state.setDroidSettingsScrollTarget
   )
 
   let systemArch = 'x86_64'
@@ -106,8 +106,8 @@ export function LegacyVersionsPage() {
   }
 
   const handleGoDisableAutoUpdate = () => {
-    setDroidHelpersScrollTarget('disable-auto-update')
-    setDroidSubView('helpers')
+    setDroidSettingsScrollTarget('disable-auto-update')
+    setDroidSubView('settings')
   }
 
   return (

@@ -381,6 +381,75 @@ async saveSessionDefaultSettings(settings: SessionDefaultSettings) : Promise<Res
 }
 },
 /**
+ * Gets the compactionModelMode setting from settings.json
+ * Returns "current-model" by default if not set
+ */
+async getCompactionModelMode() : Promise<Result<string, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_compaction_model_mode") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Saves the compactionModelMode setting to settings.json
+ */
+async saveCompactionModelMode(value: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_compaction_model_mode", { value }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Gets the compactionTokenLimit setting from settings.json
+ * Returns 200000 by default if not set
+ */
+async getCompactionTokenLimit() : Promise<Result<number, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_compaction_token_limit") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Saves the compactionTokenLimit setting to settings.json
+ */
+async saveCompactionTokenLimit(value: number) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_compaction_token_limit", { value }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Gets the compactionTokenLimitPerModel setting from settings.json
+ * Returns empty map by default if not set
+ */
+async getCompactionTokenLimitPerModel() : Promise<Result<Partial<{ [key in string]: number }>, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_compaction_token_limit_per_model") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Saves the compactionTokenLimitPerModel setting to settings.json
+ */
+async saveCompactionTokenLimitPerModel(overrides: Partial<{ [key in string]: number }>) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_compaction_token_limit_per_model", { overrides }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Loads all channels from ~/.droidgear/channels.json
  * Falls back to ~/.factory/settings.json for migration
  */

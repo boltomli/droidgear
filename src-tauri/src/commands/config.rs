@@ -5,6 +5,7 @@
 pub use droidgear_core::factory_settings::{
     CustomModel, MissionModelSettings, ModelInfo, Provider, SessionDefaultSettings,
 };
+use std::collections::HashMap;
 use tauri::AppHandle;
 
 /// Gets the path to the Factory config file
@@ -193,4 +194,51 @@ pub async fn get_session_default_settings() -> Result<SessionDefaultSettings, St
 #[specta::specta]
 pub async fn save_session_default_settings(settings: SessionDefaultSettings) -> Result<(), String> {
     droidgear_core::factory_settings::save_session_default_settings(settings)
+}
+
+/// Gets the compactionModelMode setting from settings.json
+/// Returns "current-model" by default if not set
+#[tauri::command]
+#[specta::specta]
+pub async fn get_compaction_model_mode() -> Result<String, String> {
+    droidgear_core::factory_settings::get_compaction_model_mode()
+}
+
+/// Saves the compactionModelMode setting to settings.json
+#[tauri::command]
+#[specta::specta]
+pub async fn save_compaction_model_mode(value: String) -> Result<(), String> {
+    droidgear_core::factory_settings::save_compaction_model_mode(&value)
+}
+
+/// Gets the compactionTokenLimit setting from settings.json
+/// Returns 200000 by default if not set
+#[tauri::command]
+#[specta::specta]
+pub async fn get_compaction_token_limit() -> Result<i32, String> {
+    droidgear_core::factory_settings::get_compaction_token_limit()
+}
+
+/// Saves the compactionTokenLimit setting to settings.json
+#[tauri::command]
+#[specta::specta]
+pub async fn save_compaction_token_limit(value: i32) -> Result<(), String> {
+    droidgear_core::factory_settings::save_compaction_token_limit(value)
+}
+
+/// Gets the compactionTokenLimitPerModel setting from settings.json
+/// Returns empty map by default if not set
+#[tauri::command]
+#[specta::specta]
+pub async fn get_compaction_token_limit_per_model() -> Result<HashMap<String, i32>, String> {
+    droidgear_core::factory_settings::get_compaction_token_limit_per_model()
+}
+
+/// Saves the compactionTokenLimitPerModel setting to settings.json
+#[tauri::command]
+#[specta::specta]
+pub async fn save_compaction_token_limit_per_model(
+    overrides: HashMap<String, i32>,
+) -> Result<(), String> {
+    droidgear_core::factory_settings::save_compaction_token_limit_per_model(overrides)
 }

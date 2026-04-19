@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { ModelConfigPage } from '@/components/models'
 import {
-  DroidHelpersPage,
+  DroidSettingsPage,
   LegacyVersionsPage,
   SpecsPage,
   McpPage,
@@ -79,7 +79,7 @@ export function MainWindowContent({
           {droidSubView === 'specs' && <SpecsPage />}
           {droidSubView === 'mcp' && <McpPage />}
           {droidSubView === 'sessions' && <SessionsPage />}
-          {droidSubView === 'helpers' && <DroidHelpersPage />}
+          {droidSubView === 'settings' && <DroidSettingsPage />}
           {droidSubView === 'missions' && <MissionsPage />}
           {droidSubView === 'legacy-versions' && <LegacyVersionsPage />}
         </>

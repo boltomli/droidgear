@@ -874,3 +874,136 @@ pub fn save_session_default_settings_for_home(
 pub fn save_session_default_settings(settings: SessionDefaultSettings) -> Result<(), String> {
     save_session_default_settings_for_home(&system_home_dir()?, settings)
 }
+
+// ============================================================================
+// Compaction Settings
+// ============================================================================
+
+pub fn get_compaction_model_mode_for_home(home_dir: &Path) -> Result<String, String> {
+    let config = match read_config_file_for_home(home_dir) {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => return Ok("current-model".to_string()),
+        ConfigReadResult::ParseError(_) => return Ok("current-model".to_string()),
+    };
+
+    let value = config
+        .get("compactionModelMode")
+        .and_then(|v| v.as_str())
+        .map(String::from)
+        .unwrap_or_else(|| "current-model".to_string());
+
+    Ok(value)
+}
+
+pub fn get_compaction_model_mode() -> Result<String, String> {
+    get_compaction_model_mode_for_home(&system_home_dir()?)
+}
+
+pub fn save_compaction_model_mode_for_home(home_dir: &Path, value: &str) -> Result<(), String> {
+    let mut config = match read_config_file_for_home(home_dir) {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => serde_json::json!({}),
+        ConfigReadResult::ParseError(e) => {
+            return Err(format!("{CONFIG_PARSE_ERROR_PREFIX} {e}"));
+        }
+    };
+
+    if let Some(obj) = config.as_object_mut() {
+        obj.insert("compactionModelMode".to_string(), serde_json::json!(value));
+    }
+
+    write_config_file_for_home(home_dir, &config)
+}
+
+pub fn save_compaction_model_mode(value: &str) -> Result<(), String> {
+    save_compaction_model_mode_for_home(&system_home_dir()?, value)
+}
+
+pub fn get_compaction_token_limit_for_home(home_dir: &Path) -> Result<i32, String> {
+    let config = match read_config_file_for_home(home_dir) {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => return Ok(200_000),
+        ConfigReadResult::ParseError(_) => return Ok(200_000),
+    };
+
+    let value = config
+        .get("compactionTokenLimit")
+        .and_then(|v| v.as_i64())
+        .map(|v| v as i32)
+        .unwrap_or(200_000);
+
+    Ok(value)
+}
+
+pub fn get_compaction_token_limit() -> Result<i32, String> {
+    get_compaction_token_limit_for_home(&system_home_dir()?)
+}
+
+pub fn save_compaction_token_limit_for_home(home_dir: &Path, value: i32) -> Result<(), String> {
+    let mut config = match read_config_file_for_home(home_dir) {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => serde_json::json!({}),
+        ConfigReadResult::ParseError(e) => {
+            return Err(format!("{CONFIG_PARSE_ERROR_PREFIX} {e}"));
+        }
+    };
+
+    if let Some(obj) = config.as_object_mut() {
+        obj.insert("compactionTokenLimit".to_string(), serde_json::json!(value));
+    }
+
+    write_config_file_for_home(home_dir, &config)
+}
+
+pub fn save_compaction_token_limit(value: i32) -> Result<(), String> {
+    save_compaction_token_limit_for_home(&system_home_dir()?, value)
+}
+
+pub fn get_compaction_token_limit_per_model_for_home(
+    home_dir: &Path,
+) -> Result<HashMap<String, i32>, String> {
+    let config = match read_config_file_for_home(home_dir) {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => return Ok(HashMap::new()),
+        ConfigReadResult::ParseError(_) => return Ok(HashMap::new()),
+    };
+
+    let overrides = config
+        .get("compactionTokenLimitPerModel")
+        .and_then(|v| serde_json::from_value::<HashMap<String, i32>>(v.clone()).ok())
+        .unwrap_or_default();
+
+    Ok(overrides)
+}
+
+pub fn get_compaction_token_limit_per_model() -> Result<HashMap<String, i32>, String> {
+    get_compaction_token_limit_per_model_for_home(&system_home_dir()?)
+}
+
+pub fn save_compaction_token_limit_per_model_for_home(
+    home_dir: &Path,
+    overrides: HashMap<String, i32>,
+) -> Result<(), String> {
+    let mut config = match read_config_file_for_home(home_dir) {
+        ConfigReadResult::Ok(value) => value,
+        ConfigReadResult::NotFound => serde_json::json!({}),
+        ConfigReadResult::ParseError(e) => {
+            return Err(format!("{CONFIG_PARSE_ERROR_PREFIX} {e}"));
+        }
+    };
+
+    let overrides_value = serde_json::to_value(&overrides)
+        .map_err(|e| format!("Failed to serialize compaction token limit per model: {e}"))?;
+
+    if let Some(obj) = config.as_object_mut() {
+        obj.insert("compactionTokenLimitPerModel".to_string(), overrides_value);
+    }
+
+    write_config_file_for_home(home_dir, &config)
+}
+
+pub fn save_compaction_token_limit_per_model(
+    overrides: HashMap<String, i32>,
+) -> Result<(), String> {
+    save_compaction_token_limit_per_model_for_home(&system_home_dir()?, overrides)
+}

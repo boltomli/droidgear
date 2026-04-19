@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Cpu,
-  LifeBuoy,
+  Settings,
   FileText,
   Plug,
   MessageSquare,
@@ -37,7 +37,7 @@ interface FeatureItem {
 
 const features: FeatureItem[] = [
   { id: 'models', labelKey: 'droid.features.models', icon: Cpu },
-  { id: 'helpers', labelKey: 'droid.features.helpers', icon: LifeBuoy },
+  { id: 'settings', labelKey: 'droid.features.settings', icon: Settings },
   { id: 'specs', labelKey: 'droid.features.specs', icon: FileText },
   { id: 'missions', labelKey: 'droid.features.missions', icon: Rocket },
   { id: 'mcp', labelKey: 'droid.features.mcp', icon: Plug },

@@ -1,5 +1,5 @@
 export { DroidFeatureList } from './DroidFeatureList'
-export { DroidHelpersPage } from './DroidHelpersPage'
+export { DroidSettingsPage } from './DroidSettingsPage'
 export { LegacyVersionsPage } from './LegacyVersionsPage'
 export { SpecsPage } from './SpecsPage'
 export { McpPage } from './McpPage'
