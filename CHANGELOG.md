@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.6.1
+
+**New Features / 新功能**
+
+- Add compaction settings and replace DroidHelpersPage with DroidSettingsPage / 添加压缩设置并将 DroidHelpersPage 替换为 DroidSettingsPage
+
+**Bug Fixes / 问题修复**
+
+- Filter OpenAI endpoint for Hermes / 过滤 Hermes 的 OpenAI 端点
+
 ## v0.6.0
 
 **New Features / 新功能**
