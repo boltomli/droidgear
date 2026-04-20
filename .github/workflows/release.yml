@@ -300,11 +300,4 @@ jobs:
           echo "Generated latest.json:"
           cat latest.json
 
-          existing_id=$(echo "$ASSETS_JSON" | jq -r '.[] | select(.name == "latest.json") | .id' | head -1)
-          if [ -n "$existing_id" ]; then
-            gh api -X DELETE "repos/${REPO}/releases/assets/${existing_id}"
-          fi
-          gh api "repos/${REPO}/releases/${RELEASE_ID}/assets?name=latest.json" \
-            --method POST \
-            -H "Content-Type: application/json" \
-            --input latest.json
+          gh release upload "$TAG" latest.json --clobber
