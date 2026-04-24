@@ -353,21 +353,46 @@ function ModelForm({
     }
   }
 
-  const isJsonValid = (value: string): boolean => {
+  const validateJson = (
+    value: string
+  ):
+    | { ok: true; hasSmartQuotes: false }
+    | { ok: false; error: string; hasSmartQuotes: boolean } => {
     const trimmed = value.trim()
-    if (!trimmed) return true
+    if (!trimmed) return { ok: true, hasSmartQuotes: false }
+    // U+201C / U+201D (curly double quotes) and U+2018 / U+2019 (curly single
+    // quotes) are a very common paste hazard and JSON.parse fails on them
+    // with a generic "Unexpected token" message.
+    const hasSmartQuotes = /[‘’“”]/.test(trimmed)
     try {
       const parsed = JSON.parse(trimmed)
-      return (
-        typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
-      )
-    } catch {
-      return false
+      if (
+        typeof parsed !== 'object' ||
+        parsed === null ||
+        Array.isArray(parsed)
+      ) {
+        return {
+          ok: false,
+          error: 'Root value must be a JSON object',
+          hasSmartQuotes,
+        }
+      }
+      return { ok: true, hasSmartQuotes: false }
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+        hasSmartQuotes,
+      }
     }
   }
 
-  const extraArgsValid = isJsonValid(extraArgs)
-  const extraHeadersValid = isJsonValid(extraHeaders)
+  const isJsonValid = (value: string): boolean => validateJson(value).ok
+
+  const extraArgsValidation = validateJson(extraArgs)
+  const extraHeadersValidation = validateJson(extraHeaders)
+  const extraArgsValid = extraArgsValidation.ok
+  const extraHeadersValid = extraHeadersValidation.ok
 
   const buildExtraArgs = (): Partial<Record<string, JsonValue>> | undefined => {
     const parsed = parseJsonSafe(extraArgs) ?? {}
@@ -707,9 +732,18 @@ function ModelForm({
                       className="font-mono text-sm"
                     />
                     {!extraArgsValid && (
-                      <p className="text-sm text-destructive">
-                        {t('models.invalidJson')}
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-sm text-destructive">
+                          {t('models.invalidJsonWithError', {
+                            error: extraArgsValidation.error,
+                          })}
+                        </p>
+                        {extraArgsValidation.hasSmartQuotes && (
+                          <p className="text-xs text-amber-600 dark:text-amber-500">
+                            {t('models.smartQuotesHint')}
+                          </p>
+                        )}
+                      </div>
                     )}
                     {isOpus47(modelId) &&
                       extraArgsValid &&
@@ -743,9 +777,18 @@ function ModelForm({
                       className="font-mono text-sm"
                     />
                     {!extraHeadersValid && (
-                      <p className="text-sm text-destructive">
-                        {t('models.invalidJson')}
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-sm text-destructive">
+                          {t('models.invalidJsonWithError', {
+                            error: extraHeadersValidation.error,
+                          })}
+                        </p>
+                        {extraHeadersValidation.hasSmartQuotes && (
+                          <p className="text-xs text-amber-600 dark:text-amber-500">
+                            {t('models.smartQuotesHint')}
+                          </p>
+                        )}
+                      </div>
                     )}
                     <p className="text-xs text-muted-foreground">
                       {t('models.extraHeadersHint')}

@@ -577,6 +577,8 @@
   "models.extraHeadersHint": "Additional HTTP headers, e.g. {\"X-Custom-Header\": \"value\"}",
   "models.extraHeadersPlaceholder": "{\"X-Custom-Header\": \"value\"}",
   "models.invalidJson": "Invalid JSON format",
+  "models.invalidJsonWithError": "Invalid JSON: {{error}}",
+  "models.smartQuotesHint": "Curly quotes detected — JSON requires straight ASCII double quotes (\"). Replace “ ” ‘ ’ with \" or '.",
   "models.reasoningEffort": "Reasoning Effort",
   "models.reasoningEffort.none": "None",
   "models.reasoningEffort.low": "Low",
