@@ -38,19 +38,35 @@ describe('isAnthropicAdaptiveThinkingModel', () => {
 })
 
 describe('supportsMaxEffort', () => {
-  it('only applies to Opus 4.7', () => {
+  it('applies to all anthropic adaptive thinking models', () => {
     expect(supportsMaxEffort('claude-opus-4.7')).toBe(true)
-    expect(supportsMaxEffort('claude-opus-4.6')).toBe(false)
+    expect(supportsMaxEffort('claude-opus-4-7')).toBe(true)
+    expect(supportsMaxEffort('claude-opus-4.6')).toBe(true)
+    expect(supportsMaxEffort('claude-sonnet-4.6')).toBe(true)
+  })
+
+  it('does not apply to legacy claude or openai models', () => {
+    expect(supportsMaxEffort('claude-opus-4.5')).toBe(false)
+    expect(supportsMaxEffort('claude-sonnet-4.5')).toBe(false)
     expect(supportsMaxEffort('gpt-5.2')).toBe(false)
   })
 })
 
 describe('supportsXhighEffort', () => {
-  it('supports adaptive and modern reasoning models', () => {
+  it('allows xhigh on Opus 4.7 and openai reasoning models', () => {
     expect(supportsXhighEffort('claude-opus-4.7')).toBe(true)
-    expect(supportsXhighEffort('claude-opus-4.6')).toBe(true)
     expect(supportsXhighEffort('gpt-5.2')).toBe(true)
     expect(supportsXhighEffort('o3-mini')).toBe(true)
+  })
+
+  it('rejects xhigh on Opus 4.6 and Sonnet 4.6 (adaptive non-4.7)', () => {
+    expect(supportsXhighEffort('claude-opus-4.6')).toBe(false)
+    expect(supportsXhighEffort('claude-sonnet-4.6')).toBe(false)
+  })
+
+  it('allows xhigh on legacy claude models via budget_tokens mapping', () => {
+    expect(supportsXhighEffort('claude-opus-4.5')).toBe(true)
+    expect(supportsXhighEffort('claude-sonnet-4.5')).toBe(true)
   })
 
   it('is permissive for unknown/empty IDs', () => {
