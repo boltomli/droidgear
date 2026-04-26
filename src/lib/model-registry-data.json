@@ -372,6 +372,70 @@
     "maxOutputTokens": 64000
   },
   {
+    "id": "gpt-5.3-chat-latest",
+    "name": "GPT-5.3 Chat",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 128000,
+    "maxOutputTokens": 16384
+  },
+  {
+    "id": "gpt-5.3-codex",
+    "name": "GPT-5.3 Codex",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 400000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "gpt-5.3-codex-spark",
+    "name": "GPT-5.3 Codex Spark",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 128000,
+    "maxOutputTokens": 32000
+  },
+  {
+    "id": "gpt-5.4",
+    "name": "GPT-5.4",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 1050000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "gpt-5.4-mini",
+    "name": "GPT-5.4 Mini",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 400000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "gpt-5.4-nano",
+    "name": "GPT-5.4 Nano",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 400000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "gpt-5.4-pro",
+    "name": "GPT-5.4 Pro",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 1050000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "gpt-5.5",
+    "name": "GPT-5.5",
+    "aliases": ["gpt-5.5-2026-04-23"],
+    "platform": "openai-responses",
+    "contextWindow": 1050000,
+    "maxOutputTokens": 128000
+  },
+  {
     "id": "gpt-oss-120b",
     "name": "GPT OSS 120B",
     "aliases": [],
@@ -460,6 +524,38 @@
     "maxOutputTokens": 32000
   },
   {
+    "id": "mimo-v2-omni",
+    "name": "MiMo V2 Omni",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 256000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "mimo-v2-pro",
+    "name": "MiMo V2 Pro",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "mimo-v2.5",
+    "name": "MiMo V2.5",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 131072
+  },
+  {
+    "id": "mimo-v2.5-pro",
+    "name": "MiMo V2.5 Pro",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 131072
+  },
+  {
     "id": "minimax-m2",
     "name": "MiniMax M2",
     "aliases": [],
@@ -478,6 +574,14 @@
   {
     "id": "minimax-m2.5",
     "name": "MiniMax M2.5",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 204800,
+    "maxOutputTokens": 131072
+  },
+  {
+    "id": "minimax-m2.7",
+    "name": "MiniMax M2.7",
     "aliases": [],
     "platform": "openai-completions",
     "contextWindow": 204800,
@@ -617,6 +721,22 @@
     "aliases": [],
     "platform": "openai-completions",
     "contextWindow": 204800,
+    "maxOutputTokens": 131072
+  },
+  {
+    "id": "glm-5-turbo",
+    "name": "GLM 5 Turbo",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 200000,
+    "maxOutputTokens": 131072
+  },
+  {
+    "id": "glm-5.1",
+    "name": "GLM 5.1",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 200000,
     "maxOutputTokens": 131072
   },
   {
