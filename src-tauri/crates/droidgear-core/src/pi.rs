@@ -420,6 +420,56 @@ pub fn set_active_pi_profile_id_for_home(home_dir: &Path, id: &str) -> Result<()
 }
 
 // ============================================================================
+// Apply + Config Status + Read Current Config
+// ============================================================================
+
+/// Apply a profile to `~/.pi/agent/models.json`.
+///
+/// Reads the profile, extracts the providers map, and writes it as
+/// `{ "providers": {...} }` to Pi's models.json. Also sets the active profile
+/// ID to the applied profile.
+pub fn apply_pi_profile_for_home(home_dir: &Path, id: &str) -> Result<(), String> {
+    let profile = load_profile_by_id(home_dir, id)?;
+    let config_path = pi_config_path_for_home(home_dir)?;
+
+    let current = PiCurrentConfig {
+        providers: profile.providers,
+    };
+    let s = serde_json::to_string_pretty(&current)
+        .map_err(|e| format!("Failed to serialize Pi config: {e}"))?;
+    storage::atomic_write(&config_path, s.as_bytes())?;
+    set_active_pi_profile_id_for_home(home_dir, id)?;
+    Ok(())
+}
+
+/// Get the status of `~/.pi/agent/models.json`.
+pub fn get_pi_config_status_for_home(home_dir: &Path) -> Result<PiConfigStatus, String> {
+    let config_path = pi_config_path_for_home(home_dir)?;
+    Ok(PiConfigStatus {
+        config_exists: config_path.exists(),
+        config_path: config_path.to_string_lossy().to_string(),
+    })
+}
+
+/// Read the current Pi config from `~/.pi/agent/models.json`.
+///
+/// Returns the parsed config. If the file does not exist, returns an empty
+/// config (no providers). If the file contains malformed JSON, returns an error.
+pub fn read_pi_current_config_for_home(home_dir: &Path) -> Result<PiCurrentConfig, String> {
+    let config_path = pi_config_path_for_home(home_dir)?;
+    if !config_path.exists() {
+        return Ok(PiCurrentConfig {
+            providers: HashMap::new(),
+        });
+    }
+    let s = std::fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read Pi config file: {e}"))?;
+    let config: PiCurrentConfig =
+        serde_json::from_str(&s).map_err(|e| format!("Invalid Pi config JSON: {e}"))?;
+    Ok(config)
+}
+
+// ============================================================================
 // System wrappers (CRUD)
 // ============================================================================
 
@@ -453,6 +503,18 @@ pub fn get_active_pi_profile_id() -> Result<Option<String>, String> {
 
 pub fn set_active_pi_profile_id(id: &str) -> Result<(), String> {
     set_active_pi_profile_id_for_home(&system_home_dir()?, id)
+}
+
+pub fn apply_pi_profile(id: &str) -> Result<(), String> {
+    apply_pi_profile_for_home(&system_home_dir()?, id)
+}
+
+pub fn get_pi_config_status() -> Result<PiConfigStatus, String> {
+    get_pi_config_status_for_home(&system_home_dir()?)
+}
+
+pub fn read_pi_current_config() -> Result<PiCurrentConfig, String> {
+    read_pi_current_config_for_home(&system_home_dir()?)
 }
 
 // ============================================================================
@@ -902,5 +964,261 @@ mod tests {
         assert_eq!(reloaded.providers.len(), 2);
         assert!(reloaded.providers.contains_key("ollama"));
         assert!(reloaded.providers.contains_key("openai"));
+    }
+
+    // =========================================================================
+    // Apply + Read Current Config Tests
+    // =========================================================================
+
+    #[test]
+    fn test_apply_writes_models_json() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        let profile = make_profile_with_provider("p1", "Test", "ollama");
+        save_pi_profile_for_home(home, profile).unwrap();
+
+        apply_pi_profile_for_home(home, "p1").unwrap();
+
+        let config_path = pi_config_path_for_home(home).unwrap();
+        assert!(config_path.exists());
+
+        let raw = std::fs::read_to_string(&config_path).unwrap();
+        let parsed: PiCurrentConfig = serde_json::from_str(&raw).unwrap();
+        assert!(parsed.providers.contains_key("ollama"));
+        assert_eq!(parsed.providers["ollama"].models.len(), 1);
+        assert_eq!(parsed.providers["ollama"].models[0].id, "llama3.1:8b");
+    }
+
+    #[test]
+    fn test_apply_creates_parent_directory() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        // ~/.pi/agent/ does not exist yet
+        let profile = make_profile("p1", "Minimal");
+        save_pi_profile_for_home(home, profile).unwrap();
+
+        apply_pi_profile_for_home(home, "p1").unwrap();
+
+        let config_path = pi_config_path_for_home(home).unwrap();
+        assert!(config_path.exists());
+        assert!(config_path.parent().unwrap().exists());
+    }
+
+    #[test]
+    fn test_apply_sets_active_profile() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        let profile = make_profile("p1", "Test");
+        save_pi_profile_for_home(home, profile).unwrap();
+
+        apply_pi_profile_for_home(home, "p1").unwrap();
+
+        let active = get_active_pi_profile_id_for_home(home).unwrap();
+        assert_eq!(active.as_deref(), Some("p1"));
+    }
+
+    #[test]
+    fn test_read_current_config_empty_when_missing() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        let config = read_pi_current_config_for_home(home).unwrap();
+        assert!(config.providers.is_empty());
+    }
+
+    #[test]
+    fn test_read_current_config_parses_file() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        let profile = make_profile_with_provider("p1", "Test", "ollama");
+        save_pi_profile_for_home(home, profile).unwrap();
+        apply_pi_profile_for_home(home, "p1").unwrap();
+
+        let config = read_pi_current_config_for_home(home).unwrap();
+        assert!(config.providers.contains_key("ollama"));
+        assert_eq!(config.providers["ollama"].models.len(), 1);
+        assert_eq!(config.providers["ollama"].models[0].id, "llama3.1:8b");
+    }
+
+    #[test]
+    fn test_read_current_config_handles_malformed_json() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        // Write invalid JSON
+        let config_path = pi_config_path_for_home(home).unwrap();
+        std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        std::fs::write(&config_path, "{ invalid json }").unwrap();
+
+        let result = read_pi_current_config_for_home(home);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid Pi config JSON"));
+    }
+
+    #[test]
+    fn test_apply_read_roundtrip() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        // Create a profile with two providers
+        let mut providers = HashMap::new();
+        providers.insert(
+            "ollama".to_string(),
+            PiProviderConfig {
+                base_url: Some("http://localhost:11434/v1".to_string()),
+                api: Some("openai-completions".to_string()),
+                api_key: Some("ollama".to_string()),
+                headers: None,
+                auth_header: Some(false),
+                models: vec![PiModel {
+                    id: "llama3.1:8b".to_string(),
+                    name: Some("Llama 3.1 8B".to_string()),
+                    api: None,
+                    reasoning: false,
+                    input: vec!["text".to_string()],
+                    context_window: 128000,
+                    max_tokens: 16384,
+                    cost: None,
+                    compat: None,
+                }],
+                model_overrides: None,
+                compat: None,
+            },
+        );
+        providers.insert(
+            "openai".to_string(),
+            PiProviderConfig {
+                base_url: Some("https://api.openai.com/v1".to_string()),
+                api: Some("openai-completions".to_string()),
+                api_key: Some("sk-test".to_string()),
+                headers: None,
+                auth_header: None,
+                models: vec![],
+                model_overrides: None,
+                compat: None,
+            },
+        );
+
+        let profile = PiProfile {
+            id: "p1".to_string(),
+            name: "Roundtrip Test".to_string(),
+            description: None,
+            created_at: "2026-01-01T00:00:00Z".to_string(),
+            updated_at: "2026-01-01T00:00:00Z".to_string(),
+            providers,
+        };
+        save_pi_profile_for_home(home, profile).unwrap();
+
+        // Apply
+        apply_pi_profile_for_home(home, "p1").unwrap();
+
+        // Read back
+        let config = read_pi_current_config_for_home(home).unwrap();
+        assert_eq!(config.providers.len(), 2);
+
+        let ollama = &config.providers["ollama"];
+        assert_eq!(
+            ollama.base_url.as_deref(),
+            Some("http://localhost:11434/v1")
+        );
+        assert_eq!(ollama.api.as_deref(), Some("openai-completions"));
+        assert_eq!(ollama.api_key.as_deref(), Some("ollama"));
+        assert_eq!(ollama.models.len(), 1);
+        assert_eq!(ollama.models[0].id, "llama3.1:8b");
+
+        let openai = &config.providers["openai"];
+        assert_eq!(
+            openai.base_url.as_deref(),
+            Some("https://api.openai.com/v1")
+        );
+        assert!(openai.models.is_empty());
+
+        // Verify active profile is set
+        let active = get_active_pi_profile_id_for_home(home).unwrap();
+        assert_eq!(active.as_deref(), Some("p1"));
+    }
+
+    #[test]
+    fn test_apply_overwrites_previous_config() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        // Create and apply first profile
+        save_pi_profile_for_home(home, make_profile_with_provider("p1", "First", "ollama"))
+            .unwrap();
+        apply_pi_profile_for_home(home, "p1").unwrap();
+
+        let config = read_pi_current_config_for_home(home).unwrap();
+        assert_eq!(config.providers.len(), 1);
+        assert!(config.providers.contains_key("ollama"));
+
+        // Create and apply second profile with different provider
+        save_pi_profile_for_home(home, make_profile_with_provider("p2", "Second", "openai"))
+            .unwrap();
+        apply_pi_profile_for_home(home, "p2").unwrap();
+
+        let config = read_pi_current_config_for_home(home).unwrap();
+        assert_eq!(config.providers.len(), 1);
+        assert!(config.providers.contains_key("openai"));
+        assert!(!config.providers.contains_key("ollama"));
+
+        // Active should now be p2
+        let active = get_active_pi_profile_id_for_home(home).unwrap();
+        assert_eq!(active.as_deref(), Some("p2"));
+    }
+
+    #[test]
+    fn test_config_status_when_missing() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        let status = get_pi_config_status_for_home(home).unwrap();
+        assert!(!status.config_exists);
+        assert!(status.config_path.ends_with("models.json"));
+    }
+
+    #[test]
+    fn test_config_status_when_exists() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        save_pi_profile_for_home(home, make_profile("p1", "Test")).unwrap();
+        apply_pi_profile_for_home(home, "p1").unwrap();
+
+        let status = get_pi_config_status_for_home(home).unwrap();
+        assert!(status.config_exists);
+        assert!(status.config_path.ends_with("models.json"));
+    }
+
+    #[test]
+    fn test_read_current_config_empty_providers_object() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        // Write empty providers JSON
+        let config_path = pi_config_path_for_home(home).unwrap();
+        std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        std::fs::write(&config_path, r#"{"providers": {}}"#).unwrap();
+
+        let config = read_pi_current_config_for_home(home).unwrap();
+        assert!(config.providers.is_empty());
+    }
+
+    #[test]
+    fn test_read_current_config_missing_providers_key() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        // Write JSON without providers key (should default to empty)
+        let config_path = pi_config_path_for_home(home).unwrap();
+        std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        std::fs::write(&config_path, r#"{"other": "data"}"#).unwrap();
+
+        let config = read_pi_current_config_for_home(home).unwrap();
+        assert!(config.providers.is_empty());
     }
 }
