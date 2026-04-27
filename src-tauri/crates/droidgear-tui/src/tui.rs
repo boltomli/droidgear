@@ -3292,12 +3292,22 @@ fn handle_pi_profile_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
         return None;
     };
 
+    let fields_count = 2usize; // Name, Description
+    let provider_count = profile.providers.len();
+
     match code {
         KeyCode::Esc | KeyCode::Char('q') => {
             app.screen = app::Screen::Pi;
         }
-        KeyCode::Down => app.pi_detail_field_index = app.pi_detail_field_index.saturating_add(1),
-        KeyCode::Up => app.pi_detail_field_index = app.pi_detail_field_index.saturating_sub(1),
+        KeyCode::Down => {
+            let total = fields_count + provider_count;
+            if total > 0 {
+                app.pi_detail_field_index = (app.pi_detail_field_index + 1).min(total - 1);
+            }
+        }
+        KeyCode::Up => {
+            app.pi_detail_field_index = app.pi_detail_field_index.saturating_sub(1);
+        }
         KeyCode::Char('r') => refresh_pi_detail(app),
         KeyCode::Char('a') => {
             app.modal = Some(app::Modal::Confirm {
@@ -3307,8 +3317,9 @@ fn handle_pi_profile_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
                 },
             });
         }
-        KeyCode::Char('p') => {
-            app.pi_provider_index = 0;
+        KeyCode::Char('p') if provider_count > 0 => {
+            // Navigate to provider detail for the currently selected provider
+            app.pi_provider_index = app.pi_detail_field_index.saturating_sub(fields_count);
             app.pi_provider_field_index = 0;
             app.pi_model_index = 0;
             app.pi_model_field_index = 0;
@@ -3322,31 +3333,44 @@ fn handle_pi_profile_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
                 refresh_pi_detail(app);
             }
         }
-        KeyCode::Enter | KeyCode::Char('e') => match app.pi_detail_field_index {
-            0 => {
-                app.modal = Some(app::Modal::Input {
-                    title: "Profile name".to_string(),
-                    value: profile.name.clone(),
-                    cursor: usize::MAX,
-                    is_secret: false,
-                    action: app::InputAction::PiSetProfileName {
-                        id: profile_id.clone(),
-                    },
-                });
+        KeyCode::Enter | KeyCode::Char('e') => {
+            if app.pi_detail_field_index < fields_count {
+                // Editing profile fields
+                match app.pi_detail_field_index {
+                    0 => {
+                        app.modal = Some(app::Modal::Input {
+                            title: "Profile name".to_string(),
+                            value: profile.name.clone(),
+                            cursor: usize::MAX,
+                            is_secret: false,
+                            action: app::InputAction::PiSetProfileName {
+                                id: profile_id.clone(),
+                            },
+                        });
+                    }
+                    1 => {
+                        app.modal = Some(app::Modal::Input {
+                            title: "Profile description".to_string(),
+                            value: profile.description.clone().unwrap_or_default(),
+                            cursor: usize::MAX,
+                            is_secret: false,
+                            action: app::InputAction::PiSetProfileDescription {
+                                id: profile_id.clone(),
+                            },
+                        });
+                    }
+                    _ => {}
+                }
+            } else {
+                // Open the selected provider's detail screen
+                let prov_idx = app.pi_detail_field_index - fields_count;
+                app.pi_provider_index = prov_idx;
+                app.pi_provider_field_index = 0;
+                app.pi_model_index = 0;
+                app.pi_model_field_index = 0;
+                app.screen = app::Screen::PiProvider;
             }
-            1 => {
-                app.modal = Some(app::Modal::Input {
-                    title: "Profile description".to_string(),
-                    value: profile.description.clone().unwrap_or_default(),
-                    cursor: usize::MAX,
-                    is_secret: false,
-                    action: app::InputAction::PiSetProfileDescription {
-                        id: profile_id.clone(),
-                    },
-                });
-            }
-            _ => {}
-        },
+        }
         KeyCode::Char('n') => {
             app.modal = Some(app::Modal::Input {
                 title: "New provider id".to_string(),
@@ -3358,8 +3382,12 @@ fn handle_pi_profile_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
                 },
             });
         }
-        KeyCode::Char('d') => {
-            if let Some(provider_id) = app.pi_current_provider_id() {
+        KeyCode::Char('d') if app.pi_detail_field_index >= fields_count => {
+            let prov_idx = app.pi_detail_field_index - fields_count;
+            // Get the provider ID at this index
+            let mut keys: Vec<String> = profile.providers.keys().cloned().collect();
+            keys.sort_by_key(|a| a.to_lowercase());
+            if let Some(provider_id) = keys.get(prov_idx).cloned() {
                 app.modal = Some(app::Modal::Confirm {
                     message: format!("Delete provider '{provider_id}'?"),
                     action: app::ConfirmAction::PiDeleteProvider {
@@ -3584,7 +3612,25 @@ fn handle_pi_model_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
                 });
             }
             6 => {
-                // Cost is read-only summary, no edit action
+                // Edit cost as comma-separated: input,output,cacheRead,cacheWrite
+                let cost_str = match &model.cost {
+                    Some(c) => format!(
+                        "{},{},{},{}",
+                        c.input, c.output, c.cache_read, c.cache_write
+                    ),
+                    None => "0,0,0,0".to_string(),
+                };
+                app.modal = Some(app::Modal::Input {
+                    title: "Cost (input,output,cacheRead,cacheWrite)".to_string(),
+                    value: cost_str,
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::PiSetModelCost {
+                        profile_id: profile_id.clone(),
+                        provider_id: provider_id.clone(),
+                        model_index,
+                    },
+                });
             }
             _ => {}
         },
@@ -7488,6 +7534,50 @@ fn run_input_action(
             app.set_toast("Saved", false);
             Ok(())
         }
+        app::InputAction::PiSetModelCost {
+            profile_id,
+            provider_id,
+            model_index,
+        } => {
+            // Parse comma-separated: input,output,cacheRead,cacheWrite
+            let parts: Vec<&str> = trimmed.split(',').map(|s| s.trim()).collect();
+            if parts.len() != 4 {
+                return Err(anyhow::Error::msg(
+                    "Expected 4 comma-separated values: input,output,cacheRead,cacheWrite",
+                ));
+            }
+            let input = parts[0]
+                .parse::<f64>()
+                .map_err(|_| anyhow::Error::msg("Invalid cost input value"))?;
+            let output = parts[1]
+                .parse::<f64>()
+                .map_err(|_| anyhow::Error::msg("Invalid cost output value"))?;
+            let cache_read = parts[2]
+                .parse::<f64>()
+                .map_err(|_| anyhow::Error::msg("Invalid cost cacheRead value"))?;
+            let cache_write = parts[3]
+                .parse::<f64>()
+                .map_err(|_| anyhow::Error::msg("Invalid cost cacheWrite value"))?;
+            let mut profile =
+                droidgear_core::pi::get_pi_profile_for_home(&app.home_dir, &profile_id)
+                    .map_err(anyhow::Error::msg)?;
+            let Some(provider) = profile.providers.get_mut(&provider_id) else {
+                return Err(anyhow::Error::msg("Provider not found"));
+            };
+            let Some(model) = provider.models.get_mut(model_index) else {
+                return Err(anyhow::Error::msg("Model not found"));
+            };
+            model.cost = Some(droidgear_core::pi::PiModelCost {
+                input,
+                output,
+                cache_read,
+                cache_write,
+            });
+            droidgear_core::pi::save_pi_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            app.set_toast("Saved", false);
+            Ok(())
+        }
     }
 }
 
@@ -7736,6 +7826,11 @@ mod tests {
             model_index: 0,
         };
         let _set_max = app::InputAction::PiSetModelMaxTokens {
+            profile_id: "x".to_string(),
+            provider_id: "y".to_string(),
+            model_index: 0,
+        };
+        let _set_cost = app::InputAction::PiSetModelCost {
             profile_id: "x".to_string(),
             provider_id: "y".to_string(),
             model_index: 0,

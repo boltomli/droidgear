@@ -407,6 +407,11 @@ pub enum InputAction {
         provider_id: String,
         model_index: usize,
     },
+    PiSetModelCost {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
     HermesCreateProfile,
     HermesDuplicate {
         id: String,
@@ -971,10 +976,16 @@ impl App {
         if self.pi_index >= self.pi_profiles.len() {
             self.pi_index = self.pi_profiles.len().saturating_sub(1);
         }
-        // PiProfile screen has 2 fields: Name, Description
+        // PiProfile screen: 2 fields (Name, Description) + provider list
         let pi_detail_fields_count = 2;
-        if self.pi_detail_field_index >= pi_detail_fields_count {
-            self.pi_detail_field_index = pi_detail_fields_count.saturating_sub(1);
+        let pi_provider_count = self
+            .pi_detail
+            .as_ref()
+            .map(|p| p.providers.len())
+            .unwrap_or(0);
+        let pi_detail_total = pi_detail_fields_count + pi_provider_count;
+        if self.pi_detail_field_index >= pi_detail_total {
+            self.pi_detail_field_index = pi_detail_total.saturating_sub(1);
         }
         let pi_provider_count = self
             .pi_detail

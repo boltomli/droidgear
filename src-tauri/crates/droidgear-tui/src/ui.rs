@@ -2602,6 +2602,10 @@ fn draw_pi_profile(frame: &mut Frame, app: &app::App, area: Rect) {
         )
         .split(area);
 
+    let fields_count = 2usize;
+    let in_fields = app.pi_detail_field_index < fields_count;
+    let in_providers = !in_fields;
+
     // Fields section
     let fields: Vec<(&str, String)> = vec![
         ("Name", profile.name.clone()),
@@ -2616,7 +2620,7 @@ fn draw_pi_profile(frame: &mut Frame, app: &app::App, area: Rect) {
 
     let mut field_items: Vec<ListItem> = Vec::new();
     for (i, (label, value)) in fields.into_iter().enumerate() {
-        let selected = i == app.pi_detail_field_index;
+        let selected = in_fields && i == app.pi_detail_field_index;
         let line = if selected {
             Line::from(format!("{label:>14}: {value}"))
         } else {
@@ -2624,15 +2628,11 @@ fn draw_pi_profile(frame: &mut Frame, app: &app::App, area: Rect) {
         };
         field_items.push(ListItem::new(line));
     }
+    let field_selected = in_fields.then_some(app.pi_detail_field_index);
     let field_list = List::new(field_items)
         .block(block(format!("Pi Profile: {}", profile.name)))
         .highlight_style(t.selected_row_style());
-    render_list(
-        frame,
-        field_list,
-        chunks[0],
-        Some(app.pi_detail_field_index),
-    );
+    render_list(frame, field_list, chunks[0], field_selected);
 
     // Providers section
     let mut provider_ids: Vec<String> = profile.providers.keys().cloned().collect();
@@ -2656,14 +2656,18 @@ fn draw_pi_profile(frame: &mut Frame, app: &app::App, area: Rect) {
             t.placeholder_style(),
         ))));
     }
-    let provider_selected = (!provider_ids.is_empty()).then_some(app.pi_provider_index);
+    let provider_highlight = if in_providers && !provider_ids.is_empty() {
+        Some(app.pi_detail_field_index - fields_count)
+    } else {
+        None
+    };
     let provider_list = List::new(provider_items)
         .block(block("Providers"))
         .highlight_style(t.selected_row_style());
-    render_list(frame, provider_list, chunks[1], provider_selected);
+    render_list(frame, provider_list, chunks[1], provider_highlight);
 
     let help = help_paragraph(
-        "Up/Down: move  Enter/e: edit field  p: open provider  n: add provider  d: del provider  l: load live  a: apply  q/Esc: back",
+        "Up/Down: move  Enter/e: edit field/open provider  p: open provider  n: add provider  d: del provider  l: load live  a: apply  q/Esc: back",
     );
     frame.render_widget(help, chunks[2]);
 }
