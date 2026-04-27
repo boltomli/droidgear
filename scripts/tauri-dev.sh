@@ -31,7 +31,6 @@ if [ "$FREE_PORT" != "$PORT" ]; then
   echo "Port $PORT is in use, using port $FREE_PORT"
 fi
 
-export TAURI_DEV_PORT=$FREE_PORT
-CONFIG='{"build":{"devUrl":"http://localhost:'"${FREE_PORT}"'"}}'
+CONFIG='{"build":{"devUrl":"http://localhost:'"${FREE_PORT}"'","beforeDevCommand":"npm run dev -- --port '"${FREE_PORT}"'"}}'
 
 npm run tauri dev -- --config "$CONFIG"
