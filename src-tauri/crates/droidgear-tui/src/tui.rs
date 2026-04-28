@@ -2716,7 +2716,7 @@ fn handle_openclaw_model_key(app: &mut app::App, code: KeyCode) -> Option<Action
             }
             3 => {
                 app.modal = Some(app::Modal::Input {
-                    title: "Max tokens".to_string(),
+                    title: "Max output tokens".to_string(),
                     value: model.max_tokens.map(|v| v.to_string()).unwrap_or_default(),
                     cursor: usize::MAX,
                     is_secret: false,

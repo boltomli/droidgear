@@ -590,7 +590,7 @@ fn draw_factory_model(frame: &mut Frame, app: &app::App, area: Rect) {
                 display_name
             },
         ),
-        ("Max Tokens", max_tokens),
+        ("Max Output Tokens", max_tokens),
         (
             "No Image Support",
             if no_image_support {
@@ -1234,7 +1234,7 @@ fn draw_openclaw_model(frame: &mut Frame, app: &app::App, area: Rect) {
                 .unwrap_or_default(),
         ),
         (
-            "Max Tokens",
+            "Max Output Tokens",
             model.max_tokens.map(|v| v.to_string()).unwrap_or_default(),
         ),
         (
