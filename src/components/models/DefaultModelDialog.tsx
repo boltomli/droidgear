@@ -21,7 +21,14 @@ import {
 } from '@/components/ui/select'
 import type { CustomModel, SessionDefaultSettings } from '@/lib/bindings'
 
-const REASONING_EFFORTS = ['none', 'low', 'medium', 'high'] as const
+const REASONING_EFFORTS = [
+  'none',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+] as const
 
 interface DefaultModelDialogProps {
   open: boolean

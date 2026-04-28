@@ -31,9 +31,20 @@ import {
 } from '@/lib/bindings'
 import {
   containsRegexSpecialChars,
+  effortToBudgetTokens,
   getDefaultMaxOutputTokens,
   hasOfficialModelNamePrefix,
+  isAnthropicAdaptiveThinkingModel,
+  isOpus47,
+  supportsMaxEffort,
+  supportsXhighEffort,
+  type ReasoningEffort,
 } from '@/lib/utils'
+import {
+  getSupportedEfforts,
+  getEffortEncoding,
+  getModelReasoningConfig,
+} from '@/lib/model-registry'
 import { useModelStore } from '@/store/model-store'
 import { BatchModelSelector } from './BatchModelSelector'
 import {
@@ -56,6 +67,19 @@ const defaultBaseUrls: Record<Provider, string> = {
   anthropic: 'https://api.anthropic.com',
   openai: 'https://api.openai.com',
   'generic-chat-completion-api': '',
+}
+
+const ANTHROPIC_BETA_1M_VALUE =
+  'claude-code-20250219,context-1m-2025-08-07,interleaved-thinking-2025-05-14,redact-thinking-2026-02-12,context-management-2025-06-27,prompt-caching-scope-2026-01-05,effort-2025-11-24'
+
+function has1MContextHeader(
+  headers: Record<string, unknown> | null | undefined
+): boolean {
+  if (!headers || typeof headers !== 'object') return false
+  return (
+    (headers as Record<string, string>)['Anthropic-Beta'] ===
+    ANTHROPIC_BETA_1M_VALUE
+  )
 }
 
 interface ModelFormProps {
@@ -91,11 +115,59 @@ function ModelForm({
   const [noImageSupport, setNoImageSupport] = useState(
     model?.noImageSupport ?? false
   )
-  // Extract reasoning effort from extraArgs if present
+  // Extract reasoning effort from extraArgs if present.
+  // Supports:
+  //   - reasoning.effort (OpenAI / generic)
+  //   - reasoning_effort top-level key (OpenAI format for some models like DeepSeek)
+  //   - output_config.effort paired with thinking.type (Anthropic adaptive & non-adaptive)
   const extractReasoningEffort = (
-    args?: Partial<Record<string, JsonValue>> | null
+    args?: Partial<Record<string, JsonValue>> | null,
+    modelIdForLookup?: string,
+    providerForLookup?: Provider
   ): string => {
     if (!args) return 'none'
+
+    // Registry reverse-mapping: check which encoding matches the current extraArgs
+    if (modelIdForLookup && providerForLookup) {
+      const config = getModelReasoningConfig(modelIdForLookup)
+      if (config) {
+        for (const effort of config.efforts) {
+          const encoding = getEffortEncoding(
+            modelIdForLookup,
+            providerForLookup,
+            effort
+          )
+          if (encoding) {
+            const keys = Object.keys(encoding)
+            const match = keys.every(k => {
+              const a = args[k]
+              const b = encoding[k]
+              return JSON.stringify(a) === JSON.stringify(b)
+            })
+            if (match) return effort
+          }
+        }
+      }
+    }
+
+    const thinking = args.thinking
+    const thinkingEnabled =
+      thinking &&
+      typeof thinking === 'object' &&
+      !Array.isArray(thinking) &&
+      ((thinking as Record<string, JsonValue>).type === 'adaptive' ||
+        (thinking as Record<string, JsonValue>).type === 'enabled')
+    if (thinkingEnabled) {
+      const outputConfig = args.output_config
+      if (
+        outputConfig &&
+        typeof outputConfig === 'object' &&
+        !Array.isArray(outputConfig)
+      ) {
+        const effort = (outputConfig as Record<string, JsonValue>).effort
+        if (typeof effort === 'string') return effort
+      }
+    }
     const reasoning = args.reasoning
     if (
       reasoning &&
@@ -106,11 +178,61 @@ function ModelForm({
       const effort = (reasoning as Record<string, JsonValue>).effort
       if (typeof effort === 'string') return effort
     }
+    // OpenAI format: reasoning_effort top-level key (used by DeepSeek)
+    const reasoningEffort = args.reasoning_effort
+    if (typeof reasoningEffort === 'string') return reasoningEffort
     return 'none'
   }
 
-  const [reasoningEffort, setReasoningEffort] = useState(
-    extractReasoningEffort(model?.extraArgs)
+  // If the currently selected effort isn't supported by a model, snap it down
+  // to the highest supported level. xhigh -> high, max -> xhigh -> high.
+  const clampEffortToModel = (effort: string, nextModelId: string): string => {
+    const supported = getSupportedEfforts(nextModelId, provider)
+    // Registry whitelist takes priority
+    if (supported) {
+      if (supported.includes(effort as ReasoningEffort)) return effort
+      // Find the highest supported effort to clamp to
+      const effortOrder: ReasoningEffort[] = [
+        'none',
+        'low',
+        'medium',
+        'high',
+        'xhigh',
+        'max',
+      ]
+      const idx = effortOrder.indexOf(effort as ReasoningEffort)
+      for (let i = idx - 1; i >= 0; i--) {
+        const candidate = effortOrder[i]
+        if (candidate && supported.includes(candidate)) return candidate
+      }
+      return supported[0] ?? 'high'
+    }
+    // Fallback to old logic
+    if (effort === 'max' && !supportsMaxEffort(nextModelId)) {
+      return supportsXhighEffort(nextModelId) ? 'xhigh' : 'high'
+    }
+    if (effort === 'xhigh' && !supportsXhighEffort(nextModelId)) {
+      return 'high'
+    }
+    return effort
+  }
+
+  const [reasoningEffort, setReasoningEffort] = useState(() => {
+    const extracted = extractReasoningEffort(
+      model?.extraArgs,
+      model?.model,
+      provider
+    )
+    const modelIdForClamp = model?.model ?? ''
+    return clampEffortToModel(extracted, modelIdForClamp)
+  })
+  // Track whether maxTokens was auto-filled vs user-edited, so effort changes
+  // can re-fill only when the user hasn't manually overridden the value.
+  const [autoFilledMaxTokens, setAutoFilledMaxTokens] = useState(
+    !model?.maxOutputTokens
+  )
+  const [context1MSupport, setContext1MSupport] = useState(
+    () => model?.extraHeaders != null && has1MContextHeader(model.extraHeaders)
   )
   const [extraArgs, setExtraArgs] = useState(
     model?.extraArgs ? JSON.stringify(model.extraArgs, null, 2) : ''
@@ -139,11 +261,102 @@ function ModelForm({
   // Channel picker state
   const [channelPickerOpen, setChannelPickerOpen] = useState(false)
 
+  // Rewrite the effort-encoding keys in an extraArgs JSON string to match the
+  // (provider, model, effort) triple, preserving unrelated fields. Also strips
+  // sampling params that Opus 4.7 rejects. Returns the JSON unchanged when the
+  // user has typed invalid JSON so we don't destroy in-progress edits.
+  const rewriteExtraArgsWithEffort = (
+    currentJson: string,
+    nextProvider: Provider,
+    nextModelId: string,
+    nextEffort: string
+  ): string => {
+    if (currentJson.trim() && !isJsonValid(currentJson)) return currentJson
+    const parsed = parseJsonSafe(currentJson) ?? {}
+    delete parsed.reasoning
+    delete parsed.reasoning_effort
+    delete parsed.thinking
+    delete parsed.output_config
+
+    // Registry whitelist takes priority
+    const encoding = getEffortEncoding(nextModelId, nextProvider, nextEffort)
+    if (encoding) {
+      Object.assign(parsed, encoding)
+      if (isOpus47(nextModelId)) {
+        delete parsed.temperature
+        delete parsed.top_p
+        delete parsed.top_k
+      }
+      return Object.keys(parsed).length > 0
+        ? JSON.stringify(parsed, null, 2)
+        : ''
+    }
+
+    // Fallback to old logic
+    if (nextEffort && nextEffort !== 'none') {
+      if (
+        nextProvider === 'anthropic' &&
+        isAnthropicAdaptiveThinkingModel(nextModelId)
+      ) {
+        parsed.thinking = { type: 'adaptive' }
+        parsed.output_config = { effort: nextEffort }
+      } else if (
+        nextProvider === 'anthropic' &&
+        nextModelId.startsWith('claude-')
+      ) {
+        parsed.thinking = {
+          type: 'enabled',
+          budget_tokens: effortToBudgetTokens(nextEffort),
+        }
+      } else if (nextProvider === 'anthropic') {
+        parsed.thinking = { type: 'enabled' }
+        parsed.output_config = { effort: nextEffort }
+      } else {
+        parsed.reasoning = { effort: nextEffort }
+      }
+    } else if (
+      nextProvider === 'anthropic' &&
+      !nextModelId.startsWith('claude-') &&
+      nextModelId
+    ) {
+      parsed.thinking = { type: 'disabled' }
+    }
+    if (isOpus47(nextModelId)) {
+      delete parsed.temperature
+      delete parsed.top_p
+      delete parsed.top_k
+    }
+    return Object.keys(parsed).length > 0 ? JSON.stringify(parsed, null, 2) : ''
+  }
+
   const handleModelIdChange = (newModelId: string) => {
     setModelId(newModelId)
     setDisplayName(newModelId)
-    if (newModelId && !maxTokens) {
-      setMaxTokens(getDefaultMaxOutputTokens(newModelId).toString())
+    const clampedEffort = clampEffortToModel(reasoningEffort, newModelId)
+    if (clampedEffort !== reasoningEffort) setReasoningEffort(clampedEffort)
+    setExtraArgs(
+      rewriteExtraArgsWithEffort(extraArgs, provider, newModelId, clampedEffort)
+    )
+    if (newModelId && (!maxTokens || autoFilledMaxTokens)) {
+      setMaxTokens(
+        getDefaultMaxOutputTokens(newModelId, clampedEffort).toString()
+      )
+      setAutoFilledMaxTokens(true)
+    }
+  }
+
+  const handleMaxTokensChange = (value: string) => {
+    setMaxTokens(value)
+    setAutoFilledMaxTokens(false)
+  }
+
+  const handleReasoningEffortChange = (value: string) => {
+    setReasoningEffort(value)
+    setExtraArgs(
+      rewriteExtraArgsWithEffort(extraArgs, provider, modelId, value)
+    )
+    if (modelId && autoFilledMaxTokens) {
+      setMaxTokens(getDefaultMaxOutputTokens(modelId, value).toString())
     }
   }
 
@@ -154,6 +367,11 @@ function ModelForm({
     setFetchError(null)
     setBatchMode(false)
     setSelectedModels(new Map())
+    const clampedEffort = clampEffortToModel(reasoningEffort, modelId)
+    if (clampedEffort !== reasoningEffort) setReasoningEffort(clampedEffort)
+    setExtraArgs(
+      rewriteExtraArgsWithEffort(extraArgs, value, modelId, clampedEffort)
+    )
   }
 
   const handleFetchModels = async () => {
@@ -246,21 +464,104 @@ function ModelForm({
     }
   }
 
-  const isJsonValid = (value: string): boolean => {
+  const validateJson = (
+    value: string
+  ):
+    | { ok: true; hasSmartQuotes: false }
+    | { ok: false; error: string; hasSmartQuotes: boolean } => {
     const trimmed = value.trim()
-    if (!trimmed) return true
+    if (!trimmed) return { ok: true, hasSmartQuotes: false }
+    // U+201C / U+201D (curly double quotes) and U+2018 / U+2019 (curly single
+    // quotes) are a very common paste hazard and JSON.parse fails on them
+    // with a generic "Unexpected token" message.
+    const hasSmartQuotes = /[‘’“”]/.test(trimmed)
     try {
       const parsed = JSON.parse(trimmed)
-      return (
-        typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
-      )
-    } catch {
-      return false
+      if (
+        typeof parsed !== 'object' ||
+        parsed === null ||
+        Array.isArray(parsed)
+      ) {
+        return {
+          ok: false,
+          error: 'Root value must be a JSON object',
+          hasSmartQuotes,
+        }
+      }
+      return { ok: true, hasSmartQuotes: false }
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+        hasSmartQuotes,
+      }
     }
   }
 
-  const extraArgsValid = isJsonValid(extraArgs)
-  const extraHeadersValid = isJsonValid(extraHeaders)
+  const isJsonValid = (value: string): boolean => validateJson(value).ok
+
+  const extraArgsValidation = validateJson(extraArgs)
+  const extraHeadersValidation = validateJson(extraHeaders)
+  const extraArgsValid = extraArgsValidation.ok
+  const extraHeadersValid = extraHeadersValidation.ok
+
+  const buildExtraArgs = (): Partial<Record<string, JsonValue>> | undefined => {
+    const parsed = parseJsonSafe(extraArgs) ?? {}
+
+    // Always clear every known effort-encoding key so we never ship two forms.
+    delete parsed.reasoning
+    delete parsed.reasoning_effort
+    delete parsed.thinking
+    delete parsed.output_config
+
+    // Registry whitelist takes priority
+    const encoding = getEffortEncoding(modelId, provider, reasoningEffort)
+    if (encoding) {
+      Object.assign(parsed, encoding)
+      if (isOpus47(modelId)) {
+        delete parsed.temperature
+        delete parsed.top_p
+        delete parsed.top_k
+      }
+      return Object.keys(parsed).length > 0 ? parsed : undefined
+    }
+
+    // Fallback to old logic
+    if (reasoningEffort && reasoningEffort !== 'none') {
+      if (
+        provider === 'anthropic' &&
+        isAnthropicAdaptiveThinkingModel(modelId)
+      ) {
+        parsed.thinking = { type: 'adaptive' }
+        parsed.output_config = { effort: reasoningEffort }
+      } else if (provider === 'anthropic' && modelId.startsWith('claude-')) {
+        parsed.thinking = {
+          type: 'enabled',
+          budget_tokens: effortToBudgetTokens(reasoningEffort),
+        }
+      } else if (provider === 'anthropic') {
+        parsed.thinking = { type: 'enabled' }
+        parsed.output_config = { effort: reasoningEffort }
+      } else {
+        parsed.reasoning = { effort: reasoningEffort }
+      }
+    } else if (
+      provider === 'anthropic' &&
+      !modelId.startsWith('claude-') &&
+      modelId
+    ) {
+      parsed.thinking = { type: 'disabled' }
+    }
+
+    // Opus 4.7 rejects sampling parameters — strip them rather than 400 at runtime.
+    if (isOpus47(modelId)) {
+      delete parsed.temperature
+      delete parsed.top_p
+      delete parsed.top_k
+    }
+
+    return Object.keys(parsed).length > 0 ? parsed : undefined
+  }
 
   const handleSave = () => {
     if (!modelId || !baseUrl || !apiKey) return
@@ -274,19 +575,28 @@ function ModelForm({
       displayName: displayName || undefined,
       maxOutputTokens: maxTokens ? parseInt(maxTokens) : undefined,
       noImageSupport: noImageSupport || undefined,
-      extraArgs: (() => {
-        const parsed = parseJsonSafe(extraArgs) ?? {}
-        if (reasoningEffort && reasoningEffort !== 'none') {
-          parsed.reasoning = { effort: reasoningEffort }
-        } else {
-          delete parsed.reasoning
+      extraArgs: buildExtraArgs(),
+      extraHeaders: (() => {
+        const parsed = parseJsonSafe(extraHeaders) as
+          | Record<string, string>
+          | null
+          | undefined
+        if (provider === 'anthropic' && context1MSupport) {
+          return {
+            ...(parsed ?? {}),
+            'Anthropic-Beta': ANTHROPIC_BETA_1M_VALUE,
+          }
         }
-        return Object.keys(parsed).length > 0 ? parsed : undefined
+        if (
+          provider === 'anthropic' &&
+          !context1MSupport &&
+          parsed?.['Anthropic-Beta'] === ANTHROPIC_BETA_1M_VALUE
+        ) {
+          const { 'Anthropic-Beta': _, ...rest } = parsed
+          return Object.keys(rest).length > 0 ? rest : undefined
+        }
+        return parsed as Record<string, string> | null | undefined
       })(),
-      extraHeaders: parseJsonSafe(extraHeaders) as
-        | Record<string, string>
-        | null
-        | undefined,
     }
 
     onSave(newModel)
@@ -475,10 +785,20 @@ function ModelForm({
                   id="maxTokens"
                   type="number"
                   value={maxTokens}
-                  onChange={e => setMaxTokens(e.target.value)}
+                  onChange={e => handleMaxTokensChange(e.target.value)}
                   placeholder="8192"
                   step={8192}
                 />
+                {isOpus47(modelId) &&
+                  (reasoningEffort === 'xhigh' || reasoningEffort === 'max') &&
+                  (() => {
+                    const n = parseInt(maxTokens, 10)
+                    return Number.isFinite(n) && n < 64000 ? (
+                      <p className="text-xs text-amber-600 dark:text-amber-500">
+                        {t('models.opus47.maxTokensHint')}
+                      </p>
+                    ) : null
+                  })()}
               </div>
 
               <div className="flex items-center gap-2">
@@ -501,33 +821,77 @@ function ModelForm({
                 </Label>
                 <Select
                   value={reasoningEffort}
-                  onValueChange={setReasoningEffort}
+                  onValueChange={handleReasoningEffortChange}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">
-                      {t('models.reasoningEffort.none')}
-                    </SelectItem>
-                    <SelectItem value="low">
-                      {t('models.reasoningEffort.low')}
-                    </SelectItem>
-                    <SelectItem value="medium">
-                      {t('models.reasoningEffort.medium')}
-                    </SelectItem>
-                    <SelectItem value="high">
-                      {t('models.reasoningEffort.high')}
-                    </SelectItem>
-                    <SelectItem value="xhigh">
-                      {t('models.reasoningEffort.xhigh')}
-                    </SelectItem>
+                    {(() => {
+                      const supported = getSupportedEfforts(modelId, provider)
+                      if (supported) {
+                        return supported.map(effort => (
+                          <SelectItem key={effort} value={effort}>
+                            {t(`models.reasoningEffort.${effort}`)}
+                          </SelectItem>
+                        ))
+                      }
+                      // Fallback to old logic
+                      return (
+                        <>
+                          <SelectItem value="none">
+                            {t('models.reasoningEffort.none')}
+                          </SelectItem>
+                          <SelectItem value="low">
+                            {t('models.reasoningEffort.low')}
+                          </SelectItem>
+                          <SelectItem value="medium">
+                            {t('models.reasoningEffort.medium')}
+                          </SelectItem>
+                          <SelectItem value="high">
+                            {t('models.reasoningEffort.high')}
+                          </SelectItem>
+                          {(provider === 'anthropic' ||
+                            supportsXhighEffort(modelId)) && (
+                            <SelectItem value="xhigh">
+                              {t('models.reasoningEffort.xhigh')}
+                            </SelectItem>
+                          )}
+                          {(provider === 'anthropic' ||
+                            supportsMaxEffort(modelId)) && (
+                            <SelectItem value="max">
+                              {t('models.reasoningEffort.max')}
+                            </SelectItem>
+                          )}
+                        </>
+                      )
+                    })()}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   {t('models.reasoningEffortHint')}
                 </p>
               </div>
+
+              {provider === 'anthropic' && (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="context1MSupport"
+                    checked={context1MSupport}
+                    onCheckedChange={checked =>
+                      setContext1MSupport(checked === true)
+                    }
+                  />
+                  <Label htmlFor="context1MSupport" className="cursor-pointer">
+                    {t('models.context1MSupport')}
+                  </Label>
+                </div>
+              )}
+              {provider === 'anthropic' && context1MSupport && (
+                <p className="text-xs text-muted-foreground -mt-2">
+                  {t('models.context1MSupportHint')}
+                </p>
+              )}
 
               {/* Advanced Options (extraArgs / extraHeaders) */}
               <button
@@ -556,10 +920,34 @@ function ModelForm({
                       className="font-mono text-sm"
                     />
                     {!extraArgsValid && (
-                      <p className="text-sm text-destructive">
-                        {t('models.invalidJson')}
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-sm text-destructive">
+                          {t('models.invalidJsonWithError', {
+                            error: extraArgsValidation.error,
+                          })}
+                        </p>
+                        {extraArgsValidation.hasSmartQuotes && (
+                          <p className="text-xs text-amber-600 dark:text-amber-500">
+                            {t('models.smartQuotesHint')}
+                          </p>
+                        )}
+                      </div>
                     )}
+                    {isOpus47(modelId) &&
+                      extraArgsValid &&
+                      (() => {
+                        const parsed = parseJsonSafe(extraArgs)
+                        if (!parsed) return null
+                        const hasForbidden =
+                          'temperature' in parsed ||
+                          'top_p' in parsed ||
+                          'top_k' in parsed
+                        return hasForbidden ? (
+                          <p className="text-xs text-amber-600 dark:text-amber-500">
+                            {t('models.opus47.samplingWarning')}
+                          </p>
+                        ) : null
+                      })()}
                     <p className="text-xs text-muted-foreground">
                       {t('models.extraArgsHint')}
                     </p>
@@ -577,9 +965,18 @@ function ModelForm({
                       className="font-mono text-sm"
                     />
                     {!extraHeadersValid && (
-                      <p className="text-sm text-destructive">
-                        {t('models.invalidJson')}
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-sm text-destructive">
+                          {t('models.invalidJsonWithError', {
+                            error: extraHeadersValidation.error,
+                          })}
+                        </p>
+                        {extraHeadersValidation.hasSmartQuotes && (
+                          <p className="text-xs text-amber-600 dark:text-amber-500">
+                            {t('models.smartQuotesHint')}
+                          </p>
+                        )}
+                      </div>
                     )}
                     <p className="text-xs text-muted-foreground">
                       {t('models.extraHeadersHint')}

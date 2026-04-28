@@ -5,6 +5,7 @@ import path, { resolve } from 'path'
 import packageJson from './package.json'
 
 const host = process.env.TAURI_DEV_HOST
+const port = parseInt(process.env.TAURI_DEV_PORT || '1420', 10)
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -41,16 +42,16 @@ export default defineConfig(async () => ({
   //
   // 1. prevent vite from obscuring rust errors
   clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
+  // 2. tauri expects a fixed port; use TAURI_DEV_PORT env var to customize
   server: {
-    port: 1420,
+    port,
     strictPort: true,
     host: host || false,
     hmr: host
       ? {
           protocol: 'ws',
           host,
-          port: 1421,
+          port: port + 1,
         }
       : undefined,
     watch: {

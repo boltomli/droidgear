@@ -1,10 +1,10 @@
 [
   {
-    "id": "claude-3.5-haiku",
+    "id": "claude-3-5-haiku",
     "name": "Claude 3.5 Haiku",
     "aliases": [
       "claude-3-5-haiku-20241022",
-      "claude-3-5-haiku",
+      "claude-3.5-haiku",
       "claude-3.5-haiku-20241022"
     ],
     "platform": "anthropic-messages",
@@ -12,11 +12,11 @@
     "maxOutputTokens": 8192
   },
   {
-    "id": "claude-3.5-sonnet",
+    "id": "claude-3-5-sonnet",
     "name": "Claude 3.5 Sonnet",
     "aliases": [
       "claude-3-5-sonnet-20241022",
-      "claude-3-5-sonnet",
+      "claude-3.5-sonnet",
       "claude-3.5-sonnet-20241022"
     ],
     "platform": "anthropic-messages",
@@ -24,11 +24,11 @@
     "maxOutputTokens": 64000
   },
   {
-    "id": "claude-3.7-sonnet",
+    "id": "claude-3-7-sonnet",
     "name": "Claude 3.7 Sonnet",
     "aliases": [
       "claude-3-7-sonnet-20250219",
-      "claude-3-7-sonnet",
+      "claude-3.7-sonnet",
       "claude-3.7-sonnet-20250219"
     ],
     "platform": "anthropic-messages",
@@ -52,9 +52,9 @@
     "maxOutputTokens": 4096
   },
   {
-    "id": "claude-haiku-4.5",
+    "id": "claude-haiku-4-5",
     "name": "Claude Haiku 4.5",
-    "aliases": [],
+    "aliases": ["claude-haiku-4.5"],
     "platform": "anthropic-messages",
     "contextWindow": 200000,
     "maxOutputTokens": 64000
@@ -68,25 +68,33 @@
     "maxOutputTokens": 64000
   },
   {
-    "id": "claude-opus-4.1",
+    "id": "claude-opus-4-1",
     "name": "Claude Opus 4.1",
-    "aliases": [],
+    "aliases": ["claude-opus-4.1"],
     "platform": "anthropic-messages",
     "contextWindow": 200000,
     "maxOutputTokens": 64000
   },
   {
-    "id": "claude-opus-4.5",
+    "id": "claude-opus-4-5",
     "name": "Claude Opus 4.5",
-    "aliases": [],
+    "aliases": ["claude-opus-4.5"],
     "platform": "anthropic-messages",
     "contextWindow": 200000,
     "maxOutputTokens": 64000
   },
   {
-    "id": "claude-opus-4.6",
+    "id": "claude-opus-4-6",
     "name": "Claude Opus 4.6",
-    "aliases": [],
+    "aliases": ["claude-opus-4.6"],
+    "platform": "anthropic-messages",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "claude-opus-4-7",
+    "name": "Claude Opus 4.7",
+    "aliases": ["claude-opus-4.7"],
     "platform": "anthropic-messages",
     "contextWindow": 1000000,
     "maxOutputTokens": 128000
@@ -108,17 +116,17 @@
     "maxOutputTokens": 128000
   },
   {
-    "id": "claude-sonnet-4.5",
+    "id": "claude-sonnet-4-5",
     "name": "Claude Sonnet 4.5",
-    "aliases": [],
+    "aliases": ["claude-sonnet-4.5"],
     "platform": "anthropic-messages",
     "contextWindow": 1000000,
     "maxOutputTokens": 64000
   },
   {
-    "id": "claude-sonnet-4.6",
+    "id": "claude-sonnet-4-6",
     "name": "Claude Sonnet 4.6",
-    "aliases": [],
+    "aliases": ["claude-sonnet-4.6"],
     "platform": "anthropic-messages",
     "contextWindow": 1000000,
     "maxOutputTokens": 64000
@@ -162,6 +170,61 @@
     "platform": "openai-completions",
     "contextWindow": 163840,
     "maxOutputTokens": 64000
+  },
+  {
+    "id": "deepseek-v4-flash",
+    "name": "DeepSeek V4 Flash",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 384000
+  },
+  {
+    "id": "deepseek-v4-pro",
+    "name": "DeepSeek V4 Pro",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 384000,
+    "reasoningConfig": {
+      "efforts": ["none", "high", "max"],
+      "encoding": {
+        "openai": {
+          "none": {
+            "extraArgsFragment": { "thinking": { "type": "disabled" } }
+          },
+          "high": {
+            "extraArgsFragment": {
+              "thinking": { "type": "enabled" },
+              "reasoning_effort": "high"
+            }
+          },
+          "max": {
+            "extraArgsFragment": {
+              "thinking": { "type": "enabled" },
+              "reasoning_effort": "max"
+            }
+          }
+        },
+        "anthropic": {
+          "none": {
+            "extraArgsFragment": { "thinking": { "type": "disabled" } }
+          },
+          "high": {
+            "extraArgsFragment": {
+              "thinking": { "type": "enabled" },
+              "output_config": { "effort": "high" }
+            }
+          },
+          "max": {
+            "extraArgsFragment": {
+              "thinking": { "type": "enabled" },
+              "output_config": { "effort": "max" }
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "gemini-1.5-flash",
@@ -348,6 +411,70 @@
     "maxOutputTokens": 64000
   },
   {
+    "id": "gpt-5.3-chat-latest",
+    "name": "GPT-5.3 Chat",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 128000,
+    "maxOutputTokens": 16384
+  },
+  {
+    "id": "gpt-5.3-codex",
+    "name": "GPT-5.3 Codex",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 400000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "gpt-5.3-codex-spark",
+    "name": "GPT-5.3 Codex Spark",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 128000,
+    "maxOutputTokens": 32000
+  },
+  {
+    "id": "gpt-5.4",
+    "name": "GPT-5.4",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 1050000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "gpt-5.4-mini",
+    "name": "GPT-5.4 Mini",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 400000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "gpt-5.4-nano",
+    "name": "GPT-5.4 Nano",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 400000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "gpt-5.4-pro",
+    "name": "GPT-5.4 Pro",
+    "aliases": [],
+    "platform": "openai-responses",
+    "contextWindow": 1050000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "gpt-5.5",
+    "name": "GPT-5.5",
+    "aliases": ["gpt-5.5-2026-04-23"],
+    "platform": "openai-responses",
+    "contextWindow": 1050000,
+    "maxOutputTokens": 128000
+  },
+  {
     "id": "gpt-oss-120b",
     "name": "GPT OSS 120B",
     "aliases": [],
@@ -436,6 +563,38 @@
     "maxOutputTokens": 32000
   },
   {
+    "id": "mimo-v2-omni",
+    "name": "MiMo V2 Omni",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 256000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "mimo-v2-pro",
+    "name": "MiMo V2 Pro",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000
+  },
+  {
+    "id": "mimo-v2.5",
+    "name": "MiMo V2.5",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 131072
+  },
+  {
+    "id": "mimo-v2.5-pro",
+    "name": "MiMo V2.5 Pro",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 131072
+  },
+  {
     "id": "minimax-m2",
     "name": "MiniMax M2",
     "aliases": [],
@@ -454,6 +613,14 @@
   {
     "id": "minimax-m2.5",
     "name": "MiniMax M2.5",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 204800,
+    "maxOutputTokens": 131072
+  },
+  {
+    "id": "minimax-m2.7",
+    "name": "MiniMax M2.7",
     "aliases": [],
     "platform": "openai-completions",
     "contextWindow": 204800,
@@ -593,6 +760,22 @@
     "aliases": [],
     "platform": "openai-completions",
     "contextWindow": 204800,
+    "maxOutputTokens": 131072
+  },
+  {
+    "id": "glm-5-turbo",
+    "name": "GLM 5 Turbo",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 200000,
+    "maxOutputTokens": 131072
+  },
+  {
+    "id": "glm-5.1",
+    "name": "GLM 5.1",
+    "aliases": [],
+    "platform": "openai-completions",
+    "contextWindow": 200000,
     "maxOutputTokens": 131072
   },
   {
