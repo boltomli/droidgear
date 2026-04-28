@@ -2,7 +2,7 @@
 
 [中文](README.md)
 
-A desktop enhancement tool for [Factory Droid](https://factory.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai).
+A desktop enhancement tool for [Factory Droid](https://factory.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev).
 
 Supports custom AI models (BYOK), embedded terminal, session & specs management, MCP server configuration, and more.
 
@@ -89,6 +89,13 @@ Run the installer directly.
 - **Configuration Management** - Hermes Agent YAML profile management
 - **Channel Import** - Import Hermes Agent configuration from channels
 
+### Pi Support
+
+- **Pi Coding Agent Integration** - Pi (pi.dev) custom model configuration management
+- **Provider/Model Management** - Support configuring multiple providers and their models (baseUrl, api, apiKey, headers, compat, etc.)
+- **Profile Management** - Multi-profile support with one-click apply to `~/.pi/agent/models.json`
+- **Live Config Reading** - Load existing configuration from Pi's live config
+
 ### Other Features
 
 - **Auto Update** - Version check, auto update notification and download progress
@@ -107,6 +114,7 @@ Download the `droidgear-tui` binary for your platform from [Releases](https://gi
 - macOS (Apple Silicon): `droidgear-tui-*-aarch64-apple-darwin.tar.gz`
 - macOS (Intel): `droidgear-tui-*-x86_64-apple-darwin.tar.gz`
 - Linux: `droidgear-tui-*-x86_64-unknown-linux-gnu.tar.gz`
+- Windows: `droidgear-tui-*-x86_64-pc-windows-msvc.zip`
 - Windows: `droidgear-tui-*-x86_64-pc-windows-msvc.zip`
 
 Extract and place the binary in your PATH (e.g., `/usr/local/bin`).
@@ -130,6 +138,7 @@ The TUI version supports the following configuration management features:
 - **Codex Profiles**: Configuration file management, change preview, one-click apply
 - **OpenCode Profiles**: Provider/Auth configuration management
 - **OpenClaw Profiles**: Configuration management and apply
+- **Pi Profiles**: Provider/Model configuration management and apply
 - **Sessions**: Session browsing and management
 - **Paths**: Path override configuration (for server environments)
 - **Channels**: Proxy platform and credential management
@@ -154,6 +163,7 @@ The TUI version shares configuration files with the desktop version:
 - Codex config: `~/.codex/`
 - OpenCode config: `~/.config/opencode/`
 - OpenClaw config: `~/.openclaw/`
+- Pi config: `~/.pi/agent/`
 
 For detailed design documentation, see [docs/developer/tui-design.md](docs/developer/tui-design.md)
 
