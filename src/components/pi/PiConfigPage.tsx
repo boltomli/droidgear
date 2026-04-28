@@ -8,6 +8,7 @@ import {
   Copy,
   Trash2,
   Download,
+  CloudDownload,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,11 @@ import { usePiStore } from '@/store/pi-store'
 import { ConfigStatus } from './ConfigStatus'
 import { ProviderCard } from './ProviderCard'
 import { ProviderDialog } from './ProviderDialog'
+import {
+  PiImportFromChannelDialog,
+  type PiImportResult,
+} from './PiImportFromChannelDialog'
+import type { PiProviderConfig } from '@/lib/bindings'
 
 export function PiConfigPage() {
   const { t } = useTranslation()
@@ -63,6 +69,7 @@ export function PiConfigPage() {
   const applyProfile = usePiStore(state => state.applyProfile)
   const loadFromLiveConfig = usePiStore(state => state.loadFromLiveConfig)
   const deleteProvider = usePiStore(state => state.deleteProvider)
+  const addProvider = usePiStore(state => state.addProvider)
   const saveProfile = usePiStore(state => state.saveProfile)
   const setError = usePiStore(state => state.setError)
 
@@ -71,6 +78,7 @@ export function PiConfigPage() {
     null
   )
   const [deleteProviderId, setDeleteProviderId] = useState<string | null>(null)
+  const [importFromChannelOpen, setImportFromChannelOpen] = useState(false)
   const [showApplyConfirm, setShowApplyConfirm] = useState(false)
   const [showDeleteProfileConfirm, setShowDeleteProfileConfirm] =
     useState(false)
@@ -164,6 +172,21 @@ export function PiConfigPage() {
       deleteProvider(deleteProviderId)
       setDeleteProviderId(null)
     }
+  }
+
+  const handleImportFromChannel = async (result: PiImportResult) => {
+    const config: PiProviderConfig = {
+      baseUrl: result.baseUrl,
+      api: result.api,
+      apiKey: result.apiKey,
+      headers: null,
+      authHeader: null,
+      models: result.models,
+      modelOverrides: null,
+      compat: null,
+    }
+    await addProvider(result.providerId, config)
+    toast.success(t('pi.provider.importDialog.imported'))
   }
 
   const handleProfileFieldBlur = async () => {
@@ -334,6 +357,16 @@ export function PiConfigPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => setImportFromChannelOpen(true)}
+                  disabled={!currentProfile}
+                  title={t('pi.provider.importFromChannel')}
+                >
+                  <CloudDownload className="h-4 w-4 mr-2" />
+                  {t('pi.provider.importFromChannel')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleAddProvider}
                   disabled={!currentProfile}
                 >
@@ -494,6 +527,16 @@ export function PiConfigPage() {
         onOpenChange={setProviderDialogOpen}
         editingProviderId={editingProviderId}
         currentProfile={currentProfile}
+      />
+
+      {/* Import from Channel Dialog */}
+      <PiImportFromChannelDialog
+        open={importFromChannelOpen}
+        onOpenChange={setImportFromChannelOpen}
+        onImported={handleImportFromChannel}
+        existingProviderIds={
+          currentProfile?.providers ? Object.keys(currentProfile.providers) : []
+        }
       />
 
       {/* Delete Provider Confirmation */}
