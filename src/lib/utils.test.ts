@@ -85,26 +85,26 @@ describe('supportsXhighEffort', () => {
 })
 
 describe('getDefaultMaxOutputTokens', () => {
-  it('uses 64k for Opus 4.7 at xhigh/max effort', () => {
-    expect(getDefaultMaxOutputTokens('claude-opus-4.7', 'xhigh')).toBe(64000)
-    expect(getDefaultMaxOutputTokens('claude-opus-4.7', 'max')).toBe(64000)
-    expect(getDefaultMaxOutputTokens('claude-opus-4-7', 'max')).toBe(64000)
+  it('uses registry value for Opus 4.7 regardless of effort', () => {
+    expect(getDefaultMaxOutputTokens('claude-opus-4.7', 'xhigh')).toBe(128000)
+    expect(getDefaultMaxOutputTokens('claude-opus-4.7', 'max')).toBe(128000)
+    expect(getDefaultMaxOutputTokens('claude-opus-4-7', 'max')).toBe(128000)
   })
 
-  it('uses 32k for Opus 4.7 at lower efforts', () => {
-    expect(getDefaultMaxOutputTokens('claude-opus-4.7')).toBe(32000)
-    expect(getDefaultMaxOutputTokens('claude-opus-4.7', 'none')).toBe(32000)
-    expect(getDefaultMaxOutputTokens('claude-opus-4.7', 'high')).toBe(32000)
+  it('uses registry value for Opus 4.7 at lower efforts', () => {
+    expect(getDefaultMaxOutputTokens('claude-opus-4.7')).toBe(128000)
+    expect(getDefaultMaxOutputTokens('claude-opus-4.7', 'none')).toBe(128000)
+    expect(getDefaultMaxOutputTokens('claude-opus-4.7', 'high')).toBe(128000)
   })
 
-  it('uses 64k for other claude models', () => {
-    expect(getDefaultMaxOutputTokens('claude-opus-4.6')).toBe(64000)
+  it('uses registry values for other claude models', () => {
+    expect(getDefaultMaxOutputTokens('claude-opus-4.6')).toBe(128000)
     expect(getDefaultMaxOutputTokens('claude-sonnet-4.5')).toBe(64000)
   })
 
-  it('uses 16384 for non-claude models', () => {
-    expect(getDefaultMaxOutputTokens('gpt-5.2')).toBe(16384)
-    expect(getDefaultMaxOutputTokens('gemini-2.5-pro')).toBe(16384)
+  it('uses registry values for non-claude models', () => {
+    expect(getDefaultMaxOutputTokens('gpt-5.2')).toBe(128000)
+    expect(getDefaultMaxOutputTokens('gemini-2.5-pro')).toBe(64000)
   })
 })
 

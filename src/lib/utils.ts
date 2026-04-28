@@ -116,13 +116,23 @@ export const DROID_OFFICIAL_MODEL_NAMES = [
   'GPT-5.1-Codex',
   'GPT-5.1-Codex-Max',
   'GPT-5.2',
+  'GPT-5.3-Codex',
+  'GPT-5.5',
   'Sonnet 4.5',
+  'Sonnet 4.6',
   'Opus 4.5',
+  'Opus 4.6',
+  'Opus 4.6 Fast Mode',
+  'Opus 4.7',
   'Haiku 4.5',
   'Gemini 3 Pro',
   'Gemini 3 Flash',
+  'Gemini 3.1 Pro',
   'GLM-4.6',
   'GLM-4.7',
+  'GLM-5.1',
+  'Kimi K2.6',
+  'MiniMax M2.7',
 ]
 
 export function isOfficialModelName(value: string): boolean {
