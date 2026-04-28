@@ -23,6 +23,7 @@ import {
 import { providerColors, providerLabels } from '@/lib/platform-colors'
 import type { CustomModel } from '@/lib/bindings'
 import { useConnectivityStore } from '@/store/connectivity-store'
+import { findModelByIdOrAlias } from '@/lib/model-registry'
 
 interface ModelCardProps {
   model: CustomModel
@@ -186,22 +187,38 @@ export function ModelCard({
         </div>
         {(() => {
           const reasoningEffortRaw =
-            model.extraArgs?.reasoning &&
+            (model.extraArgs?.reasoning &&
             typeof model.extraArgs.reasoning === 'object' &&
             !Array.isArray(model.extraArgs.reasoning) &&
             model.extraArgs.reasoning !== null
               ? (model.extraArgs.reasoning as Record<string, unknown>).effort
-              : undefined
+              : undefined) ??
+            (model.extraArgs?.output_config &&
+            typeof model.extraArgs.output_config === 'object' &&
+            !Array.isArray(model.extraArgs.output_config) &&
+            model.extraArgs.output_config !== null
+              ? (model.extraArgs.output_config as Record<string, unknown>)
+                  .effort
+              : undefined)
           const reasoningEffort =
             typeof reasoningEffortRaw === 'string'
               ? reasoningEffortRaw
               : undefined
           const hasOtherExtraArgs =
             model.extraArgs &&
-            Object.keys(model.extraArgs).some(k => k !== 'reasoning')
+            Object.keys(model.extraArgs).some(
+              k => k !== 'reasoning' && k !== 'output_config'
+            )
           const hasExtraHeaders = !!model.extraHeaders
+          const registryEntry = findModelByIdOrAlias(model.model)
+          const is1MContext = (registryEntry?.contextWindow ?? 0) >= 1_000_000
 
-          if (!reasoningEffort && !hasOtherExtraArgs && !hasExtraHeaders)
+          if (
+            !reasoningEffort &&
+            !hasOtherExtraArgs &&
+            !hasExtraHeaders &&
+            !is1MContext
+          )
             return null
 
           return (
@@ -209,9 +226,21 @@ export function ModelCard({
               {reasoningEffort && (
                 <Badge
                   variant="outline"
-                  className="text-xs px-1.5 py-0 border-purple-400/50 bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                  className={
+                    reasoningEffort === 'max'
+                      ? 'text-xs px-1.5 py-0 border-amber-400/50 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                      : 'text-xs px-1.5 py-0 border-purple-400/50 bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                  }
                 >
                   ✨ {String(reasoningEffort)}
+                </Badge>
+              )}
+              {is1MContext && (
+                <Badge
+                  variant="outline"
+                  className="text-xs px-1.5 py-0 border-blue-400/50 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                >
+                  1M Context
                 </Badge>
               )}
               {hasOtherExtraArgs && (
