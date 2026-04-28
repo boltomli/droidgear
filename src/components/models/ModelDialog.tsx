@@ -278,22 +278,24 @@ function ModelForm({
     delete parsed.thinking
     delete parsed.output_config
 
-    // Registry whitelist takes priority
-    const encoding = getEffortEncoding(nextModelId, nextProvider, nextEffort)
-    if (encoding) {
-      Object.assign(parsed, encoding)
-      if (isOpus47(nextModelId)) {
-        delete parsed.temperature
-        delete parsed.top_p
-        delete parsed.top_k
+    // When reasoning effort is 'none', don't inject any encoding.
+    // This respects the user's explicit choice to clear extraArgs.
+    if (nextEffort !== 'none') {
+      // Registry whitelist takes priority
+      const encoding = getEffortEncoding(nextModelId, nextProvider, nextEffort)
+      if (encoding) {
+        Object.assign(parsed, encoding)
+        if (isOpus47(nextModelId)) {
+          delete parsed.temperature
+          delete parsed.top_p
+          delete parsed.top_k
+        }
+        return Object.keys(parsed).length > 0
+          ? JSON.stringify(parsed, null, 2)
+          : ''
       }
-      return Object.keys(parsed).length > 0
-        ? JSON.stringify(parsed, null, 2)
-        : ''
-    }
 
-    // Fallback to old logic
-    if (nextEffort && nextEffort !== 'none') {
+      // Fallback to old logic
       if (
         nextProvider === 'anthropic' &&
         isAnthropicAdaptiveThinkingModel(nextModelId)
@@ -314,12 +316,6 @@ function ModelForm({
       } else {
         parsed.reasoning = { effort: nextEffort }
       }
-    } else if (
-      nextProvider === 'anthropic' &&
-      !nextModelId.startsWith('claude-') &&
-      nextModelId
-    ) {
-      parsed.thinking = { type: 'disabled' }
     }
     if (isOpus47(nextModelId)) {
       delete parsed.temperature
@@ -514,20 +510,22 @@ function ModelForm({
     delete parsed.thinking
     delete parsed.output_config
 
-    // Registry whitelist takes priority
-    const encoding = getEffortEncoding(modelId, provider, reasoningEffort)
-    if (encoding) {
-      Object.assign(parsed, encoding)
-      if (isOpus47(modelId)) {
-        delete parsed.temperature
-        delete parsed.top_p
-        delete parsed.top_k
+    // When reasoning effort is 'none', don't inject any encoding.
+    // This respects the user's explicit choice to clear extraArgs.
+    if (reasoningEffort !== 'none') {
+      // Registry whitelist takes priority
+      const encoding = getEffortEncoding(modelId, provider, reasoningEffort)
+      if (encoding) {
+        Object.assign(parsed, encoding)
+        if (isOpus47(modelId)) {
+          delete parsed.temperature
+          delete parsed.top_p
+          delete parsed.top_k
+        }
+        return Object.keys(parsed).length > 0 ? parsed : undefined
       }
-      return Object.keys(parsed).length > 0 ? parsed : undefined
-    }
 
-    // Fallback to old logic
-    if (reasoningEffort && reasoningEffort !== 'none') {
+      // Fallback to old logic
       if (
         provider === 'anthropic' &&
         isAnthropicAdaptiveThinkingModel(modelId)
@@ -545,12 +543,6 @@ function ModelForm({
       } else {
         parsed.reasoning = { effort: reasoningEffort }
       }
-    } else if (
-      provider === 'anthropic' &&
-      !modelId.startsWith('claude-') &&
-      modelId
-    ) {
-      parsed.thinking = { type: 'disabled' }
     }
 
     // Opus 4.7 rejects sampling parameters — strip them rather than 400 at runtime.
