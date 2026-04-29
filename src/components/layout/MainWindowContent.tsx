@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { ModelConfigPage } from '@/components/models'
@@ -76,7 +76,7 @@ export function MainWindowContent({
 
     if (currentView === 'droid') {
       return (
-        <div key={droidRefreshKey}>
+        <Fragment key={droidRefreshKey}>
           {droidSubView === 'models' && <ModelConfigPage />}
           {droidSubView === 'specs' && <SpecsPage />}
           {droidSubView === 'mcp' && <McpPage />}
@@ -84,7 +84,7 @@ export function MainWindowContent({
           {droidSubView === 'settings' && <DroidSettingsPage />}
           {droidSubView === 'missions' && <MissionsPage />}
           {droidSubView === 'legacy-versions' && <LegacyVersionsPage />}
-        </div>
+        </Fragment>
       )
     }
 

@@ -23,7 +23,6 @@ import {
 import { providerColors, providerLabels } from '@/lib/platform-colors'
 import type { CustomModel } from '@/lib/bindings'
 import { useConnectivityStore } from '@/store/connectivity-store'
-import { findModelByIdOrAlias } from '@/lib/model-registry'
 
 interface ModelCardProps {
   model: CustomModel
@@ -210,8 +209,10 @@ export function ModelCard({
               k => k !== 'reasoning' && k !== 'output_config'
             )
           const hasExtraHeaders = !!model.extraHeaders
-          const registryEntry = findModelByIdOrAlias(model.model)
-          const is1MContext = (registryEntry?.contextWindow ?? 0) >= 1_000_000
+          const is1MContext =
+            model.extraHeaders?.['Anthropic-Beta']?.includes(
+              'context-1m-2025-08-07'
+            ) ?? false
 
           if (
             !reasoningEffort &&

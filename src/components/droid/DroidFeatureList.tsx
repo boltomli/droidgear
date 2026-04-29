@@ -135,7 +135,6 @@ export function DroidFeatureList() {
     if (result.status === 'ok') {
       await fetchSettingsFiles()
       incrementDroidRefreshKey()
-      toast.success(t('common.copied'))
     } else {
       toast.error(t('toast.error.generic'))
     }
