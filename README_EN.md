@@ -2,7 +2,7 @@
 
 [中文](README.md)
 
-A desktop enhancement tool for [Factory Droid](https://factory.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev).
+A desktop enhancement tool for [Factory Droid](https://factory.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev) / [Zed](https://zed.dev).
 
 Supports custom AI models (BYOK), embedded terminal, session & specs management, MCP server configuration, and more.
 
@@ -96,6 +96,11 @@ Run the installer directly.
 - **Profile Management** - Multi-profile support with one-click apply to `~/.pi/agent/models.json`
 - **Live Config Reading** - Load existing configuration from Pi's live config
 
+### Zed Support
+
+- **Zed Editor Integration** - Zed (zed.dev) editor integration
+- **Provider Configuration Management** - Manage Zed's OpenAI-compatible provider configuration (`~/.config/zed/settings.json`)
+
 ### Other Features
 
 - **Auto Update** - Version check, auto update notification and download progress
@@ -139,6 +144,7 @@ The TUI version supports the following configuration management features:
 - **OpenCode Profiles**: Provider/Auth configuration management
 - **OpenClaw Profiles**: Configuration management and apply
 - **Pi Profiles**: Provider/Model configuration management and apply
+- **Zed Profiles**: OpenAI-compatible provider configuration management
 - **Sessions**: Session browsing and management
 - **Paths**: Path override configuration (for server environments)
 - **Channels**: Proxy platform and credential management
@@ -164,6 +170,7 @@ The TUI version shares configuration files with the desktop version:
 - OpenCode config: `~/.config/opencode/`
 - OpenClaw config: `~/.openclaw/`
 - Pi config: `~/.pi/agent/`
+- Zed config: `~/.config/zed/settings.json`
 
 For detailed design documentation, see [docs/developer/tui-design.md](docs/developer/tui-design.md)
 

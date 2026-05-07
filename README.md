@@ -2,7 +2,7 @@
 
 [English](README_EN.md)
 
-[Factory Droid](https://factory.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev) 的桌面增强管理工具。
+[Factory Droid](https://factory.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev) / [Zed](https://zed.dev) 的桌面增强管理工具。
 
 支持自定义 AI 模型（BYOK）、嵌入式终端、会话与 Specs 管理、MCP 服务器配置等。
 
@@ -96,6 +96,11 @@ xattr -cr /Applications/DroidGear.app
 - **Profile 管理** - 多 Profile 支持，一键应用到 `~/.pi/agent/models.json`
 - **实时配置读取** - 支持从 Pi 的 live config 加载现有配置
 
+### Zed 支持
+
+- **Zed 编辑器集成** - Zed（zed.dev）编辑器集成
+- **Provider 配置管理** - 管理 Zed 的 OpenAI 兼容 Provider 配置（`~/.config/zed/settings.json`）
+
 ### 其他功能
 
 - **自动更新** - 版本检查、自动更新提示和下载进度显示
@@ -138,6 +143,7 @@ TUI 版本支持以下配置管理功能：
 - **OpenCode Profile**：Provider/Auth 配置管理
 - **OpenClaw Profile**：配置管理与应用
 - **Pi Profile**：Provider/Model 配置管理与应用
+- **Zed Profile**：OpenAI 兼容 Provider 配置管理
 - **Sessions**：会话浏览与管理
 - **Paths**：路径覆盖配置（适配服务器环境）
 - **Channels**：代理平台与凭据管理
@@ -163,6 +169,7 @@ TUI 版本与桌面版共享配置文件：
 - OpenCode 配置：`~/.config/opencode/`
 - OpenClaw 配置：`~/.openclaw/`
 - Pi 配置：`~/.pi/agent/`
+- Zed 配置：`~/.config/zed/settings.json`
 
 详细设计文档见 [docs/developer/tui-design.md](docs/developer/tui-design.md)
 
