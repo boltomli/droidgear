@@ -3360,7 +3360,12 @@ fn draw_zed_provider(frame: &mut Frame, app: &app::App, area: Rect) {
     let models_list = List::new(model_items)
         .block(block("Models"))
         .highlight_style(t.selected_row_style());
-    render_list(frame, models_list, chunks[1], None);
+    let models_selected = if app.zed_provider_field_index >= 2 {
+        Some(app.zed_provider_field_index - 2)
+    } else {
+        None
+    };
+    render_list(frame, models_list, chunks[1], models_selected);
 
     let help = help_paragraph(
         "Up/Down: move  Enter/e: edit field  n: add model  m: edit model  d: delete model  q/Esc: back",

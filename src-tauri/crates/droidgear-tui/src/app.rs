@@ -1176,8 +1176,18 @@ impl App {
         if self.zed_provider_index >= zed_detail_provider_count {
             self.zed_provider_index = zed_detail_provider_count.saturating_sub(1);
         }
-        // ZedProvider fields: 2 (Provider Name, API URL)
-        let zed_provider_fields_count = 2;
+        // ZedProvider fields: 2 (Provider Name, API URL) + model rows
+        let zed_model_count = self
+            .zed_detail
+            .as_ref()
+            .and_then(|p| {
+                self.zed_current_provider_id()
+                    .and_then(|pid| p.providers.get(&pid))
+                    .and_then(|cfg| cfg.available_models.as_ref())
+                    .map(|models| models.len())
+            })
+            .unwrap_or(0);
+        let zed_provider_fields_count = 2 + zed_model_count;
         if self.zed_provider_field_index >= zed_provider_fields_count {
             self.zed_provider_field_index = zed_provider_fields_count.saturating_sub(1);
         }
