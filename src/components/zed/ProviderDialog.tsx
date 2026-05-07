@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { SecretInput } from '@/components/ui/secret-input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ import type {
   ZedProviderConfig,
   ZedModel,
   CustomModel,
+  ZedModelCapabilities,
 } from '@/lib/bindings'
 import { ChannelModelPickerDialog } from '@/components/channels/ChannelModelPickerDialog'
 import type { ChannelProviderContext } from '@/components/channels'
@@ -66,6 +68,16 @@ function ModelItem({ model, onEdit, onDelete }: ModelItemProps) {
           {model.maxTokens != null && (
             <Badge variant="secondary" className="text-xs">
               Max: {model.maxTokens.toLocaleString()}
+            </Badge>
+          )}
+          {model.capabilities?.tools && (
+            <Badge variant="outline" className="text-xs">
+              {t('zed.model.tools')}
+            </Badge>
+          )}
+          {model.capabilities?.images && (
+            <Badge variant="outline" className="text-xs">
+              {t('zed.model.images')}
             </Badge>
           )}
         </div>
@@ -119,6 +131,8 @@ function ModelEditDialog({
   const [modelName, setModelName] = useState(model?.name ?? '')
   const [displayName, setDisplayName] = useState(model?.displayName ?? '')
   const [maxTokens, setMaxTokens] = useState(model?.maxTokens?.toString() ?? '')
+  const [tools, setTools] = useState(model?.capabilities?.tools ?? true)
+  const [images, setImages] = useState(model?.capabilities?.images ?? false)
   const [error, setError] = useState('')
 
   const handleSave = () => {
@@ -142,10 +156,13 @@ function ModelEditDialog({
       }
     }
 
+    const capabilities: ZedModelCapabilities = { tools, images }
+
     const newModel: ZedModel = {
       name: trimmed,
       displayName: displayName.trim() || null,
       maxTokens: parsedMaxTokens,
+      capabilities,
     }
 
     onSave(trimmed, newModel)
@@ -198,6 +215,32 @@ function ModelEditDialog({
               placeholder="16384"
               min="0"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('zed.model.capabilities')}</Label>
+            <div className="flex items-center gap-6 pt-1">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="model-tools"
+                  checked={tools}
+                  onCheckedChange={(checked: boolean) => setTools(checked)}
+                />
+                <Label htmlFor="model-tools" className="cursor-pointer">
+                  {t('zed.model.tools')}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="model-images"
+                  checked={images}
+                  onCheckedChange={(checked: boolean) => setImages(checked)}
+                />
+                <Label htmlFor="model-images" className="cursor-pointer">
+                  {t('zed.model.images')}
+                </Label>
+              </div>
+            </div>
           </div>
 
           {error && <div className="text-sm text-destructive">{error}</div>}
@@ -273,6 +316,10 @@ function ProviderForm({
         name: m.model,
         displayName: m.displayName || null,
         maxTokens: m.maxOutputTokens ?? null,
+        capabilities: {
+          tools: true,
+          images: !(m.noImageSupport ?? true),
+        },
       }))
       setModels(zedModels)
     }

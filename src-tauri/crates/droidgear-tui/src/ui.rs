@@ -397,6 +397,9 @@ fn draw_main(frame: &mut Frame, app: &app::App, area: Rect) {
         app::Screen::Hermes => draw_hermes_profiles(frame, app, area),
         app::Screen::HermesProfile => draw_hermes_profile(frame, app, area),
         app::Screen::HermesProvider => draw_hermes_provider(frame, app, area),
+        app::Screen::Zed => draw_zed_profiles(frame, app, area),
+        app::Screen::ZedProfile => draw_zed_profile(frame, app, area),
+        app::Screen::ZedProvider => draw_zed_provider(frame, app, area),
         app::Screen::Sessions => draw_sessions(frame, app, area),
         app::Screen::Specs => draw_specs(frame, app, area),
         app::Screen::Channels => draw_channels(frame, app, area),
@@ -3140,4 +3143,226 @@ fn draw_hermes_provider(frame: &mut Frame, app: &app::App, area: Rect) {
     let help =
         help_paragraph("Up/Down: select  Enter/e: edit  i: import from channel  q/Esc: back");
     frame.render_widget(help, chunks[1]);
+}
+
+// ============================================================================
+// Zed UI
+// ============================================================================
+
+fn draw_zed_profiles(frame: &mut Frame, app: &app::App, area: Rect) {
+    let active = app.zed_active_id.as_deref();
+    let selected_index = app.zed_index;
+    draw_profile_list(
+        frame,
+        area,
+        "Zed Profiles",
+        app.zed_profiles
+            .iter()
+            .map(|p| (p.name.as_str(), p.id.as_str())),
+        active,
+        selected_index,
+        "Up/Down: select  Enter/e: open  a: apply  n: new  c: copy  d: delete  r: refresh  q/Esc: back",
+    );
+}
+
+fn draw_zed_profile(frame: &mut Frame, app: &app::App, area: Rect) {
+    let t = theme();
+    let Some(profile) = app.zed_detail.as_ref() else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "Failed to load profile",
+            t.error_style(),
+        ))])
+        .block(block("Zed Profile"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+
+    let fields_count = 2usize; // Name, Description
+    let in_fields = app.zed_detail_field_index < fields_count;
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Length(4),
+                Constraint::Min(0),
+                Constraint::Length(2),
+            ]
+            .as_ref(),
+        )
+        .split(area);
+
+    // Fields section
+    let fields: Vec<(&str, String)> = vec![
+        ("Name", profile.name.clone()),
+        (
+            "Description",
+            profile
+                .description
+                .clone()
+                .unwrap_or_else(|| "".to_string()),
+        ),
+    ];
+
+    let mut field_items: Vec<ListItem> = Vec::new();
+    for (i, (label, value)) in fields.into_iter().enumerate() {
+        let selected = in_fields && i == app.zed_detail_field_index;
+        let line = if selected {
+            Line::from(format!("{label:>14}: {value}"))
+        } else {
+            field_line(label, &value, 14)
+        };
+        field_items.push(ListItem::new(line));
+    }
+    let field_selected = in_fields.then_some(app.zed_detail_field_index);
+    let field_list = List::new(field_items)
+        .block(block(format!("Zed Profile: {}", profile.name)))
+        .highlight_style(t.selected_row_style());
+    render_list(frame, field_list, chunks[0], field_selected);
+
+    // Providers section
+    let mut provider_ids: Vec<String> = profile.providers.keys().cloned().collect();
+    provider_ids.sort_by_key(|a| a.to_lowercase());
+
+    let mut provider_items: Vec<ListItem> = Vec::new();
+    for pid in provider_ids.iter() {
+        let provider = profile.providers.get(pid);
+        let model_count = provider
+            .and_then(|c| c.available_models.as_ref())
+            .map(|m| m.len())
+            .unwrap_or(0);
+        let api_url = provider.map(|c| c.api_url.as_str()).unwrap_or("");
+        provider_items.push(ListItem::new(Line::from(vec![
+            Span::raw(pid.clone()),
+            Span::styled(format!("  ({model_count} models)"), t.dim_style()),
+            Span::styled(format!("  {api_url}"), t.placeholder_style()),
+        ])));
+    }
+    if provider_items.is_empty() {
+        provider_items.push(ListItem::new(Line::from(Span::styled(
+            "No providers",
+            t.placeholder_style(),
+        ))));
+    }
+    let provider_highlight = if !in_fields && !provider_ids.is_empty() {
+        Some(app.zed_detail_field_index - fields_count)
+    } else {
+        None
+    };
+    let provider_list = List::new(provider_items)
+        .block(block("Providers"))
+        .highlight_style(t.selected_row_style());
+    render_list(frame, provider_list, chunks[1], provider_highlight);
+
+    let help = help_paragraph(
+        "Up/Down: move  Enter/e: edit field/open provider  p: open provider  l: load live  a: apply  q/Esc: back",
+    );
+    frame.render_widget(help, chunks[2]);
+}
+
+fn draw_zed_provider(frame: &mut Frame, app: &app::App, area: Rect) {
+    let t = theme();
+    let Some(profile) = app.zed_detail.as_ref() else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "Failed to load profile",
+            t.error_style(),
+        ))])
+        .block(block("Zed Provider"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+    let Some(provider_id) = app.zed_current_provider_id() else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "No provider selected",
+            t.warning_style(),
+        ))])
+        .block(block("Zed Provider"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+    let Some(config) = profile.providers.get(&provider_id) else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "Provider not found",
+            t.error_style(),
+        ))])
+        .block(block("Zed Provider"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Length(4),
+                Constraint::Min(0),
+                Constraint::Length(2),
+            ]
+            .as_ref(),
+        )
+        .split(area);
+
+    let provider_fields: Vec<(&str, String)> = vec![
+        ("Provider Name", provider_id.clone()),
+        ("API URL", config.api_url.clone()),
+    ];
+
+    let mut field_items: Vec<ListItem> = Vec::new();
+    for (i, (label, value)) in provider_fields.into_iter().enumerate() {
+        let selected = i == app.zed_provider_field_index;
+        let line = if selected {
+            Line::from(format!("{label:>16}: {value}"))
+        } else {
+            field_line(label, &value, 16)
+        };
+        field_items.push(ListItem::new(line));
+    }
+    let fields_list = List::new(field_items)
+        .block(block(format!("Zed Provider: {provider_id}")))
+        .highlight_style(t.selected_row_style());
+    render_list(
+        frame,
+        fields_list,
+        chunks[0],
+        Some(app.zed_provider_field_index),
+    );
+
+    // Models section
+    let mut model_items: Vec<ListItem> = Vec::new();
+    if let Some(models) = &config.available_models {
+        for m in models.iter() {
+            let display = m
+                .display_name
+                .as_ref()
+                .map(|d| format!("{} ({})", d, m.name))
+                .unwrap_or_else(|| m.name.clone());
+            let max_tokens = m
+                .max_tokens
+                .map(|t| format!("  max_tokens: {t}"))
+                .unwrap_or_default();
+            model_items.push(ListItem::new(Line::from(vec![
+                Span::raw(display),
+                Span::styled(max_tokens, t.dim_style()),
+            ])));
+        }
+    }
+    if model_items.is_empty() {
+        model_items.push(ListItem::new(Line::from(Span::styled(
+            "No models",
+            t.placeholder_style(),
+        ))));
+    }
+    let models_list = List::new(model_items)
+        .block(block("Models"))
+        .highlight_style(t.selected_row_style());
+    render_list(frame, models_list, chunks[1], None);
+
+    let help = help_paragraph(
+        "Up/Down: move  Enter/e: edit field  n: add model  m: edit model  q/Esc: back",
+    );
+    frame.render_widget(help, chunks[2]);
 }

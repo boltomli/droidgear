@@ -17,6 +17,16 @@ use crate::{paths, storage};
 // Types
 // ============================================================================
 
+/// Model capabilities (tools + images support)
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ZedModelCapabilities {
+    /// Whether tool/function calling is supported
+    pub tools: bool,
+    /// Whether image input is supported
+    pub images: bool,
+}
+
 /// A single model within a Zed provider
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +36,9 @@ pub struct ZedModel {
     pub display_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_tokens: Option<u32>,
+    /// Model capabilities (tools + images). Defaults to None.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capabilities: Option<ZedModelCapabilities>,
 }
 
 /// A provider configuration for Zed's openai_compatible format
@@ -490,6 +503,12 @@ pub fn read_zed_current_config_for_home(home_dir: &Path) -> Result<ZedCurrentCon
                             arr.iter()
                                 .filter_map(|m| {
                                     let name = m.get("name").and_then(|n| n.as_str())?;
+                                    let capabilities = m.get("capabilities").and_then(|c| {
+                                        Some(ZedModelCapabilities {
+                                            tools: c.get("tools")?.as_bool().unwrap_or(false),
+                                            images: c.get("images")?.as_bool().unwrap_or(false),
+                                        })
+                                    });
                                     Some(ZedModel {
                                         name: name.to_string(),
                                         display_name: m
@@ -500,6 +519,7 @@ pub fn read_zed_current_config_for_home(home_dir: &Path) -> Result<ZedCurrentCon
                                             .get("max_tokens")
                                             .and_then(|t| t.as_u64())
                                             .map(|t| t as u32),
+                                        capabilities,
                                     })
                                 })
                                 .collect::<Vec<_>>()
@@ -604,11 +624,13 @@ mod tests {
                     name: "gpt-4".to_string(),
                     display_name: Some("GPT-4".to_string()),
                     max_tokens: Some(8192),
+                    capabilities: None,
                 },
                 ZedModel {
                     name: "gpt-3.5-turbo".to_string(),
                     display_name: None,
                     max_tokens: Some(4096),
+                    capabilities: None,
                 },
             ]),
             api_key: Some("sk-test-key".to_string()),
@@ -622,6 +644,7 @@ mod tests {
                 name: "claude-3".to_string(),
                 display_name: None,
                 max_tokens: None,
+                capabilities: None,
             }]),
             api_key: None,
         }
@@ -1253,11 +1276,13 @@ mod tests {
                         name: "model-1".to_string(),
                         display_name: Some("Model One".to_string()),
                         max_tokens: Some(4096),
+                        capabilities: None,
                     },
                     ZedModel {
                         name: "model-2".to_string(),
                         display_name: None,
                         max_tokens: None,
+                        capabilities: None,
                     },
                 ]),
                 api_key: Some("sk-secret".to_string()),

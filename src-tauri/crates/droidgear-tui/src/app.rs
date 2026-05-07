@@ -13,6 +13,7 @@ use droidgear_core::{
     pi::PiProfile,
     sessions::SessionSummary,
     specs::SpecFile,
+    zed::ZedProfile,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,6 +48,9 @@ pub enum Screen {
     Hermes,
     HermesProfile,
     HermesProvider,
+    Zed,
+    ZedProfile,
+    ZedProvider,
     Sessions,
     Specs,
     Channels,
@@ -175,6 +179,16 @@ pub enum ConfirmAction {
     },
     HermesDelete {
         id: String,
+    },
+    ZedApply {
+        id: String,
+    },
+    ZedDelete {
+        id: String,
+    },
+    ZedDeleteProvider {
+        profile_id: String,
+        provider_id: String,
     },
 }
 
@@ -439,6 +453,33 @@ pub enum InputAction {
     HermesImportSetApiKey {
         id: String,
     },
+    ZedCreateProfile,
+    ZedDuplicate {
+        id: String,
+    },
+    ZedSetProfileName {
+        id: String,
+    },
+    ZedSetProfileDescription {
+        id: String,
+    },
+    ZedSetProviderName {
+        profile_id: String,
+        provider_id: String,
+    },
+    ZedSetProviderApiUrl {
+        profile_id: String,
+        provider_id: String,
+    },
+    ZedAddModel {
+        profile_id: String,
+        provider_id: String,
+    },
+    ZedSetModelName {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -626,6 +667,15 @@ pub struct App {
     pub hermes_import_pending_base_url: Option<String>,
     pub hermes_import_pending_provider: Option<String>,
 
+    pub zed_profiles: Vec<ZedProfile>,
+    pub zed_active_id: Option<String>,
+    pub zed_index: usize,
+    pub zed_detail_id: Option<String>,
+    pub zed_detail: Option<ZedProfile>,
+    pub zed_detail_field_index: usize,
+    pub zed_provider_index: usize,
+    pub zed_provider_field_index: usize,
+
     pub sessions: Vec<SessionSummary>,
     pub sessions_index: usize,
 
@@ -737,6 +787,14 @@ impl App {
             hermes_provider_field_index: 0,
             hermes_import_pending_base_url: None,
             hermes_import_pending_provider: None,
+            zed_profiles: Vec::new(),
+            zed_active_id: None,
+            zed_index: 0,
+            zed_detail_id: None,
+            zed_detail: None,
+            zed_detail_field_index: 0,
+            zed_provider_index: 0,
+            zed_provider_field_index: 0,
             sessions: Vec::new(),
             sessions_index: 0,
             specs: Vec::new(),
@@ -769,6 +827,7 @@ impl App {
             ("OpenClaw", Screen::OpenClaw),
             ("Pi", Screen::Pi),
             ("Hermes", Screen::Hermes),
+            ("Zed", Screen::Zed),
             ("Sessions", Screen::Sessions),
             ("Specs", Screen::Specs),
             ("Channels", Screen::Channels),
@@ -793,6 +852,14 @@ impl App {
         let mut keys: Vec<String> = detail.providers.keys().cloned().collect();
         keys.sort_by_key(|a| a.to_lowercase());
         keys.get(self.pi_provider_index).cloned()
+    }
+
+    /// Get the provider ID at the current zed_provider_index.
+    pub fn zed_current_provider_id(&self) -> Option<String> {
+        let detail = self.zed_detail.as_ref()?;
+        let mut keys: Vec<String> = detail.providers.keys().cloned().collect();
+        keys.sort_by_key(|a| a.to_lowercase());
+        keys.get(self.zed_provider_index).cloned()
     }
 
     pub fn current_paths_key(&self) -> Option<String> {
@@ -1071,6 +1138,28 @@ impl App {
         let hermes_provider_fields_count = 4;
         if self.hermes_provider_field_index >= hermes_provider_fields_count {
             self.hermes_provider_field_index = hermes_provider_fields_count.saturating_sub(1);
+        }
+        if self.zed_index >= self.zed_profiles.len() {
+            self.zed_index = self.zed_profiles.len().saturating_sub(1);
+        }
+        // ZedProfile screen: 2 fields (Name, Description) + providers list
+        let zed_detail_provider_count = self
+            .zed_detail
+            .as_ref()
+            .map(|p| p.providers.len())
+            .unwrap_or(0);
+        let zed_detail_total = 2 + zed_detail_provider_count;
+        if zed_detail_total > 0 && self.zed_detail_field_index >= zed_detail_total {
+            self.zed_detail_field_index = zed_detail_total.saturating_sub(1);
+        }
+        // ZedProvider screen: providers count from detail
+        if self.zed_provider_index >= zed_detail_provider_count {
+            self.zed_provider_index = zed_detail_provider_count.saturating_sub(1);
+        }
+        // ZedProvider fields: 2 (Provider Name, API URL)
+        let zed_provider_fields_count = 2;
+        if self.zed_provider_field_index >= zed_provider_fields_count {
+            self.zed_provider_field_index = zed_provider_fields_count.saturating_sub(1);
         }
     }
 }

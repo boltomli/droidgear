@@ -2299,9 +2299,13 @@ export type ZedConfigStatus = { configExists: boolean; hasOpenaiCompatible: bool
  */
 export type ZedCurrentConfig = { providers?: Partial<{ [key in string]: ZedProviderConfig }> }
 /**
+ * Zed Editor — 模型能力配置
+ */
+export type ZedModelCapabilities = { tools: boolean; images: boolean }
+/**
  * Zed Editor — 模型配置
  */
-export type ZedModel = { name: string; displayName?: string | null; maxTokens?: number | null }
+export type ZedModel = { name: string; displayName?: string | null; maxTokens?: number | null; capabilities?: ZedModelCapabilities | null }
 /**
  * Zed Editor — Profile 配置
  */
