@@ -322,9 +322,12 @@ export const useZedStore = create<ZedState>()(
         const { currentProfile } = get()
         if (!currentProfile) return
         const { [id]: _removed, ...providers } = currentProfile.providers ?? {}
+        const { [id]: _removedApiKey, ...apiKeys } =
+          currentProfile.apiKeys ?? {}
         const updated: ZedProfile = {
           ...currentProfile,
           providers,
+          apiKeys: Object.keys(apiKeys).length > 0 ? apiKeys : null,
           updatedAt: new Date().toISOString(),
         }
         set({ currentProfile: updated }, undefined, 'zed/deleteProvider')
