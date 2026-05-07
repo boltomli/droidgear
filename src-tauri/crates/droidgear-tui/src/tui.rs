@@ -4487,6 +4487,94 @@ fn handle_zed_model_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
                     },
                 });
             }
+            3 => {
+                app.modal = Some(app::Modal::Input {
+                    title: "Model max output tokens".to_string(),
+                    value: model
+                        .max_output_tokens
+                        .map(|t| t.to_string())
+                        .unwrap_or_default(),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::ZedSetModelMaxOutputTokens {
+                        profile_id: profile_id.clone(),
+                        provider_id: provider_id.clone(),
+                        model_index: app.zed_model_index,
+                    },
+                });
+            }
+            4 => {
+                app.modal = Some(app::Modal::Input {
+                    title: "Model max completion tokens".to_string(),
+                    value: model
+                        .max_completion_tokens
+                        .map(|t| t.to_string())
+                        .unwrap_or_default(),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::ZedSetModelMaxCompletionTokens {
+                        profile_id: profile_id.clone(),
+                        provider_id: provider_id.clone(),
+                        model_index: app.zed_model_index,
+                    },
+                });
+            }
+            // Toggle fields: index 5=tools, 6=images, 7=parallel_tool_calls, 8=prompt_cache_key, 9=chat_completions, 10=interleaved_reasoning
+            5..=10 => {
+                let capability = match app.zed_model_field_index {
+                    5 => "tools",
+                    6 => "images",
+                    7 => "parallel_tool_calls",
+                    8 => "prompt_cache_key",
+                    9 => "chat_completions",
+                    10 => "interleaved_reasoning",
+                    _ => unreachable!(),
+                };
+                // Toggle the capability directly
+                let Some(profile) = app.zed_detail.as_mut() else {
+                    return None;
+                };
+                if let Some(config) = profile.providers.get_mut(&provider_id) {
+                    if let Some(models) = config.available_models.as_mut() {
+                        if let Some(model) = models.get_mut(app.zed_model_index) {
+                            let caps = model.capabilities.get_or_insert(
+                                droidgear_core::zed::ZedModelCapabilities {
+                                    tools: true,
+                                    images: false,
+                                    parallel_tool_calls: false,
+                                    prompt_cache_key: false,
+                                    chat_completions: false,
+                                    interleaved_reasoning: false,
+                                },
+                            );
+                            match capability {
+                                "tools" => caps.tools = !caps.tools,
+                                "images" => caps.images = !caps.images,
+                                "parallel_tool_calls" => {
+                                    caps.parallel_tool_calls = !caps.parallel_tool_calls
+                                }
+                                "prompt_cache_key" => {
+                                    caps.prompt_cache_key = !caps.prompt_cache_key
+                                }
+                                "chat_completions" => {
+                                    caps.chat_completions = !caps.chat_completions
+                                }
+                                "interleaved_reasoning" => {
+                                    caps.interleaved_reasoning = !caps.interleaved_reasoning
+                                }
+                                _ => {}
+                            }
+                            // Save
+                            let _ = droidgear_core::zed::save_zed_profile_for_home(
+                                &app.home_dir,
+                                profile.clone(),
+                            );
+                            // Re-read from disk to keep consistent
+                            refresh_zed_detail(app);
+                        }
+                    }
+                }
+            }
             _ => {}
         },
         _ => {}
@@ -8016,6 +8104,8 @@ fn run_input_action(
                     name: trimmed.to_string(),
                     display_name: None,
                     max_tokens: None,
+                    max_output_tokens: None,
+                    max_completion_tokens: None,
                     capabilities: None,
                 };
                 models.push(model);
@@ -8089,6 +8179,60 @@ fn run_input_action(
                 if let Some(models) = config.available_models.as_mut() {
                     if let Some(model) = models.get_mut(model_index) {
                         model.max_tokens = max_tokens;
+                    }
+                }
+            }
+            droidgear_core::zed::save_zed_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            refresh_zed_detail(app);
+            Ok(())
+        }
+        app::InputAction::ZedSetModelMaxOutputTokens {
+            profile_id,
+            provider_id,
+            model_index,
+        } => {
+            let max_output_tokens = if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.parse::<u32>().map_err(|_| {
+                    anyhow::Error::msg("Max output tokens must be a positive integer")
+                })?)
+            };
+            let mut profile =
+                droidgear_core::zed::get_zed_profile_for_home(&app.home_dir, &profile_id)
+                    .map_err(anyhow::Error::msg)?;
+            if let Some(config) = profile.providers.get_mut(&provider_id) {
+                if let Some(models) = config.available_models.as_mut() {
+                    if let Some(model) = models.get_mut(model_index) {
+                        model.max_output_tokens = max_output_tokens;
+                    }
+                }
+            }
+            droidgear_core::zed::save_zed_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            refresh_zed_detail(app);
+            Ok(())
+        }
+        app::InputAction::ZedSetModelMaxCompletionTokens {
+            profile_id,
+            provider_id,
+            model_index,
+        } => {
+            let max_completion_tokens = if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.parse::<u32>().map_err(|_| {
+                    anyhow::Error::msg("Max completion tokens must be a positive integer")
+                })?)
+            };
+            let mut profile =
+                droidgear_core::zed::get_zed_profile_for_home(&app.home_dir, &profile_id)
+                    .map_err(anyhow::Error::msg)?;
+            if let Some(config) = profile.providers.get_mut(&provider_id) {
+                if let Some(models) = config.available_models.as_mut() {
+                    if let Some(model) = models.get_mut(model_index) {
+                        model.max_completion_tokens = max_completion_tokens;
                     }
                 }
             }
@@ -8713,6 +8857,16 @@ mod tests {
             model_index: 0,
         };
         let _set_max_tokens = app::InputAction::ZedSetModelMaxTokens {
+            profile_id: "x".to_string(),
+            provider_id: "y".to_string(),
+            model_index: 0,
+        };
+        let _set_max_output = app::InputAction::ZedSetModelMaxOutputTokens {
+            profile_id: "x".to_string(),
+            provider_id: "y".to_string(),
+            model_index: 0,
+        };
+        let _set_max_completion = app::InputAction::ZedSetModelMaxCompletionTokens {
             profile_id: "x".to_string(),
             provider_id: "y".to_string(),
             model_index: 0,

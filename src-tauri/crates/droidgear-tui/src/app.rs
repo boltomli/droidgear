@@ -496,6 +496,16 @@ pub enum InputAction {
         provider_id: String,
         model_index: usize,
     },
+    ZedSetModelMaxOutputTokens {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
+    ZedSetModelMaxCompletionTokens {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -1191,8 +1201,8 @@ impl App {
         if self.zed_provider_field_index >= zed_provider_fields_count {
             self.zed_provider_field_index = zed_provider_fields_count.saturating_sub(1);
         }
-        // ZedModel fields: 3 (Name, Display Name, Max Tokens)
-        let zed_model_fields_count = 3;
+        // ZedModel fields: 11 (5 text: Name, Display Name, Max Tokens, Max Output Tokens, Max Completion Tokens; 6 toggles: tools, images, parallel_tool_calls, prompt_cache_key, chat_completions, interleaved_reasoning)
+        let zed_model_fields_count = 11;
         if self.zed_model_field_index >= zed_model_fields_count {
             self.zed_model_field_index = zed_model_fields_count.saturating_sub(1);
         }

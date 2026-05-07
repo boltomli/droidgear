@@ -64,10 +64,20 @@ function ModelItem({ model, onEdit, onDelete }: ModelItemProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
           {model.maxTokens != null && (
             <Badge variant="secondary" className="text-xs">
               Max: {model.maxTokens.toLocaleString()}
+            </Badge>
+          )}
+          {model.maxOutputTokens != null && (
+            <Badge variant="secondary" className="text-xs">
+              MaxOut: {model.maxOutputTokens.toLocaleString()}
+            </Badge>
+          )}
+          {model.maxCompletionTokens != null && (
+            <Badge variant="secondary" className="text-xs">
+              MaxCmp: {model.maxCompletionTokens.toLocaleString()}
             </Badge>
           )}
           {model.capabilities?.tools && (
@@ -131,8 +141,26 @@ function ModelEditDialog({
   const [modelName, setModelName] = useState(model?.name ?? '')
   const [displayName, setDisplayName] = useState(model?.displayName ?? '')
   const [maxTokens, setMaxTokens] = useState(model?.maxTokens?.toString() ?? '')
+  const [maxOutputTokens, setMaxOutputTokens] = useState(
+    model?.maxOutputTokens?.toString() ?? ''
+  )
+  const [maxCompletionTokens, setMaxCompletionTokens] = useState(
+    model?.maxCompletionTokens?.toString() ?? ''
+  )
   const [tools, setTools] = useState(model?.capabilities?.tools ?? true)
   const [images, setImages] = useState(model?.capabilities?.images ?? false)
+  const [parallelToolCalls, setParallelToolCalls] = useState(
+    model?.capabilities?.parallelToolCalls ?? false
+  )
+  const [promptCacheKey, setPromptCacheKey] = useState(
+    model?.capabilities?.promptCacheKey ?? false
+  )
+  const [chatCompletions, setChatCompletions] = useState(
+    model?.capabilities?.chatCompletions ?? false
+  )
+  const [interleavedReasoning, setInterleavedReasoning] = useState(
+    model?.capabilities?.interleavedReasoning ?? false
+  )
   const [error, setError] = useState('')
 
   const handleSave = () => {
@@ -156,12 +184,39 @@ function ModelEditDialog({
       }
     }
 
-    const capabilities: ZedModelCapabilities = { tools, images }
+    let parsedMaxOutputTokens: number | null = null
+    if (maxOutputTokens.trim()) {
+      parsedMaxOutputTokens = parseInt(maxOutputTokens, 10)
+      if (isNaN(parsedMaxOutputTokens) || parsedMaxOutputTokens <= 0) {
+        setError(t('zed.model.maxTokensInvalid'))
+        return
+      }
+    }
+
+    let parsedMaxCompletionTokens: number | null = null
+    if (maxCompletionTokens.trim()) {
+      parsedMaxCompletionTokens = parseInt(maxCompletionTokens, 10)
+      if (isNaN(parsedMaxCompletionTokens) || parsedMaxCompletionTokens <= 0) {
+        setError(t('zed.model.maxTokensInvalid'))
+        return
+      }
+    }
+
+    const capabilities: ZedModelCapabilities = {
+      tools,
+      images,
+      parallelToolCalls,
+      promptCacheKey,
+      chatCompletions,
+      interleavedReasoning,
+    }
 
     const newModel: ZedModel = {
       name: trimmed,
       displayName: displayName.trim() || null,
       maxTokens: parsedMaxTokens,
+      maxOutputTokens: parsedMaxOutputTokens,
+      maxCompletionTokens: parsedMaxCompletionTokens,
       capabilities,
     }
 
@@ -218,8 +273,30 @@ function ModelEditDialog({
           </div>
 
           <div className="space-y-2">
+            <Label>{t('zed.model.maxOutputTokens')}</Label>
+            <Input
+              type="number"
+              value={maxOutputTokens}
+              onChange={e => setMaxOutputTokens(e.target.value)}
+              placeholder="8192"
+              min="0"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('zed.model.maxCompletionTokens')}</Label>
+            <Input
+              type="number"
+              value={maxCompletionTokens}
+              onChange={e => setMaxCompletionTokens(e.target.value)}
+              placeholder="8192"
+              min="0"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label>{t('zed.model.capabilities')}</Label>
-            <div className="flex items-center gap-6 pt-1">
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="model-tools"
@@ -238,6 +315,66 @@ function ModelEditDialog({
                 />
                 <Label htmlFor="model-images" className="cursor-pointer">
                   {t('zed.model.images')}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="model-parallel-tool-calls"
+                  checked={parallelToolCalls}
+                  onCheckedChange={(checked: boolean) =>
+                    setParallelToolCalls(checked)
+                  }
+                />
+                <Label
+                  htmlFor="model-parallel-tool-calls"
+                  className="cursor-pointer"
+                >
+                  {t('zed.model.parallelToolCalls')}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="model-prompt-cache-key"
+                  checked={promptCacheKey}
+                  onCheckedChange={(checked: boolean) =>
+                    setPromptCacheKey(checked)
+                  }
+                />
+                <Label
+                  htmlFor="model-prompt-cache-key"
+                  className="cursor-pointer"
+                >
+                  {t('zed.model.promptCacheKey')}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="model-chat-completions"
+                  checked={chatCompletions}
+                  onCheckedChange={(checked: boolean) =>
+                    setChatCompletions(checked)
+                  }
+                />
+                <Label
+                  htmlFor="model-chat-completions"
+                  className="cursor-pointer"
+                >
+                  {t('zed.model.chatCompletions')}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="model-interleaved-reasoning"
+                  checked={interleavedReasoning}
+                  onCheckedChange={(checked: boolean) =>
+                    setInterleavedReasoning(checked)
+                  }
+                />
+                <Label
+                  htmlFor="model-interleaved-reasoning"
+                  className="cursor-pointer"
+                >
+                  {t('zed.model.interleavedReasoning')}
                 </Label>
               </div>
             </div>
@@ -319,6 +456,10 @@ function ProviderForm({
         capabilities: {
           tools: true,
           images: !(m.noImageSupport ?? true),
+          parallelToolCalls: false,
+          promptCacheKey: false,
+          chatCompletions: false,
+          interleavedReasoning: false,
         },
       }))
       setModels(zedModels)

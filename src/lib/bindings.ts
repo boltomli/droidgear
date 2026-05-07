@@ -2301,11 +2301,11 @@ export type ZedCurrentConfig = { providers?: Partial<{ [key in string]: ZedProvi
 /**
  * Zed Editor — 模型能力配置
  */
-export type ZedModelCapabilities = { tools: boolean; images: boolean }
+export type ZedModelCapabilities = { tools: boolean; images: boolean; parallelToolCalls: boolean; promptCacheKey: boolean; chatCompletions: boolean; interleavedReasoning: boolean }
 /**
  * Zed Editor — 模型配置
  */
-export type ZedModel = { name: string; displayName?: string | null; maxTokens?: number | null; capabilities?: ZedModelCapabilities | null }
+export type ZedModel = { name: string; displayName?: string | null; maxTokens?: number | null; maxOutputTokens?: number | null; maxCompletionTokens?: number | null; capabilities?: ZedModelCapabilities | null }
 /**
  * Zed Editor — Profile 配置
  */

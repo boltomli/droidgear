@@ -3428,11 +3428,73 @@ fn draw_zed_model(frame: &mut Frame, app: &app::App, area: Rect) {
         .max_tokens
         .map(|t| t.to_string())
         .unwrap_or_else(|| "(not set)".to_string());
+    let max_output_tokens = model
+        .max_output_tokens
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| "(not set)".to_string());
+    let max_completion_tokens = model
+        .max_completion_tokens
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| "(not set)".to_string());
+
+    let caps = model.capabilities.as_ref();
+    let tools_val = caps.map(|c| c.tools).unwrap_or(false);
+    let images_val = caps.map(|c| c.images).unwrap_or(false);
+    let parallel_tool_calls_val = caps.map(|c| c.parallel_tool_calls).unwrap_or(false);
+    let prompt_cache_key_val = caps.map(|c| c.prompt_cache_key).unwrap_or(false);
+    let chat_completions_val = caps.map(|c| c.chat_completions).unwrap_or(false);
+    let interleaved_reasoning_val = caps.map(|c| c.interleaved_reasoning).unwrap_or(false);
 
     let fields: Vec<(&str, String)> = vec![
         ("Name", model.name.clone()),
         ("Display Name", display_name),
         ("Max Tokens", max_tokens),
+        ("Max Output Tokens", max_output_tokens),
+        ("Max Completion Tokens", max_completion_tokens),
+        (
+            "tools",
+            if tools_val { "true" } else { "false" }.to_string(),
+        ),
+        (
+            "images",
+            if images_val { "true" } else { "false" }.to_string(),
+        ),
+        (
+            "parallel_tool_calls",
+            if parallel_tool_calls_val {
+                "true"
+            } else {
+                "false"
+            }
+            .to_string(),
+        ),
+        (
+            "prompt_cache_key",
+            if prompt_cache_key_val {
+                "true"
+            } else {
+                "false"
+            }
+            .to_string(),
+        ),
+        (
+            "chat_completions",
+            if chat_completions_val {
+                "true"
+            } else {
+                "false"
+            }
+            .to_string(),
+        ),
+        (
+            "interleaved_reasoning",
+            if interleaved_reasoning_val {
+                "true"
+            } else {
+                "false"
+            }
+            .to_string(),
+        ),
     ];
 
     let mut items: Vec<ListItem> = Vec::new();
@@ -3457,6 +3519,6 @@ fn draw_zed_model(frame: &mut Frame, app: &app::App, area: Rect) {
         .highlight_style(t.selected_row_style());
     render_list(frame, list, chunks[0], Some(app.zed_model_field_index));
 
-    let help = help_paragraph("Up/Down: select  Enter/e: edit  q/Esc: back");
+    let help = help_paragraph("Up/Down: select  Enter/e: edit/toggle  q/Esc: back");
     frame.render_widget(help, chunks[1]);
 }

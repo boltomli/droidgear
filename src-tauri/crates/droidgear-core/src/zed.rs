@@ -17,7 +17,7 @@ use crate::{paths, storage};
 // Types
 // ============================================================================
 
-/// Model capabilities (tools + images support)
+/// Model capabilities — matches Zed's actual settings.json schema
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ZedModelCapabilities {
@@ -25,6 +25,22 @@ pub struct ZedModelCapabilities {
     pub tools: bool,
     /// Whether image input is supported
     pub images: bool,
+    /// Whether parallel tool calls are supported
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub parallel_tool_calls: bool,
+    /// Whether prompt caching is supported
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub prompt_cache_key: bool,
+    /// Whether chat completions API is supported
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub chat_completions: bool,
+    /// Whether interleaved reasoning is supported
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub interleaved_reasoning: bool,
+}
+
+fn is_false(b: &bool) -> bool {
+    !b
 }
 
 /// A single model within a Zed provider
@@ -36,7 +52,13 @@ pub struct ZedModel {
     pub display_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_tokens: Option<u32>,
-    /// Model capabilities (tools + images). Defaults to None.
+    /// Max output tokens for this model
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_output_tokens: Option<u32>,
+    /// Max completion tokens for this model
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_completion_tokens: Option<u32>,
+    /// Model capabilities. Defaults to None.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub capabilities: Option<ZedModelCapabilities>,
 }
@@ -423,6 +445,24 @@ pub fn apply_zed_profile_for_home(home_dir: &Path, id: &str) -> Result<(), Strin
                                 Value::Number(serde_json::Number::from(max_tokens)),
                             );
                         }
+                        if let Some(max_output) = m.max_output_tokens {
+                            model_entry.insert(
+                                "max_output_tokens".to_string(),
+                                Value::Number(serde_json::Number::from(max_output)),
+                            );
+                        }
+                        if let Some(max_completion) = m.max_completion_tokens {
+                            model_entry.insert(
+                                "max_completion_tokens".to_string(),
+                                Value::Number(serde_json::Number::from(max_completion)),
+                            );
+                        }
+                        if let Some(ref capabilities) = m.capabilities {
+                            model_entry.insert(
+                                "capabilities".to_string(),
+                                serde_json::to_value(capabilities).unwrap_or_default(),
+                            );
+                        }
                         Value::Object(model_entry)
                     })
                     .collect();
@@ -507,6 +547,22 @@ pub fn read_zed_current_config_for_home(home_dir: &Path) -> Result<ZedCurrentCon
                                         Some(ZedModelCapabilities {
                                             tools: c.get("tools")?.as_bool().unwrap_or(false),
                                             images: c.get("images")?.as_bool().unwrap_or(false),
+                                            parallel_tool_calls: c
+                                                .get("parallel_tool_calls")
+                                                .and_then(|v| v.as_bool())
+                                                .unwrap_or(false),
+                                            prompt_cache_key: c
+                                                .get("prompt_cache_key")
+                                                .and_then(|v| v.as_bool())
+                                                .unwrap_or(false),
+                                            chat_completions: c
+                                                .get("chat_completions")
+                                                .and_then(|v| v.as_bool())
+                                                .unwrap_or(false),
+                                            interleaved_reasoning: c
+                                                .get("interleaved_reasoning")
+                                                .and_then(|v| v.as_bool())
+                                                .unwrap_or(false),
                                         })
                                     });
                                     Some(ZedModel {
@@ -517,6 +573,14 @@ pub fn read_zed_current_config_for_home(home_dir: &Path) -> Result<ZedCurrentCon
                                             .map(|s| s.to_string()),
                                         max_tokens: m
                                             .get("max_tokens")
+                                            .and_then(|t| t.as_u64())
+                                            .map(|t| t as u32),
+                                        max_output_tokens: m
+                                            .get("max_output_tokens")
+                                            .and_then(|t| t.as_u64())
+                                            .map(|t| t as u32),
+                                        max_completion_tokens: m
+                                            .get("max_completion_tokens")
                                             .and_then(|t| t.as_u64())
                                             .map(|t| t as u32),
                                         capabilities,
@@ -624,12 +688,16 @@ mod tests {
                     name: "gpt-4".to_string(),
                     display_name: Some("GPT-4".to_string()),
                     max_tokens: Some(8192),
+                    max_output_tokens: None,
+                    max_completion_tokens: None,
                     capabilities: None,
                 },
                 ZedModel {
                     name: "gpt-3.5-turbo".to_string(),
                     display_name: None,
                     max_tokens: Some(4096),
+                    max_output_tokens: None,
+                    max_completion_tokens: None,
                     capabilities: None,
                 },
             ]),
@@ -644,6 +712,8 @@ mod tests {
                 name: "claude-3".to_string(),
                 display_name: None,
                 max_tokens: None,
+                max_output_tokens: None,
+                max_completion_tokens: None,
                 capabilities: None,
             }]),
             api_key: None,
@@ -1276,12 +1346,16 @@ mod tests {
                         name: "model-1".to_string(),
                         display_name: Some("Model One".to_string()),
                         max_tokens: Some(4096),
+                        max_output_tokens: None,
+                        max_completion_tokens: None,
                         capabilities: None,
                     },
                     ZedModel {
                         name: "model-2".to_string(),
                         display_name: None,
                         max_tokens: None,
+                        max_output_tokens: None,
+                        max_completion_tokens: None,
                         capabilities: None,
                     },
                 ]),
