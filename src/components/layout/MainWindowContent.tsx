@@ -20,6 +20,7 @@ import {
 } from '@/components/openclaw'
 import { HermesConfigPage } from '@/components/hermes'
 import { PiConfigPage } from '@/components/pi'
+import { ZedConfigPage } from '@/components/zed'
 import { ChannelDetail, ChannelDialog } from '@/components/channels'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
@@ -102,6 +103,10 @@ export function MainWindowContent({
 
     if (currentView === 'pi') {
       return <PiConfigPage />
+    }
+
+    if (currentView === 'zed') {
+      return <ZedConfigPage />
     }
 
     if (currentView === 'openclaw') {

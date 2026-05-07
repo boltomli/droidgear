@@ -10,6 +10,7 @@ import {
   Cog,
   Cpu,
   CircuitBoard,
+  Pencil,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/components/ui/action-button'
@@ -36,6 +37,7 @@ import { CodexFeatureList } from '@/components/codex'
 import { OpenClawFeatureList } from '@/components/openclaw'
 import { HermesFeatureList } from '@/components/hermes'
 import { PiFeatureList } from '@/components/pi'
+import { ZedFeatureList } from '@/components/zed'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
@@ -50,6 +52,7 @@ type NavigationView =
   | 'openclaw'
   | 'hermes'
   | 'pi'
+  | 'zed'
 
 interface LeftSideBarProps {
   children?: React.ReactNode
@@ -102,6 +105,11 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
         <>
           <CircuitBoard className="h-4 w-4 mr-2" />
           {t('sidebar.pi')}
+        </>
+      ) : lastToolView === 'zed' ? (
+        <>
+          <Pencil className="h-4 w-4 mr-2" />
+          {t('sidebar.zed')}
         </>
       ) : (
         <>
@@ -292,6 +300,18 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                 {t('sidebar.pi')}
                 {lastToolView === 'pi' && <Check className="h-4 w-4 ml-auto" />}
               </ActionDropdownMenuItem>
+              <ActionDropdownMenuItem
+                onClick={() => {
+                  handleViewChange('zed')
+                  setDropdownOpen(false)
+                }}
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                {t('sidebar.zed')}
+                {lastToolView === 'zed' && (
+                  <Check className="h-4 w-4 ml-auto" />
+                )}
+              </ActionDropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -311,6 +331,8 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           <HermesFeatureList />
         ) : currentView === 'pi' ? (
           <PiFeatureList />
+        ) : currentView === 'zed' ? (
+          <ZedFeatureList />
         ) : (
           <CodexFeatureList />
         )}
