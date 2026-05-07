@@ -51,6 +51,7 @@ pub enum Screen {
     Zed,
     ZedProfile,
     ZedProvider,
+    ZedModel,
     Sessions,
     Specs,
     Channels,
@@ -189,6 +190,11 @@ pub enum ConfirmAction {
     ZedDeleteProvider {
         profile_id: String,
         provider_id: String,
+    },
+    ZedDeleteModel {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
     },
 }
 
@@ -480,6 +486,16 @@ pub enum InputAction {
         provider_id: String,
         model_index: usize,
     },
+    ZedSetModelDisplayName {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
+    ZedSetModelMaxTokens {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -675,6 +691,8 @@ pub struct App {
     pub zed_detail_field_index: usize,
     pub zed_provider_index: usize,
     pub zed_provider_field_index: usize,
+    pub zed_model_index: usize,
+    pub zed_model_field_index: usize,
 
     pub sessions: Vec<SessionSummary>,
     pub sessions_index: usize,
@@ -795,6 +813,8 @@ impl App {
             zed_detail_field_index: 0,
             zed_provider_index: 0,
             zed_provider_field_index: 0,
+            zed_model_index: 0,
+            zed_model_field_index: 0,
             sessions: Vec::new(),
             sessions_index: 0,
             specs: Vec::new(),
@@ -1160,6 +1180,11 @@ impl App {
         let zed_provider_fields_count = 2;
         if self.zed_provider_field_index >= zed_provider_fields_count {
             self.zed_provider_field_index = zed_provider_fields_count.saturating_sub(1);
+        }
+        // ZedModel fields: 3 (Name, Display Name, Max Tokens)
+        let zed_model_fields_count = 3;
+        if self.zed_model_field_index >= zed_model_fields_count {
+            self.zed_model_field_index = zed_model_fields_count.saturating_sub(1);
         }
     }
 }

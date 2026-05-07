@@ -400,6 +400,7 @@ fn draw_main(frame: &mut Frame, app: &app::App, area: Rect) {
         app::Screen::Zed => draw_zed_profiles(frame, app, area),
         app::Screen::ZedProfile => draw_zed_profile(frame, app, area),
         app::Screen::ZedProvider => draw_zed_provider(frame, app, area),
+        app::Screen::ZedModel => draw_zed_model(frame, app, area),
         app::Screen::Sessions => draw_sessions(frame, app, area),
         app::Screen::Specs => draw_specs(frame, app, area),
         app::Screen::Channels => draw_channels(frame, app, area),
@@ -3362,7 +3363,95 @@ fn draw_zed_provider(frame: &mut Frame, app: &app::App, area: Rect) {
     render_list(frame, models_list, chunks[1], None);
 
     let help = help_paragraph(
-        "Up/Down: move  Enter/e: edit field  n: add model  m: edit model  q/Esc: back",
+        "Up/Down: move  Enter/e: edit field  n: add model  m: edit model  d: delete model  q/Esc: back",
     );
     frame.render_widget(help, chunks[2]);
+}
+
+fn draw_zed_model(frame: &mut Frame, app: &app::App, area: Rect) {
+    let t = theme();
+    let Some(profile) = app.zed_detail.as_ref() else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "Failed to load profile",
+            t.error_style(),
+        ))])
+        .block(block("Zed Model"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+    let Some(provider_id) = app.zed_current_provider_id() else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "No provider selected",
+            t.warning_style(),
+        ))])
+        .block(block("Zed Model"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+    let Some(config) = profile.providers.get(&provider_id) else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "Provider not found",
+            t.error_style(),
+        ))])
+        .block(block("Zed Model"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+    let Some(model) = config
+        .available_models
+        .as_ref()
+        .and_then(|m| m.get(app.zed_model_index))
+    else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "Model not found",
+            t.error_style(),
+        ))])
+        .block(block("Zed Model"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+
+    let display_name = model
+        .display_name
+        .clone()
+        .unwrap_or_else(|| "(none)".to_string());
+    let max_tokens = model
+        .max_tokens
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| "(not set)".to_string());
+
+    let fields: Vec<(&str, String)> = vec![
+        ("Name", model.name.clone()),
+        ("Display Name", display_name),
+        ("Max Tokens", max_tokens),
+    ];
+
+    let mut items: Vec<ListItem> = Vec::new();
+    for (i, (label, value)) in fields.into_iter().enumerate() {
+        let selected = i == app.zed_model_field_index;
+        let line = if selected {
+            Line::from(format!("{label:>14}: {value}"))
+        } else {
+            field_line(label, &value, 14)
+        };
+        items.push(ListItem::new(line));
+    }
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
+        .split(area);
+
+    let title = format!("Zed Model: {}", model.name);
+    let list = List::new(items)
+        .block(block(title))
+        .highlight_style(t.selected_row_style());
+    render_list(frame, list, chunks[0], Some(app.zed_model_field_index));
+
+    let help = help_paragraph("Up/Down: select  Enter/e: edit  q/Esc: back");
+    frame.render_widget(help, chunks[1]);
 }

@@ -162,6 +162,10 @@ fn refresh_screen_data(app: &mut app::App) {
             refresh_zed(app);
             refresh_zed_detail(app);
         }
+        app::Screen::ZedModel => {
+            refresh_zed(app);
+            refresh_zed_detail(app);
+        }
         app::Screen::Sessions => refresh_sessions(app),
         app::Screen::Specs => refresh_specs(app),
         app::Screen::Channels => refresh_channels(app),
@@ -501,8 +505,34 @@ fn refresh_hermes_detail(app: &mut app::App) {
 }
 
 fn refresh_zed(app: &mut app::App) {
+    // Count JSON files in profiles dir for warning about corrupted files
+    let profiles_dir = app.home_dir.join(".droidgear").join("zed").join("profiles");
+    let json_file_count = if profiles_dir.exists() {
+        std::fs::read_dir(&profiles_dir)
+            .ok()
+            .map(|entries| {
+                entries
+                    .filter_map(|e| e.ok())
+                    .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("json"))
+                    .count()
+            })
+            .unwrap_or(0)
+    } else {
+        0
+    };
+
     match droidgear_core::zed::list_zed_profiles_for_home(&app.home_dir) {
-        Ok(list) => app.zed_profiles = list,
+        Ok(list) => {
+            app.zed_profiles = list;
+            // If there are JSON files that couldn't be loaded, show warning
+            if json_file_count > app.zed_profiles.len() {
+                let skipped = json_file_count - app.zed_profiles.len();
+                app.set_toast(
+                    format!("Warning: {skipped} corrupted profile file(s) skipped"),
+                    true,
+                );
+            }
+        }
         Err(e) => app.set_toast(e, true),
     }
 
@@ -600,6 +630,7 @@ fn handle_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
         app::Screen::Zed => handle_zed_key(app, code),
         app::Screen::ZedProfile => handle_zed_profile_key(app, code),
         app::Screen::ZedProvider => handle_zed_provider_key(app, code),
+        app::Screen::ZedModel => handle_zed_model_key(app, code),
         app::Screen::Sessions => handle_sessions_key(app, code),
         app::Screen::Specs => handle_specs_key(app, code),
         app::Screen::Channels => handle_channels_key(app, code),
@@ -4105,7 +4136,9 @@ fn handle_zed_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
             }
         }
         KeyCode::Char('d') => {
-            if let Some(p) = app.zed_profiles.get(app.zed_index) {
+            if app.zed_profiles.len() <= 1 {
+                app.set_toast("Cannot delete the only profile", true);
+            } else if let Some(p) = app.zed_profiles.get(app.zed_index) {
                 app.modal = Some(app::Modal::Confirm {
                     message: format!("Delete Zed profile '{}'?", p.name),
                     action: app::ConfirmAction::ZedDelete { id: p.id.clone() },
@@ -4225,6 +4258,18 @@ fn handle_zed_profile_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
                 });
             }
         }
+        KeyCode::Char('n') => {
+            app.modal = Some(app::Modal::Input {
+                title: "New provider name".to_string(),
+                value: String::new(),
+                cursor: usize::MAX,
+                is_secret: false,
+                action: app::InputAction::ZedSetProviderName {
+                    profile_id: profile_id.clone(),
+                    provider_id: String::new(),
+                },
+            });
+        }
         _ => {}
     }
 
@@ -4247,6 +4292,21 @@ fn handle_zed_provider_key(app: &mut app::App, code: KeyCode) -> Option<Action> 
         app.set_toast("Provider not found", true);
         app.screen = app::Screen::ZedProfile;
         return None;
+    };
+
+    // Models region starts at field index 2
+    let models_region = 2usize;
+    let model_count = config
+        .available_models
+        .as_ref()
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    // Helper: compute current model index based on field_index
+    let current_model_idx = if app.zed_provider_field_index >= models_region {
+        Some(app.zed_provider_field_index - models_region)
+    } else {
+        None
     };
 
     match code {
@@ -4285,23 +4345,61 @@ fn handle_zed_provider_key(app: &mut app::App, code: KeyCode) -> Option<Action> 
                     },
                 });
             }
-            _ => {}
+            _ => {
+                // Navigate to model detail screen when focused on a model
+                if let Some(model_idx) = current_model_idx {
+                    if model_idx < model_count {
+                        app.zed_model_index = model_idx;
+                        app.zed_model_field_index = 0;
+                        app.screen = app::Screen::ZedModel;
+                    }
+                }
+            }
         },
         KeyCode::Char('m') => {
-            // Navigate to model editing
-            if let 2.. = app.zed_provider_field_index {
-                let model_idx = app.zed_provider_field_index - 2;
-                if let Some(model) = config
-                    .available_models
-                    .as_ref()
-                    .and_then(|m| m.get(model_idx))
-                {
-                    app.modal = Some(app::Modal::Input {
-                        title: "Model name".to_string(),
-                        value: model.name.clone(),
-                        cursor: usize::MAX,
-                        is_secret: false,
-                        action: app::InputAction::ZedSetModelName {
+            // Navigate to model detail screen for focused model
+            if let Some(model_idx) = current_model_idx {
+                if model_idx < model_count {
+                    app.zed_model_index = model_idx;
+                    app.zed_model_field_index = 0;
+                    app.screen = app::Screen::ZedModel;
+                }
+            }
+        }
+        KeyCode::Char('n') => {
+            if app.zed_provider_field_index < models_region {
+                // Add a new provider to the profile
+                app.modal = Some(app::Modal::Input {
+                    title: "New provider name".to_string(),
+                    value: String::new(),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::ZedSetProviderName {
+                        profile_id: profile_id.clone(),
+                        provider_id: String::new(),
+                    },
+                });
+            } else {
+                // Add a new model
+                app.modal = Some(app::Modal::Input {
+                    title: "New model name".to_string(),
+                    value: String::new(),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::ZedAddModel {
+                        profile_id: profile_id.clone(),
+                        provider_id: provider_id.clone(),
+                    },
+                });
+            }
+        }
+        KeyCode::Char('d') => {
+            // Delete model when focused on a model row
+            if let Some(model_idx) = current_model_idx {
+                if model_idx < model_count {
+                    app.modal = Some(app::Modal::Confirm {
+                        message: format!("Delete model at index {model_idx}?"),
+                        action: app::ConfirmAction::ZedDeleteModel {
                             profile_id: profile_id.clone(),
                             provider_id: provider_id.clone(),
                             model_index: model_idx,
@@ -4310,18 +4408,87 @@ fn handle_zed_provider_key(app: &mut app::App, code: KeyCode) -> Option<Action> 
                 }
             }
         }
-        KeyCode::Char('n') => {
-            app.modal = Some(app::Modal::Input {
-                title: "New model name".to_string(),
-                value: String::new(),
-                cursor: usize::MAX,
-                is_secret: false,
-                action: app::InputAction::ZedAddModel {
-                    profile_id: profile_id.clone(),
-                    provider_id: provider_id.clone(),
-                },
-            });
+        _ => {}
+    }
+
+    None
+}
+
+fn handle_zed_model_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
+    let Some(profile_id) = app.zed_detail_id.clone() else {
+        app.screen = app::Screen::Zed;
+        return None;
+    };
+    let Some(provider_id) = app.zed_current_provider_id() else {
+        app.screen = app::Screen::ZedProfile;
+        return None;
+    };
+    let Some(profile) = app.zed_detail.as_ref() else {
+        return None;
+    };
+    let Some(config) = profile.providers.get(&provider_id) else {
+        app.set_toast("Provider not found", true);
+        app.screen = app::Screen::ZedProfile;
+        return None;
+    };
+    let Some(model) = config
+        .available_models
+        .as_ref()
+        .and_then(|m| m.get(app.zed_model_index))
+    else {
+        app.set_toast("Model not found", true);
+        app.screen = app::Screen::ZedProvider;
+        return None;
+    };
+
+    match code {
+        KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('b') => {
+            app.screen = app::Screen::ZedProvider
         }
+        KeyCode::Down => app.zed_model_field_index = app.zed_model_field_index.saturating_add(1),
+        KeyCode::Up => app.zed_model_field_index = app.zed_model_field_index.saturating_sub(1),
+        KeyCode::Enter | KeyCode::Char('e') => match app.zed_model_field_index {
+            0 => {
+                app.modal = Some(app::Modal::Input {
+                    title: "Model name".to_string(),
+                    value: model.name.clone(),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::ZedSetModelName {
+                        profile_id: profile_id.clone(),
+                        provider_id: provider_id.clone(),
+                        model_index: app.zed_model_index,
+                    },
+                });
+            }
+            1 => {
+                app.modal = Some(app::Modal::Input {
+                    title: "Model display name".to_string(),
+                    value: model.display_name.clone().unwrap_or_default(),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::ZedSetModelDisplayName {
+                        profile_id: profile_id.clone(),
+                        provider_id: provider_id.clone(),
+                        model_index: app.zed_model_index,
+                    },
+                });
+            }
+            2 => {
+                app.modal = Some(app::Modal::Input {
+                    title: "Model max tokens".to_string(),
+                    value: model.max_tokens.map(|t| t.to_string()).unwrap_or_default(),
+                    cursor: usize::MAX,
+                    is_secret: false,
+                    action: app::InputAction::ZedSetModelMaxTokens {
+                        profile_id: profile_id.clone(),
+                        provider_id: provider_id.clone(),
+                        model_index: app.zed_model_index,
+                    },
+                });
+            }
+            _ => {}
+        },
         _ => {}
     }
 
@@ -6186,6 +6353,25 @@ fn run_confirm_action(app: &mut app::App, action: app::ConfirmAction) -> anyhow:
                 .map_err(anyhow::Error::msg)?;
             Ok(())
         }
+        app::ConfirmAction::ZedDeleteModel {
+            profile_id,
+            provider_id,
+            model_index,
+        } => {
+            let mut profile =
+                droidgear_core::zed::get_zed_profile_for_home(&app.home_dir, &profile_id)
+                    .map_err(anyhow::Error::msg)?;
+            if let Some(config) = profile.providers.get_mut(&provider_id) {
+                if let Some(models) = config.available_models.as_mut() {
+                    if model_index < models.len() {
+                        models.remove(model_index);
+                    }
+                }
+            }
+            droidgear_core::zed::save_zed_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            Ok(())
+        }
     }
 }
 
@@ -7666,9 +7852,18 @@ fn run_input_action(
                 return Err(anyhow::Error::msg("Profile name is required"));
             }
 
-            let before = droidgear_core::zed::list_zed_profiles_for_home(&app.home_dir)
+            // Check for duplicate name
+            let existing = droidgear_core::zed::list_zed_profiles_for_home(&app.home_dir)
                 .map_err(anyhow::Error::msg)?;
-            let before_ids = before
+            if existing
+                .iter()
+                .any(|p| p.name.eq_ignore_ascii_case(trimmed))
+            {
+                return Err(anyhow::Error::msg(
+                    "A profile with this name already exists",
+                ));
+            }
+            let before_ids = existing
                 .iter()
                 .map(|p| p.id.clone())
                 .collect::<std::collections::HashSet<String>>();
@@ -7720,6 +7915,17 @@ fn run_input_action(
             }
             let mut profile = droidgear_core::zed::get_zed_profile_for_home(&app.home_dir, &id)
                 .map_err(anyhow::Error::msg)?;
+            // Check for duplicate name (excluding current profile)
+            let existing = droidgear_core::zed::list_zed_profiles_for_home(&app.home_dir)
+                .map_err(anyhow::Error::msg)?;
+            if existing
+                .iter()
+                .any(|p| p.id != id && p.name.eq_ignore_ascii_case(trimmed))
+            {
+                return Err(anyhow::Error::msg(
+                    "A profile with this name already exists",
+                ));
+            }
             profile.name = trimmed.to_string();
             droidgear_core::zed::save_zed_profile_for_home(&app.home_dir, profile)
                 .map_err(anyhow::Error::msg)?;
@@ -7745,9 +7951,25 @@ fn run_input_action(
             let mut profile =
                 droidgear_core::zed::get_zed_profile_for_home(&app.home_dir, &profile_id)
                     .map_err(anyhow::Error::msg)?;
-            // Remove old key, insert with new name
-            if let Some(config) = profile.providers.remove(&provider_id) {
-                profile.providers.insert(trimmed.to_string(), config);
+            let is_new = provider_id.is_empty() || !profile.providers.contains_key(&provider_id);
+            if is_new {
+                // Creating a new provider
+                if profile.providers.contains_key(trimmed) {
+                    return Err(anyhow::Error::msg("Provider already exists"));
+                }
+                profile.providers.insert(
+                    trimmed.to_string(),
+                    droidgear_core::zed::ZedProviderConfig {
+                        api_url: String::new(),
+                        available_models: None,
+                        api_key: None,
+                    },
+                );
+            } else {
+                // Rename existing provider
+                if let Some(config) = profile.providers.remove(&provider_id) {
+                    profile.providers.insert(trimmed.to_string(), config);
+                }
             }
             droidgear_core::zed::save_zed_profile_for_home(&app.home_dir, profile)
                 .map_err(anyhow::Error::msg)?;
@@ -7783,16 +8005,20 @@ fn run_input_action(
                 droidgear_core::zed::get_zed_profile_for_home(&app.home_dir, &profile_id)
                     .map_err(anyhow::Error::msg)?;
             if let Some(config) = profile.providers.get_mut(&provider_id) {
+                // Check for duplicate model name within this provider
+                let models = config.available_models.get_or_insert(Vec::new());
+                if models.iter().any(|m| m.name.eq_ignore_ascii_case(trimmed)) {
+                    return Err(anyhow::Error::msg(
+                        "A model with this name already exists in this provider",
+                    ));
+                }
                 let model = droidgear_core::zed::ZedModel {
                     name: trimmed.to_string(),
                     display_name: None,
                     max_tokens: None,
                     capabilities: None,
                 };
-                config
-                    .available_models
-                    .get_or_insert(Vec::new())
-                    .push(model);
+                models.push(model);
             }
             droidgear_core::zed::save_zed_profile_for_home(&app.home_dir, profile)
                 .map_err(anyhow::Error::msg)?;
@@ -7814,6 +8040,55 @@ fn run_input_action(
                 if let Some(models) = config.available_models.as_mut() {
                     if let Some(model) = models.get_mut(model_index) {
                         model.name = trimmed.to_string();
+                    }
+                }
+            }
+            droidgear_core::zed::save_zed_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            refresh_zed_detail(app);
+            Ok(())
+        }
+        app::InputAction::ZedSetModelDisplayName {
+            profile_id,
+            provider_id,
+            model_index,
+        } => {
+            let mut profile =
+                droidgear_core::zed::get_zed_profile_for_home(&app.home_dir, &profile_id)
+                    .map_err(anyhow::Error::msg)?;
+            if let Some(config) = profile.providers.get_mut(&provider_id) {
+                if let Some(models) = config.available_models.as_mut() {
+                    if let Some(model) = models.get_mut(model_index) {
+                        model.display_name = (!trimmed.is_empty()).then(|| trimmed.to_string());
+                    }
+                }
+            }
+            droidgear_core::zed::save_zed_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            refresh_zed_detail(app);
+            Ok(())
+        }
+        app::InputAction::ZedSetModelMaxTokens {
+            profile_id,
+            provider_id,
+            model_index,
+        } => {
+            let max_tokens = if trimmed.is_empty() {
+                None
+            } else {
+                Some(
+                    trimmed
+                        .parse::<u32>()
+                        .map_err(|_| anyhow::Error::msg("Max tokens must be a positive integer"))?,
+                )
+            };
+            let mut profile =
+                droidgear_core::zed::get_zed_profile_for_home(&app.home_dir, &profile_id)
+                    .map_err(anyhow::Error::msg)?;
+            if let Some(config) = profile.providers.get_mut(&provider_id) {
+                if let Some(models) = config.available_models.as_mut() {
+                    if let Some(model) = models.get_mut(model_index) {
+                        model.max_tokens = max_tokens;
                     }
                 }
             }
@@ -8396,6 +8671,11 @@ mod tests {
             profile_id: "x".to_string(),
             provider_id: "y".to_string(),
         };
+        let _del_model = app::ConfirmAction::ZedDeleteModel {
+            profile_id: "x".to_string(),
+            provider_id: "y".to_string(),
+            model_index: 0,
+        };
     }
 
     #[test]
@@ -8423,6 +8703,16 @@ mod tests {
             provider_id: "y".to_string(),
         };
         let _set_model = app::InputAction::ZedSetModelName {
+            profile_id: "x".to_string(),
+            provider_id: "y".to_string(),
+            model_index: 0,
+        };
+        let _set_display = app::InputAction::ZedSetModelDisplayName {
+            profile_id: "x".to_string(),
+            provider_id: "y".to_string(),
+            model_index: 0,
+        };
+        let _set_max_tokens = app::InputAction::ZedSetModelMaxTokens {
             profile_id: "x".to_string(),
             provider_id: "y".to_string(),
             model_index: 0,
