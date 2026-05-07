@@ -25,6 +25,8 @@ pub struct ConfigPaths {
     pub hermes: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pi: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zed: Option<String>,
 }
 
 /// Effective path info with default indicator
@@ -47,6 +49,7 @@ pub struct EffectivePaths {
     pub openclaw: EffectivePath,
     pub hermes: EffectivePath,
     pub pi: EffectivePath,
+    pub zed: EffectivePath,
 }
 
 /// WSL distribution info
@@ -206,6 +209,13 @@ pub fn get_default_paths_for_home(home_dir: &Path) -> Result<EffectivePaths, Str
                 .to_string(),
             is_default: true,
         },
+        zed: EffectivePath {
+            key: "zed".to_string(),
+            path: default_zed_config_dir_for_home(home_dir)?
+                .to_string_lossy()
+                .to_string(),
+            is_default: true,
+        },
     })
 }
 
@@ -219,6 +229,7 @@ pub fn get_effective_paths_for_home(home_dir: &Path) -> Result<EffectivePaths, S
     let openclaw_path = get_openclaw_home_for_home(home_dir, &config)?;
     let hermes_path = get_hermes_home_for_home(home_dir, &config)?;
     let pi_path = get_pi_home_for_home(home_dir, &config)?;
+    let zed_path = get_zed_config_dir_for_home(home_dir, &config)?;
 
     Ok(EffectivePaths {
         factory: EffectivePath {
@@ -255,6 +266,11 @@ pub fn get_effective_paths_for_home(home_dir: &Path) -> Result<EffectivePaths, S
             key: "pi".to_string(),
             path: pi_path.to_string_lossy().to_string(),
             is_default: config.pi.is_none(),
+        },
+        zed: EffectivePath {
+            key: "zed".to_string(),
+            path: zed_path.to_string_lossy().to_string(),
+            is_default: config.zed.is_none(),
         },
     })
 }
@@ -311,6 +327,7 @@ pub fn save_config_path_for_home(home_dir: &Path, key: &str, path: &str) -> Resu
         "openclaw" => "openclaw",
         "hermes" => "hermes",
         "pi" => "pi",
+        "zed" => "zed",
         _ => return Err(format!("Unknown config path key: {key}")),
     };
 
@@ -338,6 +355,7 @@ pub fn reset_config_path_for_home(home_dir: &Path, key: &str) -> Result<(), Stri
                     "openclaw" => "openclaw",
                     "hermes" => "hermes",
                     "pi" => "pi",
+                    "zed" => "zed",
                     _ => return Err(format!("Unknown config path key: {key}")),
                 };
                 paths_obj.remove(storage_key);
@@ -384,6 +402,11 @@ fn default_hermes_home_for_home(home_dir: &Path) -> Result<PathBuf, String> {
 /// Pi home defaults to `~/.pi/agent`
 fn default_pi_home_for_home(home_dir: &Path) -> Result<PathBuf, String> {
     Ok(home_dir.join(".pi").join("agent"))
+}
+
+/// Zed config directory defaults to `~/.config/zed`
+fn default_zed_config_dir_for_home(home_dir: &Path) -> Result<PathBuf, String> {
+    Ok(home_dir.join(".config").join("zed"))
 }
 
 /// On Windows, try to resolve Hermes default path via WSL since Hermes
@@ -511,6 +534,17 @@ pub fn get_pi_home_for_home(home_dir: &Path, config: &ConfigPaths) -> Result<Pat
     }
 }
 
+/// Get the Zed config directory, honoring user override.
+pub fn get_zed_config_dir_for_home(
+    home_dir: &Path,
+    config: &ConfigPaths,
+) -> Result<PathBuf, String> {
+    match &config.zed {
+        Some(custom) => Ok(PathBuf::from(custom)),
+        None => default_zed_config_dir_for_home(home_dir),
+    }
+}
+
 // ============================================================================
 // WSL (Windows only)
 // ============================================================================
@@ -587,6 +621,7 @@ pub fn build_wsl_path(distro: &str, username: &str, config_key: &str) -> Result<
         "openclaw" => ".openclaw",
         "hermes" => ".hermes",
         "pi" => ".pi/agent",
+        "zed" => ".config/zed",
         _ => return Err(format!("Unknown config key: {config_key}")),
     };
 

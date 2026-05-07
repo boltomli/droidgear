@@ -1189,6 +1189,116 @@ async readOpencodeCurrentConfig() : Promise<Result<OpenCodeCurrentConfig, string
 }
 },
 /**
+ * Zed Editor — 列出所有 Profile，按名称字母序排列。
+ */
+async listZedProfilesCmd() : Promise<Result<ZedProfile[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_zed_profiles_cmd") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Zed Editor — 获取单个 Profile 按 ID。
+ */
+async getZedProfileCmd(id: string) : Promise<Result<ZedProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_zed_profile_cmd", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Zed Editor — 保存 Profile（创建或更新）。
+ */
+async saveZedProfileCmd(profile: ZedProfile) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_zed_profile_cmd", { profile }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Zed Editor — 删除 Profile 按 ID。
+ */
+async deleteZedProfileCmd(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_zed_profile_cmd", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Zed Editor — 复制 Profile 并使用新的名称。
+ */
+async duplicateZedProfileCmd(id: string, newName: string) : Promise<Result<ZedProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("duplicate_zed_profile_cmd", { id, newName }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Zed Editor — 创建默认的 "Default" Profile（仅当不存在时）。
+ */
+async createDefaultZedProfileCmd() : Promise<Result<ZedProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_default_zed_profile_cmd") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Zed Editor — 获取当前的活跃 Profile ID，如果没有则返回 null。
+ */
+async getActiveZedProfileIdCmd() : Promise<Result<string | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_active_zed_profile_id_cmd") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Zed Editor — 应用 Profile 到 settings.json（MERGE 语义）。
+ */
+async applyZedProfileCmd(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("apply_zed_profile_cmd", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Zed Editor — 获取存活 Zed 配置状态。
+ */
+async getZedConfigStatusCmd() : Promise<Result<ZedConfigStatus, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_zed_config_status_cmd") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Zed Editor — 从 settings.json 读取当前存活配置。
+ */
+async readZedCurrentConfigCmd() : Promise<Result<ZedCurrentConfig, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("read_zed_current_config_cmd") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * List all OpenClaw profiles
  */
 async listOpenclawProfiles() : Promise<Result<OpenClawProfile[], string>> {
@@ -1773,7 +1883,7 @@ export type CodexProviderConfig = { name?: string | null; baseUrl?: string | nul
 /**
  * User-defined configuration paths (only stores explicitly set paths)
  */
-export type ConfigPaths = { factory?: string | null; opencode?: string | null; opencodeAuth?: string | null; codex?: string | null; openclaw?: string | null; hermes?: string | null; pi?: string | null }
+export type ConfigPaths = { factory?: string | null; opencode?: string | null; opencodeAuth?: string | null; codex?: string | null; openclaw?: string | null; hermes?: string | null; pi?: string | null; zed?: string | null }
 export type ConnectionDiagnostics = { success: boolean; provider: string; modelId: string; latencyMs: number; error?: string | null; timestamp: string; testMode: TestMode; 
 /**
  * Actual model response text (inference mode only).
@@ -1843,7 +1953,7 @@ export type EffectivePath = { key: string; path: string; isDefault: boolean }
 /**
  * All effective paths
  */
-export type EffectivePaths = { factory: EffectivePath; opencode: EffectivePath; opencodeAuth: EffectivePath; codex: EffectivePath; openclaw: EffectivePath; hermes: EffectivePath; pi: EffectivePath }
+export type EffectivePaths = { factory: EffectivePath; opencode: EffectivePath; opencodeAuth: EffectivePath; codex: EffectivePath; openclaw: EffectivePath; hermes: EffectivePath; pi: EffectivePath; zed: EffectivePath }
 /**
  * Hermes Live 配置状态
  */
@@ -2180,6 +2290,26 @@ export type WslDistro = { name: string; isDefault: boolean; version: number; sta
  * WSL information including distributions and current user
  */
 export type WslInfo = { available: boolean; distros: WslDistro[] }
+/**
+ * Zed Editor — 配置状态
+ */
+export type ZedConfigStatus = { configExists: boolean; hasOpenaiCompatible: boolean; configPath: string }
+/**
+ * Zed Editor — 当前存活配置
+ */
+export type ZedCurrentConfig = { providers?: Partial<{ [key in string]: ZedProviderConfig }> }
+/**
+ * Zed Editor — 模型配置
+ */
+export type ZedModel = { name: string; displayName?: string | null; maxTokens?: number | null }
+/**
+ * Zed Editor — Profile 配置
+ */
+export type ZedProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; providers?: Partial<{ [key in string]: ZedProviderConfig }>; apiKeys?: Partial<{ [key in string]: string }> | null }
+/**
+ * Zed Editor — Provider 配置
+ */
+export type ZedProviderConfig = { api_url: string; availableModels?: ZedModel[] | null; apiKey?: string | null }
 
 /** tauri-specta globals **/
 

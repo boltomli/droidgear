@@ -21,3 +21,4 @@ pub mod recovery;
 pub mod sessions;
 pub mod specs;
 pub mod updater;
+pub mod zed;

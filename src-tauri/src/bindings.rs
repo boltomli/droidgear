@@ -3,7 +3,7 @@ use tauri_specta::{collect_commands, Builder};
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
         channel, codex, config, connectivity, droid_settings, env, hermes, mcp, notifications,
-        openclaw, opencode, paths, pi, preferences, recovery, sessions, specs, updater,
+        openclaw, opencode, paths, pi, preferences, recovery, sessions, specs, updater, zed,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -156,6 +156,16 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         droid_settings::delete_droid_settings_file,
         droid_settings::get_droid_launch_command,
         droid_settings::launch_droid,
+        zed::list_zed_profiles_cmd,
+        zed::get_zed_profile_cmd,
+        zed::save_zed_profile_cmd,
+        zed::delete_zed_profile_cmd,
+        zed::duplicate_zed_profile_cmd,
+        zed::create_default_zed_profile_cmd,
+        zed::get_active_zed_profile_id_cmd,
+        zed::apply_zed_profile_cmd,
+        zed::get_zed_config_status_cmd,
+        zed::read_zed_current_config_cmd,
     ])
 }
 
