@@ -43,6 +43,10 @@ async function fetchShellEnv(): Promise<Record<string, string>> {
     const result = await commands.getShellEnv()
 
     if (result.status === 'ok') {
+      if (result.data == null) {
+        logger.warn('Shell env returned null/undefined data')
+        return {}
+      }
       // Convert Partial<Record> to Record by filtering out undefined values
       const env: Record<string, string> = {}
       for (const [key, value] of Object.entries(result.data)) {
