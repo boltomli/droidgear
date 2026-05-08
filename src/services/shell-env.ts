@@ -72,10 +72,14 @@ async function fetchShellEnv(): Promise<Record<string, string>> {
  * Preload shell environment at app startup.
  * Call this early to avoid delay when first terminal is created.
  */
-export function preloadShellEnv(): void {
-  getShellEnv().catch(() => {
-    // Error already logged in fetchShellEnv
-  })
+export function preloadShellEnv(): Promise<void> {
+  return getShellEnv()
+    .then(() => {
+      /* discard resolved value */
+    })
+    .catch(() => {
+      // Error already logged in fetchShellEnv
+    })
 }
 
 /**
