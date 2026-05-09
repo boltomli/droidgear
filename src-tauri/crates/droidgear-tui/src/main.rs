@@ -3,7 +3,7 @@ mod editor;
 mod tui;
 mod ui;
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -31,8 +31,12 @@ enum Command {
 
 #[derive(Debug, Subcommand)]
 enum RunTarget {
-    /// Run a Codex profile by profile id
-    Codex { profile_id: String },
+    /// Run a Codex profile by index, exact name, or profile id
+    Codex {
+        #[arg(long)]
+        list: bool,
+        profile: Option<String>,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -45,8 +49,19 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Some(Command::Run { target }) => match target {
-            RunTarget::Codex { profile_id } => {
-                tui::run_codex_temporary_run_for_profile_id(&home_dir, &profile_id)
+            RunTarget::Codex { list, profile } => {
+                if list {
+                    if profile.is_some() {
+                        bail!("`--list` cannot be combined with a Codex target");
+                    }
+                    println!("{}", tui::list_codex_temporary_run_targets(&home_dir)?);
+                    Ok(())
+                } else {
+                    let profile = profile.context(
+                        "Missing Codex target. Use `droidgear-tui run codex --list` to inspect available profiles.",
+                    )?;
+                    tui::run_codex_temporary_run_for_selector(&home_dir, &profile)
+                }
             }
         },
         None => {
@@ -84,11 +99,27 @@ mod tests {
         assert_eq!(cli.home, Some(PathBuf::from("/tmp/demo-home")));
         match cli.command {
             Some(Command::Run {
-                target: RunTarget::Codex { profile_id },
+                target: RunTarget::Codex { list, profile },
             }) => {
-                assert_eq!(profile_id, "profile-a");
+                assert!(!list);
+                assert_eq!(profile.as_deref(), Some("profile-a"));
             }
             _ => panic!("expected codex run subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_codex_list_subcommand() {
+        let cli = Cli::parse_from(["droidgear-tui", "run", "codex", "--list"]);
+
+        match cli.command {
+            Some(Command::Run {
+                target: RunTarget::Codex { list, profile },
+            }) => {
+                assert!(list);
+                assert!(profile.is_none());
+            }
+            _ => panic!("expected codex list subcommand"),
         }
     }
 }

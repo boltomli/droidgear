@@ -462,6 +462,38 @@ fn load_profile_by_id(home_dir: &Path, id: &str) -> Result<CodexProfile, String>
     read_profile_file(&path)
 }
 
+fn resolve_profile_by_name<'a>(
+    profiles: &'a [CodexProfile],
+    selector: &str,
+) -> Result<Option<&'a CodexProfile>, String> {
+    let exact_matches = profiles
+        .iter()
+        .filter(|profile| profile.name == selector)
+        .collect::<Vec<_>>();
+    match exact_matches.as_slice() {
+        [] => {}
+        [profile] => return Ok(Some(profile)),
+        _ => {
+            return Err(format!(
+                "Multiple Codex profiles share the name '{selector}'. Use the profile index or id instead."
+            ));
+        }
+    }
+
+    let folded_selector = selector.to_lowercase();
+    let folded_matches = profiles
+        .iter()
+        .filter(|profile| profile.name.to_lowercase() == folded_selector)
+        .collect::<Vec<_>>();
+    match folded_matches.as_slice() {
+        [] => Ok(None),
+        [profile] => Ok(Some(profile)),
+        _ => Err(format!(
+            "Multiple Codex profiles share the name '{selector}'. Use the profile index or id instead."
+        )),
+    }
+}
+
 pub fn list_codex_profiles_for_home(home_dir: &Path) -> Result<Vec<CodexProfile>, String> {
     // Auto-create a system "official" profile if the user has codex login credentials.
     // This keeps GUI/TUI in sync without extra UI logic.
@@ -499,6 +531,39 @@ pub fn list_codex_profiles_for_home(home_dir: &Path) -> Result<Vec<CodexProfile>
 
 pub fn get_codex_profile_for_home(home_dir: &Path, id: &str) -> Result<CodexProfile, String> {
     load_profile_by_id(home_dir, id)
+}
+
+pub fn resolve_codex_profile_selector_for_home(
+    home_dir: &Path,
+    selector: &str,
+) -> Result<CodexProfile, String> {
+    let selector = selector.trim();
+    if selector.is_empty() {
+        return Err("Codex profile selector cannot be empty".to_string());
+    }
+
+    let profiles = list_codex_profiles_for_home(home_dir)?;
+
+    if let Some(profile) = profiles.iter().find(|profile| profile.id == selector) {
+        return Ok(profile.clone());
+    }
+
+    if let Some(profile) = resolve_profile_by_name(&profiles, selector)? {
+        return Ok(profile.clone());
+    }
+
+    if let Ok(index) = selector.parse::<usize>() {
+        if let Some(profile) = index
+            .checked_sub(1)
+            .and_then(|zero_based_index| profiles.get(zero_based_index))
+        {
+            return Ok(profile.clone());
+        }
+    }
+
+    Err(format!(
+        "No Codex profile matches '{selector}'. Use `droidgear-tui run codex --list` to inspect available profiles."
+    ))
 }
 
 pub fn save_codex_profile_for_home(
@@ -774,6 +839,10 @@ pub fn get_codex_profile(id: &str) -> Result<CodexProfile, String> {
     get_codex_profile_for_home(&system_home_dir()?, id)
 }
 
+pub fn resolve_codex_profile_selector(selector: &str) -> Result<CodexProfile, String> {
+    resolve_codex_profile_selector_for_home(&system_home_dir()?, selector)
+}
+
 pub fn save_codex_profile(profile: CodexProfile) -> Result<(), String> {
     save_codex_profile_for_home(&system_home_dir()?, profile)
 }
@@ -804,4 +873,56 @@ pub fn get_codex_config_status() -> Result<CodexConfigStatus, String> {
 
 pub fn read_codex_current_config() -> Result<CodexCurrentConfig, String> {
     read_codex_current_config_for_home(&system_home_dir()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        resolve_codex_profile_selector_for_home, save_codex_profile_for_home, CodexProfile,
+    };
+    use std::collections::HashMap;
+    use tempfile::TempDir;
+
+    fn sample_profile(id: &str, name: &str) -> CodexProfile {
+        CodexProfile {
+            id: id.to_string(),
+            name: name.to_string(),
+            description: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+            providers: HashMap::new(),
+            model_provider: "openai".to_string(),
+            model: "gpt-5".to_string(),
+            model_reasoning_effort: None,
+            api_key: None,
+        }
+    }
+
+    #[test]
+    fn resolve_codex_profile_selector_for_home_accepts_id_name_and_index() {
+        let temp = TempDir::new().unwrap();
+        save_codex_profile_for_home(temp.path(), sample_profile("profile-a", "Alpha")).unwrap();
+        save_codex_profile_for_home(temp.path(), sample_profile("profile-b", "Second Profile"))
+            .unwrap();
+
+        let by_id = resolve_codex_profile_selector_for_home(temp.path(), "profile-a").unwrap();
+        let by_name =
+            resolve_codex_profile_selector_for_home(temp.path(), "second profile").unwrap();
+        let by_index = resolve_codex_profile_selector_for_home(temp.path(), "2").unwrap();
+
+        assert_eq!(by_id.id, "profile-a");
+        assert_eq!(by_name.id, "profile-b");
+        assert_eq!(by_index.id, "profile-b");
+    }
+
+    #[test]
+    fn resolve_codex_profile_selector_for_home_rejects_ambiguous_names() {
+        let temp = TempDir::new().unwrap();
+        save_codex_profile_for_home(temp.path(), sample_profile("profile-a", "Shared")).unwrap();
+        save_codex_profile_for_home(temp.path(), sample_profile("profile-b", "Shared")).unwrap();
+
+        let error = resolve_codex_profile_selector_for_home(temp.path(), "Shared").unwrap_err();
+
+        assert!(error.contains("Multiple Codex profiles share the name 'Shared'"));
+    }
 }

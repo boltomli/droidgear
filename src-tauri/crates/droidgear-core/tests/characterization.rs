@@ -344,13 +344,14 @@ model = "existing-live-model"
 
     let runtime_auth = read_to_string(&plan.runtime_home_path.join("auth.json"));
     let runtime_auth_json: Value = serde_json::from_str(&runtime_auth).unwrap();
-    assert!(runtime_auth_json.get("OPENAI_API_KEY").is_none());
     assert_eq!(
         runtime_auth_json
-            .get("session")
+            .get("OPENAI_API_KEY")
             .and_then(|value| value.as_str()),
-        Some("official-session-token")
+        Some("sk-temp")
     );
+    assert!(runtime_auth_json.get("session").is_none());
+    assert!(runtime_auth_json.get("tokens").is_none());
 
     let after_config = read_to_string(&home.join(".codex").join("config.toml"));
     let after_auth = read_to_string(&home.join(".codex").join("auth.json"));

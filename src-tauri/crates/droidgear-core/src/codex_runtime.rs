@@ -14,6 +14,11 @@ use crate::{codex, json, paths, storage};
 const CODEX_CONFIG_SUPPORT_MIN_VERSION: &str = "0.128.0";
 const CODEX_RUNTIME_DIR: &str = "runtime/codex";
 const TEMP_RUNTIME_PREFIX: &str = "temporary-run-";
+const OFFICIAL_PROFILE_ID: &str = "official";
+const TOKENS_FIELD: &str = "tokens";
+const AUTH_MODE_FIELD: &str = "auth_mode";
+const LAST_REFRESH_FIELD: &str = "last_refresh";
+const AGENT_IDENTITY_FIELD: &str = "agent_identity";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -217,6 +222,48 @@ fn write_auth_snapshot(
     json::write_json_object_file(&runtime_home_path.join("auth.json"), auth)
 }
 
+fn has_portable_managed_auth(auth: &HashMap<String, serde_json::Value>) -> bool {
+    auth.contains_key(TOKENS_FIELD)
+        || auth.contains_key(AUTH_MODE_FIELD)
+        || auth.contains_key(LAST_REFRESH_FIELD)
+        || auth.contains_key(AGENT_IDENTITY_FIELD)
+}
+
+fn build_runtime_auth_snapshot(
+    profile: &codex::CodexProfile,
+    provider: Option<&codex::CodexProviderConfig>,
+    mut live_auth: HashMap<String, serde_json::Value>,
+) -> Result<Option<HashMap<String, serde_json::Value>>, String> {
+    if let Some(api_key) = codex::resolved_api_key(profile, provider) {
+        let mut auth = HashMap::new();
+        auth.insert(
+            codex::OPENAI_API_KEY_FIELD.to_string(),
+            serde_json::Value::String(api_key),
+        );
+        return Ok(Some(auth));
+    }
+
+    codex::apply_api_key_to_auth_map(&mut live_auth, None);
+
+    if has_portable_managed_auth(&live_auth) {
+        return Ok(Some(live_auth));
+    }
+
+    if profile.id == OFFICIAL_PROFILE_ID {
+        return Err(
+            "Codex temporary run could not snapshot official auth from live CODEX_HOME. Keyring-backed official auth is not supported yet; use a file-backed Codex auth store or an API-key profile.".to_string(),
+        );
+    }
+
+    if provider.and_then(|config| config.requires_openai_auth) == Some(true) {
+        return Err(
+            "Codex temporary run requires live Codex auth for this profile, but no portable auth snapshot was available. Use an API-key profile or switch Codex CLI auth storage to file.".to_string(),
+        );
+    }
+
+    Ok(None)
+}
+
 fn build_secret_env(
     profile: &codex::CodexProfile,
     provider: Option<&codex::CodexProviderConfig>,
@@ -255,13 +302,17 @@ fn build_runtime_home_snapshot(
     std::fs::create_dir_all(&runtime_home_path)
         .map_err(|e| format!("Failed to create Codex runtime home: {e}"))?;
 
+    let (provider_id, provider) = codex::resolve_active_provider(profile);
+    validate_provider_id(&provider_id)?;
+
     let mut config = read_config_template(&live_codex_home.join("config.toml"))?;
     codex::apply_profile_to_config_map(&mut config, profile)?;
     write_config_snapshot(&runtime_home_path, &config)?;
 
-    let mut auth = read_auth_template(&live_codex_home.join("auth.json"));
-    codex::apply_api_key_to_auth_map(&mut auth, None);
-    write_auth_snapshot(&runtime_home_path, &auth)?;
+    let live_auth = read_auth_template(&live_codex_home.join("auth.json"));
+    if let Some(auth) = build_runtime_auth_snapshot(profile, provider, live_auth)? {
+        write_auth_snapshot(&runtime_home_path, &auth)?;
+    }
 
     Ok(runtime_home_path)
 }
@@ -548,7 +599,11 @@ mod tests {
         write_file(
             &live_home.join("auth.json"),
             r#"{
-  "session": "official-session-token",
+  "auth_mode": "chatgpt",
+  "tokens": {
+    "access_token": "access-token",
+    "refresh_token": "refresh-token"
+  },
   "OPENAI_API_KEY": "sk-live"
 }"#,
         );
@@ -558,11 +613,12 @@ mod tests {
             std::fs::read_to_string(plan.runtime_home_path.join("auth.json")).unwrap();
         let auth: serde_json::Value = serde_json::from_str(&runtime_auth).unwrap();
 
-        assert!(auth.get("OPENAI_API_KEY").is_none());
         assert_eq!(
-            auth.get("session").and_then(|value| value.as_str()),
-            Some("official-session-token")
+            auth.get("OPENAI_API_KEY").and_then(|value| value.as_str()),
+            Some("sk-provider")
         );
+        assert!(auth.get("tokens").is_none());
+        assert!(auth.get("auth_mode").is_none());
     }
 
     #[test]
@@ -652,6 +708,49 @@ env_key = "OLD_API_KEY"
             plan.unset_env,
             vec!["EXAMPLE_API_KEY".to_string(), "OPENAI_API_KEY".to_string(),]
         );
+    }
+
+    #[test]
+    fn temporary_run_plan_skips_empty_runtime_auth_snapshot_when_no_auth_is_needed() {
+        let temp = TempDir::new().unwrap();
+        let live_home = temp.path().join("live-codex-home");
+        crate::paths::save_config_path_for_home(
+            temp.path(),
+            "codex",
+            live_home.to_string_lossy().as_ref(),
+        )
+        .unwrap();
+
+        let mut profile = sample_profile();
+        profile.api_key = None;
+        let provider = profile.providers.get_mut("custom").unwrap();
+        provider.api_key = None;
+        provider.requires_openai_auth = Some(false);
+
+        let plan = build_temporary_run_plan_for_home(temp.path(), &profile).unwrap();
+
+        assert!(!plan.runtime_home_path.join("auth.json").exists());
+    }
+
+    #[test]
+    fn temporary_run_plan_errors_when_official_auth_cannot_be_portably_snapshotted() {
+        let temp = TempDir::new().unwrap();
+        let profile = CodexProfile {
+            id: "official".to_string(),
+            name: "Official".to_string(),
+            description: None,
+            created_at: "2026-01-01T00:00:00Z".to_string(),
+            updated_at: "2026-01-01T00:00:00Z".to_string(),
+            providers: HashMap::new(),
+            model_provider: "openai".to_string(),
+            model: "gpt-5".to_string(),
+            model_reasoning_effort: None,
+            api_key: None,
+        };
+
+        let error = build_temporary_run_plan_for_home(temp.path(), &profile).unwrap_err();
+
+        assert!(error.contains("could not snapshot official auth"));
     }
 
     #[test]
