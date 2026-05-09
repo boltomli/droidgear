@@ -234,70 +234,40 @@ fn launch_system_default_macos(command: &str) -> Result<(), String> {
 
 #[cfg(target_os = "linux")]
 fn launch_linux(command: &str, preferred: &str) -> Result<(), String> {
+    let bash_script = format!("{}; exec bash", command);
+    let xfce_script = format!("bash -c '{}; exec bash'", command);
+
     let terminals: Vec<(&str, Vec<&str>)> = match preferred {
         "gnome-terminal" => vec![(
             "gnome-terminal",
-            vec![
-                "--tab",
-                "--",
-                "bash",
-                "-c",
-                &format!("{}; exec bash", command),
-            ],
+            vec!["--tab", "--", "bash", "-c", &bash_script],
         )],
         "konsole" => vec![(
             "konsole",
-            vec![
-                "--new-tab",
-                "-e",
-                "bash",
-                "-c",
-                &format!("{}; exec bash", command),
-            ],
+            vec!["--new-tab", "-e", "bash", "-c", &bash_script],
         )],
-        "xfce4-terminal" => vec![(
-            "xfce4-terminal",
-            vec!["--tab", "-e", &format!("bash -c '{}; exec bash'", command)],
-        )],
+        "xfce4-terminal" => vec![("xfce4-terminal", vec!["--tab", "-e", &xfce_script])],
         "x-terminal-emulator" => vec![(
             "x-terminal-emulator",
-            vec!["-e", "bash", "-c", &format!("{}; exec bash", command)],
+            vec!["-e", "bash", "-c", &bash_script],
         )],
         _ => {
             // auto-detect or empty — try common terminals in order
             vec![
                 (
                     "gnome-terminal",
-                    vec![
-                        "--tab",
-                        "--",
-                        "bash",
-                        "-c",
-                        &format!("{}; exec bash", command),
-                    ],
+                    vec!["--tab", "--", "bash", "-c", &bash_script],
                 ),
                 (
                     "konsole",
-                    vec![
-                        "--new-tab",
-                        "-e",
-                        "bash",
-                        "-c",
-                        &format!("{}; exec bash", command),
-                    ],
+                    vec!["--new-tab", "-e", "bash", "-c", &bash_script],
                 ),
-                (
-                    "xfce4-terminal",
-                    vec!["--tab", "-e", &format!("bash -c '{}; exec bash'", command)],
-                ),
+                ("xfce4-terminal", vec!["--tab", "-e", &xfce_script]),
                 (
                     "x-terminal-emulator",
-                    vec!["-e", "bash", "-c", &format!("{}; exec bash", command)],
+                    vec!["-e", "bash", "-c", &bash_script],
                 ),
-                (
-                    "xterm",
-                    vec!["-e", "bash", "-c", &format!("{}; exec bash", command)],
-                ),
+                ("xterm", vec!["-e", "bash", "-c", &bash_script]),
             ]
         }
     };
