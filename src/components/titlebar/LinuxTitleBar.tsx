@@ -37,7 +37,7 @@ export function LinuxTitleBar({ className, title }: LinuxTitleBarProps) {
       <TitleBarTitle title={title} />
 
       {/* Right side - Actions + Window Controls */}
-      <div className="flex items-center">
+      <div className="flex items-center pr-2">
         <TitleBarRightActions />
         <WindowsWindowControls />
       </div>

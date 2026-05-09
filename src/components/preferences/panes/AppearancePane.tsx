@@ -143,7 +143,7 @@ export function AppearancePane() {
             onValueChange={handleLanguageChange}
             disabled={savePreferences.isPending}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -170,7 +170,7 @@ export function AppearancePane() {
             onValueChange={handleThemeChange}
             disabled={savePreferences.isPending}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-48">
               <SelectValue
                 placeholder={t('preferences.appearance.selectTheme')}
               />
@@ -200,7 +200,7 @@ export function AppearancePane() {
             onValueChange={handleTerminalFontChange}
             disabled={savePreferences.isPending || fontsLoading}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-48">
               <SelectValue
                 placeholder={t(
                   'preferences.appearance.terminalFontPlaceholder'

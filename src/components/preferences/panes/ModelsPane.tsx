@@ -37,7 +37,7 @@ export function ModelsPane() {
   }, [allModels, search])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium">{t('preferences.models.title')}</h3>
         <p className="text-sm text-muted-foreground">

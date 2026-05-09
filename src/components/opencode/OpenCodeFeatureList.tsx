@@ -47,7 +47,7 @@ export function OpenCodeFeatureList() {
       </div>
 
       {/* Install Section */}
-      <div className="mt-auto p-3 border-t text-xs text-muted-foreground">
+      <div className="mt-auto p-2 border-t text-xs text-muted-foreground">
         <div className="font-medium mb-2">{t('opencode.install.title')}</div>
         <Tabs defaultValue={isWindows ? 'windows' : 'unix'} className="w-full">
           <TabsList className="w-full">

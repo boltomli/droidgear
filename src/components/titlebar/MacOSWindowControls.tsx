@@ -124,7 +124,7 @@ export function MacOSWindowControls({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 px-3 text-black active:text-black dark:text-black',
+        'flex items-center gap-1.5 pl-2 text-black active:text-black dark:text-black',
         className
       )}
       onMouseEnter={handleMouseEnter}

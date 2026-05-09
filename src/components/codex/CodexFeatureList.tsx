@@ -32,7 +32,7 @@ export function CodexFeatureList() {
         ))}
       </div>
 
-      <div className="mt-auto p-3 border-t text-xs text-muted-foreground">
+      <div className="mt-auto p-2 border-t text-xs text-muted-foreground">
         {t('codex.features.hint')}
       </div>
     </div>

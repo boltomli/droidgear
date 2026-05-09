@@ -545,7 +545,7 @@ export function PathsPane() {
   return (
     <div className="space-y-6">
       <SettingsSection title={t('preferences.paths.title')}>
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-sm text-muted-foreground">
           {t('preferences.paths.description')}
         </p>
 

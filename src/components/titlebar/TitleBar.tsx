@@ -65,7 +65,7 @@ export function TitleBar({ className, title, forcePlatform }: TitleBarProps) {
         <TitleBarTitle title={displayTitle} />
 
         {/* Right side - Actions + Window Controls */}
-        <div className="flex items-center">
+        <div className="flex items-center pr-2">
           <TitleBarRightActions />
           <WindowsWindowControls />
         </div>

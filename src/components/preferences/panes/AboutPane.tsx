@@ -27,7 +27,7 @@ export function AboutPane() {
   return (
     <div className="flex flex-col items-center justify-center space-y-6 py-8">
       {/* App Icon & Name */}
-      <div className="flex flex-col items-center space-y-3">
+      <div className="flex flex-col items-center space-y-2">
         <img
           src="/Icon512.png"
           alt="DroidGear"
@@ -49,7 +49,7 @@ export function AboutPane() {
       <Separator className="w-64" />
 
       {/* Project URL */}
-      <div className="flex flex-col items-center space-y-2">
+      <div className="flex flex-col items-center space-y-1">
         <span className="text-sm font-medium text-foreground">
           {t('preferences.about.projectUrl')}
         </span>
@@ -75,7 +75,7 @@ export function AboutPane() {
       <Separator className="w-64" />
 
       {/* Acknowledgements */}
-      <div className="flex flex-col items-center space-y-2 text-center">
+      <div className="flex flex-col items-center space-y-1 text-center">
         <span className="text-sm font-medium text-foreground">
           {t('preferences.about.acknowledgements')}
         </span>
@@ -86,9 +86,9 @@ export function AboutPane() {
           variant="ghost"
           size="sm"
           onClick={() => handleOpenUrl(TEMPLATE_URL)}
-          className="gap-2 text-xs"
+          className="gap-2"
         >
-          <ExternalLink className="h-3 w-3" />
+          <ExternalLink className="h-4 w-4" />
           tauri-template
         </Button>
       </div>
@@ -96,7 +96,7 @@ export function AboutPane() {
       <Separator className="w-64" />
 
       {/* Tech Stack */}
-      <div className="flex flex-col items-center space-y-2">
+      <div className="flex flex-col items-center space-y-1">
         <span className="text-sm font-medium text-foreground">
           {t('preferences.about.techStack')}
         </span>

@@ -156,10 +156,10 @@ export function ModelCard({
       )}
 
       <div className="flex-1 min-w-0">
-        <div className="text-center mb-1">
+        <div className="mb-1">
           <span className="font-medium truncate">{displayName}</span>
         </div>
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center gap-2">
           <Badge variant="secondary" className={providerColors[model.provider]}>
             {providerLabels[model.provider]}
           </Badge>
@@ -181,7 +181,7 @@ export function ModelCard({
           ) : null}
           {getStatusIcon()}
         </div>
-        <div className="text-sm text-muted-foreground text-center truncate mt-1">
+        <div className="text-sm text-muted-foreground truncate mt-1">
           {model.model} • {model.baseUrl}
         </div>
         {(() => {
@@ -223,7 +223,7 @@ export function ModelCard({
             return null
 
           return (
-            <div className="flex items-center justify-center gap-1 mt-0.5">
+            <div className="flex items-center gap-1 mt-0.5">
               {reasoningEffort && (
                 <Badge
                   variant="outline"
