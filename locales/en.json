@@ -808,6 +808,7 @@
   "codex.provider.apiKeyNotConfigured": "No API Key",
   "codex.provider.setActive": "Set Active",
   "codex.provider.importFromChannel": "Import from Channel",
+  "codex.provider.reservedProviderName": "Provider name cannot be 'OpenAI' (case-insensitive)",
 
   "codex.auth.title": "Authentication",
   "codex.auth.apiKey": "OPENAI_API_KEY",

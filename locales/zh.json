@@ -808,6 +808,7 @@
   "codex.provider.apiKeyNotConfigured": "未配置 API Key",
   "codex.provider.setActive": "设为激活",
   "codex.provider.importFromChannel": "从渠道导入",
+  "codex.provider.reservedProviderName": "Provider 名称不能为 OpenAI（不区分大小写）",
 
   "codex.auth.title": "认证",
   "codex.auth.apiKey": "OPENAI_API_KEY",

@@ -400,6 +400,12 @@ pub fn save_codex_profile_for_home(
     home_dir: &Path,
     mut profile: CodexProfile,
 ) -> Result<(), String> {
+    for key in profile.providers.keys() {
+        if key.eq_ignore_ascii_case("openai") {
+            return Err("Provider name 'OpenAI' is reserved".to_string());
+        }
+    }
+
     if profile.id.trim().is_empty() {
         profile.id = Uuid::new_v4().to_string();
         profile.created_at = now_rfc3339();
