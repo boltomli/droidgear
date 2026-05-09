@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.9.0
+
+**New Features / 新功能**
+
+- Launch Droid from temporary settings snapshot / 从临时设置快照启动 Droid
+- Add listable TUI temporary runs for Droid / 为 Droid 添加可列出的 TUI 临时运行
+- Launch Codex profiles from temporary runtime home / 从临时运行时目录启动 Codex 配置
+- Reject 'OpenAI' as Codex provider name (case-insensitive) / 拒绝使用 'OpenAI' 作为 Codex 提供商名称（不区分大小写）
+
+**Bug Fixes / 问题修复**
+
+- Harden Codex temporary runs and selectors / 加固 Codex 临时运行和选择器
+
 ## v0.8.1
 
 **Bug Fixes / 问题修复**
