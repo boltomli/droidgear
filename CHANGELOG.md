@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.1
+
+**Bug Fixes / 问题修复**
+
+- Fix borrow string error while executing linux build action / 修复执行 Linux 构建动作时的 borrow string 错误
+
 ## v0.8.0
 
 **New Features / 新功能**
