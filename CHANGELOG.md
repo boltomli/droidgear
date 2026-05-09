@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.8.0
+
+**New Features / 新功能**
+
+- Multi-settings file support with terminal preference and panel refresh / 多配置文件支持，包含终端偏好设置和面板刷新
+- Differentiate max effort and add 1M context badge to model cards / 区分 max effort 并在模型卡片中添加 1M 上下文徽章
+
+**Bug Fixes / 问题修复**
+
+- Make platform comparison case-insensitive in provider inference / 平台比较不区分大小写（provider 推断）
+- Fix 1M context badge to use user config, restore models scroll, remove wrong toast / 修复 1M 上下文徽章使用用户配置，恢复模型滚动，移除错误提示
+
 ## v0.7.0
 
 **New Features / 新功能**

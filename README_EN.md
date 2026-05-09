@@ -49,10 +49,16 @@ Run the installer directly.
 - **Follow Mode** - Session follow mode with thinking expansion toggle
 - **Cloud Sync** - Cloud session sync toggle
 
+### Droid Configuration Management
+
+- **Multi-Settings Files** - Manage and switch between multiple Factory Droid configuration files (settings.json)
+- **Terminal Preferences** - Set terminal preferences independently for each configuration file
+- **Panel Refresh** - Automatically refresh relevant panels when switching configuration files
+
 ### Missions Management
 
 - **Model Configuration** - Configure Worker model and Validation Worker model for Missions
-- **Reasoning Effort** - Set reasoning effort independently for each model (none/low/medium/high)
+- **Reasoning Effort** - Set reasoning effort independently for each model (none/low/medium/high/max), displays 1M context badge on model cards
 
 ### Specs File Management
 
