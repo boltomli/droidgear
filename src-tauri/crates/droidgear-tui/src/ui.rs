@@ -328,7 +328,7 @@ fn field_line(label: &str, value: &str, label_width: usize) -> Line<'static> {
     field_line_custom(label, value, label_width, None)
 }
 
-fn render_list<'a>(frame: &mut Frame, list: List<'a>, area: Rect, selected: Option<usize>) {
+fn render_list(frame: &mut Frame, list: List<'_>, area: Rect, selected: Option<usize>) {
     let mut state = ListState::default();
     state.select(selected);
     frame.render_stateful_widget(list, area, &mut state);

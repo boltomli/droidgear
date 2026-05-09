@@ -12,6 +12,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use similar::TextDiff;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::Duration;
 use tempfile::{NamedTempFile, TempDir};
 
@@ -4633,6 +4634,46 @@ fn write_string(path: &Path, content: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn start_command_in_foreground(
+    program: &str,
+    args: &[String],
+    env: &[(String, String)],
+    secret_env: &[(String, String)],
+    unset_env: &[String],
+    cwd: Option<&Path>,
+) -> anyhow::Result<()> {
+    let mut command = Command::new(program);
+    command.args(args);
+
+    if let Some(cwd) = cwd {
+        command.current_dir(cwd);
+    }
+
+    for key in unset_env {
+        command.env_remove(key);
+    }
+
+    for (key, value) in env.iter().chain(secret_env.iter()) {
+        command.env(key, value);
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+
+        let error = command.exec();
+        Err(error).with_context(|| format!("exec {program}"))
+    }
+
+    #[cfg(not(unix))]
+    {
+        command
+            .spawn()
+            .with_context(|| format!("start {program}"))?;
+        Ok(())
+    }
+}
+
 fn format_diff_report(title: &str, files: Vec<(String, Option<String>, Option<String>)>) -> String {
     let mut out = String::new();
     out.push_str(title);
@@ -4729,6 +4770,67 @@ fn preview_codex_apply(home_dir: &Path, profile_id: &str) -> anyhow::Result<Stri
             ),
         ],
     ))
+}
+
+fn build_codex_temporary_run_plan(
+    home_dir: &Path,
+    profile_id: &str,
+) -> anyhow::Result<droidgear_core::codex_runtime::CodexTemporaryLaunchPlan> {
+    droidgear_core::codex_runtime::cleanup_stale_runtime_homes_for_home(home_dir)
+        .map_err(anyhow::Error::msg)?;
+    let profile = droidgear_core::codex::get_codex_profile_for_home(home_dir, profile_id)
+        .map_err(anyhow::Error::msg)?;
+    droidgear_core::codex_runtime::build_temporary_run_plan_for_home(home_dir, &profile)
+        .map_err(anyhow::Error::msg)
+}
+
+fn run_codex_temporary_run(home_dir: &Path, profile_id: &str) -> anyhow::Result<()> {
+    let plan = build_codex_temporary_run_plan(home_dir, profile_id)?;
+    start_command_in_foreground(
+        &plan.program,
+        &plan.args,
+        &plan.env,
+        &plan.secret_env,
+        &plan.unset_env,
+        None,
+    )
+}
+
+pub fn list_codex_temporary_run_targets(home_dir: &Path) -> anyhow::Result<String> {
+    let profiles = droidgear_core::codex::list_codex_profiles_for_home(home_dir)
+        .map_err(anyhow::Error::msg)?;
+    let active_profile_id = droidgear_core::codex::get_active_codex_profile_id_for_home(home_dir)
+        .map_err(anyhow::Error::msg)?;
+
+    let mut out = String::from("Available Codex run targets:\n");
+    if profiles.is_empty() {
+        out.push_str("(none)\n\nUse the Codex TUI/GUI to create a profile first.");
+        return Ok(out);
+    }
+
+    for (index, profile) in profiles.iter().enumerate() {
+        let marker = if active_profile_id.as_deref() == Some(profile.id.as_str()) {
+            "*"
+        } else {
+            " "
+        };
+        out.push_str(&format!(
+            "{marker} {}. {} [id: {}]\n",
+            index + 1,
+            profile.name,
+            profile.id
+        ));
+    }
+    out.push_str("\nUse `droidgear-tui run codex <index|name|id>`.\n");
+    out.push_str("`*` marks the currently active profile.");
+    Ok(out)
+}
+
+pub fn run_codex_temporary_run_for_selector(home_dir: &Path, selector: &str) -> anyhow::Result<()> {
+    let profile =
+        droidgear_core::codex::resolve_codex_profile_selector_for_home(home_dir, selector)
+            .map_err(anyhow::Error::msg)?;
+    run_codex_temporary_run(home_dir, &profile.id)
 }
 
 fn preview_opencode_apply(home_dir: &Path, profile_id: &str) -> anyhow::Result<String> {
@@ -7646,6 +7748,8 @@ fn factory_model_id(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+    use tempfile::TempDir;
 
     #[test]
     fn normalize_factory_models_sets_index_and_id() {
@@ -7885,5 +7989,50 @@ mod tests {
             profile_id: "x".to_string(),
             provider_id: "y".to_string(),
         };
+    }
+
+    #[test]
+    fn list_codex_temporary_run_targets_lists_index_name_and_id() {
+        let temp = TempDir::new().unwrap();
+        droidgear_core::codex::save_codex_profile_for_home(
+            temp.path(),
+            droidgear_core::codex::CodexProfile {
+                id: "profile-a".to_string(),
+                name: "Alpha".to_string(),
+                description: None,
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T00:00:00Z".to_string(),
+                providers: HashMap::new(),
+                model_provider: "openai".to_string(),
+                model: "gpt-5".to_string(),
+                model_reasoning_effort: None,
+                api_key: None,
+            },
+        )
+        .unwrap();
+        droidgear_core::codex::save_codex_profile_for_home(
+            temp.path(),
+            droidgear_core::codex::CodexProfile {
+                id: "profile-b".to_string(),
+                name: "Beta".to_string(),
+                description: None,
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T00:00:00Z".to_string(),
+                providers: HashMap::new(),
+                model_provider: "openai".to_string(),
+                model: "gpt-5".to_string(),
+                model_reasoning_effort: None,
+                api_key: None,
+            },
+        )
+        .unwrap();
+        droidgear_core::codex::apply_codex_profile_for_home(temp.path(), "profile-b").unwrap();
+
+        let output = list_codex_temporary_run_targets(temp.path()).unwrap();
+
+        assert!(output.contains("Available Codex run targets:"));
+        assert!(output.contains("1. Alpha [id: profile-a]"));
+        assert!(output.contains("* 2. Beta [id: profile-b]"));
+        assert!(output.contains("run codex <index|name|id>"));
     }
 }
