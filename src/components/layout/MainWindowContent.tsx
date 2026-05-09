@@ -136,20 +136,20 @@ export function MainWindowContent({
     )
   }
 
+  const isTerminalActive =
+    currentView === 'droid' && droidSubView === 'terminal'
+
   return (
     <div
       className={cn('flex h-full flex-col bg-background relative', className)}
     >
-      {renderContent()}
-      {/* Terminal is always mounted across all views, hidden when not active */}
-      <div
-        className={cn(
-          !(currentView === 'droid' && droidSubView === 'terminal') && 'hidden',
-          'absolute inset-0'
-        )}
-      >
-        <TerminalPage />
-      </div>
+      {isTerminalActive ? (
+        <div className="absolute inset-0">
+          <TerminalPage />
+        </div>
+      ) : (
+        renderContent()
+      )}
     </div>
   )
 }
