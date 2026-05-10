@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.9.1
+
+**New Features / 新功能**
+
+- Droid official accounts switch and refactor TUI modules / Droid 官方账号切换及重构 TUI 模块
+
 ## v0.9.0
 
 **New Features / 新功能**
