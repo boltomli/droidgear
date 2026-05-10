@@ -134,6 +134,83 @@ fn hermes_input_action_variants_exist() {
 }
 
 #[test]
+fn claude_screens_are_included_in_nav_items() {
+    let nav = app::App::nav_items();
+    let has_claude = nav
+        .iter()
+        .any(|(label, screen)| *label == "Claude" && *screen == app::Screen::Claude);
+    assert!(has_claude, "nav_items() should include Claude entry");
+}
+
+#[test]
+fn claude_app_state_initializes_correctly() {
+    use std::path::PathBuf;
+    let app = app::App::new(PathBuf::from("/tmp/test-home"));
+    assert!(app.claude_profiles.is_empty());
+    assert!(app.claude_active_id.is_none());
+    assert_eq!(app.claude_index, 0);
+    assert!(app.claude_detail_id.is_none());
+    assert!(app.claude_detail.is_none());
+    assert_eq!(app.claude_detail_field_index, 0);
+}
+
+#[test]
+fn claude_clamp_indices_does_not_panic_on_empty_profiles() {
+    use std::path::PathBuf;
+    let mut app = app::App::new(PathBuf::from("/tmp/test-home"));
+    app.clamp_indices();
+    assert_eq!(app.claude_index, 0);
+}
+
+#[test]
+fn claude_screen_variants_exist() {
+    let _claude = app::Screen::Claude;
+    let _claude_profile = app::Screen::ClaudeProfile;
+}
+
+#[test]
+fn claude_confirm_action_variants_exist() {
+    let _apply = app::ConfirmAction::ClaudeApply {
+        id: "test".to_string(),
+    };
+    let _delete = app::ConfirmAction::ClaudeDelete {
+        id: "test".to_string(),
+    };
+}
+
+#[test]
+fn claude_input_action_variants_exist() {
+    let _create = app::InputAction::ClaudeCreateProfile;
+    let _dup = app::InputAction::ClaudeDuplicate {
+        id: "x".to_string(),
+    };
+    let _name = app::InputAction::ClaudeSetProfileName {
+        id: "x".to_string(),
+    };
+    let _desc = app::InputAction::ClaudeSetProfileDescription {
+        id: "x".to_string(),
+    };
+    let _base = app::InputAction::ClaudeSetProfileBaseUrl {
+        id: "x".to_string(),
+    };
+    let _token = app::InputAction::ClaudeSetProfileBearerToken {
+        id: "x".to_string(),
+    };
+    let _model = app::InputAction::ClaudeSetProfileModel {
+        id: "x".to_string(),
+    };
+    let _small = app::InputAction::ClaudeSetProfileSmallModel {
+        id: "x".to_string(),
+    };
+    let _reasoning = app::SelectAction::ClaudeSetProfileReasoningEffort {
+        id: "x".to_string(),
+    };
+    let _thinking = app::SelectAction::ClaudeSetProfileThinkingMode {
+        id: "x".to_string(),
+    };
+}
+
+#[test]
 fn pi_screen_variants_exist() {
     let _pi = app::Screen::Pi;
     let _pi_profile = app::Screen::PiProfile;
