@@ -83,6 +83,8 @@ function ProviderForm({
   )
   const [apiKey, setApiKey] = useState(existingConfig?.apiKey ?? '')
 
+  const isReservedProviderId = providerId.trim().toLowerCase() === 'openai'
+
   // Channel picker state
   const [channelPickerOpen, setChannelPickerOpen] = useState(false)
 
@@ -185,6 +187,11 @@ function ProviderForm({
               placeholder="custom"
               disabled={isEditing}
             />
+            {isReservedProviderId && (
+              <p className="text-sm text-destructive">
+                {t('codex.provider.reservedProviderName')}
+              </p>
+            )}
           </div>
 
           {/* Display Name */}
@@ -275,7 +282,10 @@ function ProviderForm({
         <Button variant="outline" onClick={onClose}>
           {t('common.cancel')}
         </Button>
-        <Button onClick={handleSave} disabled={!providerId.trim()}>
+        <Button
+          onClick={handleSave}
+          disabled={!providerId.trim() || isReservedProviderId}
+        >
           {t('common.save')}
         </Button>
       </ResizableDialogFooter>

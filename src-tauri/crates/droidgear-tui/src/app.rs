@@ -2,8 +2,10 @@ use std::path::PathBuf;
 
 use droidgear_core::{
     channel::Channel,
+    claude::ClaudeCodeProfile,
     codex::CodexProfile,
     droid_settings_files::SettingsFileInfo,
+    factory_auth_profiles::AuthProfile,
     factory_settings::{CustomModel, MissionModelSettings},
     hermes::HermesProfile,
     mcp::McpServer,
@@ -26,6 +28,8 @@ pub enum Screen {
     McpServer,
     McpArgs,
     McpKeyValues,
+    Claude,
+    ClaudeProfile,
     Codex,
     CodexProfile,
     CodexProvider,
@@ -52,6 +56,7 @@ pub enum Screen {
     Channels,
     ChannelsEdit,
     Missions,
+    FactoryAuth,
 }
 
 #[derive(Debug, Clone)]
@@ -86,6 +91,12 @@ pub enum ConfirmAction {
     Quit,
     PathsResetKey {
         key: String,
+    },
+    ClaudeApply {
+        id: String,
+    },
+    ClaudeDelete {
+        id: String,
     },
     CodexApply {
         id: String,
@@ -176,12 +187,40 @@ pub enum ConfirmAction {
     HermesDelete {
         id: String,
     },
+    FactoryAuthSwitch {
+        name: String,
+    },
+    FactoryAuthDelete {
+        name: String,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub enum InputAction {
     PathsSetKey {
         key: String,
+    },
+    ClaudeCreateProfile,
+    ClaudeDuplicate {
+        id: String,
+    },
+    ClaudeSetProfileName {
+        id: String,
+    },
+    ClaudeSetProfileDescription {
+        id: String,
+    },
+    ClaudeSetProfileBaseUrl {
+        id: String,
+    },
+    ClaudeSetProfileBearerToken {
+        id: String,
+    },
+    ClaudeSetProfileModel {
+        id: String,
+    },
+    ClaudeSetProfileSmallModel {
+        id: String,
     },
     CodexCreateProfile,
     CodexDuplicate {
@@ -439,11 +478,21 @@ pub enum InputAction {
     HermesImportSetApiKey {
         id: String,
     },
+    FactoryAuthSaveProfile,
+    FactoryAuthRename {
+        name: String,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub enum SelectAction {
     GoToNav,
+    ClaudeSetProfileReasoningEffort {
+        id: String,
+    },
+    ClaudeSetProfileThinkingMode {
+        id: String,
+    },
     CodexSetProfileModelProvider {
         id: String,
     },
@@ -553,6 +602,13 @@ pub struct App {
     pub mcp_kv_mode: McpKeyValuesMode,
     pub mcp_kv_index: usize,
 
+    pub claude_profiles: Vec<ClaudeCodeProfile>,
+    pub claude_active_id: Option<String>,
+    pub claude_index: usize,
+    pub claude_detail_id: Option<String>,
+    pub claude_detail: Option<ClaudeCodeProfile>,
+    pub claude_detail_field_index: usize,
+
     pub codex_profiles: Vec<CodexProfile>,
     pub codex_active_id: Option<String>,
     pub codex_index: usize,
@@ -642,6 +698,10 @@ pub struct App {
 
     pub mission_settings: MissionModelSettings,
     pub mission_field_index: usize,
+
+    pub factory_auth_profiles: Vec<AuthProfile>,
+    pub factory_auth_active: Option<String>,
+    pub factory_auth_index: usize,
 }
 
 impl App {
@@ -671,6 +731,12 @@ impl App {
             mcp_args_index: 0,
             mcp_kv_mode: McpKeyValuesMode::Env,
             mcp_kv_index: 0,
+            claude_profiles: Vec::new(),
+            claude_active_id: None,
+            claude_index: 0,
+            claude_detail_id: None,
+            claude_detail: None,
+            claude_detail_field_index: 0,
             codex_profiles: Vec::new(),
             codex_active_id: None,
             codex_index: 0,
@@ -755,6 +821,9 @@ impl App {
                 validation_worker_reasoning_effort: None,
             },
             mission_field_index: 0,
+            factory_auth_profiles: Vec::new(),
+            factory_auth_active: None,
+            factory_auth_index: 0,
         }
     }
 
@@ -764,6 +833,7 @@ impl App {
             ("Droid Settings", Screen::DroidSettingsFiles),
             ("Factory", Screen::Factory),
             ("MCP", Screen::Mcp),
+            ("Claude", Screen::Claude),
             ("Codex", Screen::Codex),
             ("OpenCode", Screen::OpenCode),
             ("OpenClaw", Screen::OpenClaw),
@@ -773,6 +843,7 @@ impl App {
             ("Specs", Screen::Specs),
             ("Channels", Screen::Channels),
             ("Missions", Screen::Missions),
+            ("Factory Auth", Screen::FactoryAuth),
         ]
     }
 
@@ -802,6 +873,7 @@ impl App {
             &paths.opencode,
             &paths.opencode_auth,
             &paths.codex,
+            &paths.claude,
             &paths.openclaw,
             &paths.hermes,
         ];
@@ -815,6 +887,7 @@ impl App {
             &paths.opencode,
             &paths.opencode_auth,
             &paths.codex,
+            &paths.claude,
             &paths.openclaw,
             &paths.hermes,
         ];
@@ -826,9 +899,16 @@ impl App {
             self.nav_index = Self::nav_items().len().saturating_sub(1);
         }
 
-        let paths_count = 6;
+        let paths_count = 7;
         if self.paths_index >= paths_count {
             self.paths_index = paths_count.saturating_sub(1);
+        }
+        if self.claude_index >= self.claude_profiles.len() {
+            self.claude_index = self.claude_profiles.len().saturating_sub(1);
+        }
+        let claude_fields_count = 9;
+        if self.claude_detail_field_index >= claude_fields_count {
+            self.claude_detail_field_index = claude_fields_count.saturating_sub(1);
         }
         if self.factory_models_index >= self.custom_models.len() {
             self.factory_models_index = self.custom_models.len().saturating_sub(1);
@@ -1071,6 +1151,9 @@ impl App {
         let hermes_provider_fields_count = 4;
         if self.hermes_provider_field_index >= hermes_provider_fields_count {
             self.hermes_provider_field_index = hermes_provider_fields_count.saturating_sub(1);
+        }
+        if self.factory_auth_index >= self.factory_auth_profiles.len() {
+            self.factory_auth_index = self.factory_auth_profiles.len().saturating_sub(1);
         }
     }
 }

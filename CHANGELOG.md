@@ -1,5 +1,44 @@
 # Changelog
 
+## v1.0.0
+
+**New Features / 新功能**
+
+- Add Claude profile GUI and TUI surfaces / 添加 Claude 配置的 GUI 和 TUI 界面
+- Add Claude profile runtime core / 添加 Claude 配置运行时核心
+
+**Bug Fixes / 问题修复**
+
+- Share live session state in Codex temporary runs / 在 Codex 临时运行中共享实时会话状态
+- Probe CLI tools in login shell context / 在登录 shell 上下文中探测 CLI 工具
+- Harden Claude profile launch semantics / 加固 Claude 配置启动语义
+- Fix Claude temp-run launcher and TUI integration / 修复 Claude 临时运行启动器和 TUI 集成
+
+## v0.9.1
+
+**New Features / 新功能**
+
+- Droid official accounts switch and refactor TUI modules / Droid 官方账号切换及重构 TUI 模块
+
+## v0.9.0
+
+**New Features / 新功能**
+
+- Launch Droid from temporary settings snapshot / 从临时设置快照启动 Droid
+- Add listable TUI temporary runs for Droid / 为 Droid 添加可列出的 TUI 临时运行
+- Launch Codex profiles from temporary runtime home / 从临时运行时目录启动 Codex 配置
+- Reject 'OpenAI' as Codex provider name (case-insensitive) / 拒绝使用 'OpenAI' 作为 Codex 提供商名称（不区分大小写）
+
+**Bug Fixes / 问题修复**
+
+- Harden Codex temporary runs and selectors / 加固 Codex 临时运行和选择器
+
+## v0.8.1
+
+**Bug Fixes / 问题修复**
+
+- Fix borrow string error while executing linux build action / 修复执行 Linux 构建动作时的 borrow string 错误
+
 ## v0.8.0
 
 **New Features / 新功能**

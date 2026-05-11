@@ -6,13 +6,22 @@ type NavigationView =
   | 'channels'
   | 'opencode'
   | 'codex'
+  | 'claude'
   | 'openclaw'
   | 'hermes'
   | 'pi'
-type ToolView = 'droid' | 'opencode' | 'codex' | 'openclaw' | 'hermes' | 'pi'
+type ToolView =
+  | 'droid'
+  | 'opencode'
+  | 'codex'
+  | 'claude'
+  | 'openclaw'
+  | 'hermes'
+  | 'pi'
 export type DroidSubView =
   | 'models'
   | 'settings'
+  | 'auth-profiles'
   | 'specs'
   | 'mcp'
   | 'sessions'
@@ -141,6 +150,7 @@ export const useUIStore = create<UIState>()(
                 view === 'droid' ||
                 view === 'opencode' ||
                 view === 'codex' ||
+                view === 'claude' ||
                 view === 'openclaw' ||
                 view === 'hermes' ||
                 view === 'pi'

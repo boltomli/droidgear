@@ -1211,7 +1211,7 @@ dependencies = [
 
 [[package]]
 name = "droidgear"
-version = "0.8.0"
+version = "1.0.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -1257,7 +1257,9 @@ version = "0.0.0"
 dependencies = [
  "chrono",
  "dirs 5.0.1",
+ "filetime",
  "json_comments",
+ "libc",
  "log",
  "reqwest 0.12.28",
  "serde",
@@ -1279,6 +1281,7 @@ dependencies = [
  "crossterm",
  "dirs 5.0.1",
  "droidgear-core",
+ "libc",
  "ratatui",
  "serde",
  "serde_json",

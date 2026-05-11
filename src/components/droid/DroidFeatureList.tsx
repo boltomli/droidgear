@@ -13,6 +13,7 @@ import {
   Plus,
   Trash2,
   Play,
+  KeyRound,
   ChevronDown,
 } from 'lucide-react'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
@@ -63,6 +64,11 @@ interface FeatureItem {
 const features: FeatureItem[] = [
   { id: 'models', labelKey: 'droid.features.models', icon: Cpu },
   { id: 'settings', labelKey: 'droid.features.settings', icon: Settings },
+  {
+    id: 'auth-profiles',
+    labelKey: 'droid.features.authProfiles',
+    icon: KeyRound,
+  },
   { id: 'specs', labelKey: 'droid.features.specs', icon: FileText },
   { id: 'missions', labelKey: 'droid.features.missions', icon: Rocket },
   { id: 'mcp', labelKey: 'droid.features.mcp', icon: Plug },
@@ -170,7 +176,20 @@ export function DroidFeatureList() {
     }
   }
 
+  const surfaceModelSaveFailure = () => {
+    setDroidSubView('models')
+    toast.error(t('droid.settingsFile.launchSaveFailed'))
+  }
+
   const handleLaunchDroid = async () => {
+    if (useModelStore.getState().hasChanges) {
+      await useModelStore.getState().saveModels()
+      if (useModelStore.getState().hasChanges) {
+        surfaceModelSaveFailure()
+        return
+      }
+    }
+
     const result = await commands.launchDroid()
     if (result.status === 'error') {
       // If launch fails, copy the command to clipboard instead

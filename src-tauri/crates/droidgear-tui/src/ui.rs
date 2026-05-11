@@ -328,7 +328,7 @@ fn field_line(label: &str, value: &str, label_width: usize) -> Line<'static> {
     field_line_custom(label, value, label_width, None)
 }
 
-fn render_list<'a>(frame: &mut Frame, list: List<'a>, area: Rect, selected: Option<usize>) {
+fn render_list(frame: &mut Frame, list: List<'_>, area: Rect, selected: Option<usize>) {
     let mut state = ListState::default();
     state.select(selected);
     frame.render_stateful_widget(list, area, &mut state);
@@ -376,6 +376,8 @@ fn draw_main(frame: &mut Frame, app: &app::App, area: Rect) {
         app::Screen::McpServer => draw_mcp_server(frame, app, area),
         app::Screen::McpArgs => draw_mcp_args(frame, app, area),
         app::Screen::McpKeyValues => draw_mcp_key_values(frame, app, area),
+        app::Screen::Claude => draw_claude_profiles(frame, app, area),
+        app::Screen::ClaudeProfile => draw_claude_profile(frame, app, area),
         app::Screen::Codex => draw_codex_profiles(frame, app, area),
         app::Screen::CodexProfile => draw_codex_profile(frame, app, area),
         app::Screen::CodexProvider => draw_codex_provider(frame, app, area),
@@ -402,6 +404,7 @@ fn draw_main(frame: &mut Frame, app: &app::App, area: Rect) {
         app::Screen::Channels => draw_channels(frame, app, area),
         app::Screen::ChannelsEdit => draw_channels_edit(frame, app, area),
         app::Screen::Missions => draw_missions(frame, app, area),
+        app::Screen::FactoryAuth => draw_factory_auth(frame, app, area),
     }
 }
 
@@ -432,6 +435,7 @@ fn draw_paths(frame: &mut Frame, app: &app::App, area: Rect) {
             &paths.opencode,
             &paths.opencode_auth,
             &paths.codex,
+            &paths.claude,
             &paths.openclaw,
             &paths.hermes,
         ];
@@ -978,6 +982,151 @@ fn draw_codex_profiles(frame: &mut Frame, app: &app::App, area: Rect) {
         selected_index,
         "Up/Down: select  Enter/e: open  E: raw edit  p: preview  a: apply  n: new  c: copy  d: delete  r: refresh  q/Esc: back",
     );
+}
+
+fn draw_claude_profiles(frame: &mut Frame, app: &app::App, area: Rect) {
+    let active = app.claude_active_id.as_deref();
+    let selected_index = app.claude_index;
+    draw_profile_list(
+        frame,
+        area,
+        "Claude Profiles",
+        app.claude_profiles
+            .iter()
+            .map(|profile| (profile.name.as_str(), profile.id.as_str())),
+        active,
+        selected_index,
+        "Up/Down: select  Enter/e: open  t: run preview  x: run+exit  a: apply  n: new  c: copy  d: delete  r: refresh  q/Esc: back",
+    );
+}
+
+fn draw_claude_profile(frame: &mut Frame, app: &app::App, area: Rect) {
+    let t = theme();
+    let Some(profile) = app.claude_detail.as_ref() else {
+        let p = Paragraph::new(vec![Line::from(Span::styled(
+            "Failed to load profile",
+            t.error_style(),
+        ))])
+        .block(block("Claude Profile"))
+        .wrap(Wrap { trim: true });
+        frame.render_widget(p, area);
+        return;
+    };
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
+        .split(area);
+
+    let small_model_value = if profile.small_model_uses_main_model {
+        "(uses main model)".to_string()
+    } else {
+        profile
+            .small_model
+            .clone()
+            .unwrap_or_else(|| "(not set)".to_string())
+    };
+    let reasoning_value = profile
+        .reasoning_effort
+        .map(|value| match value {
+            droidgear_core::claude::ClaudeReasoningEffort::Low => "low".to_string(),
+            droidgear_core::claude::ClaudeReasoningEffort::Medium => "medium".to_string(),
+            droidgear_core::claude::ClaudeReasoningEffort::High => "high".to_string(),
+            droidgear_core::claude::ClaudeReasoningEffort::Max => "max".to_string(),
+        })
+        .unwrap_or_else(|| "(inherit)".to_string());
+    let thinking_value = match profile.thinking_mode {
+        droidgear_core::claude::ClaudeThinkingMode::Inherit => "inherit",
+        droidgear_core::claude::ClaudeThinkingMode::On => "on",
+        droidgear_core::claude::ClaudeThinkingMode::Off => "off",
+    };
+    let token_set = profile
+        .bearer_token
+        .as_deref()
+        .is_some_and(|value| !value.trim().is_empty());
+
+    let fields: Vec<(&str, String)> = vec![
+        ("Name", profile.name.clone()),
+        (
+            "Description",
+            profile
+                .description
+                .clone()
+                .unwrap_or_else(|| "".to_string()),
+        ),
+        (
+            "Base URL",
+            profile
+                .base_url
+                .clone()
+                .unwrap_or_else(|| "(not set)".to_string()),
+        ),
+        (
+            "Bearer Token",
+            if token_set {
+                "********".to_string()
+            } else {
+                "(not set)".to_string()
+            },
+        ),
+        (
+            "Main Model",
+            profile
+                .model
+                .clone()
+                .unwrap_or_else(|| "(not set)".to_string()),
+        ),
+        (
+            "Use Main Small",
+            if profile.small_model_uses_main_model {
+                "yes".to_string()
+            } else {
+                "no".to_string()
+            },
+        ),
+        ("Small Model", small_model_value),
+        ("Reasoning", reasoning_value),
+        ("Thinking", thinking_value.to_string()),
+    ];
+    let show_opaque_model_warning =
+        droidgear_core::claude::has_opaque_claude_model_id(profile.model.as_deref());
+
+    let mut items: Vec<ListItem> = Vec::new();
+    for (index, (label, value)) in fields.into_iter().enumerate() {
+        let selected = index == app.claude_detail_field_index;
+        let line = if selected {
+            Line::from(format!("{label:>16}: {value}"))
+        } else {
+            let custom_style = match label {
+                "Bearer Token" if value == "********" => Some(t.success_fg_style()),
+                _ => None,
+            };
+            field_line_custom(label, &value, 16, custom_style)
+        };
+        items.push(ListItem::new(line));
+    }
+
+    if show_opaque_model_warning {
+        items.push(ListItem::new(Line::from("")));
+        items.push(ListItem::new(Line::from(Span::styled(
+            "Warning: custom model ids may disable Claude effort/thinking detection.",
+            t.warning_style(),
+        ))));
+        items.push(ListItem::new(Line::from(Span::styled(
+            "Use an official claude-* model id for predictable behavior.",
+            t.warning_style(),
+        ))));
+    }
+
+    let list = List::new(items)
+        .block(block(format!("Claude Profile: {}", profile.name)))
+        .highlight_style(t.selected_row_style());
+    render_list(frame, list, chunks[0], Some(app.claude_detail_field_index));
+
+    let help = help_paragraph(
+        "Up/Down: move  Enter/e: edit/toggle  l: load live  t: run preview  x: run+exit  a: apply  q/Esc: back",
+    );
+    frame.render_widget(help, chunks[1]);
 }
 
 fn draw_opencode_profiles(frame: &mut Frame, app: &app::App, area: Rect) {
@@ -3139,5 +3288,58 @@ fn draw_hermes_provider(frame: &mut Frame, app: &app::App, area: Rect) {
 
     let help =
         help_paragraph("Up/Down: select  Enter/e: edit  i: import from channel  q/Esc: back");
+    frame.render_widget(help, chunks[1]);
+}
+
+fn draw_factory_auth(frame: &mut Frame, app: &app::App, area: Rect) {
+    let t = theme();
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
+        .split(area);
+
+    let mut lines: Vec<Line> = Vec::new();
+    for (i, profile) in app.factory_auth_profiles.iter().enumerate() {
+        let selected = i == app.factory_auth_index;
+        let style = if selected {
+            t.selected_style()
+        } else {
+            Style::default()
+        };
+        let active_tag = if app.factory_auth_active.as_deref() == Some(&profile.name) {
+            " [active]"
+        } else {
+            ""
+        };
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}{}", profile.label, active_tag), style),
+            Span::styled(
+                format!("  ({})", profile.name),
+                if selected {
+                    t.selected_style()
+                } else {
+                    t.dim_style()
+                },
+            ),
+        ]));
+    }
+
+    if lines.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "No auth profiles saved",
+            t.dim_style(),
+        )));
+    }
+
+    let list = Paragraph::new(lines).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" Factory Auth Profiles "),
+    );
+    frame.render_widget(list, chunks[0]);
+
+    let help = help_paragraph(
+        "Up/Down: select  Enter: switch  s: save current  r: rename  d: delete  q/Esc: back",
+    );
     frame.render_widget(help, chunks[1]);
 }

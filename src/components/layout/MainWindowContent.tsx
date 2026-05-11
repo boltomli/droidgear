@@ -11,8 +11,10 @@ import {
   TerminalPage,
   MissionsPage,
 } from '@/components/droid'
+import { FactoryAuthPage } from '@/components/factory-auth'
 import { OpenCodeConfigPage } from '@/components/opencode'
 import { CodexConfigPage } from '@/components/codex'
+import { ClaudeConfigPage } from '@/components/claude'
 import {
   OpenClawConfigPage,
   OpenClawHelpersPage,
@@ -82,6 +84,7 @@ export function MainWindowContent({
           {droidSubView === 'mcp' && <McpPage />}
           {droidSubView === 'sessions' && <SessionsPage />}
           {droidSubView === 'settings' && <DroidSettingsPage />}
+          {droidSubView === 'auth-profiles' && <FactoryAuthPage />}
           {droidSubView === 'missions' && <MissionsPage />}
           {droidSubView === 'legacy-versions' && <LegacyVersionsPage />}
         </Fragment>
@@ -94,6 +97,10 @@ export function MainWindowContent({
 
     if (currentView === 'codex') {
       return <CodexConfigPage />
+    }
+
+    if (currentView === 'claude') {
+      return <ClaudeConfigPage />
     }
 
     if (currentView === 'hermes') {

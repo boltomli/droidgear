@@ -2,8 +2,9 @@ use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
-        channel, codex, config, connectivity, droid_settings, env, hermes, mcp, notifications,
-        openclaw, opencode, paths, pi, preferences, recovery, sessions, specs, updater,
+        channel, claude, codex, config, connectivity, droid_settings, env, factory_auth_profiles,
+        hermes, mcp, notifications, openclaw, opencode, paths, pi, preferences, recovery, sessions,
+        specs, updater,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -71,6 +72,19 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         mcp::save_mcp_server,
         mcp::delete_mcp_server,
         mcp::toggle_mcp_server,
+        claude::list_claude_profiles,
+        claude::get_claude_profile,
+        claude::save_claude_profile,
+        claude::delete_claude_profile,
+        claude::duplicate_claude_profile,
+        claude::create_default_claude_profile,
+        claude::get_active_claude_profile_id,
+        claude::set_active_claude_profile_id,
+        claude::apply_claude_profile,
+        claude::get_claude_config_status,
+        claude::read_claude_current_config,
+        claude::get_claude_temporary_run_plan,
+        claude::launch_claude,
         codex::list_codex_profiles,
         codex::get_codex_profile,
         codex::save_codex_profile,
@@ -81,6 +95,9 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         codex::apply_codex_profile,
         codex::get_codex_config_status,
         codex::read_codex_current_config,
+        codex::get_codex_cli_capability,
+        codex::get_codex_temporary_run_plan,
+        codex::launch_codex,
         hermes::list_hermes_profiles,
         hermes::get_hermes_profile,
         hermes::save_hermes_profile,
@@ -156,6 +173,12 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         droid_settings::delete_droid_settings_file,
         droid_settings::get_droid_launch_command,
         droid_settings::launch_droid,
+        factory_auth_profiles::list_factory_auth_profiles,
+        factory_auth_profiles::get_active_factory_auth_profile,
+        factory_auth_profiles::switch_factory_auth_profile,
+        factory_auth_profiles::save_current_factory_auth_profile,
+        factory_auth_profiles::delete_factory_auth_profile,
+        factory_auth_profiles::rename_factory_auth_profile,
     ])
 }
 

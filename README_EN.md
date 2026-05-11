@@ -2,7 +2,7 @@
 
 [中文](README.md)
 
-A desktop enhancement tool for [Factory Droid](https://factory.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev).
+A desktop enhancement tool for [Factory Droid](https://factory.ai) / [Claude](https://claude.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev).
 
 Supports custom AI models (BYOK), embedded terminal, session & specs management, MCP server configuration, and more.
 
@@ -84,6 +84,11 @@ Run the installer directly.
 - **Configuration Management** - Load and save provider configurations
 - **Installation Helper** - Built-in installation commands for macOS/Linux/Windows
 
+### Claude Support
+
+- **Claude Profile Management** - GUI and TUI management interface for Claude profiles
+- **Runtime Core** - Claude profile runtime core support
+
 ### Codex Support
 
 - **Codex CLI Integration** - Manage Codex configuration profiles
@@ -133,6 +138,9 @@ droidgear-tui
 
 # Specify custom HOME path (for containers/testing)
 droidgear-tui --home /path/to/custom/home
+
+# Run a Codex profile once (hands off execution to the current terminal)
+droidgear-tui run codex <profile-id>
 ```
 
 ### Supported Features
