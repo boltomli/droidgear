@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.0
+
+**New Features / 新功能**
+
+- Add Claude profile GUI and TUI surfaces / 添加 Claude 配置的 GUI 和 TUI 界面
+- Add Claude profile runtime core / 添加 Claude 配置运行时核心
+
+**Bug Fixes / 问题修复**
+
+- Share live session state in Codex temporary runs / 在 Codex 临时运行中共享实时会话状态
+- Probe CLI tools in login shell context / 在登录 shell 上下文中探测 CLI 工具
+- Harden Claude profile launch semantics / 加固 Claude 配置启动语义
+- Fix Claude temp-run launcher and TUI integration / 修复 Claude 临时运行启动器和 TUI 集成
+
 ## v0.9.1
 
 **New Features / 新功能**

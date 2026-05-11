@@ -2,7 +2,7 @@
 
 [English](README_EN.md)
 
-[Factory Droid](https://factory.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev) 的桌面增强管理工具。
+[Factory Droid](https://factory.ai) / [Claude](https://claude.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev) 的桌面增强管理工具。
 
 支持自定义 AI 模型（BYOK）、嵌入式终端、会话与 Specs 管理、MCP 服务器配置等。
 
@@ -83,6 +83,11 @@ xattr -cr /Applications/DroidGear.app
 - **AI 开发集成** - OpenClaw 工具集成
 - **配置管理** - 服务商配置的加载和保存
 - **安装辅助** - 内置 macOS/Linux/Windows 安装命令
+
+### Claude 支持
+
+- **Claude Profile 管理** - Claude 配置 Profile 的 GUI 和 TUI 管理界面
+- **运行时核心** - Claude Profile 运行时核心支持
 
 ### Codex 支持
 
