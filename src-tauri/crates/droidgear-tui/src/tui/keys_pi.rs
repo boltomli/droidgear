@@ -282,6 +282,28 @@ pub(super) fn handle_pi_provider_key(app: &mut app::App, code: KeyCode) -> Optio
                 },
             });
         }
+        KeyCode::Char('i') => {
+            // Import from channel: present channel list as a Select modal
+            let options: Vec<String> = app
+                .channels
+                .iter()
+                .filter(|c| c.enabled)
+                .map(|c| format!("{} ({})", c.name, c.base_url))
+                .collect();
+            if options.is_empty() {
+                app.set_toast("No channels configured", true);
+            } else {
+                app.modal = Some(app::Modal::Select {
+                    title: "Import from channel".to_string(),
+                    options,
+                    index: 0,
+                    action: app::SelectAction::PiImportFromChannel {
+                        profile_id: profile_id.clone(),
+                        provider_id: provider_id.clone(),
+                    },
+                });
+            }
+        }
         _ => {}
     }
 

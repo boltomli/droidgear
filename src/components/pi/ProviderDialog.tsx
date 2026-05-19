@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, CloudDownload } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,6 +30,10 @@ import type {
   PiCompatConfig,
   PiModelCost,
 } from '@/lib/bindings'
+import {
+  PiImportFromChannelDialog,
+  type PiImportResult,
+} from './PiImportFromChannelDialog'
 
 const API_TYPES = [
   { value: 'openai-completions', label: 'OpenAI Completions' },
@@ -146,6 +150,8 @@ function ProviderForm({
     Record<number, string | null>
   >({})
 
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+
   const modelsContainerRef = useRef<HTMLDivElement>(null)
 
   const validateHeaders = useCallback((val: string) => {
@@ -164,6 +170,10 @@ function ProviderForm({
     const result = validateJson(val)
     setModelOverridesError(result.error)
     return result.valid
+  }, [])
+
+  const handleImportFromChannel = useCallback((result: PiImportResult) => {
+    setModels(prev => [...prev, ...result.models])
   }, [])
 
   const handleAddModel = () => {
@@ -442,15 +452,26 @@ function ProviderForm({
             <Label className="text-base font-medium">
               {t('pi.provider.models')}
             </Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddModel}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              {t('pi.provider.addModel')}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setImportDialogOpen(true)}
+              >
+                <CloudDownload className="h-4 w-4 mr-1" />
+                {t('pi.provider.importFromChannel')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddModel}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                {t('pi.provider.addModel')}
+              </Button>
+            </div>
           </div>
 
           {models.length === 0 ? (
@@ -730,6 +751,13 @@ function ProviderForm({
           {t('common.save')}
         </Button>
       </div>
+
+      <PiImportFromChannelDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImported={handleImportFromChannel}
+        existingProviderIds={[]}
+      />
     </>
   )
 }

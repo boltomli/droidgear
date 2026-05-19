@@ -661,6 +661,36 @@ pub(super) fn run_select_action(
             app.set_toast("Saved", false);
             Ok(())
         }
+        app::SelectAction::PiImportFromChannel {
+            profile_id,
+            provider_id,
+        } => {
+            let Some(selected) = selected else {
+                return Ok(());
+            };
+            // Find the matching channel by reconstructing the display string
+            let channel = app
+                .channels
+                .iter()
+                .find(|c| c.enabled && format!("{} ({})", c.name, c.base_url) == selected);
+            let Some(channel) = channel else {
+                return Err(anyhow::anyhow!("Channel not found"));
+            };
+            // Store channel info as pending import state; prompt for API key next
+            app.pi_import_pending_channel_id = Some(channel.id.clone());
+            app.pi_import_pending_base_url = Some(channel.base_url.clone());
+            app.modal = Some(app::Modal::Input {
+                title: "API key for import".to_string(),
+                value: String::new(),
+                cursor: usize::MAX,
+                is_secret: true,
+                action: app::InputAction::PiImportSetApiKey {
+                    profile_id,
+                    provider_id,
+                },
+            });
+            Ok(())
+        }
         app::SelectAction::HermesImportFromChannel { profile_id } => {
             let Some(selected) = selected else {
                 return Ok(());
@@ -2615,6 +2645,57 @@ pub(super) fn run_input_action(
             droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)
                 .map_err(anyhow::Error::msg)?;
             app.set_toast("Saved", false);
+            Ok(())
+        }
+        app::InputAction::PiImportSetApiKey {
+            profile_id,
+            provider_id,
+        } => {
+            if trimmed.is_empty() {
+                return Err(anyhow::Error::msg("API key is required"));
+            }
+            let base_url = app.pi_import_pending_base_url.take();
+            let _channel_id = app.pi_import_pending_channel_id.take();
+            let Some(base_url) = base_url else {
+                return Err(anyhow::anyhow!("No pending channel import"));
+            };
+
+            // Fetch models from the channel
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| anyhow::anyhow!("{}", e))?;
+            let models = runtime
+                .block_on(droidgear_core::channel::fetch_models_by_api_key(
+                    &base_url, trimmed, None,
+                ))
+                .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+            // Convert to Pi models and update the provider
+            let mut profile =
+                droidgear_core::pi::get_pi_profile_for_home(&app.home_dir, &profile_id)
+                    .map_err(anyhow::Error::msg)?;
+            let pi_models: Vec<droidgear_core::pi::PiModel> = models
+                .into_iter()
+                .map(|m| droidgear_core::pi::PiModel {
+                    id: m.id,
+                    name: m.name,
+                    api: None,
+                    reasoning: false,
+                    input: Vec::new(),
+                    context_window: 0,
+                    max_tokens: 0,
+                    cost: None,
+                    compat: None,
+                })
+                .collect();
+            if let Some(provider) = profile.providers.get_mut(&provider_id) {
+                provider.models = pi_models;
+            }
+            droidgear_core::pi::save_pi_profile_for_home(&app.home_dir, profile.clone())
+                .map_err(anyhow::Error::msg)?;
+            app.pi_detail = Some(profile);
+            app.set_toast("Imported from channel", false);
             Ok(())
         }
         app::InputAction::HermesImportSetApiKey { id } => {
