@@ -46,6 +46,15 @@ npm run test:run -- src/store/ui-store.test.ts -t "toggle"   # File + test name
 npm run test:coverage    # With coverage report
 ```
 
+## TUI (Terminal UI)
+
+```bash
+npm run tui              # Run TUI (cargo run)
+npm run tui:dev          # Run TUI with auto-rebuild via cargo-watch
+npm run tui:build        # Compile TUI in release mode
+npm run tui:check        # Check TUI compiles without producing binary
+```
+
 ## Testing — Rust
 
 ```bash
@@ -54,4 +63,21 @@ npm run rust:fmt         # Format Rust code
 npm run rust:fmt:check   # Check Rust formatting
 npm run rust:clippy      # Rust linter (warnings = errors)
 npm run rust:bindings    # Regenerate tauri-specta TypeScript bindings
+
+## All Commands (Quick Reference)
+
+| Category | Command | Description |
+|----------|---------|-------------|
+| Dev | `npm run dev` | Vite frontend dev server |
+| Dev | `npm run tauri:dev` | Tauri app with hot reload |
+| Dev | `npm run tui:dev` | TUI with auto-rebuild |
+| Build | `npm run build` | TypeScript check + Vite build |
+| Build | `npm run tauri:build` | Tauri production build |
+| Build | `npm run tui:build` | TUI release build |
+| Check | `npm run tui:check` | TUI compile check |
+| Run | `npm run tui` | Run TUI |
+| Quality | `npm run check:all` | Full check suite |
+| Quality | `npm run fix:all` | Auto-fix all fixable issues |
+| Test | `npm run test:run` | Vitest (single run) |
+| Test | `npm run rust:test` | Rust tests |
 ```
