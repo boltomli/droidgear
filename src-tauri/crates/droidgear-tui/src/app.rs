@@ -699,6 +699,7 @@ pub struct App {
     /// Temporary state used during Pi "import from channel" flow in TUI
     pub pi_import_pending_channel_id: Option<String>,
     pub pi_import_pending_base_url: Option<String>,
+    pub pi_import_pending_provider_id: Option<String>,
 
     pub sessions: Vec<SessionSummary>,
     pub sessions_index: usize,
@@ -823,6 +824,7 @@ impl App {
             hermes_import_pending_provider: None,
             pi_import_pending_channel_id: None,
             pi_import_pending_base_url: None,
+            pi_import_pending_provider_id: None,
             sessions: Vec::new(),
             sessions_index: 0,
             specs: Vec::new(),
