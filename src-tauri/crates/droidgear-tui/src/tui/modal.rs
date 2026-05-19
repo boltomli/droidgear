@@ -3022,7 +3022,8 @@ pub(super) fn run_input_action(
                 .map_err(anyhow::Error::msg)?;
             refresh_pi_detail(app);
 
-            // Show channel list to select from
+            // Refresh channels and show selection
+            refresh_channels(app);
             let enabled_channels: Vec<String> = app
                 .channels
                 .iter()
