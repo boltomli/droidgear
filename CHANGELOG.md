@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.0.3
+
+**New Features / 新功能**
+
+- Align Codex/Claude launch with Droid panel: drop the pre-launch CLI probe and add a directory picker that sets the terminal cwd / 让 Codex/Claude 启动行为与 Droid 面板一致：去掉启动前的 CLI 探测，并在启动前弹出目录选择，将选定目录作为终端工作目录
+- Add "Import from Channel" for Pi models in GUI and TUI / GUI 和 TUI 新增 Pi 模型的"从渠道导入"
+
+**Bug Fixes / 问题修复**
+
+- Suppress the flashing console window when querying WSL distributions and user info on Windows / 修复 Windows 上查询 WSL 分发和用户名时弹出命令行窗口闪烁的问题
+
+**Improvements / 改进**
+
+- Refactor OpenClaw config to update in place instead of rebuilding from scratch / 重构 OpenClaw 配置改为原地更新而非从零重建
+- Reduce main bundle from 1606 kB to 500 kB via React.lazy code splitting / 通过 React.lazy 按需加载，主 bundle 从 1606 kB 降至 500 kB
+- Upgrade tauri to 2.11.2 and @tauri-apps/cli to 2.11.2 / 升级 tauri 至 2.11.2、@tauri-apps/cli 至 2.11.2
+
 ## v1.0.2
 
 **Bug Fixes / 问题修复**
