@@ -2664,6 +2664,42 @@ fn draw_modal(frame: &mut Frame, modal: &app::Modal) {
                 .style(t.modal_style());
             frame.render_widget(p, area);
         }
+        app::Modal::MultiSelect {
+            title,
+            options,
+            selected,
+            index,
+            ..
+        } => {
+            let mut lines: Vec<Line> = Vec::new();
+            for (i, opt) in options.iter().enumerate() {
+                let checked = if i < selected.len() && selected[i] {
+                    "[x]"
+                } else {
+                    "[ ]"
+                };
+                let prefix = if i == *index { "▸" } else { " " };
+                let line = if i == *index {
+                    Line::from(vec![Span::styled(
+                        format!("{} {} {}", prefix, checked, opt),
+                        t.selected_style(),
+                    )])
+                } else {
+                    Line::from(vec![Span::raw(format!("  {} {}", checked, opt))])
+                };
+                lines.push(line);
+            }
+            lines.push(Line::from(""));
+            lines.push(hint_line(
+                "Up/Down: move  Space/Enter: toggle  Tab/c: confirm  Esc: cancel",
+            ));
+            let block = block(title.as_str()).border_style(t.focused_border_style());
+            let p = Paragraph::new(lines)
+                .block(block)
+                .wrap(Wrap { trim: false })
+                .style(t.modal_style());
+            frame.render_widget(p, area);
+        }
     }
 }
 
@@ -2876,7 +2912,7 @@ fn draw_pi_profile(frame: &mut Frame, app: &app::App, area: Rect) {
     render_list(frame, provider_list, chunks[1], provider_highlight);
 
     let help = help_paragraph(
-        "Up/Down: move  Enter/e: edit field/open provider  p: open provider  n: add provider  d: del provider  l: load live  a: apply  q/Esc: back",
+        "Up/Down: move  Enter/e: edit field/open provider  p: open provider  n: add provider  i: create from channel  d: del provider  l: load live  a: apply  q/Esc: back",
     );
     frame.render_widget(help, chunks[2]);
 }
@@ -2989,7 +3025,7 @@ fn draw_pi_provider(frame: &mut Frame, app: &app::App, area: Rect) {
     render_list(frame, models_list, chunks[1], models_selected);
 
     let help = help_paragraph(
-        "Up/Down: move  Enter/e: edit field  m: open model  n: add model  d: del model  q/Esc: back",
+        "Up/Down: move  Enter/e: edit field  m: open model  n: add model  d: del model  i: import from channel  q/Esc: back",
     );
     frame.render_widget(help, chunks[2]);
 }

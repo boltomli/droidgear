@@ -84,6 +84,13 @@ pub enum Modal {
         index: usize,
         action: SelectAction,
     },
+    MultiSelect {
+        title: String,
+        options: Vec<String>,
+        selected: Vec<bool>,
+        index: usize,
+        action: SelectAction,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -475,6 +482,13 @@ pub enum InputAction {
     HermesSetProfileApiKey {
         id: String,
     },
+    PiImportSetApiKey {
+        profile_id: String,
+        provider_id: String,
+    },
+    PiAddProviderFromChannel {
+        profile_id: String,
+    },
     HermesImportSetApiKey {
         id: String,
     },
@@ -541,6 +555,22 @@ pub enum SelectAction {
     MissionsSetValidationWorkerModel,
     MissionsSetValidationWorkerReasoningEffort,
     PiSetProviderApi {
+        profile_id: String,
+        provider_id: String,
+    },
+    PiImportFromChannel {
+        profile_id: String,
+        provider_id: String,
+    },
+    PiImportSetToken {
+        profile_id: String,
+        provider_id: String,
+    },
+    PiImportToggleModel {
+        profile_id: String,
+        provider_id: String,
+    },
+    PiAddProviderFromChannel {
         profile_id: String,
         provider_id: String,
     },
@@ -681,6 +711,20 @@ pub struct App {
     /// Temporary state used during "import from channel" flow in TUI
     pub hermes_import_pending_base_url: Option<String>,
     pub hermes_import_pending_provider: Option<String>,
+    /// Temporary state used during Pi "import from channel" flow in TUI
+    pub pi_import_pending_channel_id: Option<String>,
+    pub pi_import_pending_base_url: Option<String>,
+    pub pi_import_pending_provider_id: Option<String>,
+    /// Pending models fetched from channel (for model selection in import flow)
+    pub pi_import_pending_models: Option<Vec<droidgear_core::factory_settings::ModelInfo>>,
+    /// Selected indices in pending models
+    pub pi_import_pending_selected: Option<Vec<bool>>,
+    /// Resolved API key for pending channel import
+    pub pi_import_pending_api_key: Option<String>,
+    /// Fetched tokens for the current channel import (for platform lookup)
+    pub pi_import_pending_tokens: Option<Vec<droidgear_core::channel::ChannelToken>>,
+    /// Inferred API type for pending channel import
+    pub pi_import_pending_api_type: Option<String>,
 
     pub sessions: Vec<SessionSummary>,
     pub sessions_index: usize,
@@ -803,6 +847,14 @@ impl App {
             hermes_provider_field_index: 0,
             hermes_import_pending_base_url: None,
             hermes_import_pending_provider: None,
+            pi_import_pending_channel_id: None,
+            pi_import_pending_base_url: None,
+            pi_import_pending_provider_id: None,
+            pi_import_pending_models: None,
+            pi_import_pending_selected: None,
+            pi_import_pending_api_key: None,
+            pi_import_pending_tokens: None,
+            pi_import_pending_api_type: None,
             sessions: Vec::new(),
             sessions_index: 0,
             specs: Vec::new(),

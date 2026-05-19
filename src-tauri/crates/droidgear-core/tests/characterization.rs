@@ -664,7 +664,7 @@ fn opencode_apply_prefers_jsonc_and_merges_provider_and_auth() {
 }
 
 #[test]
-fn openclaw_apply_replaces_models_providers_and_chunk_object() {
+fn openclaw_apply_updates_owned_fields_in_place_and_preserves_unknown_keys() {
     let temp = TempDir::new().unwrap();
     let home = home_dir(&temp);
 
@@ -765,7 +765,9 @@ fn openclaw_apply_replaces_models_providers_and_chunk_object() {
     assert!(!providers_obj.contains_key("base"));
     assert!(providers_obj.contains_key("new"));
 
-    // agents.defaults.model replaced (extra key removed)
+    // agents.defaults.model is updated in place: `primary` overwritten,
+    // unknown sibling keys preserved (per the new "only update what we own"
+    // contract).
     let model_obj = after_v
         .get("agents")
         .and_then(|v| v.get("defaults"))
@@ -776,9 +778,15 @@ fn openclaw_apply_replaces_models_providers_and_chunk_object() {
         model_obj.get("primary").and_then(|v| v.as_str()),
         Some("new/m1")
     );
-    assert!(!model_obj.contains_key("something"));
+    assert_eq!(
+        model_obj.get("something").and_then(|v| v.as_str()),
+        Some("should-be-removed"),
+        "unknown agents.defaults.model.* keys must be preserved"
+    );
 
-    // blockStreamingChunk replaced: minChars removed, maxChars updated.
+    // blockStreamingChunk: `maxChars` updated. `minChars` is preserved
+    // because the profile sets it to None (= "don't touch"). Wholesale
+    // replacement would have dropped it; surgical update keeps it.
     let chunk_obj = after_v
         .get("agents")
         .and_then(|v| v.get("defaults"))
@@ -789,7 +797,11 @@ fn openclaw_apply_replaces_models_providers_and_chunk_object() {
         chunk_obj.get("maxChars").and_then(|v| v.as_i64()),
         Some(100)
     );
-    assert!(chunk_obj.get("minChars").is_none());
+    assert_eq!(
+        chunk_obj.get("minChars").and_then(|v| v.as_i64()),
+        Some(1),
+        "None in profile means leave existing value untouched"
+    );
 
     // active profile id
     let active = read_to_string(

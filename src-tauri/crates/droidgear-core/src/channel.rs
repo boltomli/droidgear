@@ -380,6 +380,26 @@ pub async fn fetch_channel_tokens(
     }
 }
 
+/// Blocking version of `fetch_channel_tokens`.
+/// Creates a lightweight tokio runtime and blocks on the async version.
+pub fn fetch_channel_tokens_blocking(
+    channel_type: ChannelType,
+    base_url: &str,
+    username: &str,
+    password: &str,
+) -> Result<Vec<ChannelToken>, String> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| format!("Failed to create tokio runtime: {e}"))?;
+    runtime.block_on(fetch_channel_tokens(
+        channel_type,
+        base_url,
+        username,
+        password,
+    ))
+}
+
 async fn fetch_new_api_keys(
     base_url: &str,
     username: &str,
@@ -845,6 +865,26 @@ pub async fn fetch_models_by_api_key(
     })?;
 
     Ok(parser(&data))
+}
+
+pub fn fetch_models_by_api_key_blocking(
+    base_url: &str,
+    api_key: &str,
+    platform: Option<&str>,
+) -> Result<Vec<ModelInfo>, String> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| format!("Failed to create tokio runtime: {e}"))?;
+    let base_url = base_url.to_string();
+    let api_key = api_key.to_string();
+    let platform = platform.map(|s| s.to_string());
+    runtime.block_on(async {
+        let base_url = &base_url;
+        let api_key = &api_key;
+        let platform = platform.as_deref();
+        fetch_models_by_api_key(base_url, api_key, platform).await
+    })
 }
 
 fn parse_openai_models(data: &Value) -> Vec<ModelInfo> {
