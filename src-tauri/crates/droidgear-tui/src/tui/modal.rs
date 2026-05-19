@@ -768,6 +768,8 @@ pub(super) fn run_select_action(
                                         "No tokens available for this channel"
                                     ));
                                 }
+                                // Store tokens for platform lookup
+                                app.pi_import_pending_tokens = Some(tokens);
                                 app.modal = Some(app::Modal::Select {
                                     title: "Select token".to_string(),
                                     options,
@@ -889,9 +891,32 @@ pub(super) fn run_select_action(
             };
             let base_url = app.pi_import_pending_base_url.clone().unwrap_or_default();
 
+            // Look up the selected token to get its platform
+            let platform = app.pi_import_pending_tokens.as_ref().and_then(|tokens| {
+                tokens.iter().find_map(|t| {
+                    let display = format!("{} ({})", t.name, t.key);
+                    if display == selected {
+                        t.platform.clone()
+                    } else {
+                        None
+                    }
+                })
+            });
+
+            // Infer API type from platform (matching GUI's inferPiApiType)
+            let api_type = match platform.as_deref() {
+                Some("anthropic") | Some("claude") => "anthropic-messages",
+                Some("gemini") => "google-generative-ai",
+                _ => "openai-completions",
+            }
+            .to_string();
+            app.pi_import_pending_api_type = Some(api_type);
+
             // Fetch models using the selected token
             let models = droidgear_core::channel::fetch_models_by_api_key_blocking(
-                &base_url, &api_key, None,
+                &base_url,
+                &api_key,
+                platform.as_deref(),
             )
             .map_err(|e| anyhow::anyhow!("{}", e))?;
 
@@ -948,7 +973,10 @@ pub(super) fn run_select_action(
             if let Some(provider) = profile.providers.get_mut(&provider_id) {
                 provider.base_url = Some(base_url);
                 provider.api_key = Some(api_key);
-                provider.api = Some("openai-completions".to_string());
+                provider.api = app
+                    .pi_import_pending_api_type
+                    .take()
+                    .or_else(|| Some("openai-completions".to_string()));
                 provider.models = pi_models;
             }
 
@@ -1010,6 +1038,8 @@ pub(super) fn run_select_action(
                                         "No tokens available for this channel"
                                     ));
                                 }
+                                // Store tokens for platform lookup
+                                app.pi_import_pending_tokens = Some(tokens);
                                 app.modal = Some(app::Modal::Select {
                                     title: "Select token".to_string(),
                                     options,

@@ -721,6 +721,10 @@ pub struct App {
     pub pi_import_pending_selected: Option<Vec<bool>>,
     /// Resolved API key for pending channel import
     pub pi_import_pending_api_key: Option<String>,
+    /// Fetched tokens for the current channel import (for platform lookup)
+    pub pi_import_pending_tokens: Option<Vec<droidgear_core::channel::ChannelToken>>,
+    /// Inferred API type for pending channel import
+    pub pi_import_pending_api_type: Option<String>,
 
     pub sessions: Vec<SessionSummary>,
     pub sessions_index: usize,
@@ -849,6 +853,8 @@ impl App {
             pi_import_pending_models: None,
             pi_import_pending_selected: None,
             pi_import_pending_api_key: None,
+            pi_import_pending_tokens: None,
+            pi_import_pending_api_type: None,
             sessions: Vec::new(),
             sessions_index: 0,
             specs: Vec::new(),
