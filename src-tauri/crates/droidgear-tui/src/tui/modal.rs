@@ -158,6 +158,62 @@ pub(super) fn handle_modal_key(app: &mut app::App, code: KeyCode, modal: app::Mo
             }
             _ => {}
         },
+        app::Modal::MultiSelect {
+            title,
+            options,
+            mut selected,
+            mut index,
+            action,
+        } => match code {
+            KeyCode::Esc | KeyCode::Char('q') => {
+                app.modal = None;
+            }
+            KeyCode::Down => {
+                index = index.saturating_add(1).min(options.len().saturating_sub(1));
+                app.modal = Some(app::Modal::MultiSelect {
+                    title,
+                    options,
+                    selected,
+                    index,
+                    action,
+                });
+            }
+            KeyCode::Up => {
+                index = index.saturating_sub(1);
+                app.modal = Some(app::Modal::MultiSelect {
+                    title,
+                    options,
+                    selected,
+                    index,
+                    action,
+                });
+            }
+            KeyCode::Enter | KeyCode::Char(' ') => {
+                if index < selected.len() {
+                    selected[index] = !selected[index];
+                }
+                // Sync selection to app state
+                app.pi_import_pending_selected = Some(selected.clone());
+                app.modal = Some(app::Modal::MultiSelect {
+                    title,
+                    options,
+                    selected,
+                    index,
+                    action,
+                });
+            }
+            KeyCode::Tab | KeyCode::Char('c') => {
+                // Sync final selection to app state and confirm
+                app.pi_import_pending_selected = Some(selected);
+                app.modal = None;
+                if let Err(e) = run_select_action(app, action, index, None) {
+                    app.set_toast(e.to_string(), true);
+                } else {
+                    refresh_screen_data(app);
+                }
+            }
+            _ => {}
+        },
     }
 }
 
@@ -661,6 +717,435 @@ pub(super) fn run_select_action(
             app.set_toast("Saved", false);
             Ok(())
         }
+        app::SelectAction::PiImportFromChannel {
+            profile_id,
+            provider_id,
+        } => {
+            let Some(selected) = selected else {
+                return Ok(());
+            };
+            // Find the matching channel by reconstructing the display string
+            let channel = app
+                .channels
+                .iter()
+                .find(|c| c.enabled && format!("{} ({})", c.name, c.base_url) == selected);
+            let Some(channel) = channel else {
+                return Err(anyhow::anyhow!("Channel not found"));
+            };
+
+            app.pi_import_pending_channel_id = Some(channel.id.clone());
+            app.pi_import_pending_base_url = Some(channel.base_url.clone());
+
+            // Check if this is a token-based channel (NewApi/Sub2Api)
+            let is_token_based = matches!(
+                channel.channel_type,
+                droidgear_core::channel::ChannelType::NewApi
+                    | droidgear_core::channel::ChannelType::Sub2Api
+            );
+
+            if is_token_based {
+                // Token-based channel: fetch tokens for user to select
+                if let Ok(Some((username, password))) =
+                    droidgear_core::channel::get_channel_credentials_for_home(
+                        &app.home_dir,
+                        &channel.id,
+                    )
+                {
+                    if !password.is_empty() {
+                        match droidgear_core::channel::fetch_channel_tokens_blocking(
+                            channel.channel_type.clone(),
+                            &channel.base_url,
+                            &username,
+                            &password,
+                        ) {
+                            Ok(tokens) => {
+                                let options: Vec<String> = tokens
+                                    .iter()
+                                    .map(|t| format!("{} ({})", t.name, t.key))
+                                    .collect();
+                                if options.is_empty() {
+                                    return Err(anyhow::anyhow!(
+                                        "No tokens available for this channel"
+                                    ));
+                                }
+                                // Store tokens for platform lookup
+                                app.pi_import_pending_tokens = Some(tokens);
+                                app.modal = Some(app::Modal::Select {
+                                    title: "Select token".to_string(),
+                                    options,
+                                    index: 0,
+                                    action: app::SelectAction::PiImportSetToken {
+                                        profile_id,
+                                        provider_id,
+                                    },
+                                });
+                            }
+                            Err(e) => {
+                                return Err(anyhow::anyhow!("Failed to fetch tokens: {}", e));
+                            }
+                        }
+                    } else {
+                        // No password stored, fall through to API key prompt
+                        app.modal = Some(app::Modal::Input {
+                            title: "API key for import".to_string(),
+                            value: String::new(),
+                            cursor: usize::MAX,
+                            is_secret: true,
+                            action: app::InputAction::PiImportSetApiKey {
+                                profile_id,
+                                provider_id,
+                            },
+                        });
+                    }
+                } else {
+                    // No credentials found, prompt for API key
+                    app.modal = Some(app::Modal::Input {
+                        title: "API key for token-based channel".to_string(),
+                        value: String::new(),
+                        cursor: usize::MAX,
+                        is_secret: true,
+                        action: app::InputAction::PiImportSetApiKey {
+                            profile_id,
+                            provider_id,
+                        },
+                    });
+                }
+            } else {
+                // API-key channel (General/Ollama/CliProxyApi): try to resolve key
+                let api_key = resolve_channel_api_key(
+                    app,
+                    &channel.id,
+                    &channel.channel_type,
+                    &channel.base_url,
+                );
+
+                if let Some(api_key) = api_key {
+                    // Auto-resolve succeeded: fetch models
+                    match droidgear_core::channel::fetch_models_by_api_key_blocking(
+                        &channel.base_url,
+                        &api_key,
+                        None,
+                    ) {
+                        Ok(models) => {
+                            // Store models and show MultiSelect
+                            app.pi_import_pending_models = Some(models.clone());
+                            let selected_bools: Vec<bool> = vec![true; models.len()];
+                            app.pi_import_pending_selected = Some(selected_bools.clone());
+                            app.pi_import_pending_api_key = Some(api_key);
+
+                            let options: Vec<String> =
+                                models.iter().map(|m| m.id.clone()).collect();
+                            app.modal = Some(app::Modal::MultiSelect {
+                                title: "Select models to import (Tab/c: confirm)".to_string(),
+                                options,
+                                selected: selected_bools,
+                                index: 0,
+                                action: app::SelectAction::PiImportToggleModel {
+                                    profile_id,
+                                    provider_id,
+                                },
+                            });
+                        }
+                        Err(e) => {
+                            // Models fetch failed - prompt for a different API key
+                            app.modal = Some(app::Modal::Input {
+                                title: format!("API key for import (error: {e})"),
+                                value: api_key,
+                                cursor: usize::MAX,
+                                is_secret: true,
+                                action: app::InputAction::PiImportSetApiKey {
+                                    profile_id,
+                                    provider_id,
+                                },
+                            });
+                        }
+                    }
+                } else {
+                    // No API key found in channel: prompt for it
+                    app.modal = Some(app::Modal::Input {
+                        title: "API key for import".to_string(),
+                        value: String::new(),
+                        cursor: usize::MAX,
+                        is_secret: true,
+                        action: app::InputAction::PiImportSetApiKey {
+                            profile_id,
+                            provider_id,
+                        },
+                    });
+                }
+            }
+            Ok(())
+        }
+        app::SelectAction::PiImportSetToken {
+            profile_id,
+            provider_id,
+        } => {
+            let Some(selected) = selected else {
+                return Ok(());
+            };
+            // Parse token key from the selected option (format: "name (key)")
+            let api_key = if let Some(idx) = selected.rfind(" (") {
+                selected[idx + 2..selected.len() - 1].to_string()
+            } else {
+                selected.to_string()
+            };
+            let base_url = app.pi_import_pending_base_url.clone().unwrap_or_default();
+
+            // Look up the selected token to get its platform
+            let platform = app.pi_import_pending_tokens.as_ref().and_then(|tokens| {
+                tokens.iter().find_map(|t| {
+                    let display = format!("{} ({})", t.name, t.key);
+                    if display == selected {
+                        t.platform.clone()
+                    } else {
+                        None
+                    }
+                })
+            });
+
+            // Infer API type from platform (matching GUI's inferPiApiType)
+            let api_type = match platform.as_deref() {
+                Some("anthropic") | Some("claude") => "anthropic-messages",
+                Some("gemini") => "google-generative-ai",
+                _ => "openai-completions",
+            }
+            .to_string();
+            app.pi_import_pending_api_type = Some(api_type);
+
+            // Fetch models using the selected token
+            let models = droidgear_core::channel::fetch_models_by_api_key_blocking(
+                &base_url,
+                &api_key,
+                platform.as_deref(),
+            )
+            .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+            // Store models and show MultiSelect
+            app.pi_import_pending_models = Some(models.clone());
+            let selected_bools: Vec<bool> = vec![true; models.len()];
+            app.pi_import_pending_selected = Some(selected_bools.clone());
+            app.pi_import_pending_api_key = Some(api_key);
+
+            let options: Vec<String> = models.iter().map(|m| m.id.clone()).collect();
+            app.modal = Some(app::Modal::MultiSelect {
+                title: "Select models to import (Tab/c: confirm)".to_string(),
+                options,
+                selected: selected_bools,
+                index: 0,
+                action: app::SelectAction::PiImportToggleModel {
+                    profile_id,
+                    provider_id,
+                },
+            });
+            Ok(())
+        }
+        app::SelectAction::PiImportToggleModel {
+            profile_id,
+            provider_id,
+        } => {
+            // User confirmed the model selection - import selected models
+            let models = app.pi_import_pending_models.take().unwrap_or_default();
+            let selected = app.pi_import_pending_selected.take().unwrap_or_default();
+            let api_key = app.pi_import_pending_api_key.take().unwrap_or_default();
+            let base_url = app.pi_import_pending_base_url.take().unwrap_or_default();
+
+            let mut profile =
+                droidgear_core::pi::get_pi_profile_for_home(&app.home_dir, &profile_id)
+                    .map_err(anyhow::Error::msg)?;
+
+            let pi_models: Vec<droidgear_core::pi::PiModel> = models
+                .into_iter()
+                .enumerate()
+                .filter(|(i, _)| i < &selected.len() && selected[*i])
+                .map(|(_, m)| droidgear_core::pi::PiModel {
+                    id: m.id,
+                    name: m.name,
+                    api: None,
+                    reasoning: false,
+                    input: vec!["text".to_string()],
+                    context_window: 128000,
+                    max_tokens: 16384,
+                    cost: None,
+                    compat: None,
+                })
+                .collect();
+
+            if let Some(provider) = profile.providers.get_mut(&provider_id) {
+                provider.base_url = Some(base_url);
+                provider.api_key = Some(api_key);
+                provider.api = app
+                    .pi_import_pending_api_type
+                    .take()
+                    .or_else(|| Some("openai-completions".to_string()));
+                provider.models = pi_models;
+            }
+
+            droidgear_core::pi::save_pi_profile_for_home(&app.home_dir, profile.clone())
+                .map_err(anyhow::Error::msg)?;
+            app.pi_detail = Some(profile);
+            app.pi_import_pending_provider_id = None;
+            app.set_toast("Imported from channel", false);
+            Ok(())
+        }
+        app::SelectAction::PiAddProviderFromChannel {
+            profile_id,
+            provider_id,
+        } => {
+            let Some(selected) = selected else {
+                return Ok(());
+            };
+            // Find the matching channel by reconstructing the display string
+            let channel = app
+                .channels
+                .iter()
+                .find(|c| c.enabled && format!("{} ({})", c.name, c.base_url) == selected);
+            let Some(channel) = channel else {
+                return Err(anyhow::anyhow!("Channel not found"));
+            };
+
+            app.pi_import_pending_channel_id = Some(channel.id.clone());
+            app.pi_import_pending_base_url = Some(channel.base_url.clone());
+
+            // Check if this is a token-based channel (NewApi/Sub2Api)
+            let is_token_based = matches!(
+                channel.channel_type,
+                droidgear_core::channel::ChannelType::NewApi
+                    | droidgear_core::channel::ChannelType::Sub2Api
+            );
+
+            if is_token_based {
+                // Token-based channel: fetch tokens for user to select
+                if let Ok(Some((username, password))) =
+                    droidgear_core::channel::get_channel_credentials_for_home(
+                        &app.home_dir,
+                        &channel.id,
+                    )
+                {
+                    if !password.is_empty() {
+                        match droidgear_core::channel::fetch_channel_tokens_blocking(
+                            channel.channel_type.clone(),
+                            &channel.base_url,
+                            &username,
+                            &password,
+                        ) {
+                            Ok(tokens) => {
+                                let options: Vec<String> = tokens
+                                    .iter()
+                                    .map(|t| format!("{} ({})", t.name, t.key))
+                                    .collect();
+                                if options.is_empty() {
+                                    return Err(anyhow::anyhow!(
+                                        "No tokens available for this channel"
+                                    ));
+                                }
+                                // Store tokens for platform lookup
+                                app.pi_import_pending_tokens = Some(tokens);
+                                app.modal = Some(app::Modal::Select {
+                                    title: "Select token".to_string(),
+                                    options,
+                                    index: 0,
+                                    action: app::SelectAction::PiImportSetToken {
+                                        profile_id,
+                                        provider_id,
+                                    },
+                                });
+                            }
+                            Err(e) => {
+                                return Err(anyhow::anyhow!("Failed to fetch tokens: {}", e));
+                            }
+                        }
+                    } else {
+                        // No password stored, fall through to API key prompt
+                        app.modal = Some(app::Modal::Input {
+                            title: "API key for import".to_string(),
+                            value: String::new(),
+                            cursor: usize::MAX,
+                            is_secret: true,
+                            action: app::InputAction::PiImportSetApiKey {
+                                profile_id,
+                                provider_id,
+                            },
+                        });
+                    }
+                } else {
+                    // No credentials found, prompt for API key
+                    app.modal = Some(app::Modal::Input {
+                        title: "API key for token-based channel".to_string(),
+                        value: String::new(),
+                        cursor: usize::MAX,
+                        is_secret: true,
+                        action: app::InputAction::PiImportSetApiKey {
+                            profile_id,
+                            provider_id,
+                        },
+                    });
+                }
+            } else {
+                // API-key channel (General/Ollama/CliProxyApi): try to resolve key
+                let api_key = resolve_channel_api_key(
+                    app,
+                    &channel.id,
+                    &channel.channel_type,
+                    &channel.base_url,
+                );
+
+                if let Some(api_key) = api_key {
+                    // Auto-resolve succeeded: fetch models and show MultiSelect
+                    match droidgear_core::channel::fetch_models_by_api_key_blocking(
+                        &channel.base_url,
+                        &api_key,
+                        None,
+                    ) {
+                        Ok(models) => {
+                            // Store models and show MultiSelect
+                            app.pi_import_pending_models = Some(models.clone());
+                            let selected_bools: Vec<bool> = vec![true; models.len()];
+                            app.pi_import_pending_selected = Some(selected_bools.clone());
+                            app.pi_import_pending_api_key = Some(api_key);
+
+                            let options: Vec<String> =
+                                models.iter().map(|m| m.id.clone()).collect();
+                            app.modal = Some(app::Modal::MultiSelect {
+                                title: "Select models to import (Tab/c: confirm)".to_string(),
+                                options,
+                                selected: selected_bools,
+                                index: 0,
+                                action: app::SelectAction::PiImportToggleModel {
+                                    profile_id,
+                                    provider_id,
+                                },
+                            });
+                        }
+                        Err(e) => {
+                            // Models fetch failed - prompt for a different API key
+                            app.modal = Some(app::Modal::Input {
+                                title: format!("API key for import (error: {e})"),
+                                value: api_key,
+                                cursor: usize::MAX,
+                                is_secret: true,
+                                action: app::InputAction::PiImportSetApiKey {
+                                    profile_id,
+                                    provider_id,
+                                },
+                            });
+                        }
+                    }
+                } else {
+                    // No API key found in channel: prompt for it
+                    app.modal = Some(app::Modal::Input {
+                        title: "API key for import".to_string(),
+                        value: String::new(),
+                        cursor: usize::MAX,
+                        is_secret: true,
+                        action: app::InputAction::PiImportSetApiKey {
+                            profile_id,
+                            provider_id,
+                        },
+                    });
+                }
+            }
+            Ok(())
+        }
         app::SelectAction::HermesImportFromChannel { profile_id } => {
             let Some(selected) = selected else {
                 return Ok(());
@@ -685,6 +1170,68 @@ pub(super) fn run_select_action(
             });
             Ok(())
         }
+    }
+}
+
+/// Try to resolve an API key from a channel's stored authentication.
+/// First checks for a stored API key (CliProxyApi/Ollama/General),
+/// then tries credentials to fetch a live token (NewApi/Sub2Api).
+fn resolve_channel_api_key(
+    app: &app::App,
+    channel_id: &str,
+    channel_type: &droidgear_core::channel::ChannelType,
+    base_url: &str,
+) -> Option<String> {
+    // Try stored API key first
+    if let Ok(Some(key)) =
+        droidgear_core::channel::get_channel_api_key_for_home(&app.home_dir, channel_id)
+    {
+        if !key.is_empty() {
+            return Some(key);
+        }
+    }
+
+    // Try stored credentials
+    if let Ok(Some((username, password))) =
+        droidgear_core::channel::get_channel_credentials_for_home(&app.home_dir, channel_id)
+    {
+        if !password.is_empty() {
+            match channel_type {
+                droidgear_core::channel::ChannelType::NewApi
+                | droidgear_core::channel::ChannelType::Sub2Api => {
+                    // Token-based channel: fetch a live token from the API
+                    match droidgear_core::channel::fetch_channel_tokens_blocking(
+                        channel_type.clone(),
+                        base_url,
+                        &username,
+                        &password,
+                    ) {
+                        Ok(tokens) => {
+                            // Return the first active token's key
+                            for t in &tokens {
+                                if t.status == 1 && !t.key.is_empty() {
+                                    return Some(t.key.clone());
+                                }
+                            }
+                            // Fall back to first token if none active
+                            tokens.first().map(|t| t.key.clone())
+                        }
+                        Err(_) => {
+                            // Token fetch failed, try password as-is
+                            Some(password)
+                        }
+                    }
+                }
+                _ => {
+                    // API-key channel: password is the key
+                    Some(password)
+                }
+            }
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
 
@@ -2617,6 +3164,43 @@ pub(super) fn run_input_action(
             app.set_toast("Saved", false);
             Ok(())
         }
+        app::InputAction::PiImportSetApiKey {
+            profile_id,
+            provider_id,
+        } => {
+            if trimmed.is_empty() {
+                return Err(anyhow::Error::msg("API key is required"));
+            }
+            let base_url = app.pi_import_pending_base_url.take();
+            let _channel_id = app.pi_import_pending_channel_id.take();
+            let Some(base_url) = base_url else {
+                return Err(anyhow::anyhow!("No pending channel import"));
+            };
+
+            // Fetch models from the channel
+            let models =
+                droidgear_core::channel::fetch_models_by_api_key_blocking(&base_url, trimmed, None)
+                    .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+            // Store models and show MultiSelect
+            app.pi_import_pending_models = Some(models.clone());
+            app.pi_import_pending_api_key = Some(trimmed.to_string());
+            let selected_bools: Vec<bool> = vec![true; models.len()];
+            app.pi_import_pending_selected = Some(selected_bools.clone());
+
+            let options: Vec<String> = models.iter().map(|m| m.id.clone()).collect();
+            app.modal = Some(app::Modal::MultiSelect {
+                title: "Select models to import (Tab/c: confirm)".to_string(),
+                options,
+                selected: selected_bools,
+                index: 0,
+                action: app::SelectAction::PiImportToggleModel {
+                    profile_id,
+                    provider_id,
+                },
+            });
+            Ok(())
+        }
         app::InputAction::HermesImportSetApiKey { id } => {
             // Complete the "import from channel" flow: apply stored base_url/provider + entered api_key
             let base_url = app.hermes_import_pending_base_url.take();
@@ -2732,6 +3316,50 @@ pub(super) fn run_input_action(
             app.pi_model_index = 0;
             app.pi_model_field_index = 0;
             refresh_pi_detail(app);
+            Ok(())
+        }
+        app::InputAction::PiAddProviderFromChannel { profile_id } => {
+            if trimmed.is_empty() {
+                return Err(anyhow::Error::msg("Provider id is required"));
+            }
+            // Create the empty provider
+            let mut profile =
+                droidgear_core::pi::get_pi_profile_for_home(&app.home_dir, &profile_id)
+                    .map_err(anyhow::Error::msg)?;
+            if profile.providers.contains_key(trimmed) {
+                return Err(anyhow::Error::msg("Provider already exists"));
+            }
+            let provider_id = trimmed.to_string();
+            profile.providers.insert(
+                provider_id.clone(),
+                droidgear_core::pi::PiProviderConfig::default(),
+            );
+            droidgear_core::pi::save_pi_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            refresh_pi_detail(app);
+
+            // Refresh channels and show selection
+            refresh_channels(app);
+            let enabled_channels: Vec<String> = app
+                .channels
+                .iter()
+                .filter(|c| c.enabled)
+                .map(|c| format!("{} ({})", c.name, c.base_url))
+                .collect();
+            if enabled_channels.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "No enabled channels found. Add a channel first."
+                ));
+            }
+            app.modal = Some(app::Modal::Select {
+                title: "Select channel to import from".to_string(),
+                options: enabled_channels,
+                index: 0,
+                action: app::SelectAction::PiAddProviderFromChannel {
+                    profile_id,
+                    provider_id,
+                },
+            });
             Ok(())
         }
         app::InputAction::PiSetProviderBaseUrl {

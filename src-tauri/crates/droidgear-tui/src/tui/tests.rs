@@ -588,6 +588,41 @@ fn list_claude_temporary_run_targets_lists_index_name_and_id() {
 }
 
 #[test]
+fn pi_import_from_channel_action_variants_exist() {
+    let _import = app::SelectAction::PiImportFromChannel {
+        profile_id: "x".to_string(),
+        provider_id: "y".to_string(),
+    };
+    let _set_key = app::InputAction::PiImportSetApiKey {
+        profile_id: "x".to_string(),
+        provider_id: "y".to_string(),
+    };
+}
+
+#[test]
+fn pi_add_provider_from_channel_action_variants_exist() {
+    let _select = app::SelectAction::PiAddProviderFromChannel {
+        profile_id: "x".to_string(),
+        provider_id: "y".to_string(),
+    };
+    let _input = app::InputAction::PiAddProviderFromChannel {
+        profile_id: "x".to_string(),
+    };
+}
+
+#[test]
+fn pi_import_set_token_action_exists() {
+    let _set_token = app::SelectAction::PiImportSetToken {
+        profile_id: "x".to_string(),
+        provider_id: "y".to_string(),
+    };
+    let _toggle = app::SelectAction::PiImportToggleModel {
+        profile_id: "x".to_string(),
+        provider_id: "y".to_string(),
+    };
+}
+
+#[test]
 fn format_claude_temporary_run_preview_includes_overlay_and_sensitive_notice() {
     let preview = droidgear_core::claude_runtime::ClaudeTemporaryRunDebugPreview {
         profile_id: "profile-a".to_string(),

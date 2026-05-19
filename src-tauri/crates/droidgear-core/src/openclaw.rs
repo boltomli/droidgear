@@ -270,42 +270,39 @@ fn load_profile_by_id(home_dir: &Path, id: &str) -> Result<OpenClawProfile, Stri
 // ============================================================================
 // Config merge helpers
 // ============================================================================
+//
+// DroidGear's job when saving an OpenClaw profile is to update **only** the
+// fields it owns and leave everything else (unknown keys, future schema
+// additions, user-added settings, key ordering) byte-for-byte intact wherever
+// possible.
+//
+// Concretely, DroidGear owns these fields:
+//   - agents.defaults.model.primary
+//   - agents.defaults.model.fallbacks
+//   - agents.defaults.blockStreamingDefault
+//   - agents.defaults.blockStreamingBreak
+//   - agents.defaults.blockStreamingChunk.{minChars,maxChars}
+//   - agents.defaults.blockStreamingCoalesce.idleMs
+//   - channels.telegram.{blockStreaming,chunkMode}
+//   - models.providers.<id>.{baseUrl,apiKey,api}
+//   - models.providers.<id>.models[].{id,name,reasoning,input,contextWindow,maxTokens}
+//   - models.providers (add/remove provider entries)
+//   - agents.defaults.models[<owned-ref>] (add/remove ref entries)
+//   - agents.list (managed separately by save_openclaw_subagents)
+//
+// Everything else is preserved as-is.
+//
+// Key ordering is preserved thanks to `serde_json/preserve_order`.
 
-/// Paths that should be replaced instead of deep merged
-const REPLACE_PATHS: &[&[&str]] = &[
-    &["models", "providers"],
-    &["agents", "defaults", "model"],
-    &["agents", "defaults", "models"],
-    &["agents", "defaults", "blockStreamingDefault"],
-    &["agents", "defaults", "blockStreamingBreak"],
-    &["agents", "defaults", "blockStreamingChunk"],
-    &["agents", "defaults", "blockStreamingCoalesce"],
-    &["agents", "list"],
-];
-
-/// Deep merge with path-based replacement strategy.
-fn deep_merge_with_replace(base: &mut Value, overlay: &Value, current_path: &[String]) {
-    let should_replace = REPLACE_PATHS.iter().any(|replace_path| {
-        replace_path.len() == current_path.len()
-            && replace_path
-                .iter()
-                .zip(current_path.iter())
-                .all(|(a, b)| *a == b)
-    });
-
-    if should_replace {
-        *base = overlay.clone();
-        return;
-    }
-
+/// Deep merge of `overlay` into `base`. Objects are merged recursively;
+/// non-object values (including arrays) are replaced wholesale. Used by
+/// `save_openclaw_subagents_for_home` to merge per-agent overlays.
+fn deep_merge(base: &mut Value, overlay: &Value) {
     match (base, overlay) {
         (Value::Object(base_map), Value::Object(overlay_map)) => {
             for (key, overlay_val) in overlay_map {
-                let mut new_path = current_path.to_vec();
-                new_path.push(key.clone());
-
                 match base_map.get_mut(key) {
-                    Some(base_val) => deep_merge_with_replace(base_val, overlay_val, &new_path),
+                    Some(base_val) => deep_merge(base_val, overlay_val),
                     None => {
                         base_map.insert(key.clone(), overlay_val.clone());
                     }
@@ -426,193 +423,467 @@ fn read_openclaw_config_raw_for_home(home_dir: &Path) -> Result<Value, String> {
     serde_json::from_str(&s).map_err(|e| format!("Invalid config JSON: {e}"))
 }
 
-fn build_openclaw_config(profile: &OpenClawProfile) -> Value {
-    let mut config = serde_json::Map::new();
-
-    // Collect all model refs from providers for agents.defaults.models
-    let mut all_model_refs: Vec<String> = Vec::new();
-    for (provider_id, provider) in &profile.providers {
-        for model in &provider.models {
-            all_model_refs.push(format!("{provider_id}/{}", model.id));
-        }
-    }
-
-    // agents.defaults.model.primary and agents.defaults.models
-    if profile.default_model.is_some() || !all_model_refs.is_empty() {
-        let mut agents = serde_json::Map::new();
-        let mut defaults = serde_json::Map::new();
-
-        if let Some(ref model) = profile.default_model {
-            let mut model_obj = serde_json::Map::new();
-            model_obj.insert("primary".to_string(), Value::String(model.clone()));
-            // Write failover list if present and non-empty
-            if let Some(ref failover) = profile.failover_models {
-                if !failover.is_empty() {
-                    model_obj.insert(
-                        "fallbacks".to_string(),
-                        Value::Array(failover.iter().map(|s| Value::String(s.clone())).collect()),
-                    );
-                }
-            }
-            defaults.insert("model".to_string(), Value::Object(model_obj));
-        }
-
-        if !all_model_refs.is_empty() {
-            let mut models_map = serde_json::Map::new();
-            for model_ref in all_model_refs {
-                models_map.insert(model_ref, Value::Object(serde_json::Map::new()));
-            }
-            defaults.insert("models".to_string(), Value::Object(models_map));
-        }
-
-        agents.insert("defaults".to_string(), Value::Object(defaults));
-        config.insert("agents".to_string(), Value::Object(agents));
-    }
-
-    // models.providers (only if there are custom providers)
-    if !profile.providers.is_empty() {
-        let mut models = serde_json::Map::new();
-        models.insert("mode".to_string(), Value::String("merge".to_string()));
-
-        let mut providers = serde_json::Map::new();
-        for (id, provider) in &profile.providers {
-            let mut provider_obj = serde_json::Map::new();
-
-            if let Some(ref base_url) = provider.base_url {
-                provider_obj.insert("baseUrl".to_string(), Value::String(base_url.clone()));
-            }
-            if let Some(ref api_key) = provider.api_key {
-                provider_obj.insert("apiKey".to_string(), Value::String(api_key.clone()));
-            }
-            if let Some(ref api) = provider.api {
-                provider_obj.insert("api".to_string(), Value::String(api.clone()));
-            }
-
-            if !provider.models.is_empty() {
-                let models_arr: Vec<Value> = provider
-                    .models
-                    .iter()
-                    .map(|m| {
-                        let mut model_obj = serde_json::Map::new();
-                        model_obj.insert("id".to_string(), Value::String(m.id.clone()));
-                        model_obj.insert(
-                            "name".to_string(),
-                            Value::String(m.name.as_deref().unwrap_or(&m.id).to_string()),
-                        );
-                        model_obj.insert("reasoning".to_string(), Value::Bool(m.reasoning));
-                        if !m.input.is_empty() {
-                            model_obj.insert(
-                                "input".to_string(),
-                                Value::Array(
-                                    m.input.iter().map(|s| Value::String(s.clone())).collect(),
-                                ),
-                            );
-                        }
-                        if let Some(cw) = m.context_window {
-                            model_obj.insert("contextWindow".to_string(), Value::Number(cw.into()));
-                        }
-                        if let Some(mt) = m.max_tokens {
-                            model_obj.insert("maxTokens".to_string(), Value::Number(mt.into()));
-                        }
-                        Value::Object(model_obj)
-                    })
-                    .collect();
-                provider_obj.insert("models".to_string(), Value::Array(models_arr));
-            }
-
-            providers.insert(id.clone(), Value::Object(provider_obj));
-        }
-
-        models.insert("providers".to_string(), Value::Object(providers));
-        config.insert("models".to_string(), Value::Object(models));
-    }
-
-    // Block streaming config (agents.defaults block streaming settings)
-    if let Some(ref bs_config) = profile.block_streaming_config {
-        let agents = config
-            .entry("agents".to_string())
-            .or_insert_with(|| Value::Object(serde_json::Map::new()));
-        if let Value::Object(agents_map) = agents {
-            let defaults = agents_map
-                .entry("defaults".to_string())
-                .or_insert_with(|| Value::Object(serde_json::Map::new()));
-            if let Value::Object(defaults_map) = defaults {
-                if let Some(ref val) = bs_config.block_streaming_default {
-                    defaults_map.insert(
-                        "blockStreamingDefault".to_string(),
-                        Value::String(val.clone()),
-                    );
-                }
-                if let Some(ref val) = bs_config.block_streaming_break {
-                    defaults_map.insert(
-                        "blockStreamingBreak".to_string(),
-                        Value::String(val.clone()),
-                    );
-                }
-                if let Some(ref chunk) = bs_config.block_streaming_chunk {
-                    let mut chunk_obj = serde_json::Map::new();
-                    if let Some(min) = chunk.min_chars {
-                        chunk_obj.insert("minChars".to_string(), Value::Number(min.into()));
-                    }
-                    if let Some(max) = chunk.max_chars {
-                        chunk_obj.insert("maxChars".to_string(), Value::Number(max.into()));
-                    }
-                    if !chunk_obj.is_empty() {
-                        defaults_map
-                            .insert("blockStreamingChunk".to_string(), Value::Object(chunk_obj));
-                    }
-                }
-                if let Some(ref coalesce) = bs_config.block_streaming_coalesce {
-                    if let Some(idle) = coalesce.idle_ms {
-                        let mut coalesce_obj = serde_json::Map::new();
-                        coalesce_obj.insert("idleMs".to_string(), Value::Number(idle.into()));
-                        defaults_map.insert(
-                            "blockStreamingCoalesce".to_string(),
-                            Value::Object(coalesce_obj),
-                        );
-                    }
-                }
-            }
-        }
-
-        // Telegram channel config (channels.telegram)
-        if let Some(ref telegram) = bs_config.telegram_channel {
-            let channels = config
-                .entry("channels".to_string())
-                .or_insert_with(|| Value::Object(serde_json::Map::new()));
-            if let Value::Object(channels_map) = channels {
-                let telegram_obj = channels_map
-                    .entry("telegram".to_string())
-                    .or_insert_with(|| Value::Object(serde_json::Map::new()));
-                if let Value::Object(telegram_map) = telegram_obj {
-                    if let Some(bs) = telegram.block_streaming {
-                        telegram_map.insert("blockStreaming".to_string(), Value::Bool(bs));
-                    }
-                    if let Some(ref mode) = telegram.chunk_mode {
-                        telegram_map.insert("chunkMode".to_string(), Value::String(mode.clone()));
-                    }
-                }
-            }
-        }
-    }
-
-    Value::Object(config)
-}
-
 fn write_openclaw_config_for_home(
     home_dir: &Path,
     profile: &OpenClawProfile,
 ) -> Result<(), String> {
     let config_path = openclaw_config_path_for_home(home_dir)?;
 
-    // Read existing config and merge with replace strategy for model configs
-    let mut base_config = read_openclaw_config_raw_for_home(home_dir)?;
-    let overlay_config = build_openclaw_config(profile);
-    deep_merge_with_replace(&mut base_config, &overlay_config, &[]);
+    // Surgically update DroidGear-owned fields on top of the existing config.
+    // Everything else — unknown keys, key order, user-added settings — is
+    // preserved.
+    let mut config = read_openclaw_config_raw_for_home(home_dir)?;
+    if !config.is_object() {
+        config = Value::Object(serde_json::Map::new());
+    }
+    apply_profile_in_place(&mut config, profile);
 
-    let s = serde_json::to_string_pretty(&base_config)
+    let s = serde_json::to_string_pretty(&config)
         .map_err(|e| format!("Failed to serialize config: {e}"))?;
     storage::atomic_write(&config_path, s.as_bytes())
+}
+
+/// Apply every DroidGear-owned field from `profile` into `config` in place.
+///
+/// Guarantees:
+/// - Unknown top-level keys (gateway, channels.*, bindings, plugins, wizard,
+///   tools, session, meta, ...) are not touched.
+/// - Within objects DroidGear partially owns (e.g. `agents.defaults`,
+///   `agents.defaults.model`, `agents.defaults.blockStreamingChunk`,
+///   `models.providers.<id>`, model entries inside `models[]`,
+///   `channels.telegram`), only owned fields are written; siblings are
+///   preserved.
+/// - Empty intermediate objects DroidGear created but did not populate are
+///   removed at the end.
+fn apply_profile_in_place(config: &mut Value, profile: &OpenClawProfile) {
+    let owned_provider_ids: std::collections::HashSet<String> =
+        profile.providers.keys().cloned().collect();
+
+    let config_obj = match config.as_object_mut() {
+        Some(o) => o,
+        None => return,
+    };
+
+    // -------------------- agents.defaults.{model, blockStreaming*} --------------------
+    let needs_agents_block = profile.default_model.is_some()
+        || profile.failover_models.is_some()
+        || profile.block_streaming_config.is_some()
+        || profile.providers.values().any(|p| !p.models.is_empty())
+        || agents_defaults_models_has_owned_ref(config_obj, &owned_provider_ids);
+
+    if needs_agents_block {
+        let agents_value = config_obj
+            .entry("agents".to_string())
+            .or_insert_with(|| Value::Object(serde_json::Map::new()));
+        if let Value::Object(agents_map) = agents_value {
+            let defaults_value = agents_map
+                .entry("defaults".to_string())
+                .or_insert_with(|| Value::Object(serde_json::Map::new()));
+            if let Value::Object(defaults_map) = defaults_value {
+                apply_default_model(defaults_map, profile);
+                apply_block_streaming_to_defaults(defaults_map, profile);
+                apply_agents_defaults_models(defaults_map, profile, &owned_provider_ids);
+            }
+        }
+    }
+
+    // -------------------- channels.telegram --------------------
+    if let Some(bs) = profile
+        .block_streaming_config
+        .as_ref()
+        .and_then(|c| c.telegram_channel.as_ref())
+    {
+        let channels_value = config_obj
+            .entry("channels".to_string())
+            .or_insert_with(|| Value::Object(serde_json::Map::new()));
+        if let Value::Object(channels_map) = channels_value {
+            let telegram_value = channels_map
+                .entry("telegram".to_string())
+                .or_insert_with(|| Value::Object(serde_json::Map::new()));
+            if let Value::Object(telegram_map) = telegram_value {
+                if let Some(b) = bs.block_streaming {
+                    telegram_map.insert("blockStreaming".to_string(), Value::Bool(b));
+                }
+                if let Some(ref mode) = bs.chunk_mode {
+                    telegram_map.insert("chunkMode".to_string(), Value::String(mode.clone()));
+                }
+            }
+            // Don't drop `channels.telegram` if it ended up empty — the user
+            // may have placed a placeholder there. We only ever insert into
+            // it (above), never delete.
+        }
+    }
+
+    // -------------------- models.providers --------------------
+    apply_models_providers(config_obj, profile, &owned_provider_ids);
+
+    // -------------------- final cleanup of empties we just created --------------------
+    cleanup_empty_dg_blocks(config_obj);
+}
+
+/// Helper: return true if `config.agents.defaults.models` already has at
+/// least one ref whose provider prefix is owned by the profile (i.e. we may
+/// need to prune stale entries even if profile has no models[] currently).
+fn agents_defaults_models_has_owned_ref(
+    config_obj: &serde_json::Map<String, Value>,
+    owned: &std::collections::HashSet<String>,
+) -> bool {
+    config_obj
+        .get("agents")
+        .and_then(|v| v.get("defaults"))
+        .and_then(|v| v.get("models"))
+        .and_then(|v| v.as_object())
+        .is_some_and(|m| {
+            m.keys().any(|key| {
+                let prefix = key.split('/').next().unwrap_or("");
+                owned.contains(prefix)
+            })
+        })
+}
+
+/// Update `agents.defaults.model` in place. Only `primary` and `fallbacks`
+/// are owned by DroidGear; any unknown sibling keys (e.g. user-added routing
+/// metadata) are preserved.
+fn apply_default_model(
+    defaults_map: &mut serde_json::Map<String, Value>,
+    profile: &OpenClawProfile,
+) {
+    if profile.default_model.is_none() && profile.failover_models.is_none() {
+        return;
+    }
+
+    let model_value = defaults_map
+        .entry("model".to_string())
+        .or_insert_with(|| Value::Object(serde_json::Map::new()));
+    let model_map = match model_value {
+        Value::Object(m) => m,
+        // If the user (or a future OpenClaw version) made `model` a string,
+        // convert it to the documented object form rather than crashing.
+        _ => {
+            *model_value = Value::Object(serde_json::Map::new());
+            match model_value {
+                Value::Object(m) => m,
+                _ => unreachable!(),
+            }
+        }
+    };
+
+    if let Some(ref primary) = profile.default_model {
+        model_map.insert("primary".to_string(), Value::String(primary.clone()));
+    }
+
+    match &profile.failover_models {
+        Some(fallbacks) if !fallbacks.is_empty() => {
+            model_map.insert(
+                "fallbacks".to_string(),
+                Value::Array(fallbacks.iter().map(|s| Value::String(s.clone())).collect()),
+            );
+        }
+        Some(_) => {
+            // Empty list → user explicitly cleared fallbacks.
+            model_map.remove("fallbacks");
+        }
+        None => {
+            // Unset → leave whatever was already there alone.
+        }
+    }
+}
+
+/// Update the `agents.defaults.blockStreaming*` keys in place.
+fn apply_block_streaming_to_defaults(
+    defaults_map: &mut serde_json::Map<String, Value>,
+    profile: &OpenClawProfile,
+) {
+    let bs = match profile.block_streaming_config.as_ref() {
+        Some(b) => b,
+        None => return,
+    };
+
+    if let Some(ref val) = bs.block_streaming_default {
+        defaults_map.insert(
+            "blockStreamingDefault".to_string(),
+            Value::String(val.clone()),
+        );
+    }
+    if let Some(ref val) = bs.block_streaming_break {
+        defaults_map.insert(
+            "blockStreamingBreak".to_string(),
+            Value::String(val.clone()),
+        );
+    }
+    if let Some(ref chunk) = bs.block_streaming_chunk {
+        let chunk_value = defaults_map
+            .entry("blockStreamingChunk".to_string())
+            .or_insert_with(|| Value::Object(serde_json::Map::new()));
+        if let Value::Object(chunk_map) = chunk_value {
+            if let Some(min) = chunk.min_chars {
+                chunk_map.insert("minChars".to_string(), Value::Number(min.into()));
+            }
+            if let Some(max) = chunk.max_chars {
+                chunk_map.insert("maxChars".to_string(), Value::Number(max.into()));
+            }
+        }
+    }
+    if let Some(ref coalesce) = bs.block_streaming_coalesce {
+        if let Some(idle) = coalesce.idle_ms {
+            let coalesce_value = defaults_map
+                .entry("blockStreamingCoalesce".to_string())
+                .or_insert_with(|| Value::Object(serde_json::Map::new()));
+            if let Value::Object(coalesce_map) = coalesce_value {
+                coalesce_map.insert("idleMs".to_string(), Value::Number(idle.into()));
+            }
+        }
+    }
+}
+
+/// Reconcile `agents.defaults.models` with the refs implied by
+/// `profile.providers[*].models[]`. Only refs whose provider prefix is owned
+/// by the profile are added/removed; refs for other providers are untouched,
+/// and existing entry contents (`alias`, `params`, `streaming`, ...) are
+/// preserved.
+fn apply_agents_defaults_models(
+    defaults_map: &mut serde_json::Map<String, Value>,
+    profile: &OpenClawProfile,
+    owned: &std::collections::HashSet<String>,
+) {
+    let target_refs: std::collections::HashSet<String> = profile
+        .providers
+        .iter()
+        .flat_map(|(pid, p)| p.models.iter().map(move |m| format!("{pid}/{}", m.id)))
+        .collect();
+
+    let need_models_block = !target_refs.is_empty() || defaults_map.contains_key("models");
+    if !need_models_block {
+        return;
+    }
+
+    let models_value = defaults_map
+        .entry("models".to_string())
+        .or_insert_with(|| Value::Object(serde_json::Map::new()));
+    let Value::Object(models_map) = models_value else {
+        return;
+    };
+
+    // Remove stale refs whose provider prefix is owned but the model id is gone.
+    let to_remove: Vec<String> = models_map
+        .keys()
+        .filter(|key| {
+            let prefix = key.split('/').next().unwrap_or("");
+            owned.contains(prefix) && !target_refs.contains(*key)
+        })
+        .cloned()
+        .collect();
+    for key in to_remove {
+        models_map.remove(&key);
+    }
+
+    // Insert refs we own that aren't already present.
+    for r in &target_refs {
+        models_map
+            .entry(r.clone())
+            .or_insert_with(|| Value::Object(serde_json::Map::new()));
+    }
+}
+
+/// Reconcile `models.providers` with `profile.providers`. The profile is the
+/// source of truth for provider identity: any provider in the file but not in
+/// the profile is removed (treated as user-deleted). For providers the
+/// profile owns, only typed fields (`baseUrl`, `apiKey`, `api`, model entries)
+/// are written; everything else is preserved.
+fn apply_models_providers(
+    config_obj: &mut serde_json::Map<String, Value>,
+    profile: &OpenClawProfile,
+    owned: &std::collections::HashSet<String>,
+) {
+    // Skip entirely if there's nothing to do.
+    let has_existing_providers = config_obj
+        .get("models")
+        .and_then(|v| v.get("providers"))
+        .is_some();
+    if profile.providers.is_empty() && !has_existing_providers {
+        return;
+    }
+
+    let models_value = config_obj
+        .entry("models".to_string())
+        .or_insert_with(|| Value::Object(serde_json::Map::new()));
+    let Value::Object(models_map) = models_value else {
+        return;
+    };
+
+    // Default `mode` to "merge" if absent (matches the OpenClaw default).
+    models_map
+        .entry("mode".to_string())
+        .or_insert_with(|| Value::String("merge".to_string()));
+
+    let providers_value = models_map
+        .entry("providers".to_string())
+        .or_insert_with(|| Value::Object(serde_json::Map::new()));
+    let Value::Object(providers_map) = providers_value else {
+        return;
+    };
+
+    // Drop providers no longer in the profile.
+    let to_remove: Vec<String> = providers_map
+        .keys()
+        .filter(|id| !owned.contains(id.as_str()))
+        .cloned()
+        .collect();
+    for id in to_remove {
+        providers_map.remove(&id);
+    }
+
+    // Update each owned provider in place.
+    for (id, provider) in &profile.providers {
+        let provider_value = providers_map
+            .entry(id.clone())
+            .or_insert_with(|| Value::Object(serde_json::Map::new()));
+        if let Value::Object(provider_obj) = provider_value {
+            update_provider_in_place(provider_obj, provider);
+        }
+    }
+}
+
+/// Final pass: drop top-level blocks DroidGear created but didn't populate.
+/// Existing user blocks (even if empty) are left alone.
+fn cleanup_empty_dg_blocks(config_obj: &mut serde_json::Map<String, Value>) {
+    // agents.defaults.models → agents.defaults → agents
+    if let Some(Value::Object(agents_map)) = config_obj.get_mut("agents") {
+        if let Some(Value::Object(defaults_map)) = agents_map.get_mut("defaults") {
+            if defaults_map
+                .get("models")
+                .and_then(|v| v.as_object())
+                .is_some_and(|m| m.is_empty())
+            {
+                defaults_map.remove("models");
+            }
+            if defaults_map
+                .get("blockStreamingChunk")
+                .and_then(|v| v.as_object())
+                .is_some_and(|m| m.is_empty())
+            {
+                defaults_map.remove("blockStreamingChunk");
+            }
+            if defaults_map
+                .get("blockStreamingCoalesce")
+                .and_then(|v| v.as_object())
+                .is_some_and(|m| m.is_empty())
+            {
+                defaults_map.remove("blockStreamingCoalesce");
+            }
+            if defaults_map
+                .get("model")
+                .and_then(|v| v.as_object())
+                .is_some_and(|m| m.is_empty())
+            {
+                defaults_map.remove("model");
+            }
+        }
+        if agents_map
+            .get("defaults")
+            .and_then(|v| v.as_object())
+            .is_some_and(|m| m.is_empty())
+        {
+            agents_map.remove("defaults");
+        }
+    }
+    if config_obj
+        .get("agents")
+        .and_then(|v| v.as_object())
+        .is_some_and(|m| m.is_empty())
+    {
+        config_obj.remove("agents");
+    }
+}
+
+/// Update a provider object in place. Sets typed fields from the profile;
+/// removes typed fields when the profile clears them; preserves everything
+/// else.
+fn update_provider_in_place(
+    provider_obj: &mut serde_json::Map<String, Value>,
+    provider: &OpenClawProviderConfig,
+) {
+    set_or_remove_str(provider_obj, "baseUrl", provider.base_url.as_deref());
+    set_or_remove_str(provider_obj, "apiKey", provider.api_key.as_deref());
+    set_or_remove_str(provider_obj, "api", provider.api.as_deref());
+
+    // Update models[] surgically: match existing entries by id, preserve unknown fields.
+    let existing_models: Vec<Value> = provider_obj
+        .get("models")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    // Build an id → existing-entry map (last write wins, mirroring how
+    // OpenClaw treats duplicate ids).
+    let mut existing_by_id: HashMap<String, Value> = HashMap::new();
+    for entry in existing_models {
+        if let Some(id) = entry.get("id").and_then(|v| v.as_str()) {
+            existing_by_id.insert(id.to_string(), entry);
+        }
+    }
+
+    let mut new_models: Vec<Value> = Vec::with_capacity(provider.models.len());
+    for m in &provider.models {
+        let mut entry = existing_by_id
+            .remove(&m.id)
+            .and_then(|v| match v {
+                Value::Object(_) => Some(v),
+                _ => None,
+            })
+            .unwrap_or_else(|| Value::Object(serde_json::Map::new()));
+
+        if let Value::Object(map) = &mut entry {
+            map.insert("id".to_string(), Value::String(m.id.clone()));
+            map.insert(
+                "name".to_string(),
+                Value::String(m.name.as_deref().unwrap_or(&m.id).to_string()),
+            );
+            map.insert("reasoning".to_string(), Value::Bool(m.reasoning));
+            if m.input.is_empty() {
+                map.remove("input");
+            } else {
+                map.insert(
+                    "input".to_string(),
+                    Value::Array(m.input.iter().map(|s| Value::String(s.clone())).collect()),
+                );
+            }
+            match m.context_window {
+                Some(cw) => {
+                    map.insert("contextWindow".to_string(), Value::Number(cw.into()));
+                }
+                None => {
+                    map.remove("contextWindow");
+                }
+            }
+            match m.max_tokens {
+                Some(mt) => {
+                    map.insert("maxTokens".to_string(), Value::Number(mt.into()));
+                }
+                None => {
+                    map.remove("maxTokens");
+                }
+            }
+        }
+        new_models.push(entry);
+    }
+
+    if new_models.is_empty() {
+        provider_obj.remove("models");
+    } else {
+        provider_obj.insert("models".to_string(), Value::Array(new_models));
+    }
+}
+
+fn set_or_remove_str(map: &mut serde_json::Map<String, Value>, key: &str, value: Option<&str>) {
+    match value {
+        Some(s) => {
+            map.insert(key.to_string(), Value::String(s.to_string()));
+        }
+        None => {
+            map.remove(key);
+        }
+    }
 }
 
 // ============================================================================
@@ -901,7 +1172,7 @@ pub fn save_openclaw_subagents_for_home(
 
         let merged = if let Some(mut existing) = existing_map.remove(&agent.id) {
             // Deep merge new into existing (new fields override, existing fields preserved)
-            deep_merge_with_replace(&mut existing, &new_value, &[]);
+            deep_merge(&mut existing, &new_value);
             existing
         } else {
             new_value
@@ -929,7 +1200,7 @@ pub fn save_openclaw_subagents_for_home(
             main_overlay.insert("subagents".to_string(), Value::Object(sa_obj));
 
             let main_entry = if let Some(mut existing_main) = existing_map.remove("main") {
-                deep_merge_with_replace(&mut existing_main, &Value::Object(main_overlay), &[]);
+                deep_merge(&mut existing_main, &Value::Object(main_overlay));
                 existing_main
             } else {
                 Value::Object(main_overlay)
@@ -945,7 +1216,7 @@ pub fn save_openclaw_subagents_for_home(
     agents.insert("list".to_string(), Value::Array(result_list));
     overlay.insert("agents".to_string(), Value::Object(agents));
 
-    deep_merge_with_replace(&mut config, &Value::Object(overlay), &[]);
+    deep_merge(&mut config, &Value::Object(overlay));
 
     let s = serde_json::to_string_pretty(&config)
         .map_err(|e| format!("Failed to serialize config: {e}"))?;
@@ -982,6 +1253,15 @@ mod tests {
         }
     }
 
+    /// Helper: build the full config the way `write_openclaw_config_for_home`
+    /// does (apply profile to an empty base) for tests that want to inspect
+    /// the JSON structure.
+    fn build_full_config(profile: &OpenClawProfile) -> Value {
+        let mut config = Value::Object(serde_json::Map::new());
+        apply_profile_in_place(&mut config, profile);
+        config
+    }
+
     /// Helper: run full roundtrip build → parse and verify invariants.
     fn roundtrip(
         profile: &OpenClawProfile,
@@ -990,9 +1270,8 @@ mod tests {
         Option<Vec<String>>,
         HashMap<String, OpenClawProviderConfig>,
     ) {
-        let config = build_openclaw_config(profile);
-        let (model, failovers, providers) = parse_openclaw_config(&config);
-        (model, failovers, providers)
+        let config = build_full_config(profile);
+        parse_openclaw_config(&config)
     }
 
     // ------------------------------------------------------------------
@@ -1053,7 +1332,7 @@ mod tests {
         profile.default_model = Some("anthropic/claude-opus-4-6".to_string());
         profile.failover_models = Some(vec![]);
 
-        let config = build_openclaw_config(&profile);
+        let config = build_full_config(&profile);
 
         // Verify `agents.defaults.model` has `primary` but no `fallbacks`
         let agents = config.get("agents").and_then(|v| v.as_object()).unwrap();
@@ -1155,7 +1434,7 @@ mod tests {
         );
         profile.providers = providers;
 
-        let config = build_openclaw_config(&profile);
+        let config = build_full_config(&profile);
 
         // Since no models in provider, no `agents.defaults.models` should be written.
         // And since no default_model is set, no `agents` block should appear either.
@@ -1211,7 +1490,7 @@ mod tests {
             }),
         });
 
-        let config = build_openclaw_config(&profile);
+        let config = build_full_config(&profile);
 
         // Verify structure before roundtrip
         let agents = config.get("agents").and_then(|v| v.as_object()).unwrap();
@@ -1289,7 +1568,7 @@ mod tests {
         );
         profile.providers = providers;
 
-        let config = build_openclaw_config(&profile);
+        let config = build_full_config(&profile);
         let config_str = serde_json::to_string_pretty(&config).unwrap();
 
         // Verify the JSON output contains expected keys
@@ -1773,7 +2052,7 @@ mod tests {
         );
         profile.providers = providers;
 
-        let config = build_openclaw_config(&profile);
+        let config = build_full_config(&profile);
         let json_str = serde_json::to_string_pretty(&config).unwrap();
 
         // Verify camelCase field names in output
@@ -1957,5 +2236,577 @@ mod tests {
         assert_eq!(anthropic.models[0].id, "claude-opus-4-6");
         assert!(anthropic.models[0].reasoning);
         assert_eq!(anthropic.models[0].input, vec!["text", "image"]);
+    }
+
+    // ------------------------------------------------------------------
+    // Load + save preservation tests
+    //
+    // OpenClaw's config supports many provider/model fields DroidGear does
+    // not model in `OpenClawProviderConfig`/`OpenClawModel` (timeoutSeconds,
+    // headers, params, contextTokens, alias, compat, ...). A load → save
+    // roundtrip must preserve those untouched fields, otherwise saving a
+    // profile silently corrupts the user's openclaw.json.
+    // ------------------------------------------------------------------
+
+    fn run_load_save_roundtrip(existing_config: &str) -> Value {
+        let temp = tempfile::TempDir::new().unwrap();
+        let home = temp.path().join("home");
+        std::fs::create_dir_all(home.join(".openclaw")).unwrap();
+        std::fs::write(
+            home.join(".openclaw").join("openclaw.json"),
+            existing_config,
+        )
+        .unwrap();
+
+        let profile = create_default_openclaw_profile_for_home(&home).unwrap();
+        apply_openclaw_profile_for_home(&home, &profile).unwrap();
+
+        let s = std::fs::read_to_string(home.join(".openclaw").join("openclaw.json")).unwrap();
+        serde_json::from_str(&s).unwrap()
+    }
+
+    #[test]
+    fn test_load_save_preserves_unrelated_top_level_keys() {
+        // Top-level keys DroidGear does not own must survive a roundtrip
+        // (gateway, channels, plugins, bindings, wizard, tools, session, meta).
+        let existing = r#"{
+            "agents": {
+                "defaults": {
+                    "model": {"primary": "wududu/m1"},
+                    "workspace": "/home/u/.openclaw/workspace"
+                }
+            },
+            "models": {
+                "providers": {
+                    "wududu": {
+                        "baseUrl": "https://w",
+                        "apiKey": "k",
+                        "api": "openai-completions",
+                        "models": [{"id": "m1", "name": "M1", "reasoning": true, "input": ["text"], "contextWindow": 100000, "maxTokens": 4096}]
+                    }
+                }
+            },
+            "gateway": {"port": 18789, "mode": "local"},
+            "channels": {"feishu": {"enabled": true}},
+            "bindings": [{"agentId": "main"}],
+            "plugins": {"entries": {"feishu": {"enabled": true}}},
+            "wizard": {"lastRunCommand": "onboard"},
+            "tools": {"profile": "coding"},
+            "session": {"dmScope": "per-channel-peer"},
+            "meta": {"lastTouchedVersion": "2026.5.18"}
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+
+        for key in [
+            "gateway", "channels", "bindings", "plugins", "wizard", "tools", "session", "meta",
+        ] {
+            assert!(v.get(key).is_some(), "top-level key '{key}' lost");
+        }
+        assert_eq!(
+            v.pointer("/agents/defaults/workspace")
+                .and_then(|x| x.as_str()),
+            Some("/home/u/.openclaw/workspace"),
+            "agents.defaults.workspace lost"
+        );
+    }
+
+    #[test]
+    fn test_load_save_preserves_extra_provider_fields() {
+        // Provider-level fields OpenClaw supports but DroidGear doesn't
+        // model: auth, timeoutSeconds, headers, params, etc.
+        let existing = r#"{
+            "models": {
+                "providers": {
+                    "wududu": {
+                        "api": "openai-completions",
+                        "apiKey": "secret",
+                        "baseUrl": "https://w.example",
+                        "auth": "api-key",
+                        "timeoutSeconds": 600,
+                        "headers": {"X-Custom": "value"},
+                        "params": {"temperature": 0.7},
+                        "injectNumCtxForOpenAICompat": false,
+                        "models": [
+                            {"id": "m1", "name": "M1", "reasoning": false, "input": ["text"], "contextWindow": 100000, "maxTokens": 4096}
+                        ]
+                    }
+                }
+            }
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+
+        let prov = v.pointer("/models/providers/wududu").unwrap();
+        assert_eq!(prov.get("auth").and_then(|x| x.as_str()), Some("api-key"));
+        assert_eq!(
+            prov.get("timeoutSeconds").and_then(|x| x.as_u64()),
+            Some(600)
+        );
+        assert_eq!(
+            prov.pointer("/headers/X-Custom").and_then(|x| x.as_str()),
+            Some("value")
+        );
+        assert_eq!(
+            prov.pointer("/params/temperature").and_then(|x| x.as_f64()),
+            Some(0.7)
+        );
+        assert_eq!(
+            prov.get("injectNumCtxForOpenAICompat")
+                .and_then(|x| x.as_bool()),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn test_load_save_preserves_extra_model_fields() {
+        // Model-level fields OpenClaw supports but DroidGear doesn't model:
+        // contextTokens, params, headers, compat, ...
+        let existing = r#"{
+            "models": {
+                "providers": {
+                    "wududu": {
+                        "baseUrl": "https://w",
+                        "apiKey": "k",
+                        "api": "openai-completions",
+                        "models": [
+                            {
+                                "id": "m1",
+                                "name": "M1",
+                                "reasoning": true,
+                                "input": ["text"],
+                                "contextWindow": 200000,
+                                "contextTokens": 150000,
+                                "maxTokens": 8192,
+                                "params": {"thinking_budget": 8000},
+                                "headers": {"X-Trace": "1"},
+                                "compat": {"supportsTools": true}
+                            }
+                        ]
+                    }
+                }
+            }
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+
+        let model0 = v.pointer("/models/providers/wududu/models/0").unwrap();
+        assert_eq!(
+            model0.get("contextTokens").and_then(|x| x.as_u64()),
+            Some(150000),
+            "model.contextTokens lost"
+        );
+        assert_eq!(
+            model0
+                .pointer("/params/thinking_budget")
+                .and_then(|x| x.as_u64()),
+            Some(8000),
+            "model.params lost"
+        );
+        assert_eq!(
+            model0.pointer("/headers/X-Trace").and_then(|x| x.as_str()),
+            Some("1"),
+            "model.headers lost"
+        );
+        assert_eq!(
+            model0
+                .pointer("/compat/supportsTools")
+                .and_then(|x| x.as_bool()),
+            Some(true),
+            "model.compat lost"
+        );
+    }
+
+    #[test]
+    fn test_load_save_preserves_agents_defaults_models_alias() {
+        // agents.defaults.models[ref] entries can carry alias/params/streaming.
+        let existing = r#"{
+            "agents": {
+                "defaults": {
+                    "model": {"primary": "wududu/m1"},
+                    "models": {
+                        "wududu/m1": {
+                            "alias": "fast",
+                            "params": {"thinking": "low"},
+                            "streaming": true
+                        }
+                    }
+                }
+            },
+            "models": {
+                "providers": {
+                    "wududu": {
+                        "baseUrl": "https://w",
+                        "apiKey": "k",
+                        "api": "openai-completions",
+                        "models": [{"id": "m1", "name": "M1", "reasoning": true, "input": ["text"], "contextWindow": 100000, "maxTokens": 4096}]
+                    }
+                }
+            }
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+
+        let entry = v.pointer("/agents/defaults/models/wududu~1m1").unwrap();
+        assert_eq!(entry.get("alias").and_then(|x| x.as_str()), Some("fast"));
+        assert_eq!(
+            entry.pointer("/params/thinking").and_then(|x| x.as_str()),
+            Some("low")
+        );
+        assert_eq!(entry.get("streaming").and_then(|x| x.as_bool()), Some(true));
+    }
+
+    #[test]
+    fn test_load_save_preserves_unowned_models_defaults_entries() {
+        // agents.defaults.models entries whose provider prefix is NOT owned
+        // by the profile must be left alone (e.g. a built-in 'openai/' ref a
+        // user added by hand alongside the custom 'wududu' provider).
+        let existing = r#"{
+            "agents": {
+                "defaults": {
+                    "model": {"primary": "wududu/m1"},
+                    "models": {
+                        "wududu/m1": {"alias": "fast"},
+                        "openai/gpt-5.5": {"alias": "smart"}
+                    }
+                }
+            },
+            "models": {
+                "providers": {
+                    "wududu": {
+                        "baseUrl": "https://w",
+                        "apiKey": "k",
+                        "api": "openai-completions",
+                        "models": [{"id": "m1", "name": "M1", "reasoning": true, "input": ["text"], "contextWindow": 100000, "maxTokens": 4096}]
+                    }
+                }
+            }
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+
+        let entry = v
+            .pointer("/agents/defaults/models/openai~1gpt-5.5")
+            .unwrap();
+        assert_eq!(
+            entry.get("alias").and_then(|x| x.as_str()),
+            Some("smart"),
+            "non-owned models.defaults entry should be preserved"
+        );
+    }
+
+    #[test]
+    fn test_load_save_removes_models_for_models_dropped_from_profile() {
+        // If profile no longer references a model id, the typed `models[]`
+        // entry under that provider should be removed from the file.
+        let existing = r#"{
+            "agents": {
+                "defaults": {
+                    "model": {"primary": "wududu/keep"}
+                }
+            },
+            "models": {
+                "providers": {
+                    "wududu": {
+                        "baseUrl": "https://w",
+                        "apiKey": "k",
+                        "api": "openai-completions",
+                        "models": [
+                            {"id": "keep", "name": "Keep", "reasoning": false, "input": ["text"], "contextWindow": 100000, "maxTokens": 4096}
+                        ]
+                    }
+                }
+            }
+        }"#;
+
+        let temp = tempfile::TempDir::new().unwrap();
+        let home = temp.path().join("home");
+        std::fs::create_dir_all(home.join(".openclaw")).unwrap();
+        std::fs::write(home.join(".openclaw").join("openclaw.json"), existing).unwrap();
+
+        // Load profile, then drop the only model from the only provider.
+        let mut profile = create_default_openclaw_profile_for_home(&home).unwrap();
+        if let Some(p) = profile.providers.get_mut("wududu") {
+            p.models.clear();
+        }
+        apply_openclaw_profile_for_home(&home, &profile).unwrap();
+
+        let s = std::fs::read_to_string(home.join(".openclaw").join("openclaw.json")).unwrap();
+        let v: Value = serde_json::from_str(&s).unwrap();
+
+        // Provider still present (user didn't remove it), but with no models[].
+        assert!(v.pointer("/models/providers/wududu").is_some());
+        assert!(
+            v.pointer("/models/providers/wududu/models").is_none()
+                || v.pointer("/models/providers/wududu/models")
+                    .and_then(|x| x.as_array())
+                    .is_some_and(|a| a.is_empty()),
+            "models[] should be empty/absent"
+        );
+    }
+
+    #[test]
+    fn test_load_save_preserves_unknown_keys_inside_agents_defaults_model() {
+        // OpenClaw may add new sub-keys to `agents.defaults.model`
+        // (e.g. routing strategies, weights). DroidGear only owns `primary`
+        // and `fallbacks`; everything else here must survive.
+        let existing = r#"{
+            "agents": {
+                "defaults": {
+                    "model": {
+                        "primary": "wududu/m1",
+                        "fallbacks": ["wududu/m1"],
+                        "strategy": "weighted",
+                        "weights": {"wududu/m1": 1.0},
+                        "futureKey": {"x": 42}
+                    }
+                }
+            },
+            "models": {
+                "providers": {
+                    "wududu": {
+                        "baseUrl": "https://w",
+                        "apiKey": "k",
+                        "api": "openai-completions",
+                        "models": [{"id": "m1", "name": "M1", "reasoning": false, "input": ["text"], "contextWindow": 100000, "maxTokens": 4096}]
+                    }
+                }
+            }
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+        let model = v.pointer("/agents/defaults/model").unwrap();
+        assert_eq!(
+            model.get("strategy").and_then(|x| x.as_str()),
+            Some("weighted"),
+            "unknown agents.defaults.model.strategy lost"
+        );
+        assert_eq!(
+            model
+                .pointer("/weights/wududu~1m1")
+                .and_then(|x| x.as_f64()),
+            Some(1.0)
+        );
+        assert_eq!(
+            model.pointer("/futureKey/x").and_then(|x| x.as_u64()),
+            Some(42)
+        );
+    }
+
+    #[test]
+    fn test_load_save_preserves_unknown_keys_inside_block_streaming_chunk() {
+        // Owned: minChars/maxChars. Unknown sibling sub-keys must survive.
+        let existing = r#"{
+            "agents": {
+                "defaults": {
+                    "blockStreamingChunk": {
+                        "minChars": 200,
+                        "maxChars": 600,
+                        "smoothingMode": "adaptive",
+                        "customTuning": {"weight": 0.5}
+                    }
+                }
+            }
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+        let chunk = v.pointer("/agents/defaults/blockStreamingChunk").unwrap();
+        assert_eq!(
+            chunk.get("smoothingMode").and_then(|x| x.as_str()),
+            Some("adaptive")
+        );
+        assert_eq!(
+            chunk
+                .pointer("/customTuning/weight")
+                .and_then(|x| x.as_f64()),
+            Some(0.5)
+        );
+        assert_eq!(chunk.get("minChars").and_then(|x| x.as_u64()), Some(200));
+        assert_eq!(chunk.get("maxChars").and_then(|x| x.as_u64()), Some(600));
+    }
+
+    #[test]
+    fn test_load_save_preserves_unknown_keys_inside_channels_telegram() {
+        // Owned: blockStreaming, chunkMode. Anything else (botToken, chatIds,
+        // proxy, etc.) must survive. Sibling channels (`channels.feishu`)
+        // must also survive.
+        let existing = r#"{
+            "channels": {
+                "telegram": {
+                    "blockStreaming": true,
+                    "chunkMode": "message",
+                    "botToken": "xxx:yyy",
+                    "chatIds": ["-1001", "-1002"],
+                    "proxy": {"url": "socks5://localhost:1080"}
+                },
+                "feishu": {"webhookUrl": "https://example/hook"}
+            }
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+        let tg = v.pointer("/channels/telegram").unwrap();
+        assert_eq!(
+            tg.get("botToken").and_then(|x| x.as_str()),
+            Some("xxx:yyy"),
+            "telegram.botToken lost"
+        );
+        assert_eq!(
+            tg.pointer("/chatIds/0").and_then(|x| x.as_str()),
+            Some("-1001")
+        );
+        assert_eq!(
+            tg.pointer("/proxy/url").and_then(|x| x.as_str()),
+            Some("socks5://localhost:1080")
+        );
+        assert_eq!(
+            v.pointer("/channels/feishu/webhookUrl")
+                .and_then(|x| x.as_str()),
+            Some("https://example/hook"),
+            "sibling channel `feishu` lost"
+        );
+    }
+
+    #[test]
+    fn test_load_save_preserves_top_level_key_order() {
+        // With serde_json's preserve_order feature, top-level key order
+        // should be stable across a load → save roundtrip.
+        let existing = r#"{
+            "meta": {"v": 1},
+            "agents": {
+                "defaults": {
+                    "model": {"primary": "wududu/m1"}
+                }
+            },
+            "gateway": {"port": 18789},
+            "models": {
+                "providers": {
+                    "wududu": {
+                        "baseUrl": "https://w",
+                        "apiKey": "k",
+                        "api": "openai-completions",
+                        "models": [{"id": "m1", "name": "M1", "reasoning": false, "input": ["text"], "contextWindow": 100000, "maxTokens": 4096}]
+                    }
+                }
+            },
+            "plugins": {"entries": {}}
+        }"#;
+
+        let temp = tempfile::TempDir::new().unwrap();
+        let home = temp.path().join("home");
+        std::fs::create_dir_all(home.join(".openclaw")).unwrap();
+        std::fs::write(home.join(".openclaw").join("openclaw.json"), existing).unwrap();
+
+        let profile = create_default_openclaw_profile_for_home(&home).unwrap();
+        apply_openclaw_profile_for_home(&home, &profile).unwrap();
+
+        let after_text =
+            std::fs::read_to_string(home.join(".openclaw").join("openclaw.json")).unwrap();
+        let after: Value = serde_json::from_str(&after_text).unwrap();
+        let after_obj = after.as_object().unwrap();
+        let actual_order: Vec<&str> = after_obj.keys().map(String::as_str).collect();
+        assert_eq!(
+            actual_order,
+            vec!["meta", "agents", "gateway", "models", "plugins"],
+            "top-level key order changed: {actual_order:?}"
+        );
+    }
+
+    #[test]
+    fn test_load_save_preserves_provider_key_order_inside_object() {
+        // Provider object key order should also survive (preserve_order +
+        // surgical updates do not reinsert keys we don't own).
+        let existing = r#"{
+            "models": {
+                "providers": {
+                    "wududu": {
+                        "timeoutSeconds": 600,
+                        "baseUrl": "https://w",
+                        "headers": {"X-A": "1"},
+                        "apiKey": "k",
+                        "api": "openai-completions",
+                        "models": [{"id": "m1", "name": "M1", "reasoning": false, "input": ["text"], "contextWindow": 100000, "maxTokens": 4096}]
+                    }
+                }
+            }
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+        let prov = v
+            .pointer("/models/providers/wududu")
+            .and_then(|x| x.as_object())
+            .unwrap();
+        let actual_order: Vec<&str> = prov.keys().map(String::as_str).collect();
+        assert_eq!(
+            actual_order,
+            vec![
+                "timeoutSeconds",
+                "baseUrl",
+                "headers",
+                "apiKey",
+                "api",
+                "models"
+            ],
+            "provider key order changed: {actual_order:?}"
+        );
+    }
+
+    #[test]
+    fn test_load_save_preserves_model_array_order_and_position() {
+        // models[] is keyed by id; order must match the profile order
+        // (DroidGear-owned semantics). Existing entries' unknown fields
+        // are preserved per-model.
+        let existing = r#"{
+            "models": {
+                "providers": {
+                    "wududu": {
+                        "baseUrl": "https://w",
+                        "apiKey": "k",
+                        "api": "openai-completions",
+                        "models": [
+                            {"id": "a", "name": "A", "reasoning": false, "input": ["text"], "contextWindow": 100000, "maxTokens": 4096, "params": {"x": 1}},
+                            {"id": "b", "name": "B", "reasoning": false, "input": ["text"], "contextWindow": 100000, "maxTokens": 4096}
+                        ]
+                    }
+                }
+            }
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+        let arr = v
+            .pointer("/models/providers/wududu/models")
+            .and_then(|x| x.as_array())
+            .unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0].get("id").and_then(|x| x.as_str()), Some("a"));
+        assert_eq!(arr[1].get("id").and_then(|x| x.as_str()), Some("b"));
+        // Unknown per-model field preserved.
+        assert_eq!(
+            arr[0].pointer("/params/x").and_then(|x| x.as_u64()),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn test_load_save_does_not_inject_unowned_keys() {
+        // A round-trip on a config that DroidGear has nothing to update
+        // should not introduce keys (no `models.mode` materialization, no
+        // empty `agents.defaults.models`, etc.).
+        let existing = r#"{
+            "meta": {"v": 1},
+            "gateway": {"port": 18789}
+        }"#;
+
+        let v = run_load_save_roundtrip(existing);
+        let obj = v.as_object().unwrap();
+        assert!(obj.contains_key("meta"));
+        assert!(obj.contains_key("gateway"));
+        assert!(
+            !obj.contains_key("models"),
+            "empty profile should not materialize `models` block: {obj:?}"
+        );
+        assert!(
+            !obj.contains_key("agents"),
+            "empty profile should not materialize `agents` block: {obj:?}"
+        );
     }
 }
