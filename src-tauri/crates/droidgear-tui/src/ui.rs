@@ -2664,6 +2664,38 @@ fn draw_modal(frame: &mut Frame, modal: &app::Modal) {
                 .style(t.modal_style());
             frame.render_widget(p, area);
         }
+        app::Modal::MultiSelect {
+            title,
+            options,
+            selected,
+            index,
+            ..
+        } => {
+            let items: Vec<ListItem> = options
+                .iter()
+                .enumerate()
+                .map(|(i, opt)| {
+                    let checked = if i < selected.len() && selected[i] {
+                        "[x]"
+                    } else {
+                        "[ ]"
+                    };
+                    let line = if i == *index {
+                        format!("\u{25b8} {} {}", checked, opt)
+                    } else {
+                        format!("  {} {}", checked, opt)
+                    };
+                    ListItem::new(Line::from(Span::raw(line)))
+                })
+                .collect();
+            let list_height = items.len() as u16 + 2;
+            let list = List::new(items)
+                .block(Block::default().title(title.clone()).borders(Borders::ALL))
+                .highlight_style(t.selected_style());
+            let area = centered_rect(60, list_height.min(frame.area().height - 4), frame.area());
+            frame.render_widget(Clear, area);
+            frame.render_widget(list, area);
+        }
     }
 }
 
