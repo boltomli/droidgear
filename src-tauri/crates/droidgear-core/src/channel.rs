@@ -847,6 +847,65 @@ pub async fn fetch_models_by_api_key(
     Ok(parser(&data))
 }
 
+pub fn fetch_models_by_api_key_blocking(
+    base_url: &str,
+    api_key: &str,
+    platform: Option<&str>,
+) -> Result<Vec<ModelInfo>, String> {
+    let trimmed_base = base_url.trim_end_matches('/');
+    let client = reqwest::blocking::Client::new();
+
+    if platform == Some("antigravity") {
+        let claude_url = format!("{trimmed_base}/antigravity/v1/models");
+
+        let response = client
+            .get(&claude_url)
+            .header("Authorization", format!("Bearer {api_key}"))
+            .send()
+            .map_err(|e| format!("Request failed: {e}"))?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().unwrap_or_default();
+            return Err(format!("API error {status}: {body}"));
+        }
+
+        let body = response
+            .text()
+            .map_err(|e| format!("Failed to read response body: {e}"))?;
+        let data: Value =
+            serde_json::from_str(&body).map_err(|e| format!("Failed to parse response: {e}"))?;
+
+        return Ok(parse_openai_models(&data));
+    }
+
+    let (url, parser): (String, fn(&Value) -> Vec<ModelInfo>) = match platform {
+        Some("gemini") => (format!("{trimmed_base}/v1beta/models"), parse_gemini_models),
+        Some("openai") => (format!("{trimmed_base}/v1/models"), parse_openai_models),
+        _ => (format!("{trimmed_base}/v1/models"), parse_openai_models),
+    };
+
+    let response = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {api_key}"))
+        .send()
+        .map_err(|e| format!("Request failed: {e}"))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().unwrap_or_default();
+        return Err(format!("API error {status}: {body}"));
+    }
+
+    let body = response
+        .text()
+        .map_err(|e| format!("Failed to read response body: {e}"))?;
+    let data: Value =
+        serde_json::from_str(&body).map_err(|e| format!("Failed to parse response: {e}"))?;
+
+    Ok(parser(&data))
+}
+
 fn parse_openai_models(data: &Value) -> Vec<ModelInfo> {
     data.get("data")
         .and_then(|v| v.as_array())

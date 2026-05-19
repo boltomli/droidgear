@@ -479,6 +479,9 @@ pub enum InputAction {
         profile_id: String,
         provider_id: String,
     },
+    PiAddProviderFromChannel {
+        profile_id: String,
+    },
     HermesImportSetApiKey {
         id: String,
     },
@@ -549,6 +552,10 @@ pub enum SelectAction {
         provider_id: String,
     },
     PiImportFromChannel {
+        profile_id: String,
+        provider_id: String,
+    },
+    PiAddProviderFromChannel {
         profile_id: String,
         provider_id: String,
     },

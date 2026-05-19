@@ -691,6 +691,36 @@ pub(super) fn run_select_action(
             });
             Ok(())
         }
+        app::SelectAction::PiAddProviderFromChannel {
+            profile_id,
+            provider_id,
+        } => {
+            let Some(selected) = selected else {
+                return Ok(());
+            };
+            // Find the matching channel by reconstructing the display string
+            let channel = app
+                .channels
+                .iter()
+                .find(|c| c.enabled && format!("{} ({})", c.name, c.base_url) == selected);
+            let Some(channel) = channel else {
+                return Err(anyhow::anyhow!("Channel not found"));
+            };
+            // Store channel info as pending import state; prompt for API key next
+            app.pi_import_pending_channel_id = Some(channel.id.clone());
+            app.pi_import_pending_base_url = Some(channel.base_url.clone());
+            app.modal = Some(app::Modal::Input {
+                title: "API key for import".to_string(),
+                value: String::new(),
+                cursor: usize::MAX,
+                is_secret: true,
+                action: app::InputAction::PiImportSetApiKey {
+                    profile_id,
+                    provider_id,
+                },
+            });
+            Ok(())
+        }
         app::SelectAction::HermesImportFromChannel { profile_id } => {
             let Some(selected) = selected else {
                 return Ok(());
@@ -2661,15 +2691,9 @@ pub(super) fn run_input_action(
             };
 
             // Fetch models from the channel
-            let runtime = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .map_err(|e| anyhow::anyhow!("{}", e))?;
-            let models = runtime
-                .block_on(droidgear_core::channel::fetch_models_by_api_key(
-                    &base_url, trimmed, None,
-                ))
-                .map_err(|e| anyhow::anyhow!("{}", e))?;
+            let models =
+                droidgear_core::channel::fetch_models_by_api_key_blocking(&base_url, trimmed, None)
+                    .map_err(|e| anyhow::anyhow!("{}", e))?;
 
             // Convert to Pi models and update the provider
             let mut profile =
@@ -2690,6 +2714,8 @@ pub(super) fn run_input_action(
                 })
                 .collect();
             if let Some(provider) = profile.providers.get_mut(&provider_id) {
+                provider.base_url = Some(base_url);
+                provider.api_key = Some(trimmed.to_string());
                 provider.models = pi_models;
             }
             droidgear_core::pi::save_pi_profile_for_home(&app.home_dir, profile.clone())
@@ -2813,6 +2839,49 @@ pub(super) fn run_input_action(
             app.pi_model_index = 0;
             app.pi_model_field_index = 0;
             refresh_pi_detail(app);
+            Ok(())
+        }
+        app::InputAction::PiAddProviderFromChannel { profile_id } => {
+            if trimmed.is_empty() {
+                return Err(anyhow::Error::msg("Provider id is required"));
+            }
+            // Create the empty provider
+            let mut profile =
+                droidgear_core::pi::get_pi_profile_for_home(&app.home_dir, &profile_id)
+                    .map_err(anyhow::Error::msg)?;
+            if profile.providers.contains_key(trimmed) {
+                return Err(anyhow::Error::msg("Provider already exists"));
+            }
+            let provider_id = trimmed.to_string();
+            profile.providers.insert(
+                provider_id.clone(),
+                droidgear_core::pi::PiProviderConfig::default(),
+            );
+            droidgear_core::pi::save_pi_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            refresh_pi_detail(app);
+
+            // Show channel list to select from
+            let enabled_channels: Vec<String> = app
+                .channels
+                .iter()
+                .filter(|c| c.enabled)
+                .map(|c| format!("{} ({})", c.name, c.base_url))
+                .collect();
+            if enabled_channels.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "No enabled channels found. Add a channel first."
+                ));
+            }
+            app.modal = Some(app::Modal::Select {
+                title: "Select channel to import from".to_string(),
+                options: enabled_channels,
+                index: 0,
+                action: app::SelectAction::PiAddProviderFromChannel {
+                    profile_id,
+                    provider_id,
+                },
+            });
             Ok(())
         }
         app::InputAction::PiSetProviderBaseUrl {

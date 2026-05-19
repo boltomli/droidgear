@@ -2876,7 +2876,7 @@ fn draw_pi_profile(frame: &mut Frame, app: &app::App, area: Rect) {
     render_list(frame, provider_list, chunks[1], provider_highlight);
 
     let help = help_paragraph(
-        "Up/Down: move  Enter/e: edit field/open provider  p: open provider  n: add provider  d: del provider  l: load live  a: apply  q/Esc: back",
+        "Up/Down: move  Enter/e: edit field/open provider  p: open provider  n: add provider  i: create from channel  d: del provider  l: load live  a: apply  q/Esc: back",
     );
     frame.render_widget(help, chunks[2]);
 }
