@@ -677,51 +677,72 @@ pub(super) fn run_select_action(
                 return Err(anyhow::anyhow!("Channel not found"));
             };
 
-            if keys_channels::channel_type_uses_api_key(&channel.channel_type) {
-                // API-key channel: auto-resolve the key without prompting
-                let api_key = droidgear_core::channel::get_channel_api_key_for_home(
-                    &app.home_dir,
-                    &channel.id,
-                )
-                .map_err(|e| anyhow::anyhow!("{}", e))?
-                .ok_or_else(|| anyhow::anyhow!("No API key configured for this channel"))?;
+            // Try to auto-resolve the API key from the channel's stored auth
+            let api_key = resolve_channel_api_key(app, &channel.id);
 
-                // Fetch models and update provider directly
-                let models = droidgear_core::channel::fetch_models_by_api_key_blocking(
+            if let Some(api_key) = api_key {
+                // Auto-resolve succeeded: fetch models and update provider directly
+                match droidgear_core::channel::fetch_models_by_api_key_blocking(
                     &channel.base_url,
                     &api_key,
                     None,
-                )
-                .map_err(|e| anyhow::anyhow!("{}", e))?;
-
-                let mut profile =
-                    droidgear_core::pi::get_pi_profile_for_home(&app.home_dir, &profile_id)
-                        .map_err(anyhow::Error::msg)?;
-                let pi_models: Vec<droidgear_core::pi::PiModel> = models
-                    .into_iter()
-                    .map(|m| droidgear_core::pi::PiModel {
-                        id: m.id,
-                        name: m.name,
-                        api: None,
-                        reasoning: false,
-                        input: Vec::new(),
-                        context_window: 0,
-                        max_tokens: 0,
-                        cost: None,
-                        compat: None,
-                    })
-                    .collect();
-                if let Some(provider) = profile.providers.get_mut(&provider_id) {
-                    provider.base_url = Some(channel.base_url.clone());
-                    provider.api_key = Some(api_key);
-                    provider.models = pi_models;
+                ) {
+                    Ok(models) => {
+                        match droidgear_core::pi::get_pi_profile_for_home(
+                            &app.home_dir,
+                            &profile_id,
+                        ) {
+                            Ok(mut profile) => {
+                                let pi_models: Vec<droidgear_core::pi::PiModel> = models
+                                    .into_iter()
+                                    .map(|m| droidgear_core::pi::PiModel {
+                                        id: m.id,
+                                        name: m.name,
+                                        api: None,
+                                        reasoning: false,
+                                        input: Vec::new(),
+                                        context_window: 0,
+                                        max_tokens: 0,
+                                        cost: None,
+                                        compat: None,
+                                    })
+                                    .collect();
+                                if let Some(provider) = profile.providers.get_mut(&provider_id) {
+                                    provider.base_url = Some(channel.base_url.clone());
+                                    provider.api_key = Some(api_key);
+                                    provider.models = pi_models;
+                                }
+                                if let Err(e) = droidgear_core::pi::save_pi_profile_for_home(
+                                    &app.home_dir,
+                                    profile.clone(),
+                                ) {
+                                    app.set_toast(e, true);
+                                } else {
+                                    app.pi_detail = Some(profile);
+                                    app.set_toast("Imported from channel", false);
+                                }
+                            }
+                            Err(e) => app.set_toast(e, true),
+                        }
+                    }
+                    Err(e) => {
+                        // Models fetch failed - prompt for a different API key
+                        app.pi_import_pending_channel_id = Some(channel.id.clone());
+                        app.pi_import_pending_base_url = Some(channel.base_url.clone());
+                        app.modal = Some(app::Modal::Input {
+                            title: format!("API key for import (error: {e})"),
+                            value: api_key,
+                            cursor: usize::MAX,
+                            is_secret: true,
+                            action: app::InputAction::PiImportSetApiKey {
+                                profile_id,
+                                provider_id,
+                            },
+                        });
+                    }
                 }
-                droidgear_core::pi::save_pi_profile_for_home(&app.home_dir, profile.clone())
-                    .map_err(anyhow::Error::msg)?;
-                app.pi_detail = Some(profile);
-                app.set_toast("Imported from channel", false);
             } else {
-                // Token-based channel: store pending state and prompt for API key
+                // No API key found in channel: prompt for it
                 app.pi_import_pending_channel_id = Some(channel.id.clone());
                 app.pi_import_pending_base_url = Some(channel.base_url.clone());
                 app.modal = Some(app::Modal::Input {
@@ -753,53 +774,73 @@ pub(super) fn run_select_action(
                 return Err(anyhow::anyhow!("Channel not found"));
             };
 
-            if keys_channels::channel_type_uses_api_key(&channel.channel_type) {
-                // API-key channel: auto-resolve and complete the import
-                let api_key = droidgear_core::channel::get_channel_api_key_for_home(
-                    &app.home_dir,
-                    &channel.id,
-                )
-                .map_err(|e| anyhow::anyhow!("{}", e))?
-                .ok_or_else(|| anyhow::anyhow!("No API key configured for this channel"))?;
+            // Try to auto-resolve the API key from the channel's stored auth
+            let api_key = resolve_channel_api_key(app, &channel.id);
 
-                // Fetch models
-                let models = droidgear_core::channel::fetch_models_by_api_key_blocking(
+            if let Some(api_key) = api_key {
+                // Auto-resolve succeeded: fetch models and create provider directly
+                match droidgear_core::channel::fetch_models_by_api_key_blocking(
                     &channel.base_url,
                     &api_key,
                     None,
-                )
-                .map_err(|e| anyhow::anyhow!("{}", e))?;
-
-                // Update the provider with channel data
-                let mut profile =
-                    droidgear_core::pi::get_pi_profile_for_home(&app.home_dir, &profile_id)
-                        .map_err(anyhow::Error::msg)?;
-                let pi_models: Vec<droidgear_core::pi::PiModel> = models
-                    .into_iter()
-                    .map(|m| droidgear_core::pi::PiModel {
-                        id: m.id,
-                        name: m.name,
-                        api: None,
-                        reasoning: false,
-                        input: Vec::new(),
-                        context_window: 0,
-                        max_tokens: 0,
-                        cost: None,
-                        compat: None,
-                    })
-                    .collect();
-                if let Some(provider) = profile.providers.get_mut(&provider_id) {
-                    provider.base_url = Some(channel.base_url.clone());
-                    provider.api_key = Some(api_key);
-                    provider.models = pi_models;
+                ) {
+                    Ok(models) => {
+                        match droidgear_core::pi::get_pi_profile_for_home(
+                            &app.home_dir,
+                            &profile_id,
+                        ) {
+                            Ok(mut profile) => {
+                                let pi_models: Vec<droidgear_core::pi::PiModel> = models
+                                    .into_iter()
+                                    .map(|m| droidgear_core::pi::PiModel {
+                                        id: m.id,
+                                        name: m.name,
+                                        api: None,
+                                        reasoning: false,
+                                        input: Vec::new(),
+                                        context_window: 0,
+                                        max_tokens: 0,
+                                        cost: None,
+                                        compat: None,
+                                    })
+                                    .collect();
+                                if let Some(provider) = profile.providers.get_mut(&provider_id) {
+                                    provider.base_url = Some(channel.base_url.clone());
+                                    provider.api_key = Some(api_key);
+                                    provider.models = pi_models;
+                                }
+                                if let Err(e) = droidgear_core::pi::save_pi_profile_for_home(
+                                    &app.home_dir,
+                                    profile.clone(),
+                                ) {
+                                    app.set_toast(e, true);
+                                } else {
+                                    app.pi_detail = Some(profile);
+                                    app.pi_import_pending_provider_id = None;
+                                    app.set_toast("Provider created from channel", false);
+                                }
+                            }
+                            Err(e) => app.set_toast(e, true),
+                        }
+                    }
+                    Err(e) => {
+                        // Models fetch failed - prompt for a different API key
+                        app.pi_import_pending_channel_id = Some(channel.id.clone());
+                        app.pi_import_pending_base_url = Some(channel.base_url.clone());
+                        app.modal = Some(app::Modal::Input {
+                            title: format!("API key for import (error: {e})"),
+                            value: api_key,
+                            cursor: usize::MAX,
+                            is_secret: true,
+                            action: app::InputAction::PiImportSetApiKey {
+                                profile_id,
+                                provider_id,
+                            },
+                        });
+                    }
                 }
-                droidgear_core::pi::save_pi_profile_for_home(&app.home_dir, profile.clone())
-                    .map_err(anyhow::Error::msg)?;
-                app.pi_detail = Some(profile);
-                app.pi_import_pending_provider_id = None;
-                app.set_toast("Provider created from channel", false);
             } else {
-                // Token-based channel: store pending state and prompt for API key
+                // No API key found in channel: prompt for it
                 app.pi_import_pending_channel_id = Some(channel.id.clone());
                 app.pi_import_pending_base_url = Some(channel.base_url.clone());
                 app.modal = Some(app::Modal::Input {
@@ -840,6 +881,31 @@ pub(super) fn run_select_action(
             Ok(())
         }
     }
+}
+
+/// Try to resolve an API key from a channel's stored authentication.
+/// First checks for a stored API key (CliProxyApi/Ollama/General),
+/// then falls back to credentials password (NewApi/Sub2Api).
+fn resolve_channel_api_key(app: &app::App, channel_id: &str) -> Option<String> {
+    // Try stored API key first
+    if let Ok(Some(key)) =
+        droidgear_core::channel::get_channel_api_key_for_home(&app.home_dir, channel_id)
+    {
+        if !key.is_empty() {
+            return Some(key);
+        }
+    }
+
+    // Fall back to credentials password
+    if let Ok(Some((_username, password))) =
+        droidgear_core::channel::get_channel_credentials_for_home(&app.home_dir, channel_id)
+    {
+        if !password.is_empty() {
+            return Some(password);
+        }
+    }
+
+    None
 }
 
 pub(super) fn run_confirm_action(
