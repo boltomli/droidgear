@@ -241,7 +241,8 @@ pub(super) fn handle_hermes_provider_key(app: &mut app::App, code: KeyCode) -> O
             _ => {}
         },
         KeyCode::Char('i') => {
-            // Import from channel: present channel list as a Select modal
+            // Import from channel: refresh and present channel list
+            refresh_channels(app);
             let options: Vec<String> = app
                 .channels
                 .iter()
