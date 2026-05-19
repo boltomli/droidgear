@@ -890,10 +890,26 @@ pub(super) fn run_select_action(
             let base_url = app.pi_import_pending_base_url.clone().unwrap_or_default();
 
             // Fetch models using the selected token
-            let models = droidgear_core::channel::fetch_models_by_api_key_blocking(
+            let result = droidgear_core::channel::fetch_models_by_api_key_blocking(
                 &base_url, &api_key, None,
-            )
-            .map_err(|e| anyhow::anyhow!("{}", e))?;
+            );
+            let models = match result {
+                Ok(models) => models,
+                Err(e) => {
+                    // Show error in MultiSelect title instead of toast
+                    app.modal = Some(app::Modal::Input {
+                        title: format!("Error fetching models: {e}"),
+                        value: api_key,
+                        cursor: usize::MAX,
+                        is_secret: true,
+                        action: app::InputAction::PiImportSetApiKey {
+                            profile_id,
+                            provider_id,
+                        },
+                    });
+                    return Ok(());
+                }
+            };
 
             // Store models and show MultiSelect
             app.pi_import_pending_models = Some(models.clone());
