@@ -2671,30 +2671,34 @@ fn draw_modal(frame: &mut Frame, modal: &app::Modal) {
             index,
             ..
         } => {
-            let items: Vec<ListItem> = options
-                .iter()
-                .enumerate()
-                .map(|(i, opt)| {
-                    let checked = if i < selected.len() && selected[i] {
-                        "[x]"
-                    } else {
-                        "[ ]"
-                    };
-                    let line = if i == *index {
-                        format!("\u{25b8} {} {}", checked, opt)
-                    } else {
-                        format!("  {} {}", checked, opt)
-                    };
-                    ListItem::new(Line::from(Span::raw(line)))
-                })
-                .collect();
-            let list_height = items.len() as u16 + 2;
-            let list = List::new(items)
-                .block(Block::default().title(title.clone()).borders(Borders::ALL))
-                .highlight_style(t.selected_style());
-            let area = centered_rect(60, list_height.min(frame.area().height - 4), frame.area());
-            frame.render_widget(Clear, area);
-            frame.render_widget(list, area);
+            let mut lines: Vec<Line> = Vec::new();
+            for (i, opt) in options.iter().enumerate() {
+                let checked = if i < selected.len() && selected[i] {
+                    "[x]"
+                } else {
+                    "[ ]"
+                };
+                let prefix = if i == *index { "▸" } else { " " };
+                let line = if i == *index {
+                    Line::from(vec![Span::styled(
+                        format!("{} {} {}", prefix, checked, opt),
+                        t.selected_style(),
+                    )])
+                } else {
+                    Line::from(vec![Span::raw(format!("  {} {}", checked, opt))])
+                };
+                lines.push(line);
+            }
+            lines.push(Line::from(""));
+            lines.push(hint_line(
+                "Up/Down: move  Space/Enter: toggle  Tab/c: confirm  Esc: cancel",
+            ));
+            let block = block(title.as_str()).border_style(t.focused_border_style());
+            let p = Paragraph::new(lines)
+                .block(block)
+                .wrap(Wrap { trim: false })
+                .style(t.modal_style());
+            frame.render_widget(p, area);
         }
     }
 }
