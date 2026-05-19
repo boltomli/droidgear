@@ -890,26 +890,10 @@ pub(super) fn run_select_action(
             let base_url = app.pi_import_pending_base_url.clone().unwrap_or_default();
 
             // Fetch models using the selected token
-            let result = droidgear_core::channel::fetch_models_by_api_key_blocking(
+            let models = droidgear_core::channel::fetch_models_by_api_key_blocking(
                 &base_url, &api_key, None,
-            );
-            let models = match result {
-                Ok(models) => models,
-                Err(e) => {
-                    // Show error in MultiSelect title instead of toast
-                    app.modal = Some(app::Modal::Input {
-                        title: format!("Error fetching models: {e}"),
-                        value: api_key,
-                        cursor: usize::MAX,
-                        is_secret: true,
-                        action: app::InputAction::PiImportSetApiKey {
-                            profile_id,
-                            provider_id,
-                        },
-                    });
-                    return Ok(());
-                }
-            };
+            )
+            .map_err(|e| anyhow::anyhow!("{}", e))?;
 
             // Store models and show MultiSelect
             app.pi_import_pending_models = Some(models.clone());
@@ -953,9 +937,9 @@ pub(super) fn run_select_action(
                     name: m.name,
                     api: None,
                     reasoning: false,
-                    input: Vec::new(),
-                    context_window: 0,
-                    max_tokens: 0,
+                    input: vec!["text".to_string()],
+                    context_window: 128000,
+                    max_tokens: 16384,
                     cost: None,
                     compat: None,
                 })
@@ -964,6 +948,7 @@ pub(super) fn run_select_action(
             if let Some(provider) = profile.providers.get_mut(&provider_id) {
                 provider.base_url = Some(base_url);
                 provider.api_key = Some(api_key);
+                provider.api = Some("openai-completions".to_string());
                 provider.models = pi_models;
             }
 
