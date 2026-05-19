@@ -380,6 +380,26 @@ pub async fn fetch_channel_tokens(
     }
 }
 
+/// Blocking version of `fetch_channel_tokens`.
+/// Creates a lightweight tokio runtime and blocks on the async version.
+pub fn fetch_channel_tokens_blocking(
+    channel_type: ChannelType,
+    base_url: &str,
+    username: &str,
+    password: &str,
+) -> Result<Vec<ChannelToken>, String> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| format!("Failed to create tokio runtime: {e}"))?;
+    runtime.block_on(fetch_channel_tokens(
+        channel_type,
+        base_url,
+        username,
+        password,
+    ))
+}
+
 async fn fetch_new_api_keys(
     base_url: &str,
     username: &str,

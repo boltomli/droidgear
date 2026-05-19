@@ -16,7 +16,7 @@ serde_yaml = "0.9"
 specta = { version = "=2.0.0-rc.22", features = ["derive", "serde_json"] }
 toml = "0.8"
 uuid = { version = "1", features = ["v4"] }
-tokio = { version = "1", features = ["time"] }
+tokio = { version = "1", features = ["time", "rt"] }
 log = "0.4"
 
 [dev-dependencies]

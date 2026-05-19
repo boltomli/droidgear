@@ -678,7 +678,8 @@ pub(super) fn run_select_action(
             };
 
             // Try to auto-resolve the API key from the channel's stored auth
-            let api_key = resolve_channel_api_key(app, &channel.id);
+            let api_key =
+                resolve_channel_api_key(app, &channel.id, &channel.channel_type, &channel.base_url);
 
             if let Some(api_key) = api_key {
                 // Auto-resolve succeeded: fetch models and update provider directly
@@ -775,7 +776,8 @@ pub(super) fn run_select_action(
             };
 
             // Try to auto-resolve the API key from the channel's stored auth
-            let api_key = resolve_channel_api_key(app, &channel.id);
+            let api_key =
+                resolve_channel_api_key(app, &channel.id, &channel.channel_type, &channel.base_url);
 
             if let Some(api_key) = api_key {
                 // Auto-resolve succeeded: fetch models and create provider directly
@@ -885,8 +887,13 @@ pub(super) fn run_select_action(
 
 /// Try to resolve an API key from a channel's stored authentication.
 /// First checks for a stored API key (CliProxyApi/Ollama/General),
-/// then falls back to credentials password (NewApi/Sub2Api).
-fn resolve_channel_api_key(app: &app::App, channel_id: &str) -> Option<String> {
+/// then tries credentials to fetch a live token (NewApi/Sub2Api).
+fn resolve_channel_api_key(
+    app: &app::App,
+    channel_id: &str,
+    channel_type: &droidgear_core::channel::ChannelType,
+    base_url: &str,
+) -> Option<String> {
     // Try stored API key first
     if let Ok(Some(key)) =
         droidgear_core::channel::get_channel_api_key_for_home(&app.home_dir, channel_id)
@@ -896,16 +903,48 @@ fn resolve_channel_api_key(app: &app::App, channel_id: &str) -> Option<String> {
         }
     }
 
-    // Fall back to credentials password
-    if let Ok(Some((_username, password))) =
+    // Try stored credentials
+    if let Ok(Some((username, password))) =
         droidgear_core::channel::get_channel_credentials_for_home(&app.home_dir, channel_id)
     {
         if !password.is_empty() {
-            return Some(password);
+            match channel_type {
+                droidgear_core::channel::ChannelType::NewApi
+                | droidgear_core::channel::ChannelType::Sub2Api => {
+                    // Token-based channel: fetch a live token from the API
+                    match droidgear_core::channel::fetch_channel_tokens_blocking(
+                        channel_type.clone(),
+                        base_url,
+                        &username,
+                        &password,
+                    ) {
+                        Ok(tokens) => {
+                            // Return the first active token's key
+                            for t in &tokens {
+                                if t.status == 1 && !t.key.is_empty() {
+                                    return Some(t.key.clone());
+                                }
+                            }
+                            // Fall back to first token if none active
+                            tokens.first().map(|t| t.key.clone())
+                        }
+                        Err(_) => {
+                            // Token fetch failed, try password as-is
+                            Some(password)
+                        }
+                    }
+                }
+                _ => {
+                    // API-key channel: password is the key
+                    Some(password)
+                }
+            }
+        } else {
+            None
         }
+    } else {
+        None
     }
-
-    None
 }
 
 pub(super) fn run_confirm_action(
