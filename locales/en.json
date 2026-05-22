@@ -18,6 +18,7 @@
   "menu.selectAll": "Select All",
   "menu.toggleLeftSidebar": "Toggle Left Sidebar",
   "menu.toggleRightSidebar": "Toggle Right Sidebar",
+  "menu.resetWindow": "Reset Window",
 
   "preferences.title": "Preferences",
   "preferences.description": "Customize your application preferences here.",

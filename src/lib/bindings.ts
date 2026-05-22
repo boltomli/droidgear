@@ -1850,6 +1850,20 @@ async renameFactoryAuthProfile(name: string, label: string) : Promise<Result<nul
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Tauri command: snap the main window to the default size, clear fullscreen,
+ * re-center, and quarantine the saved state file so the next launch starts
+ * fresh. Surfaced via the application menu and a global shortcut so users
+ * can recover from an unmanageable window without editing files by hand.
+ */
+async resetWindowState() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("reset_window_state") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

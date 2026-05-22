@@ -15,6 +15,7 @@ import { useUIStore } from '@/store/ui-store'
 import { logger } from '@/lib/logger'
 import { notifications } from '@/lib/notifications'
 import { checkForUpdate, showUpdateNotification } from '@/services/updater'
+import { commands } from '@/lib/tauri-bindings'
 
 const APP_NAME = 'DroidGear'
 
@@ -99,6 +100,13 @@ export async function buildAppMenu(): Promise<Menu> {
           text: t('menu.toggleRightSidebar'),
           action: handleToggleRightSidebar,
         }),
+        await PredefinedMenuItem.new({ item: 'Separator' }),
+        await MenuItem.new({
+          id: 'reset-window',
+          text: t('menu.resetWindow'),
+          accelerator: 'CmdOrCtrl+Shift+0',
+          action: handleResetWindow,
+        }),
       ],
     })
 
@@ -172,4 +180,20 @@ function handleToggleLeftSidebar(): void {
 function handleToggleRightSidebar(): void {
   logger.info('Toggle Right Sidebar menu item clicked')
   useUIStore.getState().toggleRightSidebar()
+}
+
+async function handleResetWindow(): Promise<void> {
+  logger.info('Reset Window menu item clicked')
+  try {
+    const result = await commands.resetWindowState()
+    if (result.status === 'error') {
+      throw new Error(result.error)
+    }
+  } catch (error) {
+    logger.error('Reset window failed', { error })
+    notifications.error(
+      'Reset Window Failed',
+      error instanceof Error ? error.message : 'Could not reset window state'
+    )
+  }
 }

@@ -4,7 +4,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
         channel, claude, codex, config, connectivity, droid_settings, env, factory_auth_profiles,
         hermes, mcp, notifications, openclaw, opencode, paths, pi, preferences, recovery, sessions,
-        specs, updater,
+        specs, updater, window,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -179,6 +179,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         factory_auth_profiles::save_current_factory_auth_profile,
         factory_auth_profiles::delete_factory_auth_profile,
         factory_auth_profiles::rename_factory_auth_profile,
+        window::reset_window_state,
     ])
 }
 

@@ -18,6 +18,7 @@
   "menu.selectAll": "全选",
   "menu.toggleLeftSidebar": "切换左侧边栏",
   "menu.toggleRightSidebar": "切换右侧边栏",
+  "menu.resetWindow": "重置窗口",
 
   "preferences.title": "偏好设置",
   "preferences.description": "在此自定义您的应用程序偏好设置。",

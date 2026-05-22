@@ -36,14 +36,27 @@ pub fn run() {
         }));
     }
 
-    // Window state plugin - saves/restores window position and size
-    // Exclude VISIBLE flag to prevent white screen on startup - frontend will show window after loading
+    // Window state plugin - saves/restores window position and size.
+    // Pre-check the on-disk state file before the plugin reads it: corrupted
+    // or absurdly oversized files (e.g. saved with a now-disconnected monitor
+    // or after an OS DPI glitch) get quarantined so we fall back to defaults.
+    // Exclude VISIBLE so the frontend can show the window after loading.
+    // Exclude DECORATIONS because we always force `decorations(false)` in
+    // code (custom titlebar); persisting it lets a corrupted file confuse
+    // the restore path.
+    // Exclude FULLSCREEN because a stale fullscreen flag combined with our
+    // custom titlebar can leave users unable to exit fullscreen.
     #[cfg(desktop)]
     {
         use tauri_plugin_window_state::StateFlags;
+        commands::window::precheck_state_file();
+        let flags = StateFlags::all()
+            & !StateFlags::VISIBLE
+            & !StateFlags::DECORATIONS
+            & !StateFlags::FULLSCREEN;
         app_builder = app_builder.plugin(
             tauri_plugin_window_state::Builder::new()
-                .with_state_flags(StateFlags::all() & !StateFlags::VISIBLE)
+                .with_state_flags(flags)
                 .build(),
         );
     }
@@ -102,9 +115,12 @@ pub fn run() {
             // Since window is created with visible: false, no "jump" effect will occur
             #[cfg(desktop)]
             {
-                // Check if window state file exists
-                let app_dir = app.path().app_data_dir()?;
-                let state_file = app_dir.join("window-state.json");
+                // Check if a window state file exists. The plugin uses
+                // `app_config_dir`/.window-state.json (note the leading dot);
+                // matching that exactly avoids a stale "first launch" branch
+                // when the plugin has, in fact, restored saved geometry.
+                let config_dir = app.path().app_config_dir()?;
+                let state_file = config_dir.join(".window-state.json");
                 let has_saved_state = state_file.exists();
 
                 // Create window with visible: false initially
@@ -141,17 +157,58 @@ pub fn run() {
                         let _ = window.center();
                         log::debug!("First launch: window centered");
                     }
-                } else {
+                } else if let Some(window) = app.get_webview_window("main") {
+                    // Saved state restored - validate the resulting geometry
+                    // is still on a visible monitor. If a secondary display
+                    // was unplugged or the file lied about size, snap back.
+                    let _ = commands::window::validate_and_clamp_window(&window);
                     log::debug!("Window state restored by plugin");
                 }
             }
 
-            // Set up global shortcut plugin (without any shortcuts - we register them separately)
+            // Set up global shortcut plugin and register Cmd/Ctrl+Shift+0 as
+            // a system-wide escape hatch: even when the window is offscreen
+            // and the menubar is unreachable, this resets it to defaults.
             #[cfg(desktop)]
             {
-                use tauri_plugin_global_shortcut::Builder;
+                use tauri_plugin_global_shortcut::{
+                    Builder, Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
+                };
 
-                app.handle().plugin(Builder::new().build())?;
+                #[cfg(target_os = "macos")]
+                let primary_mod = Modifiers::SUPER;
+                #[cfg(not(target_os = "macos"))]
+                let primary_mod = Modifiers::CONTROL;
+
+                let reset_shortcut =
+                    Shortcut::new(Some(primary_mod | Modifiers::SHIFT), Code::Digit0);
+                let reset_shortcut_for_handler = reset_shortcut;
+
+                app.handle().plugin(
+                    Builder::new()
+                        .with_handler(move |app, shortcut, event| {
+                            if event.state != ShortcutState::Pressed {
+                                return;
+                            }
+                            if *shortcut == reset_shortcut_for_handler {
+                                let app_handle = app.clone();
+                                tauri::async_runtime::spawn(async move {
+                                    if let Err(err) =
+                                        commands::window::reset_window_state(app_handle).await
+                                    {
+                                        log::warn!(
+                                            "Global shortcut reset_window_state failed: {err}"
+                                        );
+                                    }
+                                });
+                            }
+                        })
+                        .build(),
+                )?;
+
+                if let Err(err) = app.handle().global_shortcut().register(reset_shortcut) {
+                    log::warn!("Failed to register window reset shortcut: {err}");
+                }
             }
 
             // NOTE: Application menu is built from JavaScript for i18n support

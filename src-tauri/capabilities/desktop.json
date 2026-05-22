@@ -5,6 +5,7 @@
   "permissions": [
     "updater:default",
     "window-state:default",
+    "global-shortcut:default",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "core:window:allow-show",
