@@ -8,6 +8,7 @@ import {
   Copy,
   Trash2,
   Download,
+  Monitor,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { open } from '@tauri-apps/plugin-dialog'
@@ -191,6 +192,43 @@ export function CodexConfigPage() {
     }
   }
 
+  const handleDesktopLaunch = async () => {
+    if (!currentProfile || isLaunching) return
+
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: t('codex.actions.selectDirectory'),
+    })
+    if (!selected) return
+    const cwd = selected as string
+
+    setIsLaunching(true)
+    setError(null)
+
+    try {
+      if (currentProfile.id !== 'official') {
+        await saveProfile()
+        const saveState = useCodexStore.getState()
+        if (saveState.error) {
+          toast.error(saveState.error)
+          return
+        }
+      }
+
+      const result = await commands.launchCodexDesktop(currentProfile.id, cwd)
+      if (result.status === 'ok') {
+        toast.success(t('codex.actions.desktopLaunchSuccess'))
+        return
+      }
+
+      setError(result.error)
+      toast.error(result.error)
+    } finally {
+      setIsLaunching(false)
+    }
+  }
+
   const handleLoadFromConfig = async () => {
     await loadFromLiveConfig()
     toast.success(t('codex.actions.loadedFromLive'))
@@ -239,6 +277,15 @@ export function CodexConfigPage() {
           >
             <Play className="h-4 w-4 mr-2" />
             {t('codex.actions.launch')}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleDesktopLaunch}
+            disabled={!currentProfile || isLoading || isLaunching}
+            title={t('codex.actions.desktopLaunchTooltip')}
+          >
+            <Monitor className="h-4 w-4 mr-2" />
+            {t('codex.actions.desktopLaunch')}
           </Button>
           <Button
             variant="outline"

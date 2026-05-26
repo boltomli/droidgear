@@ -107,6 +107,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         codex::get_codex_cli_capability,
         codex::get_codex_temporary_run_plan,
         codex::launch_codex,
+        codex::launch_codex_desktop,
         hermes::list_hermes_profiles,
         hermes::get_hermes_profile,
         hermes::save_hermes_profile,

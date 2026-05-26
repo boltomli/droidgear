@@ -1106,6 +1106,18 @@ async launchCodex(id: string, cwd: string | null) : Promise<Result<null, string>
 }
 },
 /**
+ * Launch the Codex desktop (Electron) app on Windows with CDP remote debugging
+ * enabled and inject a bootstrap script.
+ */
+async launchCodexDesktop(id: string, cwd: string | null) : Promise<Result<CodexDesktopLaunchResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("launch_codex_desktop", { id, cwd }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * List all Hermes profiles
  */
 async listHermesProfiles() : Promise<Result<HermesProfile[], string>> {
@@ -2159,6 +2171,13 @@ export type CodexProfile = { id: string; name: string; description?: string | nu
  * Codex Provider 配置（对应 config.toml 中的 [model_providers.<id>]）
  */
 export type CodexProviderConfig = { name?: string | null; baseUrl?: string | null; wireApi?: string | null; requiresOpenaiAuth?: boolean | null; envKey?: string | null; envKeyInstructions?: string | null; httpHeaders?: Partial<{ [key in string]: string }> | null; queryParams?: Partial<{ [key in string]: string }> | null; model?: string | null; modelReasoningEffort?: string | null; apiKey?: string | null }
+/**
+ * Result returned by the desktop launch command.
+ */
+export type CodexDesktopLaunchResult = { debugPort: number; cdUri: string }
+/**
+ * Public preview of a temporary-run launch (secret values redacted).
+ */
 export type CodexTemporaryRunPlan = { program: string; args: string[]; env: ([string, string])[]; unsetEnv: string[]; secretEnvKeys: string[]; warnings: string[] }
 /**
  * User-defined configuration paths (only stores explicitly set paths)

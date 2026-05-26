@@ -838,6 +838,9 @@
   "codex.actions.selectDirectory": "选择 Codex 的工作目录",
   "codex.actions.loadFromLive": "读取当前配置",
   "codex.actions.loadedFromLive": "已从当前配置读取",
+  "codex.actions.desktopLaunch": "桌面版",
+  "codex.actions.desktopLaunchTooltip": "启动 Codex 桌面版并通过 CDP 注入（仅限 Windows）",
+  "codex.actions.desktopLaunchSuccess": "Codex 桌面版已启动，CDP 注入成功",
 
   "claude.title": "Claude Code 配置",
   "claude.features.title": "Claude",

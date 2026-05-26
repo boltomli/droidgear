@@ -1,3 +1,5 @@
+#[cfg(windows)]
+pub mod cdp;
 pub mod channel;
 pub mod claude;
 pub mod claude_runtime;

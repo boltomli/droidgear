@@ -838,6 +838,9 @@
   "codex.actions.selectDirectory": "Select working directory for Codex",
   "codex.actions.loadFromLive": "Load Live",
   "codex.actions.loadedFromLive": "Loaded from live config",
+  "codex.actions.desktopLaunch": "Desktop App",
+  "codex.actions.desktopLaunchTooltip": "Launch Codex desktop app with CDP injection (Windows only)",
+  "codex.actions.desktopLaunchSuccess": "Codex desktop launched with CDP injection",
 
   "claude.title": "Claude Code Configuration",
   "claude.features.title": "Claude",

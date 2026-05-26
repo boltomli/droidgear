@@ -12,6 +12,13 @@ use crate::utils::login_shell::run_command_in_login_shell;
 use crate::utils::preferences::load_preferences;
 use crate::utils::terminal_launch::{launch_in_terminal, LaunchSpec};
 
+/// Result returned by the desktop launch command.
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+pub struct CodexDesktopLaunchResult {
+    pub debug_port: u16,
+    pub cd_uri: String,
+}
+
 /// List all Codex profiles
 #[tauri::command]
 #[specta::specta]
@@ -152,6 +159,141 @@ fn build_codex_launch_spec(plan: &CodexTemporaryLaunchPlan) -> LaunchSpec {
         cwd: None,
         support_dir: Some(plan.runtime_home_path.clone()),
     }
+}
+
+/// Launch the Codex desktop (Electron) app on Windows with CDP remote debugging
+/// enabled and inject a bootstrap script.
+#[tauri::command]
+#[specta::specta]
+pub async fn launch_codex_desktop(
+    id: String,
+    cwd: Option<String>,
+) -> Result<CodexDesktopLaunchResult, String> {
+    launch_codex_desktop_impl(id, cwd).await
+}
+
+#[cfg(windows)]
+async fn launch_codex_desktop_impl(
+    id: String,
+    cwd: Option<String>,
+) -> Result<CodexDesktopLaunchResult, String> {
+    use std::os::windows::process::CommandExt;
+    use std::process::{Command, Stdio};
+
+    // Apply the profile so Codex desktop picks up the config.
+    droidgear_core::codex::apply_codex_profile(&id)?;
+
+    // Find the Codex executable.
+    let codex_exe = find_codex_desktop_exe()?;
+
+    let debug_port = droidgear_core::cdp::CDP_DEFAULT_PORT;
+    let args = [
+        format!("--remote-debugging-port={debug_port}"),
+        format!("--remote-allow-origins=http://127.0.0.1:{debug_port}"),
+    ];
+
+    // Launch Codex desktop with CDP flags, without spawning a console window.
+    let _child = Command::new(&codex_exe)
+        .args(&args)
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| {
+            format!(
+                "Failed to launch Codex desktop at '{}': {e}",
+                codex_exe.display()
+            )
+        })?;
+
+    log::info!(
+        "Launched Codex desktop at {} with CDP port {debug_port}",
+        codex_exe.display()
+    );
+
+    // Wait for CDP to become available and inject bootstrap script.
+    let cwd_path = cwd.map(std::path::PathBuf::from);
+    inject_bootstrap(debug_port, cwd_path.as_deref()).await?;
+
+    Ok(CodexDesktopLaunchResult {
+        debug_port,
+        cd_uri: format!("http://127.0.0.1:{debug_port}/json"),
+    })
+}
+
+#[cfg(not(windows))]
+async fn launch_codex_desktop_impl(
+    _id: String,
+    _cwd: Option<String>,
+) -> Result<CodexDesktopLaunchResult, String> {
+    Err("Desktop launch is only supported on Windows".to_string())
+}
+
+#[cfg(windows)]
+fn find_codex_desktop_exe() -> Result<std::path::PathBuf, String> {
+    // 1. Check known install locations first.
+    let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_default();
+    let known_paths = [
+        format!("{local_app_data}\\Programs\\codex\\Codex.exe"),
+        format!("{local_app_data}\\codex\\Codex.exe"),
+    ];
+
+    for path in &known_paths {
+        let candidate = std::path::PathBuf::from(path);
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+
+    // 2. Fall back to searching PATH for codex.exe or Codex.exe.
+    if let Ok(path_var) = std::env::var("PATH") {
+        for dir in std::env::split_paths(&path_var) {
+            for name in &["Codex.exe", "codex.exe"] {
+                let candidate = dir.join(name);
+                if candidate.exists() {
+                    log::info!("Found Codex desktop exe in PATH: {}", candidate.display());
+                    return Ok(candidate);
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "Codex desktop executable not found. Searched known paths ({}) and PATH.",
+        known_paths
+            .iter()
+            .map(|p| p.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    ))
+}
+
+#[cfg(windows)]
+async fn inject_bootstrap(debug_port: u16, cwd: Option<&std::path::Path>) -> Result<(), String> {
+    let cwd_json = cwd
+        .and_then(|p| p.to_str())
+        .map(|s| serde_json::Value::String(s.to_string()))
+        .unwrap_or(serde_json::Value::Null);
+
+    let script = format!(
+        r#"
+(() => {{
+    console.log('[DroidGear] CDP injection active');
+    window.__droidgear = {{
+        debugPort: {debug_port},
+        cwd: {cwd_json},
+        injectedAt: new Date().toISOString(),
+    }};
+}})();
+"#
+    );
+
+    droidgear_core::cdp::injection::inject_script(debug_port, &script)
+        .await
+        .map_err(|e| format!("CDP injection failed: {e}"))?;
+
+    log::info!("Successfully injected bootstrap script into Codex desktop");
+    Ok(())
 }
 
 #[cfg(test)]
