@@ -108,6 +108,14 @@
     "maxOutputTokens": 128000
   },
   {
+    "id": "claude-opus-4-8",
+    "name": "Claude Opus 4.8",
+    "aliases": ["claude-opus-4.8"],
+    "platform": "anthropic-messages",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000
+  },
+  {
     "id": "claude-sonnet-4",
     "name": "Claude Sonnet 4",
     "aliases": ["claude-sonnet-4-20250514"],

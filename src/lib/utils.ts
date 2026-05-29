@@ -27,6 +27,11 @@ export function isOpus47(modelId: string): boolean {
   return n.includes('opus.4.7')
 }
 
+export function isOpus48(modelId: string): boolean {
+  const n = normalizeModelId(modelId)
+  return n.includes('opus.4.8')
+}
+
 export function isClaudeJupiterV1P(modelId: string): boolean {
   const n = normalizeModelId(modelId)
   return n.includes('jupiter.v1.p')
@@ -35,7 +40,7 @@ export function isClaudeJupiterV1P(modelId: string): boolean {
 // Models that reject sampling parameters (temperature, top_p, top_k).
 // Mirrors Opus 4.7 strictness; new variants should be added here.
 export function isStrictSamplingModel(modelId: string): boolean {
-  return isOpus47(modelId) || isClaudeJupiterV1P(modelId)
+  return isOpus47(modelId) || isOpus48(modelId) || isClaudeJupiterV1P(modelId)
 }
 
 export function isOpus46(modelId: string): boolean {
@@ -51,6 +56,7 @@ export function isSonnet46(modelId: string): boolean {
 export function isAnthropicAdaptiveThinkingModel(modelId: string): boolean {
   const n = normalizeModelId(modelId)
   return (
+    n.includes('opus.4.8') ||
     n.includes('opus.4.7') ||
     n.includes('opus.4.6') ||
     n.includes('sonnet.4.6') ||
@@ -94,6 +100,7 @@ export function supportsXhighEffort(modelId: string): boolean {
   const config = getModelReasoningConfig(modelId)
   if (config) return config.efforts.includes('xhigh')
   if (isOpus47(modelId)) return true
+  if (isOpus48(modelId)) return true
   if (isClaudeJupiterV1P(modelId)) return true
   const n = normalizeModelId(modelId)
   return (
@@ -114,7 +121,7 @@ export function getDefaultMaxOutputTokens(
     return entry.maxOutputTokens
   }
   // Fallback for unknown models
-  if (isOpus47(modelId) || isClaudeJupiterV1P(modelId)) {
+  if (isOpus47(modelId) || isOpus48(modelId) || isClaudeJupiterV1P(modelId)) {
     if (effort === 'xhigh' || effort === 'max') return 64000
     return 32000
   }
@@ -151,6 +158,7 @@ export const DROID_OFFICIAL_MODEL_NAMES = [
   'Opus 4.6',
   'Opus 4.6 Fast Mode',
   'Opus 4.7',
+  'Opus 4.8',
   'Haiku 4.5',
   'Gemini 3 Pro',
   'Gemini 3 Flash',
