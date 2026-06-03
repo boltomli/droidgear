@@ -26,9 +26,14 @@ describe('inferProtocolFromModelId', () => {
     expect(inferProtocolFromModelId('gemini-2-flash')).toBe('google-ai')
   })
 
+  it('identifies DeepSeek models as openai', () => {
+    expect(inferProtocolFromModelId('deepseek-v3')).toBe('openai')
+    expect(inferProtocolFromModelId('deepseek-v4-pro')).toBe('openai')
+    expect(inferProtocolFromModelId('deepseek-chat')).toBe('openai')
+  })
+
   it('returns openai-compatible for unknown models', () => {
     expect(inferProtocolFromModelId('llama-3')).toBe('openai-compatible')
-    expect(inferProtocolFromModelId('deepseek-v3')).toBe('openai-compatible')
     expect(inferProtocolFromModelId('unknown-model')).toBe('openai-compatible')
   })
 

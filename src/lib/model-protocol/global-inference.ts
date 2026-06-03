@@ -18,8 +18,8 @@ export function inferProtocolFromModelId(modelId: string): ModelProtocol {
   // Gemini 系列 (Google AI)
   if (lowerModelId.startsWith('gemini-')) return 'google-ai'
 
-  // DeepSeek 系列 (OpenAI 兼容)
-  if (lowerModelId.startsWith('deepseek-')) return 'openai-compatible'
+  // DeepSeek 系列 (OpenAI)
+  if (lowerModelId.startsWith('deepseek-')) return 'openai'
 
   // 默认使用 OpenAI 兼容协议
   return 'openai-compatible'

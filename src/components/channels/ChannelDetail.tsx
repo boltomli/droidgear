@@ -196,7 +196,12 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
         channel.type === 'general'
           ? getBaseUrlForNewApi(config.provider, channel.baseUrl)
           : channel.type === 'deep-seek'
-            ? channel.baseUrl.replace(/\/+$/, '')
+            ? (() => {
+                const trimmed = channel.baseUrl.replace(/\/+$/, '')
+                if (config.provider === 'anthropic')
+                  return `${trimmed}/anthropic`
+                return trimmed
+              })()
             : getBaseUrlForSub2Api(
                 config.provider,
                 channel.baseUrl,

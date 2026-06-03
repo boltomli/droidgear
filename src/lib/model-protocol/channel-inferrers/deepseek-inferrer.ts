@@ -1,15 +1,25 @@
-import type { ModelProtocol } from '../types'
+import type { ChannelInferenceContext, ModelProtocol } from '../types'
 import { GeneralInferrer } from './general-inferrer'
 
 /**
  * DeepSeek 推断器
  *
- * DeepSeek API 不使用 /v1 前缀，所有端点直接在 base URL 下：
- * - Chat: POST {base}/chat/completions
- * - Models: GET {base}/models
+ * DeepSeek API 仅支持 OpenAI 和 Anthropic 两种协议：
+ * - OpenAI 格式：{base}/chat/completions, {base}/models
+ * - Anthropic 格式：{base}/anthropic
  */
 export class DeepSeekInferrer extends GeneralInferrer {
-  override getBaseUrl(_protocol: ModelProtocol, baseUrl: string): string {
-    return baseUrl.replace(/\/+$/, '')
+  override inferFromModel(
+    modelId: string,
+    _context: ChannelInferenceContext
+  ): ModelProtocol | null {
+    if (modelId.toLowerCase().startsWith('deepseek-')) return 'openai'
+    return null
+  }
+
+  override getBaseUrl(protocol: ModelProtocol, baseUrl: string): string {
+    const trimmed = baseUrl.replace(/\/+$/, '')
+    if (protocol === 'anthropic') return `${trimmed}/anthropic`
+    return trimmed
   }
 }
