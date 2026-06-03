@@ -50,6 +50,7 @@ const channelTypeI18nKeys: Record<ChannelType, string> = {
   'cli-proxy-api': 'channels.typeCliProxyApi',
   ollama: 'channels.typeOllama',
   general: 'channels.typeGeneral',
+  'deep-seek': 'channels.typeDeepSeek',
 }
 
 interface ChannelDetailProps {
@@ -94,12 +95,13 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
   }
 
   const inferProvider = (modelId: string): Provider => {
-    // CLI Proxy API, General, New API, and Ollama use the same logic
+    // CLI Proxy API, General, New API, Ollama, and DeepSeek use the same logic
     if (
       channel.type === 'new-api' ||
       channel.type === 'cli-proxy-api' ||
       channel.type === 'ollama' ||
-      channel.type === 'general'
+      channel.type === 'general' ||
+      channel.type === 'deep-seek'
     ) {
       return inferProviderForNewApi(modelId)
     }
@@ -120,7 +122,7 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
     const result = await commands.fetchModelsByApiKey(
       channel.baseUrl,
       apiKey.key,
-      apiKey.platform
+      channel.type === 'deep-seek' ? 'deepseek' : apiKey.platform
     )
     setIsFetchingModels(false)
 
@@ -193,11 +195,13 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
         channel.type === 'ollama' ||
         channel.type === 'general'
           ? getBaseUrlForNewApi(config.provider, channel.baseUrl)
-          : getBaseUrlForSub2Api(
-              config.provider,
-              channel.baseUrl,
-              selectedKey?.platform
-            )
+          : channel.type === 'deep-seek'
+            ? channel.baseUrl.replace(/\/+$/, '')
+            : getBaseUrlForSub2Api(
+                config.provider,
+                channel.baseUrl,
+                selectedKey?.platform
+              )
 
       let displayName = modelId
       if (config.alias) {

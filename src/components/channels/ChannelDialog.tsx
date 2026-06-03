@@ -37,6 +37,7 @@ const defaultBaseUrls: Record<ChannelType, string> = {
   'cli-proxy-api': '',
   ollama: 'http://localhost:11434',
   general: '',
+  'deep-seek': 'https://api.deepseek.com',
 }
 
 interface ChannelFormProps {
@@ -132,6 +133,9 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
           break
         case 'ollama':
           typeName = t('channels.typeOllama')
+          break
+        case 'deep-seek':
+          typeName = t('channels.typeDeepSeek')
           break
         case 'general':
           typeName = t('channels.typeGeneral')
@@ -230,6 +234,9 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
                 </SelectItem>
                 <SelectItem value="ollama">
                   {t('channels.typeOllama')}
+                </SelectItem>
+                <SelectItem value="deep-seek">
+                  {t('channels.typeDeepSeek')}
                 </SelectItem>
               </SelectContent>
             </Select>

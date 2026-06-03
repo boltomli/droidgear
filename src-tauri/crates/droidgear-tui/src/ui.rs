@@ -2412,6 +2412,7 @@ fn draw_channels_edit(frame: &mut Frame, app: &app::App, area: Rect) {
         droidgear_core::channel::ChannelType::CliProxyApi => "cli-proxy-api",
         droidgear_core::channel::ChannelType::Ollama => "ollama",
         droidgear_core::channel::ChannelType::General => "general",
+        droidgear_core::channel::ChannelType::DeepSeek => "deep-seek",
     };
 
     let uses_api_key = matches!(

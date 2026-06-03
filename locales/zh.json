@@ -479,6 +479,7 @@
   "channels.typeCliProxyApi": "CLI Proxy API",
   "channels.typeOllama": "Ollama",
   "channels.typeGeneral": "通用",
+  "channels.typeDeepSeek": "DeepSeek",
   "channels.apiUrl": "API 地址",
   "channels.apiKey": "API Key",
   "channels.enterApiKey": "输入 API Key",

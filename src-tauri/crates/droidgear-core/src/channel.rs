@@ -25,6 +25,8 @@ pub enum ChannelType {
     CliProxyApi,
     Ollama,
     General,
+    #[serde(rename = "deep-seek")]
+    DeepSeek,
 }
 
 /// Channel configuration
@@ -339,6 +341,22 @@ pub async fn detect_channel_type(base_url: &str) -> Result<ChannelType, String> 
         }
     }
 
+    // 3.5. DeepSeek: GET /models returns OpenAI format with owned_by field
+    if let Ok(resp) = client.get(format!("{base}/models")).send().await {
+        if resp.status().is_success() {
+            if let Ok(data) = resp.json::<Value>().await {
+                if let Some(arr) = data.get("data").and_then(|d| d.as_array()) {
+                    if arr.iter().any(|m| {
+                        m.get("id").is_some()
+                            && m.get("owned_by").and_then(|v| v.as_str()) == Some("deepseek")
+                    }) {
+                        return Ok(ChannelType::DeepSeek);
+                    }
+                }
+            }
+        }
+    }
+
     // 4. CLI Proxy API: GET /v1/models returns OpenAI format
     if let Ok(resp) = client.get(format!("{base}/v1/models")).send().await {
         if resp.status().is_success() {
@@ -364,19 +382,20 @@ pub async fn fetch_channel_tokens(
     match channel_type {
         ChannelType::NewApi => fetch_new_api_keys(base_url, username, password).await,
         ChannelType::Sub2Api => fetch_sub2api_tokens(base_url, username, password).await,
-        ChannelType::CliProxyApi | ChannelType::Ollama | ChannelType::General => {
-            Ok(vec![ChannelToken {
-                id: 0.0,
-                name: "API Key".to_string(),
-                key: password.to_string(),
-                status: 1,
-                remain_quota: 0.0,
-                used_quota: 0.0,
-                unlimited_quota: true,
-                platform: None,
-                group_name: None,
-            }])
-        }
+        ChannelType::CliProxyApi
+        | ChannelType::Ollama
+        | ChannelType::General
+        | ChannelType::DeepSeek => Ok(vec![ChannelToken {
+            id: 0.0,
+            name: "API Key".to_string(),
+            key: password.to_string(),
+            status: 1,
+            remain_quota: 0.0,
+            used_quota: 0.0,
+            unlimited_quota: true,
+            platform: None,
+            group_name: None,
+        }]),
     }
 }
 
@@ -832,6 +851,7 @@ pub async fn fetch_models_by_api_key(
     let (url, parser): (String, fn(&Value) -> Vec<ModelInfo>) = match platform {
         Some("gemini") => (format!("{trimmed_base}/v1beta/models"), parse_gemini_models),
         Some("openai") => (format!("{trimmed_base}/v1/models"), parse_openai_models),
+        Some("deepseek") => (format!("{trimmed_base}/models"), parse_openai_models),
         _ => (format!("{trimmed_base}/v1/models"), parse_openai_models),
     };
     log::debug!("Channel: fetching models from {url} (platform={platform:?})");

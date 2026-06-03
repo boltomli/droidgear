@@ -3,6 +3,7 @@ import type { ChannelInferrer } from './types'
 import { Sub2ApiInferrer } from './channel-inferrers/sub2api-inferrer'
 import { NewApiInferrer } from './channel-inferrers/newapi-inferrer'
 import { CliProxyInferrer } from './channel-inferrers/cliproxy-inferrer'
+import { DeepSeekInferrer } from './channel-inferrers/deepseek-inferrer'
 import { GeneralInferrer } from './channel-inferrers/general-inferrer'
 
 const inferrerMap = new Map<ChannelType, ChannelInferrer>([
@@ -10,6 +11,7 @@ const inferrerMap = new Map<ChannelType, ChannelInferrer>([
   ['new-api', new NewApiInferrer()],
   ['cli-proxy-api', new CliProxyInferrer()],
   ['ollama', new CliProxyInferrer()],
+  ['deep-seek', new DeepSeekInferrer()],
   ['general', new GeneralInferrer()],
 ])
 

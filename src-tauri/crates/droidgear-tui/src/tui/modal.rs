@@ -585,6 +585,7 @@ pub(super) fn run_select_action(
                 droidgear_core::channel::ChannelType::CliProxyApi => "",
                 droidgear_core::channel::ChannelType::Ollama => "http://localhost:11434",
                 droidgear_core::channel::ChannelType::General => "",
+                droidgear_core::channel::ChannelType::DeepSeek => "https://api.deepseek.com",
             };
 
             let old_default = default_base_url(&channel.channel_type);

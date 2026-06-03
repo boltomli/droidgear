@@ -1,7 +1,12 @@
 import { commands, type ChannelType } from '@/lib/bindings'
 
 export function isApiKeyAuthChannel(type: ChannelType): boolean {
-  return type === 'cli-proxy-api' || type === 'ollama' || type === 'general'
+  return (
+    type === 'cli-proxy-api' ||
+    type === 'ollama' ||
+    type === 'general' ||
+    type === 'deep-seek'
+  )
 }
 
 /** Platforms known to be incompatible with OpenAI API format */

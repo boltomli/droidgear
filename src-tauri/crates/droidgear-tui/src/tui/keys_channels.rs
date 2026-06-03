@@ -78,6 +78,7 @@ pub(super) fn channel_type_uses_api_key(
         droidgear_core::channel::ChannelType::CliProxyApi
             | droidgear_core::channel::ChannelType::Ollama
             | droidgear_core::channel::ChannelType::General
+            | droidgear_core::channel::ChannelType::DeepSeek
     )
 }
 
@@ -225,6 +226,7 @@ pub(super) fn handle_channels_edit_key(app: &mut app::App, code: KeyCode) -> Opt
                     "cli-proxy-api".to_string(),
                     "ollama".to_string(),
                     "general".to_string(),
+                    "deep-seek".to_string(),
                 ];
                 let index = match draft.channel_type {
                     droidgear_core::channel::ChannelType::NewApi => 0,
@@ -232,6 +234,7 @@ pub(super) fn handle_channels_edit_key(app: &mut app::App, code: KeyCode) -> Opt
                     droidgear_core::channel::ChannelType::CliProxyApi => 2,
                     droidgear_core::channel::ChannelType::Ollama => 3,
                     droidgear_core::channel::ChannelType::General => 4,
+                    droidgear_core::channel::ChannelType::DeepSeek => 5,
                 };
                 app.modal = Some(app::Modal::Select {
                     title: "Channel type".to_string(),

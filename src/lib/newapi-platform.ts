@@ -4,6 +4,7 @@ import { normalizeBaseUrl } from '@/lib/sub2api-platform'
 export const inferProviderForNewApi = (modelId: string): Provider => {
   const modelLower = modelId.toLowerCase()
   if (modelLower.startsWith('claude-')) return 'anthropic'
+  if (modelLower.startsWith('deepseek-')) return 'generic-chat-completion-api'
   if (modelLower.startsWith('gpt-') || /^o[134](-|$)/.test(modelLower))
     return 'openai'
   return 'generic-chat-completion-api'
