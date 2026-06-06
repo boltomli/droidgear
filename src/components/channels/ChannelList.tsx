@@ -71,6 +71,8 @@ export function ChannelList({ onAddChannel }: ChannelListProps) {
   const { t } = useTranslation()
   const channels = useChannelStore(state => state.channels)
   const selectedChannelId = useChannelStore(state => state.selectedChannelId)
+  const isLoading = useChannelStore(state => state.isLoading)
+  const error = useChannelStore(state => state.error)
   const loadChannels = useChannelStore(state => state.loadChannels)
   const addChannel = useChannelStore(state => state.addChannel)
   const updateChannel = useChannelStore(state => state.updateChannel)
@@ -275,7 +277,13 @@ export function ChannelList({ onAddChannel }: ChannelListProps) {
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
-          {channels.length === 0 ? (
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground px-3 py-2">
+              {t('common.loading', 'Loading...')}
+            </p>
+          ) : error ? (
+            <p className="text-sm text-destructive px-3 py-2">{error}</p>
+          ) : channels.length === 0 ? (
             <p className="text-sm text-muted-foreground px-3 py-2">
               {t('channels.noChannels')}
             </p>

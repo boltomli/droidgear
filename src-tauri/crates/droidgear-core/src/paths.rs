@@ -76,8 +76,13 @@ pub struct WslInfo {
 
 const SETTINGS_FILE: &str = "settings.json";
 
-fn get_home_dir() -> Result<PathBuf, String> {
-    dirs::home_dir().ok_or_else(|| "Failed to get home directory".to_string())
+pub fn get_home_dir() -> Result<PathBuf, String> {
+    let result = dirs::home_dir().ok_or_else(|| "Failed to get home directory".to_string());
+    match &result {
+        Ok(home) => log::info!("Resolved home directory: {}", home.display()),
+        Err(e) => log::error!("Failed to resolve home directory: {e}"),
+    }
+    result
 }
 
 pub fn droidgear_dir_from_home(home_dir: &Path) -> PathBuf {

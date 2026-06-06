@@ -84,10 +84,6 @@ pub enum ChannelAuth {
 // Paths
 // ============================================================================
 
-fn home_dir() -> Result<PathBuf, String> {
-    dirs::home_dir().ok_or_else(|| "Could not find home directory".to_string())
-}
-
 fn droidgear_dir_for_home(home_dir: &Path) -> PathBuf {
     home_dir.join(".droidgear")
 }
@@ -173,10 +169,16 @@ fn delete_channel_auth_for_home(home_dir: &Path, channel_id: &str) -> Result<(),
 /// Falls back to Factory settings.json for migration
 pub fn load_channels_for_home(home_dir: &Path) -> Result<Vec<Channel>, String> {
     let droidgear_path = channels_path_for_home(home_dir)?;
+    log::info!("Channel: channels file path: {}", droidgear_path.display());
 
     if droidgear_path.exists() {
-        return read_channels_from_file(&droidgear_path);
+        log::info!("Channel: channels file exists, reading...");
+        let channels = read_channels_from_file(&droidgear_path)?;
+        log::info!("Channel: loaded {} channels", channels.len());
+        return Ok(channels);
     }
+
+    log::info!("Channel: channels file not found, attempting migration from Factory settings");
 
     // Migration: ~/.factory/settings.json -> channels array
     let factory_settings_path = {
@@ -199,6 +201,10 @@ pub fn load_channels_for_home(home_dir: &Path) -> Result<Vec<Channel>, String> {
                                 .collect();
 
                             if !channels.is_empty() {
+                                log::info!(
+                                    "Channel: migrated {} channels from Factory settings",
+                                    channels.len()
+                                );
                                 write_channels_to_file(&droidgear_path, &channels)?;
                             }
                             return Ok(channels);
@@ -209,11 +215,14 @@ pub fn load_channels_for_home(home_dir: &Path) -> Result<Vec<Channel>, String> {
         }
     }
 
+    log::info!("Channel: no channels found (empty)");
     Ok(vec![])
 }
 
 pub fn load_channels() -> Result<Vec<Channel>, String> {
-    load_channels_for_home(&home_dir()?)
+    let home = crate::paths::get_home_dir()?;
+    log::info!("Channel: loading channels from home: {}", home.display());
+    load_channels_for_home(&home)
 }
 
 pub fn save_channels_for_home(home_dir: &Path, channels: Vec<Channel>) -> Result<(), String> {
@@ -222,7 +231,7 @@ pub fn save_channels_for_home(home_dir: &Path, channels: Vec<Channel>) -> Result
 }
 
 pub fn save_channels(channels: Vec<Channel>) -> Result<(), String> {
-    save_channels_for_home(&home_dir()?, channels)
+    save_channels_for_home(&crate::paths::get_home_dir()?, channels)
 }
 
 pub fn save_channel_credentials_for_home(
@@ -243,7 +252,12 @@ pub fn save_channel_credentials(
     username: &str,
     password: &str,
 ) -> Result<(), String> {
-    save_channel_credentials_for_home(&home_dir()?, channel_id, username, password)
+    save_channel_credentials_for_home(
+        &crate::paths::get_home_dir()?,
+        channel_id,
+        username,
+        password,
+    )
 }
 
 pub fn get_channel_credentials_for_home(
@@ -257,7 +271,7 @@ pub fn get_channel_credentials_for_home(
 }
 
 pub fn get_channel_credentials(channel_id: &str) -> Result<Option<(String, String)>, String> {
-    get_channel_credentials_for_home(&home_dir()?, channel_id)
+    get_channel_credentials_for_home(&crate::paths::get_home_dir()?, channel_id)
 }
 
 pub fn save_channel_api_key_for_home(
@@ -272,7 +286,7 @@ pub fn save_channel_api_key_for_home(
 }
 
 pub fn save_channel_api_key(channel_id: &str, api_key: &str) -> Result<(), String> {
-    save_channel_api_key_for_home(&home_dir()?, channel_id, api_key)
+    save_channel_api_key_for_home(&crate::paths::get_home_dir()?, channel_id, api_key)
 }
 
 pub fn get_channel_api_key_for_home(
@@ -286,7 +300,7 @@ pub fn get_channel_api_key_for_home(
 }
 
 pub fn get_channel_api_key(channel_id: &str) -> Result<Option<String>, String> {
-    get_channel_api_key_for_home(&home_dir()?, channel_id)
+    get_channel_api_key_for_home(&crate::paths::get_home_dir()?, channel_id)
 }
 
 pub fn delete_channel_credentials_for_home(
@@ -297,7 +311,7 @@ pub fn delete_channel_credentials_for_home(
 }
 
 pub fn delete_channel_credentials(channel_id: &str) -> Result<(), String> {
-    delete_channel_credentials_for_home(&home_dir()?, channel_id)
+    delete_channel_credentials_for_home(&crate::paths::get_home_dir()?, channel_id)
 }
 
 // ============================================================================
