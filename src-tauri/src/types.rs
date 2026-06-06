@@ -42,7 +42,7 @@ pub struct AppPreferences {
     #[serde(default)]
     pub disable_auto_update: Option<bool>,
     /// Preferred terminal app for launching Droid CLI
-    /// "system-default" | "terminal" | "iterm2" (macOS)
+    /// "system-default" | "terminal" | "iterm2" | "ghostty" (macOS)
     /// "auto-detect" | "gnome-terminal" | "konsole" | "xfce4-terminal" | "x-terminal-emulator" | custom (Linux)
     /// "windows-terminal" | "cmd" | "powershell" (Windows)
     /// If None, defaults to platform-appropriate default

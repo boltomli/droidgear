@@ -357,6 +357,12 @@ fn launch_macos(spec: &LaunchSpec, preferred: &str) -> Result<(), String> {
                 &prepared.keep_open_command,
                 &banner,
             ),
+            "ghostty" => launch_ghostty(
+                spec,
+                &prepared.command,
+                &prepared.keep_open_command,
+                &banner,
+            ),
             "terminal" => launch_terminal_app(&prepared.command, &banner),
             _ => launch_system_default_macos(spec, &prepared.command, &banner),
         };
@@ -366,6 +372,12 @@ fn launch_macos(spec: &LaunchSpec, preferred: &str) -> Result<(), String> {
     let banner = render_posix_banner(&spec.program);
     match preferred {
         "iterm2" => launch_iterm2(
+            spec,
+            &prepared.command,
+            &prepared.keep_open_command,
+            &banner,
+        ),
+        "ghostty" => launch_ghostty(
             spec,
             &prepared.command,
             &prepared.keep_open_command,
@@ -423,6 +435,30 @@ end tell"#,
         if !status2.success() {
             return Err("Failed to launch iTerm2".to_string());
         }
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn launch_ghostty(
+    spec: &LaunchSpec,
+    _command: &str,
+    keep_open_command: &str,
+    banner: &str,
+) -> Result<(), String> {
+    let file_path = launch_artifact_path(spec, "terminal-launch.command");
+    let script_content =
+        format!("#!/bin/bash\nrm -f -- \"$0\"\nclear\n{banner}\n{keep_open_command}\nexit\n");
+    write_launch_script(&file_path, &script_content)?;
+
+    let file_arg = file_path.to_string_lossy().to_string();
+    let status = std::process::Command::new("open")
+        .args(["-a", "Ghostty", &file_arg])
+        .status()
+        .map_err(|e| format!("Failed to launch Ghostty: {e}"))?;
+
+    if !status.success() {
+        return Err("Failed to launch Ghostty".to_string());
     }
     Ok(())
 }

@@ -275,6 +275,7 @@ export function GeneralPane() {
                     {t('preferences.general.terminalApp')}
                   </SelectItem>
                   <SelectItem value="iterm2">iTerm2</SelectItem>
+                  <SelectItem value="ghostty">Ghostty</SelectItem>
                 </>
               )}
               {!isMacOS && !isWindows && (
