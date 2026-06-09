@@ -92,6 +92,11 @@ const ChannelDetail = lazy(() =>
     default: m.ChannelDetail,
   }))
 )
+const ExportTemplatesPage = lazy(() =>
+  import('@/components/export/ExportTemplatesPage').then(m => ({
+    default: m.ExportTemplatesPage,
+  }))
+)
 // ChannelDialog is also statically imported by LeftSideBar, so lazy loading
 // here won't create a separate chunk. Keep it as a regular static import.
 import { ChannelDialog } from '@/components/channels/ChannelDialog'
@@ -189,6 +194,10 @@ export function MainWindowContent({
 
     if (currentView === 'pi') {
       return <PiConfigPage />
+    }
+
+    if (currentView === 'export-templates') {
+      return <ExportTemplatesPage />
     }
 
     if (currentView === 'openclaw') {

@@ -2,9 +2,9 @@ use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
-        channel, claude, claude_settings, codex, config, connectivity, droid_settings, env,
-        factory_auth_profiles, hermes, mcp, notifications, openclaw, opencode, paths, pi,
-        preferences, recovery, sessions, specs, updater, window,
+        channel, channel_export, claude, claude_settings, codex, config, connectivity,
+        droid_settings, env, factory_auth_profiles, hermes, mcp, notifications, openclaw, opencode,
+        paths, pi, preferences, recovery, sessions, specs, updater, window,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -57,6 +57,10 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         channel::detect_channel_type,
         channel::fetch_channel_tokens,
         channel::fetch_models_by_api_key,
+        channel_export::load_export_templates,
+        channel_export::save_export_template,
+        channel_export::delete_export_template,
+        channel_export::run_export_template,
         env::get_env_var,
         env::set_env_var,
         env::remove_env_var,

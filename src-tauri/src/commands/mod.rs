@@ -4,6 +4,7 @@
 //! Import specific commands via their submodule (e.g., `commands::preferences::greet`).
 
 pub mod channel;
+pub mod channel_export;
 pub mod claude;
 pub mod claude_settings;
 pub mod codex;
