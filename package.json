@@ -148,5 +148,8 @@
   "overrides": {
     "uuid": "^14.0.0",
     "@babel/plugin-proposal-private-methods": "npm:@babel/plugin-transform-private-methods@^7.25.0"
+  },
+  "allowScripts": {
+    "@ast-grep/cli@0.40.3": true
   }
 }

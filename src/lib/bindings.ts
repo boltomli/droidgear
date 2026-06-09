@@ -561,6 +561,50 @@ async fetchModelsByApiKey(baseUrl: string, apiKey: string, platform: string | nu
 }
 },
 /**
+ * Load all export templates from config file.
+ */
+async loadExportTemplates() : Promise<Result<ExportTemplate[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("load_export_templates") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Save (create or update) an export template.
+ */
+async saveExportTemplate(template: ExportTemplate) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_export_template", { template }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Delete an export template by name.
+ */
+async deleteExportTemplate(name: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_export_template", { name }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Run an export template by name and return the result.
+ */
+async runExportTemplate(name: string) : Promise<Result<ExportResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("run_export_template", { name }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Gets the value of an environment variable.
  * Returns None if the variable is not set.
  */
@@ -2308,6 +2352,125 @@ export type MissionModelSettings = { workerModel?: string | null; workerReasonin
  * Model info returned from API
  */
 export type ModelInfo = { id: string; name: string | null }
+/**
+ * Output format for export templates
+ */
+export type ExportFormat = "json" | "yaml" | "toml"
+/**
+ * Output structure for export templates
+ */
+export type OutputStructure = "flat" | "nested"
+/**
+ * Channel filter for export templates
+ */
+export type ChannelFilter = {
+  /**
+   * Only include these channel types (empty = all)
+   */
+  types: ChannelType[]
+  /**
+   * Only include enabled channels
+   */
+  enabledOnly: boolean
+  /**
+   * Only include channels with these IDs (empty = all)
+   */
+  ids: string[]
+}
+/**
+ * Token filter for export templates
+ */
+export type TokenFilter = {
+  /**
+   * Token status (1=enabled, empty = all)
+   */
+  status: number | null
+  /**
+   * Only include tokens matching these platforms (empty = all)
+   */
+  platforms: string[]
+}
+/**
+ * An export template ("the form").
+ * Users fill in fields to define what data to export, in what format, and where to write it.
+ */
+export type ExportTemplate = {
+  /**
+   * Template name (unique identifier)
+   */
+  name: string
+  /**
+   * Human-readable description
+   */
+  description: string
+  /**
+   * Channel filter conditions
+   */
+  channels: ChannelFilter
+  /**
+   * Token filter conditions
+   */
+  tokens: TokenFilter
+  /**
+   * Whether to fetch the model list from the API
+   */
+  fetchModels: boolean
+  /**
+   * Optional protocol overrides by model ID prefix
+   */
+  modelProtocolOverrides: { [key: string]: string }
+  /**
+   * Map of source field path to output field name.
+   * e.g. {"channel.name": "channel", "model.id": "model", "token.key": "apiKey"}
+   * Empty = all fields with original names.
+   */
+  fields: { [key: string]: string }
+  /**
+   * Output format
+   */
+  format: ExportFormat
+  /**
+   * Output structure (flat or nested)
+   */
+  outputStructure: OutputStructure
+  /**
+   * Output file path (supports ~ and {timestamp})
+   */
+  outputPath: string
+}
+/**
+ * Result of running an export template.
+ */
+export type ExportResult = {
+  /**
+   * Template name
+   */
+  template: string
+  /**
+   * Number of channels processed
+   */
+  channelsCount: number
+  /**
+   * Number of tokens processed
+   */
+  tokensCount: number
+  /**
+   * Number of models exported
+   */
+  modelsCount: number
+  /**
+   * Output file path
+   */
+  outputPath: string
+  /**
+   * Record count (rows written)
+   */
+  recordCount: number
+  /**
+   * Any warnings
+   */
+  warnings: string[]
+}
 export type ModelTestResult = { modelId: string; modelName: string; diagnostics: ConnectionDiagnostics; isAvailable: boolean }
 /**
  * OpenClaw config status

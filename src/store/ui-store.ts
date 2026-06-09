@@ -4,6 +4,7 @@ import { devtools, persist } from 'zustand/middleware'
 type NavigationView =
   | 'droid'
   | 'channels'
+  | 'export-templates'
   | 'opencode'
   | 'codex'
   | 'claude'

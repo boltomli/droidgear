@@ -1,4 +1,5 @@
 pub mod channel;
+pub mod channel_export;
 pub mod claude;
 pub mod claude_runtime;
 pub mod claude_settings_files;
