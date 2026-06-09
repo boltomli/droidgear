@@ -572,7 +572,8 @@ async loadExportTemplates() : Promise<Result<ExportTemplate[], string>> {
 }
 },
 /**
- * Save (create or update) an export template.
+ * Save (create or update) an export template by name.
+ * If a template with the same name exists, it's replaced.
  */
 async saveExportTemplate(template: ExportTemplate) : Promise<Result<null, string>> {
     try {
@@ -2104,6 +2105,22 @@ enabled: boolean;
  */
 createdAt: number }
 /**
+ * Channel filter conditions
+ */
+export type ChannelFilter = { 
+/**
+ * Only include these channel types (empty = all)
+ */
+types?: ChannelType[]; 
+/**
+ * Only include enabled channels
+ */
+enabledOnly?: boolean; 
+/**
+ * Only include channels with these IDs (empty = all)
+ */
+ids?: string[] }
+/**
  * Token from channel API
  */
 export type ChannelToken = { 
@@ -2280,6 +2297,73 @@ export type EffectivePath = { key: string; path: string; isDefault: boolean }
  */
 export type EffectivePaths = { factory: EffectivePath; opencode: EffectivePath; opencodeAuth: EffectivePath; codex: EffectivePath; claude: EffectivePath; openclaw: EffectivePath; hermes: EffectivePath; pi: EffectivePath }
 /**
+ * Output format
+ */
+export type ExportFormat = "json" | "yaml" | "toml"
+/**
+ * Result of an export run.
+ */
+export type ExportResult = { 
+/**
+ * Template name
+ */
+template: string; 
+/**
+ * Number of channels processed
+ */
+channelsCount: number; 
+/**
+ * Number of tokens processed
+ */
+tokensCount: number; 
+/**
+ * Number of models exported
+ */
+modelsCount: number; 
+/**
+ * Output file path
+ */
+outputPath: string; 
+/**
+ * Record count (rows written)
+ */
+recordCount: number; 
+/**
+ * Any warnings
+ */
+warnings: string[] }
+/**
+ * A single export template ("the form")
+ */
+export type ExportTemplate = { 
+/**
+ * Template name (unique identifier)
+ */
+name: string; 
+/**
+ * Human-readable description
+ */
+description?: string; channels?: ChannelFilter; tokens?: TokenFilter; 
+/**
+ * Whether to fetch the model list from the API
+ */
+fetchModels?: boolean; 
+/**
+ * Optional protocol overrides by model ID prefix (glob-like)
+ * e.g. {"claude-*": "anthropic"}
+ */
+modelProtocolOverrides?: Partial<{ [key in string]: string }>; 
+/**
+ * Map of source field path → output field name
+ * e.g. {"channel.name": "channel", "model.id": "model", "token.key": "apiKey"}
+ * Empty = all fields with original names
+ */
+fields?: Partial<{ [key in string]: string }>; format: ExportFormat; outputStructure?: OutputStructure; 
+/**
+ * Output file path (supports ~ and {timestamp})
+ */
+outputPath: string }
+/**
  * Hermes Live 配置状态
  */
 export type HermesConfigStatus = { configExists: boolean; configPath: string }
@@ -2352,125 +2436,6 @@ export type MissionModelSettings = { workerModel?: string | null; workerReasonin
  * Model info returned from API
  */
 export type ModelInfo = { id: string; name: string | null }
-/**
- * Output format for export templates
- */
-export type ExportFormat = "json" | "yaml" | "toml"
-/**
- * Output structure for export templates
- */
-export type OutputStructure = "flat" | "nested"
-/**
- * Channel filter for export templates
- */
-export type ChannelFilter = {
-  /**
-   * Only include these channel types (empty = all)
-   */
-  types: ChannelType[]
-  /**
-   * Only include enabled channels
-   */
-  enabledOnly: boolean
-  /**
-   * Only include channels with these IDs (empty = all)
-   */
-  ids: string[]
-}
-/**
- * Token filter for export templates
- */
-export type TokenFilter = {
-  /**
-   * Token status (1=enabled, empty = all)
-   */
-  status: number | null
-  /**
-   * Only include tokens matching these platforms (empty = all)
-   */
-  platforms: string[]
-}
-/**
- * An export template ("the form").
- * Users fill in fields to define what data to export, in what format, and where to write it.
- */
-export type ExportTemplate = {
-  /**
-   * Template name (unique identifier)
-   */
-  name: string
-  /**
-   * Human-readable description
-   */
-  description: string
-  /**
-   * Channel filter conditions
-   */
-  channels: ChannelFilter
-  /**
-   * Token filter conditions
-   */
-  tokens: TokenFilter
-  /**
-   * Whether to fetch the model list from the API
-   */
-  fetchModels: boolean
-  /**
-   * Optional protocol overrides by model ID prefix
-   */
-  modelProtocolOverrides: { [key: string]: string }
-  /**
-   * Map of source field path to output field name.
-   * e.g. {"channel.name": "channel", "model.id": "model", "token.key": "apiKey"}
-   * Empty = all fields with original names.
-   */
-  fields: { [key: string]: string }
-  /**
-   * Output format
-   */
-  format: ExportFormat
-  /**
-   * Output structure (flat or nested)
-   */
-  outputStructure: OutputStructure
-  /**
-   * Output file path (supports ~ and {timestamp})
-   */
-  outputPath: string
-}
-/**
- * Result of running an export template.
- */
-export type ExportResult = {
-  /**
-   * Template name
-   */
-  template: string
-  /**
-   * Number of channels processed
-   */
-  channelsCount: number
-  /**
-   * Number of tokens processed
-   */
-  tokensCount: number
-  /**
-   * Number of models exported
-   */
-  modelsCount: number
-  /**
-   * Output file path
-   */
-  outputPath: string
-  /**
-   * Record count (rows written)
-   */
-  recordCount: number
-  /**
-   * Any warnings
-   */
-  warnings: string[]
-}
 export type ModelTestResult = { modelId: string; modelName: string; diagnostics: ConnectionDiagnostics; isAvailable: boolean }
 /**
  * OpenClaw config status
@@ -2540,6 +2505,14 @@ export type OpenCodeProviderConfig = { npm?: string | null; name?: string | null
  * OpenCode Provider options
  */
 export type OpenCodeProviderOptions = { baseURL?: string | null; apiKey?: string | null; timeout?: number | null; headers?: Partial<{ [key in string]: string }> | null }
+/**
+ * Output structure
+ */
+export type OutputStructure = "flat" | 
+/**
+ * Nested: channels → tokens → models
+ */
+"nested"
 /**
  * Pi compatibility configuration
  */
@@ -2721,6 +2694,18 @@ export type TelegramChannelConfig = { blockStreaming?: boolean | null; chunkMode
  * Test mode: ping (HTTP probe) or inference (real model call).
  */
 export type TestMode = "ping" | "inference"
+/**
+ * Token filter conditions
+ */
+export type TokenFilter = { 
+/**
+ * Token status (1=enabled, empty = all)
+ */
+status: number | null; 
+/**
+ * Only include tokens matching these platforms (empty = all)
+ */
+platforms?: string[] }
 /**
  * Token usage statistics
  */

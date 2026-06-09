@@ -27,6 +27,8 @@ import type {
   ExportFormat,
   OutputStructure,
   ChannelType,
+  ChannelFilter,
+  TokenFilter,
 } from '@/lib/bindings'
 
 interface ExportTemplateDialogProps {
@@ -131,17 +133,20 @@ export function ExportTemplateDialog({
     })
   }
 
-  const updateChannels = (update: Partial<ExportTemplate['channels']>) => {
+  const updateChannels = (update: Partial<ChannelFilter>) => {
     setForm(prev => ({
       ...prev,
-      channels: { ...prev.channels, ...update },
+      channels: {
+        ...(prev.channels ?? { types: [], enabledOnly: true, ids: [] }),
+        ...update,
+      },
     }))
   }
 
-  const updateTokens = (update: Partial<ExportTemplate['tokens']>) => {
+  const updateTokens = (update: Partial<TokenFilter>) => {
     setForm(prev => ({
       ...prev,
-      tokens: { ...prev.tokens, ...update },
+      tokens: { ...(prev.tokens ?? { status: 1, platforms: [] }), ...update },
     }))
   }
 
@@ -149,7 +154,7 @@ export function ExportTemplateDialog({
     if (!newSourceField || !newOutputName) return
     setForm(prev => ({
       ...prev,
-      fields: { ...prev.fields, [newSourceField]: newOutputName },
+      fields: { ...(prev.fields ?? {}), [newSourceField]: newOutputName },
     }))
     setNewSourceField('channel.name')
     setNewOutputName('')
@@ -159,7 +164,7 @@ export function ExportTemplateDialog({
     setForm(prev => ({
       ...prev,
       fields: Object.fromEntries(
-        Object.entries(prev.fields).filter(([k]) => k !== source)
+        Object.entries(prev.fields ?? {}).filter(([k]) => k !== source)
       ),
     }))
   }
@@ -172,7 +177,7 @@ export function ExportTemplateDialog({
     setForm(prev => ({
       ...prev,
       modelProtocolOverrides: {
-        ...prev.modelProtocolOverrides,
+        ...(prev.modelProtocolOverrides ?? {}),
         [pattern]: newOverrideProtocol,
       },
     }))
@@ -184,7 +189,7 @@ export function ExportTemplateDialog({
     setForm(prev => ({
       ...prev,
       modelProtocolOverrides: Object.fromEntries(
-        Object.entries(prev.modelProtocolOverrides).filter(
+        Object.entries(prev.modelProtocolOverrides ?? {}).filter(
           ([k]) => k !== pattern
         )
       ),
@@ -192,10 +197,11 @@ export function ExportTemplateDialog({
   }
 
   const toggleChannelType = (type: ChannelType) => {
+    const types = form.channels?.types ?? []
     updateChannels({
-      types: form.channels.types.includes(type)
-        ? form.channels.types.filter(t => t !== type)
-        : [...form.channels.types, type],
+      types: types.includes(type)
+        ? types.filter(t => t !== type)
+        : [...types, type],
     })
   }
 
@@ -220,6 +226,11 @@ export function ExportTemplateDialog({
       onOpenChange(false)
     }
   }
+
+  const channels = form.channels ?? { types: [], enabledOnly: true, ids: [] }
+  const tokens = form.tokens ?? { status: 1, platforms: [] }
+  const fields = form.fields ?? {}
+  const overrides = form.modelProtocolOverrides ?? {}
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -252,7 +263,7 @@ export function ExportTemplateDialog({
             <div className="grid gap-2">
               <Label>{t('export.description')}</Label>
               <Input
-                value={form.description}
+                value={form.description ?? ''}
                 onChange={e => updateField('description', e.target.value)}
                 placeholder={t('export.descriptionPlaceholder')}
               />
@@ -275,7 +286,7 @@ export function ExportTemplateDialog({
                     className="flex items-center gap-1.5 text-sm cursor-pointer"
                   >
                     <Checkbox
-                      checked={form.channels.types.includes(type)}
+                      checked={(channels.types ?? []).includes(type)}
                       onCheckedChange={() => toggleChannelType(type)}
                     />
                     {type}
@@ -290,7 +301,7 @@ export function ExportTemplateDialog({
             <div className="flex items-center gap-2">
               <Switch
                 id="enabled-only"
-                checked={form.channels.enabledOnly}
+                checked={channels.enabledOnly ?? true}
                 onCheckedChange={checked =>
                   updateChannels({ enabledOnly: checked })
                 }
@@ -303,8 +314,8 @@ export function ExportTemplateDialog({
               <Label>{t('export.tokenStatus')}</Label>
               <Select
                 value={
-                  form.tokens.status !== null
-                    ? String(form.tokens.status)
+                  tokens.status !== null && tokens.status !== undefined
+                    ? String(tokens.status)
                     : 'all'
                 }
                 onValueChange={v =>
@@ -327,7 +338,7 @@ export function ExportTemplateDialog({
             <div className="grid gap-2">
               <Label>{t('export.tokenPlatforms')}</Label>
               <Input
-                value={form.tokens.platforms.join(', ')}
+                value={(tokens.platforms ?? []).join(', ')}
                 onChange={e =>
                   updateTokens({
                     platforms: e.target.value
@@ -360,27 +371,25 @@ export function ExportTemplateDialog({
               {t('export.protocolOverrides')}
             </h3>
 
-            {Object.entries(form.modelProtocolOverrides).map(
-              ([pattern, protocol]) => (
-                <div key={pattern} className="flex items-center gap-2 text-sm">
-                  <code className="px-2 py-0.5 bg-muted rounded text-xs">
-                    {pattern}
-                  </code>
-                  <span>→</span>
-                  <code className="px-2 py-0.5 bg-muted rounded text-xs">
-                    {protocol}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 ml-auto"
-                    onClick={() => removeOverride(pattern)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )
-            )}
+            {Object.entries(overrides).map(([pattern, protocol]) => (
+              <div key={pattern} className="flex items-center gap-2 text-sm">
+                <code className="px-2 py-0.5 bg-muted rounded text-xs">
+                  {pattern}
+                </code>
+                <span>→</span>
+                <code className="px-2 py-0.5 bg-muted rounded text-xs">
+                  {protocol}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 ml-auto"
+                  onClick={() => removeOverride(pattern)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
 
             <div className="flex items-center gap-2">
               <Input
@@ -428,9 +437,9 @@ export function ExportTemplateDialog({
               {t('export.fieldSelectorsHint')}
             </p>
 
-            {Object.entries(form.fields).length > 0 && (
+            {Object.entries(fields).length > 0 && (
               <div className="border rounded-md divide-y">
-                {Object.entries(form.fields).map(([source, outputName]) => (
+                {Object.entries(fields).map(([source, outputName]) => (
                   <div
                     key={source}
                     className="flex items-center gap-2 px-3 py-2 text-sm"

@@ -263,7 +263,7 @@ export function ExportTemplatesPage() {
                         {t('export.withModels')}
                       </Badge>
                     )}
-                    {template.channels.enabledOnly && (
+                    {template.channels?.enabledOnly && (
                       <Badge variant="secondary" className="text-xs">
                         {t('export.enabledOnly')}
                       </Badge>
