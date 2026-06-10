@@ -28,6 +28,7 @@ jscpd-report
 *.tsbuildinfo
 
 .vscode/
+.qoder/
 
 openspec/
 .iflow/

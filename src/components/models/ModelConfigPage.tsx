@@ -185,12 +185,36 @@ export function ModelConfigPage() {
   }
 
   const handleSaveModel = async (model: CustomModel) => {
+    // Capture old model before update to detect ID changes
+    const oldModel =
+      editingIndex !== null
+        ? useModelStore.getState().models[editingIndex]
+        : null
+
     if (editingIndex !== null) {
       updateModel(editingIndex, model)
     } else {
       addModel(model)
     }
     await saveModels()
+
+    // If the edited model was marked as default/spec mode and its ID changed
+    // (e.g., display name was edited), persist the updated session settings
+    if (oldModel?.id && editingIndex !== null) {
+      const { models: updatedModels, sessionDefaultSettings: currentSettings } =
+        useModelStore.getState()
+      const updatedModel = updatedModels[editingIndex]
+      if (
+        updatedModel?.id &&
+        updatedModel.id !== oldModel.id &&
+        currentSettings
+      ) {
+        const { saveSessionDefaultSettings } = useModelStore.getState()
+        // The store's updateModel already updated the in-memory settings —
+        // just persist them
+        await saveSessionDefaultSettings(currentSettings)
+      }
+    }
   }
 
   const handleSaveBatchModels = async (batchModels: CustomModel[]) => {

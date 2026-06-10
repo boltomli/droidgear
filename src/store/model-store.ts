@@ -259,12 +259,44 @@ export const useModelStore = create<ModelState>()(
       updateModel: (index, model) => {
         set(
           state => {
+            const oldModel = state.models[index]
+            const oldId = oldModel?.id
             const newModels = [...state.models]
             newModels[index] = model
             const updatedModels = updateModelsIndexAndId(newModels)
+            const newModel = updatedModels[index]
+            const newId = newModel?.id
+
+            // Update default model references if the model's ID changed
+            // (e.g., display name was edited, which changes the derived ID)
+            let defaultModelId = state.defaultModelId
+            let sessionDefaultSettings = state.sessionDefaultSettings
+              ? { ...state.sessionDefaultSettings }
+              : null
+
+            if (oldId && newId && oldId !== newId) {
+              if (defaultModelId === oldId) {
+                defaultModelId = newId
+              }
+              if (sessionDefaultSettings?.model === oldId) {
+                sessionDefaultSettings = {
+                  ...sessionDefaultSettings,
+                  model: newId,
+                }
+              }
+              if (sessionDefaultSettings?.specModeModel === oldId) {
+                sessionDefaultSettings = {
+                  ...sessionDefaultSettings,
+                  specModeModel: newId,
+                }
+              }
+            }
+
             return {
               models: updatedModels,
               hasChanges: !modelsEqual(updatedModels, state.originalModels),
+              defaultModelId,
+              sessionDefaultSettings,
             }
           },
           undefined,
