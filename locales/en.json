@@ -935,6 +935,8 @@
   "claude.model.smallModelUsesMainModelHint": "When enabled, ANTHROPIC_DEFAULT_HAIKU_MODEL mirrors the main model so background tools share the same model.",
   "claude.model.capabilityWarningTitle": "Unrecognized model id",
   "claude.model.capabilityWarningBody": "\"{{model}}\" doesn't look like an official Claude model id. Reasoning effort and thinking flags may not apply if the upstream gateway maps it to a non-Anthropic backend.",
+  "claude.model.context1MSupport": "1M Context Support",
+  "claude.model.context1MSupportHint": "Appends [1m] suffix to the model name. Claude Code natively strips this and enables the extended context window (up to 1M tokens) via the anthropic-beta header.",
 
   "claude.reasoning.title": "Reasoning & thinking",
   "claude.reasoning.hint": "Maps to env.CLAUDE_CODE_EFFORT_LEVEL / CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING / CLAUDE_CODE_DISABLE_THINKING and root alwaysThinkingEnabled.",

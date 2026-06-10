@@ -11,6 +11,9 @@ export const CLAUDE_DISABLE_ADAPTIVE_ENV =
 export const CLAUDE_DISABLE_THINKING_ENV = 'CLAUDE_CODE_DISABLE_THINKING'
 export const CLAUDE_MAX_THINKING_TOKENS_ENV = 'MAX_THINKING_TOKENS'
 
+/** Suffix that Claude Code uses to enable 1M context windows. */
+export const MODEL_1M_SUFFIX = '[1m]'
+
 export type ClaudeReasoningEffort =
   | 'inherit'
   | 'low'
@@ -203,4 +206,74 @@ export function setSmallModelMirroring(
       setEnvString(draft, CLAUDE_SMALL_MODEL_ENV, mainModel)
     }
   }
+}
+
+// ============================================================================
+// 1M Context helpers
+// ============================================================================
+
+/**
+ * Read the resolved model value, preferring env.ANTHROPIC_MODEL over the
+ * top-level `model` field (matches Rust `build_current_config_from_settings`).
+ */
+function getResolvedModel(
+  doc: ClaudeSettingsDoc | null | undefined
+): string | null {
+  const envModel = getEnvString(doc, CLAUDE_MODEL_ENV)
+  if (envModel) return envModel
+  if (!doc) return null
+  const topLevel = doc.model
+  return typeof topLevel === 'string' && topLevel.trim().length > 0
+    ? topLevel.trim()
+    : null
+}
+
+/**
+ * Returns true when the current model name includes the `[1m]` suffix.
+ * Checks env.ANTHROPIC_MODEL first, then falls back to top-level `model`.
+ */
+export function hasModel1MContext(
+  doc: ClaudeSettingsDoc | null | undefined
+): boolean {
+  const model = getResolvedModel(doc)
+  return model?.includes(MODEL_1M_SUFFIX) ?? false
+}
+
+/**
+ * Toggle the `[1m]` suffix on the model name.
+ * Manages env.ANTHROPIC_MODEL; also cleans up a stale top-level `model` field.
+ */
+export function toggleModel1MContext(
+  draft: ClaudeSettingsDoc,
+  enabled: boolean
+): void {
+  const current = getResolvedModel(draft)
+  if (!current) return
+
+  const stripped = current.replaceAll(MODEL_1M_SUFFIX, '').trim()
+  if (!stripped) return
+
+  const next = enabled ? stripped + MODEL_1M_SUFFIX : stripped
+  setEnvString(draft, CLAUDE_MODEL_ENV, next)
+  syncTopLevelModel(draft)
+}
+
+/**
+ * When `env.ANTHROPIC_MODEL` is set, remove the top-level `model` field
+ * so the two never conflict. When env is absent but top-level `model` exists,
+ * leave it alone (the user may rely on it).
+ */
+export function syncTopLevelModel(draft: ClaudeSettingsDoc): void {
+  const envModel = getEnvString(draft, CLAUDE_MODEL_ENV)
+  if (envModel) {
+    Reflect.deleteProperty(draft, 'model')
+  }
+}
+
+/**
+ * Clean up the document before saving. Removes stale top-level `model` when
+ * `ANTHROPIC_MODEL` env is present, keeping the config unambiguous.
+ */
+export function cleanupDocument(draft: ClaudeSettingsDoc): void {
+  syncTopLevelModel(draft)
 }

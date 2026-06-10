@@ -935,6 +935,8 @@
   "claude.model.smallModelUsesMainModelHint": "勾选后 ANTHROPIC_DEFAULT_HAIKU_MODEL 与主模型保持一致，避免后台工具走另一个模型。",
   "claude.model.capabilityWarningTitle": "未识别的模型 ID",
   "claude.model.capabilityWarningBody": "“{{model}}” 不是标准 Claude 模型 ID。如上游网关将其映射到非 Anthropic 后端，思维和 effort 等参数可能不会生效。",
+  "claude.model.context1MSupport": "1M 上下文支持",
+  "claude.model.context1MSupportHint": "在模型名称后追加 [1m] 后缀。Claude Code 会自动去除此后缀并通过 anthropic-beta 头启用扩展上下文窗口（最高 100 万 tokens）。",
 
   "claude.reasoning.title": "推理与思考",
   "claude.reasoning.hint": "对应 env.CLAUDE_CODE_EFFORT_LEVEL / CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING / CLAUDE_CODE_DISABLE_THINKING 以及根级 alwaysThinkingEnabled。",

@@ -39,14 +39,18 @@ import {
   CLAUDE_SMALL_MODEL_ENV,
   type ClaudeReasoningEffort,
   type ClaudeThinkingMode,
+  cleanupDocument,
   getEnvString,
   getReasoningEffort,
   getThinkingMode,
+  hasModel1MContext,
   isSmallModelMirroringMain,
   setEnvString,
   setReasoningEffort,
   setSmallModelMirroring,
   setThinkingMode,
+  syncTopLevelModel,
+  toggleModel1MContext,
 } from '@/lib/claude-settings-mapping'
 import { hasOpaqueClaudeModelId } from '@/lib/utils'
 import {
@@ -170,6 +174,8 @@ export function ClaudeSettingsPage() {
   }
 
   const handleSave = async () => {
+    // Clean up stale top-level fields before persisting.
+    patchJson(cleanupDocument)
     await saveFile()
     const latestError = useClaudeSettingsStore.getState().error
     if (latestError) {
@@ -632,6 +638,8 @@ function ProviderSection({ json, patchJson }: SectionProps) {
       if (result.defaultModel) {
         setEnvString(draft, CLAUDE_MODEL_ENV, result.defaultModel)
       }
+      // Remove stale top-level model to avoid confusion with the env var.
+      syncTopLevelModel(draft)
     })
     toast.success(t('claude.provider.importDialog.imported'))
   }
@@ -712,6 +720,7 @@ function ModelSection({ json, patchJson }: SectionProps) {
   const mirror = isSmallModelMirroringMain(json)
   const showOpaqueWarning = hasOpaqueClaudeModelId(model)
   const smallModelDisplay = mirror ? model : smallModel
+  const context1M = hasModel1MContext(json)
 
   return (
     <section className="space-y-4 pt-4 border-t">
@@ -772,6 +781,27 @@ function ModelSection({ json, patchJson }: SectionProps) {
           </div>
         </div>
       )}
+
+      <div className="flex items-start gap-3 rounded-md border p-3">
+        <Checkbox
+          id="claude-model-context-1m"
+          checked={context1M}
+          onCheckedChange={checked =>
+            patchJson(draft => toggleModel1MContext(draft, checked === true))
+          }
+        />
+        <div className="space-y-1">
+          <Label
+            htmlFor="claude-model-context-1m"
+            className="text-sm font-medium"
+          >
+            {t('claude.model.context1MSupport')}
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            {t('claude.model.context1MSupportHint')}
+          </p>
+        </div>
+      </div>
 
       <div className="flex items-start gap-3 rounded-md border p-3">
         <Checkbox
