@@ -322,38 +322,103 @@ fn apply_profile_to_config_path(profile: &HermesProfile, config_path: &Path) -> 
         .as_mapping_mut()
         .ok_or("config.yaml root must be a YAML mapping")?;
 
-    // Build the new model section from the profile's model config.
-    let mut model_map = serde_yaml::Mapping::new();
-    if let Some(ref default) = profile.model.default {
-        model_map.insert(
-            Value::String("default".to_string()),
-            Value::String(default.clone()),
-        );
-    }
-    if let Some(ref provider) = profile.model.provider {
-        model_map.insert(
-            Value::String("provider".to_string()),
-            Value::String(provider.clone()),
-        );
-    }
+    // Update custom_providers list with the profile's provider config.
+    // Only add/update if the provider has a base_url (indicating it's a custom provider).
     if let Some(ref base_url) = profile.model.base_url {
-        model_map.insert(
-            Value::String("base_url".to_string()),
-            Value::String(base_url.clone()),
-        );
-    }
-    if let Some(ref api_key) = profile.model.api_key {
-        model_map.insert(
-            Value::String("api_key".to_string()),
-            Value::String(api_key.clone()),
-        );
-    }
+        if !base_url.is_empty() {
+            let custom_providers = root
+                .entry(Value::String("custom_providers".to_string()))
+                .or_insert_with(|| Value::Sequence(Vec::new()));
+            let providers_list = custom_providers
+                .as_sequence_mut()
+                .ok_or("custom_providers must be a YAML sequence")?;
 
-    // Replace the model section (preserving all other sections).
-    root.insert(
-        Value::String("model".to_string()),
-        Value::Mapping(model_map),
-    );
+            // Try to find existing provider by base_url or name
+            let provider_name = profile
+                .model
+                .provider
+                .clone()
+                .unwrap_or_else(|| "custom".to_string());
+            let model_name = profile.model.default.clone().unwrap_or_default();
+
+            let existing_idx = providers_list.iter().position(|p| {
+                p.get("base_url")
+                    .and_then(|v| v.as_str())
+                    .map(|url| url == base_url)
+                    .unwrap_or(false)
+                    || p.get("name")
+                        .and_then(|v| v.as_str())
+                        .map(|name| name == provider_name)
+                        .unwrap_or(false)
+            });
+
+            let mut new_provider = serde_yaml::Mapping::new();
+            new_provider.insert(
+                Value::String("name".to_string()),
+                Value::String(provider_name.clone()),
+            );
+            new_provider.insert(
+                Value::String("base_url".to_string()),
+                Value::String(base_url.clone()),
+            );
+            if let Some(ref api_key) = profile.model.api_key {
+                if !api_key.is_empty() {
+                    new_provider.insert(
+                        Value::String("api_key".to_string()),
+                        Value::String(api_key.clone()),
+                    );
+                }
+            }
+            if !model_name.is_empty() {
+                new_provider.insert(
+                    Value::String("model".to_string()),
+                    Value::String(model_name),
+                );
+            }
+
+            if let Some(idx) = existing_idx {
+                // Update existing provider - preserve other fields
+                if let Some(existing) = providers_list.get_mut(idx) {
+                    if let Some(existing_map) = existing.as_mapping_mut() {
+                        // Only update fields that are set in profile
+                        if let Some(ref name) = profile.model.provider {
+                            if !name.is_empty() {
+                                existing_map.insert(
+                                    Value::String("name".to_string()),
+                                    Value::String(name.clone()),
+                                );
+                            }
+                        }
+                        if !base_url.is_empty() {
+                            existing_map.insert(
+                                Value::String("base_url".to_string()),
+                                Value::String(base_url.clone()),
+                            );
+                        }
+                        if let Some(ref api_key) = profile.model.api_key {
+                            if !api_key.is_empty() {
+                                existing_map.insert(
+                                    Value::String("api_key".to_string()),
+                                    Value::String(api_key.clone()),
+                                );
+                            }
+                        }
+                        if let Some(ref default) = profile.model.default {
+                            if !default.is_empty() {
+                                existing_map.insert(
+                                    Value::String("model".to_string()),
+                                    Value::String(default.clone()),
+                                );
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Add new provider
+                providers_list.push(Value::Mapping(new_provider));
+            }
+        }
+    }
 
     // Update agent.reasoning_effort if set in profile.
     if let Some(ref effort) = profile.reasoning_effort {
@@ -375,6 +440,7 @@ fn apply_profile_to_config_path(profile: &HermesProfile, config_path: &Path) -> 
 }
 
 /// Internal: read current Hermes config from a specific config.yaml path.
+/// Reads from custom_providers list (first entry) and agent.reasoning_effort.
 fn read_current_config_from_path(config_path: &Path) -> Result<HermesCurrentConfig, String> {
     if !config_path.exists() {
         return Ok(HermesCurrentConfig {
@@ -405,20 +471,45 @@ fn read_current_config_from_path(config_path: &Path) -> Result<HermesCurrentConf
     let parsed: Value =
         serde_yaml::from_str(&s).map_err(|e| format!("Failed to parse config.yaml: {e}"))?;
 
-    let model_section = parsed.get("model");
-    let get_str = |key: &str| -> Option<String> {
-        model_section
-            .and_then(|m| m.get(key))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-    };
-
-    let model = HermesModelConfig {
-        default: get_str("default"),
-        provider: get_str("provider"),
-        base_url: get_str("base_url"),
-        api_key: get_str("api_key"),
-    };
+    // Read from custom_providers list (first entry), fallback to model section
+    let model = parsed
+        .get("custom_providers")
+        .and_then(|p| p.as_sequence())
+        .and_then(|seq| seq.first())
+        .map(|first| {
+            let get_str = |key: &str| -> Option<String> {
+                first
+                    .get(key)
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+            };
+            HermesModelConfig {
+                default: get_str("model"),
+                provider: get_str("name"),
+                base_url: get_str("base_url"),
+                api_key: get_str("api_key"),
+            }
+        })
+        .or_else(|| {
+            // Fallback to model section (legacy format)
+            parsed.get("model").map(|m| {
+                let get_str = |key: &str| -> Option<String> {
+                    m.get(key).and_then(|v| v.as_str()).map(|s| s.to_string())
+                };
+                HermesModelConfig {
+                    default: get_str("default"),
+                    provider: get_str("provider"),
+                    base_url: get_str("base_url"),
+                    api_key: get_str("api_key"),
+                }
+            })
+        })
+        .unwrap_or(HermesModelConfig {
+            default: None,
+            provider: None,
+            base_url: None,
+            api_key: None,
+        });
 
     // Read agent.reasoning_effort
     let reasoning_effort = parsed
@@ -649,15 +740,16 @@ other_section:
         let temp = TempDir::new().unwrap();
         let home = home(&temp);
 
-        // Existing config.yaml with unrelated sections
+        // Existing config.yaml with unrelated sections and custom_providers
         let base_yaml = r#"
 other_section:
   key: value
   nested:
     deep: 42
-model:
-  default: old-model
-  provider: old-provider
+custom_providers:
+- name: old-provider
+  base_url: https://old-api.com/v1
+  model: old-model
 "#;
         write_file(
             &home.join(".hermes").join("config.yaml"),
@@ -697,26 +789,32 @@ model:
             Some(42)
         );
 
-        // Model section updated
+        // custom_providers: old one preserved (no match), new one added
+        let providers = parsed
+            .get("custom_providers")
+            .and_then(|v| v.as_sequence())
+            .unwrap();
+        // Old provider preserved (different base_url and name)
+        assert_eq!(providers.len(), 2);
         assert_eq!(
-            parsed
-                .get("model")
-                .and_then(|v| v.get("default"))
-                .and_then(|v| v.as_str()),
-            Some("gpt-4")
+            providers[0].get("name").and_then(|v| v.as_str()),
+            Some("old-provider")
         );
         assert_eq!(
-            parsed
-                .get("model")
-                .and_then(|v| v.get("provider"))
-                .and_then(|v| v.as_str()),
+            providers[0].get("model").and_then(|v| v.as_str()),
+            Some("old-model")
+        );
+        // New provider added
+        assert_eq!(
+            providers[1].get("name").and_then(|v| v.as_str()),
             Some("openai")
         );
         assert_eq!(
-            parsed
-                .get("model")
-                .and_then(|v| v.get("api_key"))
-                .and_then(|v| v.as_str()),
+            providers[1].get("model").and_then(|v| v.as_str()),
+            Some("gpt-4")
+        );
+        assert_eq!(
+            providers[1].get("api_key").and_then(|v| v.as_str()),
             Some("sk-test")
         );
 
@@ -765,11 +863,11 @@ model:
         let home = home(&temp);
 
         let yaml = r#"
-model:
-  default: gpt-4
-  provider: openai
+custom_providers:
+- name: openai
   base_url: https://api.openai.com/v1
   api_key: sk-test
+  model: gpt-4
 agent:
   reasoning_effort: xhigh
 "#;
@@ -786,13 +884,126 @@ agent:
         let home = home(&temp);
 
         let yaml = r#"
-model:
-  default: gpt-4
+custom_providers:
+- name: openai
+  model: gpt-4
 "#;
         write_file(&home.join(".hermes").join("config.yaml"), yaml.trim_start());
 
         let config = read_hermes_current_config_for_home(home).unwrap();
         assert_eq!(config.reasoning_effort, None);
+    }
+
+    #[test]
+    fn test_read_legacy_model_section() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        // Only model section, no custom_providers
+        let yaml = r#"
+model:
+  default: gpt-4-turbo
+  provider: openai
+  base_url: https://api.openai.com/v1
+  api_key: sk-live
+"#;
+        write_file(&home.join(".hermes").join("config.yaml"), yaml.trim_start());
+
+        let config = read_hermes_current_config_for_home(home).unwrap();
+        assert_eq!(config.model.default.as_deref(), Some("gpt-4-turbo"));
+        assert_eq!(config.model.provider.as_deref(), Some("openai"));
+        assert_eq!(
+            config.model.base_url.as_deref(),
+            Some("https://api.openai.com/v1")
+        );
+        assert_eq!(config.model.api_key.as_deref(), Some("sk-live"));
+    }
+
+    #[test]
+    fn test_read_custom_providers_takes_precedence() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        // Both model and custom_providers exist
+        let yaml = r#"
+model:
+  default: old-model
+  provider: old-provider
+custom_providers:
+- name: new-provider
+  base_url: https://new-api.com/v1
+  model: new-model
+"#;
+        write_file(&home.join(".hermes").join("config.yaml"), yaml.trim_start());
+
+        let config = read_hermes_current_config_for_home(home).unwrap();
+        // Should read from custom_providers, not model
+        assert_eq!(config.model.default.as_deref(), Some("new-model"));
+        assert_eq!(config.model.provider.as_deref(), Some("new-provider"));
+        assert_eq!(
+            config.model.base_url.as_deref(),
+            Some("https://new-api.com/v1")
+        );
+    }
+
+    #[test]
+    fn test_apply_does_not_delete_model_section() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        let base_yaml = r#"
+model:
+  default: old-model
+  provider: old-provider
+custom_providers:
+- name: existing
+  base_url: https://existing.com/v1
+  model: existing-model
+"#;
+        write_file(
+            &home.join(".hermes").join("config.yaml"),
+            base_yaml.trim_start(),
+        );
+
+        let mut profile = make_profile("p1", "Profile 1", Some("gpt-4"));
+        profile.model.base_url = Some("https://new-api.com/v1".to_string());
+        write_file(
+            &home
+                .join(".droidgear")
+                .join("hermes")
+                .join("profiles")
+                .join("p1.json"),
+            &serde_json::to_string_pretty(&profile).unwrap(),
+        );
+
+        apply_hermes_profile_for_home(home, "p1").unwrap();
+
+        let after = std::fs::read_to_string(home.join(".hermes").join("config.yaml")).unwrap();
+        let parsed: Value = serde_yaml::from_str(&after).unwrap();
+
+        // model section should still exist (not deleted)
+        assert_eq!(
+            parsed
+                .get("model")
+                .and_then(|v| v.get("default"))
+                .and_then(|v| v.as_str()),
+            Some("old-model")
+        );
+
+        // custom_providers should have new provider added
+        let providers = parsed
+            .get("custom_providers")
+            .and_then(|v| v.as_sequence())
+            .unwrap();
+        assert_eq!(providers.len(), 2);
+        assert_eq!(
+            providers[1].get("name").and_then(|v| v.as_str()),
+            Some("openai")
+        );
+        assert_eq!(
+            providers[1].get("model").and_then(|v| v.as_str()),
+            Some("gpt-4")
+        );
     }
 
     #[test]
@@ -888,11 +1099,11 @@ model:
         let temp = TempDir::new().unwrap();
         let home = home(&temp);
 
-        let yaml = r#"model:
-  default: gpt-4-turbo
-  provider: openai
+        let yaml = r#"custom_providers:
+- name: openai
   base_url: https://api.openai.com/v1
   api_key: sk-live
+  model: gpt-4-turbo
 unrelated: data
 "#;
         write_file(&home.join(".hermes").join("config.yaml"), yaml);
