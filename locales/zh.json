@@ -1201,6 +1201,7 @@
   "hermes.model.baseUrlPlaceholder": "例如 https://api.openai.com/v1",
   "hermes.model.apiKey": "API 密钥",
   "hermes.model.apiKeyPlaceholder": "输入 API 密钥",
+  "hermes.model.reasoningEffort": "推理强度",
   "hermes.model.loadFromConfig": "从配置加载",
 
   "hermes.configStatus.title": "配置状态",

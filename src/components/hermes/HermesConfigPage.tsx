@@ -95,6 +95,9 @@ export function HermesConfigPage() {
   const [editingApiKey, setEditingApiKey] = useState(
     currentProfile?.model.apiKey ?? ''
   )
+  const [editingReasoningEffort, setEditingReasoningEffort] = useState(
+    currentProfile?.reasoningEffort ?? ''
+  )
 
   // Reset local state when profile changes
   const [lastProfileKey, setLastProfileKey] = useState(profileKey)
@@ -106,6 +109,7 @@ export function HermesConfigPage() {
     setEditingProvider(currentProfile?.model.provider ?? '')
     setEditingBaseUrl(currentProfile?.model.baseUrl ?? '')
     setEditingApiKey(currentProfile?.model.apiKey ?? '')
+    setEditingReasoningEffort(currentProfile?.reasoningEffort ?? '')
   }
 
   useEffect(() => {
@@ -158,6 +162,7 @@ export function HermesConfigPage() {
       setEditingProvider(updated.model.provider ?? '')
       setEditingBaseUrl(updated.model.baseUrl ?? '')
       setEditingApiKey(updated.model.apiKey ?? '')
+      setEditingReasoningEffort(updated.reasoningEffort ?? '')
     }
     toast.success(t('hermes.actions.loadedFromLive'))
   }
@@ -206,6 +211,7 @@ export function HermesConfigPage() {
         baseUrl: trimToNull(editingBaseUrl),
         apiKey: trimToNull(editingApiKey),
       },
+      reasoningEffort: trimToNull(editingReasoningEffort),
       updatedAt: new Date().toISOString(),
     }
     useHermesStore.setState(
@@ -412,6 +418,48 @@ export function HermesConfigPage() {
                   onBlur={handleModelBlur}
                   placeholder={t('hermes.model.apiKeyPlaceholder')}
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="w-24">
+                  {t('hermes.model.reasoningEffort')}
+                </Label>
+                <Select
+                  value={editingReasoningEffort || '(none)'}
+                  onValueChange={value => {
+                    const newValue = value === '(none)' ? '' : value
+                    setEditingReasoningEffort(newValue)
+                    // Auto-save on selection change
+                    if (currentProfile) {
+                      const updated = {
+                        ...currentProfile,
+                        model: { ...currentProfile.model },
+                        reasoningEffort: trimToNull(newValue),
+                        updatedAt: new Date().toISOString(),
+                      }
+                      useHermesStore.setState(
+                        { currentProfile: updated },
+                        undefined,
+                        'hermes/updateReasoningEffort'
+                      )
+                      saveProfile()
+                    }
+                  }}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="(none)">(none)</SelectItem>
+                    <SelectItem value="none">none</SelectItem>
+                    <SelectItem value="minimal">minimal</SelectItem>
+                    <SelectItem value="low">low</SelectItem>
+                    <SelectItem value="medium">medium</SelectItem>
+                    <SelectItem value="high">high</SelectItem>
+                    <SelectItem value="xhigh">xhigh</SelectItem>
+                    <SelectItem value="max">max</SelectItem>
+                    <SelectItem value="ultra">ultra</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

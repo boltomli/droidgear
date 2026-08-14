@@ -1201,6 +1201,7 @@
   "hermes.model.baseUrlPlaceholder": "e.g. https://api.openai.com/v1",
   "hermes.model.apiKey": "API Key",
   "hermes.model.apiKeyPlaceholder": "Enter API key",
+  "hermes.model.reasoningEffort": "Reasoning Effort",
   "hermes.model.loadFromConfig": "Load from Config",
 
   "hermes.configStatus.title": "Config Status",

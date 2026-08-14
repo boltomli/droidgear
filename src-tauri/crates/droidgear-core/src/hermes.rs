@@ -42,6 +42,10 @@ pub struct HermesProfile {
     pub created_at: String,
     pub updated_at: String,
     pub model: HermesModelConfig,
+    /// 推理努力程度（对应 config.yaml 中的 agent.reasoning_effort）
+    /// 选项：none, minimal, low, medium, high, xhigh, max, ultra
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning_effort: Option<String>,
 }
 
 /// Hermes Live 配置状态
@@ -57,6 +61,9 @@ pub struct HermesConfigStatus {
 #[serde(rename_all = "camelCase")]
 pub struct HermesCurrentConfig {
     pub model: HermesModelConfig,
+    /// 推理努力程度（对应 config.yaml 中的 agent.reasoning_effort）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning_effort: Option<String>,
 }
 
 // ============================================================================
@@ -258,6 +265,7 @@ pub fn create_default_hermes_profile_for_home(home_dir: &Path) -> Result<HermesP
             base_url: Some(String::new()),
             api_key: Some(String::new()),
         },
+        reasoning_effort: None,
     };
 
     write_profile_file(home_dir, &profile)?;
@@ -347,6 +355,20 @@ fn apply_profile_to_config_path(profile: &HermesProfile, config_path: &Path) -> 
         Value::Mapping(model_map),
     );
 
+    // Update agent.reasoning_effort if set in profile.
+    if let Some(ref effort) = profile.reasoning_effort {
+        let agent_section = root
+            .entry(Value::String("agent".to_string()))
+            .or_insert_with(|| Value::Mapping(serde_yaml::Mapping::new()));
+        let agent_map = agent_section
+            .as_mapping_mut()
+            .ok_or("agent section must be a YAML mapping")?;
+        agent_map.insert(
+            Value::String("reasoning_effort".to_string()),
+            Value::String(effort.clone()),
+        );
+    }
+
     let yaml_str = serde_yaml::to_string(&config)
         .map_err(|e| format!("Failed to serialize config.yaml: {e}"))?;
     storage::atomic_write(config_path, yaml_str.as_bytes())
@@ -354,46 +376,61 @@ fn apply_profile_to_config_path(profile: &HermesProfile, config_path: &Path) -> 
 
 /// Internal: read current Hermes config from a specific config.yaml path.
 fn read_current_config_from_path(config_path: &Path) -> Result<HermesCurrentConfig, String> {
-    let model = if config_path.exists() {
-        let s = std::fs::read_to_string(config_path)
-            .map_err(|e| format!("Failed to read config.yaml: {e}"))?;
-        if s.trim().is_empty() {
-            HermesModelConfig {
+    if !config_path.exists() {
+        return Ok(HermesCurrentConfig {
+            model: HermesModelConfig {
                 default: None,
                 provider: None,
                 base_url: None,
                 api_key: None,
-            }
-        } else {
-            let parsed: Value = serde_yaml::from_str(&s)
-                .map_err(|e| format!("Failed to parse config.yaml: {e}"))?;
+            },
+            reasoning_effort: None,
+        });
+    }
 
-            let model_section = parsed.get("model");
+    let s = std::fs::read_to_string(config_path)
+        .map_err(|e| format!("Failed to read config.yaml: {e}"))?;
+    if s.trim().is_empty() {
+        return Ok(HermesCurrentConfig {
+            model: HermesModelConfig {
+                default: None,
+                provider: None,
+                base_url: None,
+                api_key: None,
+            },
+            reasoning_effort: None,
+        });
+    }
 
-            let get_str = |key: &str| -> Option<String> {
-                model_section
-                    .and_then(|m| m.get(key))
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-            };
+    let parsed: Value =
+        serde_yaml::from_str(&s).map_err(|e| format!("Failed to parse config.yaml: {e}"))?;
 
-            HermesModelConfig {
-                default: get_str("default"),
-                provider: get_str("provider"),
-                base_url: get_str("base_url"),
-                api_key: get_str("api_key"),
-            }
-        }
-    } else {
-        HermesModelConfig {
-            default: None,
-            provider: None,
-            base_url: None,
-            api_key: None,
-        }
+    let model_section = parsed.get("model");
+    let get_str = |key: &str| -> Option<String> {
+        model_section
+            .and_then(|m| m.get(key))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
     };
 
-    Ok(HermesCurrentConfig { model })
+    let model = HermesModelConfig {
+        default: get_str("default"),
+        provider: get_str("provider"),
+        base_url: get_str("base_url"),
+        api_key: get_str("api_key"),
+    };
+
+    // Read agent.reasoning_effort
+    let reasoning_effort = parsed
+        .get("agent")
+        .and_then(|a| a.get("reasoning_effort"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    Ok(HermesCurrentConfig {
+        model,
+        reasoning_effort,
+    })
 }
 
 /// 应用指定 Profile 到 `~/.hermes/config.yaml`（for_home variant, NOT WSL-aware）
@@ -509,6 +546,7 @@ mod tests {
                 base_url: Some("https://api.openai.com/v1".to_string()),
                 api_key: Some("sk-test".to_string()),
             },
+            reasoning_effort: None,
         }
     }
 
@@ -528,6 +566,7 @@ mod tests {
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-01T00:00:00Z".to_string(),
             model,
+            reasoning_effort: Some("high".to_string()),
         };
 
         // Verify JSON serialization (profiles stored as JSON)
@@ -536,7 +575,9 @@ mod tests {
         assert!(json.contains("\"provider\":"));
         assert!(json.contains("\"baseUrl\":"));
         assert!(json.contains("\"apiKey\":"));
+        assert!(json.contains("\"reasoningEffort\":"));
         assert!(json.contains("gpt-4"));
+        assert!(json.contains("high"));
     }
 
     #[test]
@@ -684,6 +725,74 @@ model:
             .unwrap()
             .unwrap();
         assert_eq!(active, "p1");
+    }
+
+    #[test]
+    fn test_apply_writes_reasoning_effort() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        // Create a profile with reasoning_effort
+        let mut profile = make_profile("p1", "Profile 1", Some("gpt-4"));
+        profile.reasoning_effort = Some("high".to_string());
+        write_file(
+            &home
+                .join(".droidgear")
+                .join("hermes")
+                .join("profiles")
+                .join("p1.json"),
+            &serde_json::to_string_pretty(&profile).unwrap(),
+        );
+
+        apply_hermes_profile_for_home(home, "p1").unwrap();
+
+        let after = std::fs::read_to_string(home.join(".hermes").join("config.yaml")).unwrap();
+        let parsed: Value = serde_yaml::from_str(&after).unwrap();
+
+        // reasoning_effort should be written under agent section
+        assert_eq!(
+            parsed
+                .get("agent")
+                .and_then(|v| v.get("reasoning_effort"))
+                .and_then(|v| v.as_str()),
+            Some("high")
+        );
+    }
+
+    #[test]
+    fn test_read_current_config_with_reasoning_effort() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        let yaml = r#"
+model:
+  default: gpt-4
+  provider: openai
+  base_url: https://api.openai.com/v1
+  api_key: sk-test
+agent:
+  reasoning_effort: xhigh
+"#;
+        write_file(&home.join(".hermes").join("config.yaml"), yaml.trim_start());
+
+        let config = read_hermes_current_config_for_home(home).unwrap();
+        assert_eq!(config.model.default.as_deref(), Some("gpt-4"));
+        assert_eq!(config.reasoning_effort.as_deref(), Some("xhigh"));
+    }
+
+    #[test]
+    fn test_read_current_config_without_reasoning_effort() {
+        let temp = TempDir::new().unwrap();
+        let home = home(&temp);
+
+        let yaml = r#"
+model:
+  default: gpt-4
+"#;
+        write_file(&home.join(".hermes").join("config.yaml"), yaml.trim_start());
+
+        let config = read_hermes_current_config_for_home(home).unwrap();
+        assert_eq!(config.reasoning_effort, None);
     }
 
     #[test]
