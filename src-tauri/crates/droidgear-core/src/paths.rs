@@ -413,11 +413,18 @@ fn default_pi_home_for_home(home_dir: &Path) -> Result<PathBuf, String> {
     Ok(home_dir.join(".pi").join("agent"))
 }
 
-/// On Windows, try to resolve Hermes default path via WSL since Hermes
-/// doesn't support native Windows. Falls back to the local home directory.
+/// On Windows, prefer native home directory if config exists there,
+/// otherwise try WSL since Hermes also runs under WSL. Falls back to
+/// the local home directory.
 fn default_hermes_home_with_wsl(home_dir: &Path) -> Result<PathBuf, String> {
     #[cfg(target_os = "windows")]
     {
+        // Prefer native Windows path if config.yaml already exists there
+        let native = default_hermes_home_for_home(home_dir)?;
+        if native.join("config.yaml").exists() {
+            return Ok(native);
+        }
+        // Fall back to WSL path
         if let Ok(wsl_info) = get_wsl_info() {
             if let Some(distro) = wsl_info.distros.iter().find(|d| d.is_default) {
                 if let Ok(username) = get_wsl_username(&distro.name) {
@@ -427,7 +434,9 @@ fn default_hermes_home_with_wsl(home_dir: &Path) -> Result<PathBuf, String> {
                 }
             }
         }
+        Ok(native)
     }
+    #[cfg(not(target_os = "windows"))]
     default_hermes_home_for_home(home_dir)
 }
 
