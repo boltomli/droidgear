@@ -1141,4 +1141,25 @@ unrelated: data
         assert_eq!(reloaded.created_at, "2024-06-01T00:00:00Z");
         assert_eq!(reloaded.name, "Updated Name");
     }
+
+    #[test]
+    fn test_system_wrapper_reads_appdata_config() {
+        // Only run on Windows with actual config
+        #[cfg(target_os = "windows")]
+        {
+            if let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") {
+                let config_path = std::path::PathBuf::from(local_app_data)
+                    .join("hermes")
+                    .join("config.yaml");
+                if config_path.exists() {
+                    let config = read_hermes_current_config().unwrap();
+                    assert!(
+                        config.reasoning_effort.is_some(),
+                        "reasoning_effort should be Some, got None. Config: {:?}",
+                        config_path
+                    );
+                }
+            }
+        }
+    }
 }
