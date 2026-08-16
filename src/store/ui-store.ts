@@ -169,7 +169,8 @@ export const useUIStore = create<UIState>()(
                 view === 'claude' ||
                 view === 'openclaw' ||
                 view === 'hermes' ||
-                view === 'pi'
+                view === 'pi' ||
+                view === 'omp'
                   ? view
                   : state.lastToolView,
             }),
