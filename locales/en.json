@@ -1207,7 +1207,7 @@
   "hermes.configStatus.title": "Config Status",
 
   "hermes.actions.apply": "Apply Profile",
-  "hermes.actions.applyConfirm": "Apply this profile? This will update your Hermes configuration file.",
+  "hermes.actions.applyConfirm": "Apply this profile? This will update your Hermes configuration file:",
   "hermes.actions.applySuccess": "Profile applied successfully",
   "hermes.actions.loadedFromLive": "Loaded from live config",
   "hermes.model.importFromChannel": "Import from Channel",

@@ -475,7 +475,12 @@ export function HermesConfigPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('hermes.actions.apply')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('hermes.actions.applyConfirm')}
+              {t('hermes.actions.applyConfirm')}{' '}
+              {configStatus?.configPath && (
+                <code className="text-xs break-all">
+                  {configStatus.configPath}
+                </code>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

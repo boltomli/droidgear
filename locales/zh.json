@@ -1207,7 +1207,7 @@
   "hermes.configStatus.title": "配置状态",
 
   "hermes.actions.apply": "应用配置文件",
-  "hermes.actions.applyConfirm": "应用此配置文件？这将更新您的 Hermes 配置文件。",
+  "hermes.actions.applyConfirm": "应用此配置文件？这将更新您的 Hermes 配置文件：",
   "hermes.actions.applySuccess": "配置文件已成功应用",
   "hermes.actions.loadedFromLive": "已从当前配置加载",
   "hermes.model.importFromChannel": "从渠道导入",
