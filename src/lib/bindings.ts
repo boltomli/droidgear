@@ -1451,6 +1451,127 @@ async readPiCurrentConfig() : Promise<Result<PiCurrentConfig, string>> {
 }
 },
 /**
+ * List all OMP profiles
+ */
+async listOmpProfiles() : Promise<Result<OmpProfile[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_omp_profiles") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Get a profile by ID
+ */
+async getOmpProfile(id: string) : Promise<Result<OmpProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_omp_profile", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Save a profile (create or update)
+ */
+async saveOmpProfile(profile: OmpProfile) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_omp_profile", { profile }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Delete a profile
+ */
+async deleteOmpProfile(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_omp_profile", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Duplicate a profile
+ */
+async duplicateOmpProfile(id: string, newName: string) : Promise<Result<OmpProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("duplicate_omp_profile", { id, newName }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Create default profile (when no profiles exist)
+ */
+async createDefaultOmpProfile() : Promise<Result<OmpProfile, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_default_omp_profile") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Get active profile ID
+ */
+async getActiveOmpProfileId() : Promise<Result<string | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_active_omp_profile_id") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Set active profile ID
+ */
+async setActiveOmpProfileId(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_active_omp_profile_id", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Apply a profile to `~/.omp/agent/models.yml`
+ */
+async applyOmpProfile(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("apply_omp_profile", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Get OMP config status
+ */
+async getOmpConfigStatus() : Promise<Result<OmpConfigStatus, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_omp_config_status") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Read current OMP configuration from config files
+ */
+async readOmpCurrentConfig() : Promise<Result<OmpCurrentConfig, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("read_omp_current_config") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * List all OpenCode profiles
  */
 async listOpencodeProfiles() : Promise<Result<OpenCodeProfile[], string>> {
@@ -2719,6 +2840,46 @@ export type PiConfigStatus = { configExists: boolean; configPath: string }
  * Current Pi configuration (from `~/.pi/agent/models.json`)
  */
 export type PiCurrentConfig = { providers?: Partial<{ [key in string]: PiProviderConfig }> }
+/**
+ * OMP compatibility configuration. Unknown fields are retained for newer OMP versions.
+ */
+export type OmpCompatConfig = { supportsStore?: boolean | null; supportsDeveloperRole?: boolean | null; supportsReasoningEffort?: boolean | null; reasoningEffortMap?: Partial<{ [key in string]: JsonValue }> | null; supportsUsageInStreaming?: boolean | null; maxTokensField?: string | null; requiresToolResultName?: boolean | null; requiresAssistantAfterToolResult?: boolean | null; requiresThinkingAsText?: boolean | null; requiresReasoningContentOnAssistantMessages?: boolean | null; thinkingFormat?: string | null; cacheControlFormat?: string | null; supportsStrictMode?: boolean | null; supportsLongCacheRetention?: boolean | null; supportsEagerToolInputStreaming?: boolean | null; openRouterRouting?: JsonValue | null; vercelGatewayRouting?: JsonValue | null }
+/**
+ * OMP config status
+ */
+export type OmpConfigStatus = { configExists: boolean; configPath: string }
+/**
+ * Current OMP configuration (from `~/.omp/agent/models.yml`)
+ */
+export type OmpCurrentConfig = { providers?: Partial<{ [key in string]: OmpProviderConfig }> }
+/**
+ * OMP discovery configuration for live model listing
+ */
+export type OmpDiscovery = { type: string }
+/**
+ * OMP model definition
+ */
+export type OmpModel = { id: string; name?: string | null; api?: string | null; reasoning?: boolean; thinkingLevelMap?: Partial<{ [key in string]: string | null }> | null; input?: string[]; contextWindow?: number; maxTokens?: number; cost?: OmpModelCost | null; headers?: Partial<{ [key in string]: string }> | null; compat?: OmpCompatConfig | null; contextPromotionTarget?: string | null }
+/**
+ * OMP model cost configuration
+ */
+export type OmpModelCost = { input?: number; output?: number; cacheRead?: number; cacheWrite?: number; tiers?: OmpModelCostTier[] | null }
+/**
+ * OMP model cost tier. Rates are in dollars per million tokens.
+ */
+export type OmpModelCostTier = { inputTokensAbove: number; input: number; output: number; cacheRead: number; cacheWrite: number }
+/**
+ * OMP model override (subset of OmpModel fields for overriding built-in models)
+ */
+export type OmpModelOverride = { name?: string | null; api?: string | null; reasoning?: boolean | null; thinkingLevelMap?: Partial<{ [key in string]: string | null }> | null; input?: string[] | null; contextWindow?: number | null; maxTokens?: number | null; cost?: OmpModelCost | null; headers?: Partial<{ [key in string]: string }> | null; compat?: OmpCompatConfig | null; contextPromotionTarget?: string | null }
+/**
+ * OMP profile (stored in DroidGear)
+ */
+export type OmpProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; providers?: Partial<{ [key in string]: OmpProviderConfig }> }
+/**
+ * OMP provider configuration
+ */
+export type OmpProviderConfig = { baseUrl?: string | null; api?: string | null; apiKey?: string | null; oauth?: string | null; auth?: string | null; headers?: Partial<{ [key in string]: string }> | null; authHeader?: boolean | null; models: OmpModel[]; modelOverrides?: Partial<{ [key in string]: OmpModelOverride }> | null; compat?: OmpCompatConfig | null; disableStrictTools?: boolean | null; discovery?: OmpDiscovery | null }
 /**
  * Pi model definition
  */

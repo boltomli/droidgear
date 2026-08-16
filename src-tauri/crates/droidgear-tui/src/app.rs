@@ -10,6 +10,7 @@ use droidgear_core::{
     factory_settings::{CustomModel, MissionModelSettings},
     hermes::HermesProfile,
     mcp::McpServer,
+    omp::OmpProfile,
     openclaw::{OpenClawProfile, OpenClawSubAgent},
     opencode::OpenCodeProfile,
     paths::{EffectivePath, EffectivePaths},
@@ -51,6 +52,10 @@ pub enum Screen {
     PiProfile,
     PiProvider,
     PiModel,
+    Omp,
+    OmpProfile,
+    OmpProvider,
+    OmpModel,
     Hermes,
     HermesProfile,
     HermesProvider,
@@ -192,6 +197,21 @@ pub enum ConfirmAction {
         provider_id: String,
     },
     PiDeleteModel {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
+    OmpApply {
+        id: String,
+    },
+    OmpDelete {
+        id: String,
+    },
+    OmpDeleteProvider {
+        profile_id: String,
+        provider_id: String,
+    },
+    OmpDeleteModel {
         profile_id: String,
         provider_id: String,
         model_index: usize,
@@ -469,6 +489,63 @@ pub enum InputAction {
         provider_id: String,
         model_index: usize,
     },
+    OmpCreateProfile,
+    OmpDuplicate {
+        id: String,
+    },
+    OmpSetProfileName {
+        id: String,
+    },
+    OmpSetProfileDescription {
+        id: String,
+    },
+    OmpAddProvider {
+        profile_id: String,
+    },
+    OmpSetProviderBaseUrl {
+        profile_id: String,
+        provider_id: String,
+    },
+    OmpSetProviderApiKey {
+        profile_id: String,
+        provider_id: String,
+    },
+    OmpAddModel {
+        profile_id: String,
+        provider_id: String,
+    },
+    OmpSetModelId {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
+    OmpSetModelName {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
+    OmpSetModelContextWindow {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
+    OmpSetModelMaxTokens {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
+    OmpSetModelCost {
+        profile_id: String,
+        provider_id: String,
+        model_index: usize,
+    },
+    OmpImportSetApiKey {
+        profile_id: String,
+        provider_id: String,
+    },
+    OmpAddProviderFromChannel {
+        profile_id: String,
+    },
     HermesCreateProfile,
     HermesDuplicate {
         id: String,
@@ -589,6 +666,26 @@ pub enum SelectAction {
         provider_id: String,
     },
     PiAddProviderFromChannel {
+        profile_id: String,
+        provider_id: String,
+    },
+    OmpSetProviderApi {
+        profile_id: String,
+        provider_id: String,
+    },
+    OmpImportFromChannel {
+        profile_id: String,
+        provider_id: String,
+    },
+    OmpImportSetToken {
+        profile_id: String,
+        provider_id: String,
+    },
+    OmpImportToggleModel {
+        profile_id: String,
+        provider_id: String,
+    },
+    OmpAddProviderFromChannel {
         profile_id: String,
         provider_id: String,
     },
@@ -726,6 +823,17 @@ pub struct App {
     pub pi_model_index: usize,
     pub pi_model_field_index: usize,
 
+    pub omp_profiles: Vec<OmpProfile>,
+    pub omp_active_id: Option<String>,
+    pub omp_index: usize,
+    pub omp_detail_id: Option<String>,
+    pub omp_detail: Option<OmpProfile>,
+    pub omp_detail_field_index: usize,
+    pub omp_provider_index: usize,
+    pub omp_provider_field_index: usize,
+    pub omp_model_index: usize,
+    pub omp_model_field_index: usize,
+
     pub hermes_profiles: Vec<HermesProfile>,
     pub hermes_active_id: Option<String>,
     pub hermes_index: usize,
@@ -750,6 +858,21 @@ pub struct App {
     pub pi_import_pending_tokens: Option<Vec<droidgear_core::channel::ChannelToken>>,
     /// Inferred API type for pending channel import
     pub pi_import_pending_api_type: Option<String>,
+
+    /// Temporary state used during OMP "import from channel" flow in TUI
+    pub omp_import_pending_channel_id: Option<String>,
+    pub omp_import_pending_base_url: Option<String>,
+    pub omp_import_pending_provider_id: Option<String>,
+    /// Pending models fetched from channel (for model selection in import flow)
+    pub omp_import_pending_models: Option<Vec<droidgear_core::factory_settings::ModelInfo>>,
+    /// Selected indices in pending models
+    pub omp_import_pending_selected: Option<Vec<bool>>,
+    /// Resolved API key for pending channel import
+    pub omp_import_pending_api_key: Option<String>,
+    /// Fetched tokens for the current channel import (for platform lookup)
+    pub omp_import_pending_tokens: Option<Vec<droidgear_core::channel::ChannelToken>>,
+    /// Inferred API type for pending channel import
+    pub omp_import_pending_api_type: Option<String>,
 
     pub sessions: Vec<SessionSummary>,
     pub sessions_index: usize,
@@ -885,6 +1008,16 @@ impl App {
             pi_provider_field_index: 0,
             pi_model_index: 0,
             pi_model_field_index: 0,
+            omp_profiles: Vec::new(),
+            omp_active_id: None,
+            omp_index: 0,
+            omp_detail_id: None,
+            omp_detail: None,
+            omp_detail_field_index: 0,
+            omp_provider_index: 0,
+            omp_provider_field_index: 0,
+            omp_model_index: 0,
+            omp_model_field_index: 0,
             hermes_profiles: Vec::new(),
             hermes_active_id: None,
             hermes_index: 0,
@@ -902,6 +1035,14 @@ impl App {
             pi_import_pending_api_key: None,
             pi_import_pending_tokens: None,
             pi_import_pending_api_type: None,
+            omp_import_pending_channel_id: None,
+            omp_import_pending_base_url: None,
+            omp_import_pending_provider_id: None,
+            omp_import_pending_models: None,
+            omp_import_pending_selected: None,
+            omp_import_pending_api_key: None,
+            omp_import_pending_tokens: None,
+            omp_import_pending_api_type: None,
             sessions: Vec::new(),
             sessions_index: 0,
             specs: Vec::new(),
@@ -984,6 +1125,11 @@ impl App {
             NavGroup {
                 label: "Pi",
                 items: &[("Providers", Screen::Pi)],
+                system: false,
+            },
+            NavGroup {
+                label: "OMP",
+                items: &[("Providers", Screen::Omp)],
                 system: false,
             },
             NavGroup {
@@ -1081,6 +1227,9 @@ impl App {
             Screen::PiProfile => Screen::Pi,
             Screen::PiProvider => Screen::PiProfile,
             Screen::PiModel => Screen::PiProvider,
+            Screen::OmpProfile => Screen::Omp,
+            Screen::OmpProvider => Screen::OmpProfile,
+            Screen::OmpModel => Screen::OmpProvider,
             Screen::HermesProfile => Screen::Hermes,
             Screen::HermesProvider => Screen::HermesProfile,
             Screen::ChannelsEdit => Screen::Channels,
@@ -1113,6 +1262,14 @@ impl App {
         let mut keys: Vec<String> = detail.providers.keys().cloned().collect();
         keys.sort_by_key(|a| a.to_lowercase());
         keys.get(self.pi_provider_index).cloned()
+    }
+
+    /// Get the provider ID at the current omp_provider_index.
+    pub fn omp_current_provider_id(&self) -> Option<String> {
+        let detail = self.omp_detail.as_ref()?;
+        let mut keys: Vec<String> = detail.providers.keys().cloned().collect();
+        keys.sort_by_key(|a| a.to_lowercase());
+        keys.get(self.omp_provider_index).cloned()
     }
 
     pub fn current_paths_key(&self) -> Option<String> {
@@ -1360,6 +1517,52 @@ impl App {
         let pi_model_fields_count = 7;
         if self.pi_model_field_index >= pi_model_fields_count {
             self.pi_model_field_index = pi_model_fields_count.saturating_sub(1);
+        }
+        // --- OMP ---
+        if self.omp_index >= self.omp_profiles.len() {
+            self.omp_index = self.omp_profiles.len().saturating_sub(1);
+        }
+        // OmpProfile screen: 2 fields (Name, Description) + provider list
+        let omp_detail_fields_count = 2;
+        let omp_provider_count = self
+            .omp_detail
+            .as_ref()
+            .map(|p| p.providers.len())
+            .unwrap_or(0);
+        let omp_detail_total = omp_detail_fields_count + omp_provider_count;
+        if self.omp_detail_field_index >= omp_detail_total {
+            self.omp_detail_field_index = omp_detail_total.saturating_sub(1);
+        }
+        let omp_provider_count = self
+            .omp_detail
+            .as_ref()
+            .map(|p| p.providers.len())
+            .unwrap_or(0);
+        if self.omp_provider_index >= omp_provider_count {
+            self.omp_provider_index = omp_provider_count.saturating_sub(1);
+        }
+        // OmpProvider screen has 3 fields: Base URL, API, API Key
+        let omp_provider_fields_count = 3;
+        if self.omp_provider_field_index >= omp_provider_fields_count {
+            self.omp_provider_field_index = omp_provider_fields_count.saturating_sub(1);
+        }
+        let omp_model_count = self
+            .omp_detail
+            .as_ref()
+            .and_then(|p| {
+                let keys: Vec<String> = p.providers.keys().cloned().collect();
+                keys.get(self.omp_provider_index)
+                    .and_then(|pid| p.providers.get(pid))
+                    .map(|cfg| cfg.models.len())
+            })
+            .unwrap_or(0);
+        if self.omp_model_index >= omp_model_count {
+            self.omp_model_index = omp_model_count.saturating_sub(1);
+        }
+        // OmpModel screen has 7 fields: id, name, reasoning, input, contextWindow, maxTokens, cost
+        let omp_model_fields_count = 7;
+        if self.omp_model_field_index >= omp_model_fields_count {
+            self.omp_model_field_index = omp_model_fields_count.saturating_sub(1);
         }
         if self.sessions_index >= self.sessions.len() {
             self.sessions_index = self.sessions.len().saturating_sub(1);

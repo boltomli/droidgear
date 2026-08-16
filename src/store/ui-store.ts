@@ -10,6 +10,7 @@ type NavigationView =
   | 'openclaw'
   | 'hermes'
   | 'pi'
+  | 'omp'
 type ToolView =
   | 'droid'
   | 'opencode'
@@ -18,6 +19,7 @@ type ToolView =
   | 'openclaw'
   | 'hermes'
   | 'pi'
+  | 'omp'
 export type DroidSubView =
   | 'models'
   | 'settings'
