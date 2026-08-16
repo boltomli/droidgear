@@ -97,6 +97,22 @@ fn active_profile_path_for_home(home_dir: &Path) -> Result<PathBuf, String> {
 /// `~/.hermes/` (or custom path) — NOT WSL-aware; used by `_for_home` variants
 /// and tests that pass a temp directory.
 fn hermes_config_dir_for_home(home_dir: &Path) -> Result<PathBuf, String> {
+    // Check AppData/Local/hermes first (Windows user config)
+    // Only when home_dir is the system home (not a custom/test path)
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(system_home) = dirs::home_dir() {
+            if home_dir == system_home {
+                if let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") {
+                    let user_path = std::path::PathBuf::from(local_app_data).join("hermes");
+                    if user_path.join("config.yaml").exists() {
+                        return Ok(user_path);
+                    }
+                }
+            }
+        }
+    }
+    // Fallback to main config path
     let config_paths = paths::load_config_paths_for_home(home_dir);
     let dir = paths::get_hermes_home_for_home(home_dir, &config_paths)?;
     if !dir.exists() {
