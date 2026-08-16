@@ -1354,6 +1354,7 @@
   "omp.actions.applySuccess": "Profile applied successfully",
   "omp.actions.loadedFromLive": "Loaded from live config",
   "omp.actions.loadFromLive": "Load from Live",
+  "omp.actions.noLiveRoles": "No model roles found in config.yml",
   "omp.actions.refreshLive": "Refresh",
 
   "omp.liveConfig.title": "Live Config",

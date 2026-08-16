@@ -1354,6 +1354,7 @@
   "omp.actions.applySuccess": "配置已成功应用",
   "omp.actions.loadedFromLive": "已从活跃配置加载",
   "omp.actions.loadFromLive": "从活跃配置加载",
+  "omp.actions.noLiveRoles": "config.yml 中未找到模型角色配置",
   "omp.actions.refreshLive": "刷新",
 
   "omp.liveConfig.title": "当前配置",

@@ -133,11 +133,16 @@ export function OmpConfigPage() {
 
   const handleLoadFromLive = async () => {
     if (!currentProfile) return
-    if (liveConfig?.agentConfig?.modelRoles) {
+    // Reload live config first in case it changed
+    await loadLiveConfig()
+    const latest = useOmpStore.getState().liveConfig
+    if (latest?.agentConfig?.modelRoles) {
       await updateCurrentProfile({
-        modelRoles: liveConfig.agentConfig.modelRoles,
+        modelRoles: latest.agentConfig.modelRoles,
       })
       toast.success(t('omp.actions.loadedFromLive'))
+    } else {
+      toast.warning(t('omp.actions.noLiveRoles'))
     }
   }
 

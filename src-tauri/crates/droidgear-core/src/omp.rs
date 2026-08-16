@@ -603,14 +603,15 @@ pub fn get_omp_config_status_for_home(home_dir: &Path) -> Result<OmpConfigStatus
 }
 
 /// Read the current OMP config from all sources.
+/// Returns partial results if DB reads fail (e.g. files locked by running OMP).
 pub fn read_omp_current_config_for_home(home_dir: &Path) -> Result<OmpCurrentConfig, String> {
     let agent_config = read_config_yml(home_dir)?;
 
     let models_db_path = omp_models_db_path_for_home(home_dir)?;
-    let provider_models = read_model_cache_from_db(&models_db_path)?;
+    let provider_models = read_model_cache_from_db(&models_db_path).unwrap_or_default();
 
     let agent_db_path = omp_agent_db_path_for_home(home_dir)?;
-    let credentials = read_credentials_from_db(&agent_db_path)?;
+    let credentials = read_credentials_from_db(&agent_db_path).unwrap_or_default();
 
     Ok(OmpCurrentConfig {
         agent_config,

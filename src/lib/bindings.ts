@@ -2539,7 +2539,7 @@ export type CodexTemporaryRunPlan = { program: string; args: string[]; env: ([st
 /**
  * User-defined configuration paths (only stores explicitly set paths)
  */
-export type ConfigPaths = { factory?: string | null; opencode?: string | null; opencodeAuth?: string | null; codex?: string | null; claude?: string | null; openclaw?: string | null; hermes?: string | null; pi?: string | null }
+export type ConfigPaths = { factory?: string | null; opencode?: string | null; opencodeAuth?: string | null; codex?: string | null; claude?: string | null; openclaw?: string | null; hermes?: string | null; pi?: string | null; omp?: string | null }
 export type ConnectionDiagnostics = { success: boolean; provider: string; modelId: string; latencyMs: number; error?: string | null; timestamp: string; testMode: TestMode; 
 /**
  * Actual model response text (inference mode only).
@@ -2610,7 +2610,7 @@ export type EffectivePath = { key: string; path: string; isDefault: boolean }
 /**
  * All effective paths
  */
-export type EffectivePaths = { factory: EffectivePath; opencode: EffectivePath; opencodeAuth: EffectivePath; codex: EffectivePath; claude: EffectivePath; openclaw: EffectivePath; hermes: EffectivePath; pi: EffectivePath }
+export type EffectivePaths = { factory: EffectivePath; opencode: EffectivePath; opencodeAuth: EffectivePath; codex: EffectivePath; claude: EffectivePath; openclaw: EffectivePath; hermes: EffectivePath; pi: EffectivePath; omp: EffectivePath }
 /**
  * Output format
  */
@@ -2753,6 +2753,54 @@ export type MissionModelSettings = { workerModel?: string | null; workerReasonin
 export type ModelInfo = { id: string; name: string | null }
 export type ModelTestResult = { modelId: string; modelName: string; diagnostics: ConnectionDiagnostics; isAvailable: boolean }
 /**
+ * OMP agent configuration (from `~/.omp/agent/config.yml`).
+ */
+export type OmpAgentConfig = { modelRoles?: OmpModelRoles | null; theme?: OmpTheme | null; steeringMode?: string | null; followUpMode?: string | null; interruptMode?: string | null; symbolPreset?: string | null; setupVersion?: number | null }
+/**
+ * A cached model entry from `models.db` (read-only).
+ */
+export type OmpCachedModel = { id: string; name?: string | null; api?: string | null; provider?: string | null; baseUrl?: string | null; reasoning?: boolean; input?: string[]; cost?: OmpModelCost | null; contextWindow?: number; maxTokens?: number; thinking?: OmpThinkingConfig | null }
+/**
+ * Full OMP configuration status.
+ */
+export type OmpConfigStatus = { configExists: boolean; configPath: string; modelsDbExists: boolean; agentDbExists: boolean }
+/**
+ * OMP credential status for a provider.
+ */
+export type OmpCredentialStatus = { provider: string; credentialType: string; hasKey: boolean }
+/**
+ * Current OMP configuration (combined from all sources).
+ */
+export type OmpCurrentConfig = { agentConfig?: OmpAgentConfig; providerModels?: OmpProviderModels[]; credentials?: OmpCredentialStatus[] }
+/**
+ * OMP model cost information.
+ */
+export type OmpModelCost = { input?: number; output?: number; cacheRead?: number; cacheWrite?: number }
+/**
+ * OMP model roles — which model handles which role.
+ */
+export type OmpModelRoles = { default?: string | null; smol?: string | null; slow?: string | null; plan?: string | null; commit?: string | null }
+/**
+ * OMP profile (stored in DroidGear) — snapshot of model role assignments.
+ */
+export type OmpProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; 
+/**
+ * Model role assignments (what gets written to config.yml on apply).
+ */
+modelRoles?: OmpModelRoles }
+/**
+ * A provider's cached model list from `models.db`.
+ */
+export type OmpProviderModels = { providerId: string; models: OmpCachedModel[] }
+/**
+ * OMP theme configuration.
+ */
+export type OmpTheme = { dark?: string | null; light?: string | null }
+/**
+ * OMP thinking/reasoning configuration.
+ */
+export type OmpThinkingConfig = { mode?: string | null; efforts?: string[] | null }
+/**
  * OpenClaw config status
  */
 export type OpenClawConfigStatus = { configExists: boolean; configPath: string }
@@ -2840,50 +2888,6 @@ export type PiConfigStatus = { configExists: boolean; configPath: string }
  * Current Pi configuration (from `~/.pi/agent/models.json`)
  */
 export type PiCurrentConfig = { providers?: Partial<{ [key in string]: PiProviderConfig }> }
-/**
- * OMP agent configuration (from `~/.omp/agent/config.yml`).
- */
-export type OmpAgentConfig = { modelRoles?: OmpModelRoles | null; theme?: OmpTheme | null; steeringMode?: string | null; followUpMode?: string | null; interruptMode?: string | null; symbolPreset?: string | null; setupVersion?: number | null }
-/**
- * OMP cached model entry from `models.db` (read-only).
- */
-export type OmpCachedModel = { id: string; name?: string | null; api?: string | null; provider?: string | null; baseUrl?: string | null; reasoning?: boolean; input?: string[]; cost?: OmpModelCost | null; contextWindow?: number; maxTokens?: number; thinking?: OmpThinkingConfig | null }
-/**
- * OMP config status.
- */
-export type OmpConfigStatus = { configExists: boolean; configPath: string; modelsDbExists: boolean; agentDbExists: boolean }
-/**
- * OMP credential status for a provider (from `agent.db`, read-only).
- */
-export type OmpCredentialStatus = { provider: string; credentialType: string; hasKey: boolean }
-/**
- * Current OMP configuration (combined from all sources).
- */
-export type OmpCurrentConfig = { agentConfig: OmpAgentConfig; providerModels: OmpProviderModels[]; credentials: OmpCredentialStatus[] }
-/**
- * OMP model cost configuration.
- */
-export type OmpModelCost = { input?: number; output?: number; cacheRead?: number; cacheWrite?: number }
-/**
- * OMP model role assignments.
- */
-export type OmpModelRoles = { default?: string | null; smol?: string | null; slow?: string | null; plan?: string | null; commit?: string | null }
-/**
- * OMP profile (stored in DroidGear) — snapshot of model role assignments.
- */
-export type OmpProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; modelRoles: OmpModelRoles }
-/**
- * A provider's cached model list from `models.db` (read-only).
- */
-export type OmpProviderModels = { providerId: string; models: OmpCachedModel[] }
-/**
- * OMP thinking/reasoning configuration.
- */
-export type OmpThinkingConfig = { mode?: string | null; efforts?: string[] | null }
-/**
- * OMP theme configuration.
- */
-export type OmpTheme = { dark?: string | null; light?: string | null }
 /**
  * Pi model definition
  */
