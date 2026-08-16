@@ -79,6 +79,12 @@ export const useOmpStore = create<OmpState>()(
             // Auto-select active profile
             if (activeId) {
               get().selectProfile(activeId)
+            } else {
+              // Select first profile if no active
+              const { profiles } = get()
+              if (profiles.length > 0 && profiles[0]) {
+                get().selectProfile(profiles[0].id)
+              }
             }
           }
         } catch {

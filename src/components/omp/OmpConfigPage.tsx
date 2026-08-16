@@ -95,8 +95,9 @@ export function OmpConfigPage() {
   const [newProfileName, setNewProfileName] = useState('')
 
   useEffect(() => {
-    void loadProfiles()
-    void loadActiveProfileId()
+    void loadProfiles().then(() => {
+      void loadActiveProfileId()
+    })
     void loadConfigStatus()
     void loadLiveConfig()
   }, [loadProfiles, loadActiveProfileId, loadConfigStatus, loadLiveConfig])
