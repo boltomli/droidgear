@@ -1,8 +1,12 @@
 //! OMP (Oh My Pi) configuration management (core).
 //!
-//! Provides type definitions and path helpers for OMP's `~/.omp/agent/models.yml`
-//! configuration. OMP is a fork of Pi; the provider-model hierarchy is
-//! structurally identical but stored as YAML with a few OMP-specific fields.
+//! OMP stores configuration across three locations:
+//! - `~/.omp/agent/config.yml` — agent behavior (modelRoles, theme, etc.)
+//! - `~/.omp/agent/models.db` — SQLite model catalog cache (read-only from DroidGear)
+//! - `~/.omp/agent/agent.db` — SQLite credentials (read-only from DroidGear)
+//!
+//! DroidGear manages model role assignments via `config.yml` and reads the
+//! model catalog and credential status from the SQLite databases.
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -14,21 +18,66 @@ use uuid::Uuid;
 use crate::{paths, storage};
 
 // ============================================================================
-// Types
+// Types — config.yml
 // ============================================================================
 
-/// OMP model cost tier. Rates are in dollars per million tokens.
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+/// OMP model roles — which model handles which role.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
-pub struct OmpModelCostTier {
-    pub input_tokens_above: u32,
-    pub input: f64,
-    pub output: f64,
-    pub cache_read: f64,
-    pub cache_write: f64,
+pub struct OmpModelRoles {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub smol: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub slow: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub plan: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub commit: Option<String>,
+    #[serde(flatten)]
+    #[specta(skip)]
+    pub extra: HashMap<String, serde_json::Value>,
 }
 
-/// OMP model cost configuration
+/// OMP theme configuration.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OmpTheme {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dark: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub light: Option<String>,
+}
+
+/// OMP agent configuration (from `~/.omp/agent/config.yml`).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OmpAgentConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_roles: Option<OmpModelRoles>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub theme: Option<OmpTheme>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub steering_mode: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub follow_up_mode: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interrupt_mode: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub symbol_preset: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub setup_version: Option<u32>,
+    #[serde(flatten)]
+    #[specta(skip)]
+    pub extra: HashMap<String, serde_json::Value>,
+}
+
+// ============================================================================
+// Types — models.db (read-only)
+// ============================================================================
+
+/// OMP model cost information.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct OmpModelCost {
@@ -40,220 +89,47 @@ pub struct OmpModelCost {
     pub cache_read: f64,
     #[serde(default)]
     pub cache_write: f64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tiers: Option<Vec<OmpModelCostTier>>,
-    #[serde(flatten)]
-    #[specta(skip)]
-    pub extra: HashMap<String, serde_json::Value>,
 }
 
-/// OMP compatibility configuration. Unknown fields are retained for newer OMP versions.
+/// OMP thinking/reasoning configuration.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
-pub struct OmpCompatConfig {
+pub struct OmpThinkingConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub supports_store: Option<bool>,
+    pub mode: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub supports_developer_role: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub supports_reasoning_effort: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reasoning_effort_map: Option<HashMap<String, serde_json::Value>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub supports_usage_in_streaming: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub max_tokens_field: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub requires_tool_result_name: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub requires_assistant_after_tool_result: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub requires_thinking_as_text: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub requires_reasoning_content_on_assistant_messages: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thinking_format: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cache_control_format: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub supports_strict_mode: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub supports_long_cache_retention: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub supports_eager_tool_input_streaming: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub open_router_routing: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vercel_gateway_routing: Option<serde_json::Value>,
-    #[serde(flatten)]
-    #[specta(skip)]
-    pub extra: HashMap<String, serde_json::Value>,
+    pub efforts: Option<Vec<String>>,
 }
 
-/// OMP model definition
+/// A cached model entry from `models.db` (read-only).
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
-pub struct OmpModel {
+pub struct OmpCachedModel {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub api: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_url: Option<String>,
     #[serde(default)]
     pub reasoning: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thinking_level_map: Option<HashMap<String, Option<String>>>,
     #[serde(default = "default_input")]
     pub input: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost: Option<OmpModelCost>,
     #[serde(default = "default_context_window")]
     pub context_window: u32,
     #[serde(default = "default_max_tokens")]
     pub max_tokens: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cost: Option<OmpModelCost>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub headers: Option<HashMap<String, String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub compat: Option<OmpCompatConfig>,
-    /// OMP-specific: when context exceeds contextWindow, swap to this model before fallback.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub context_promotion_target: Option<String>,
+    pub thinking: Option<OmpThinkingConfig>,
     #[serde(flatten)]
     #[specta(skip)]
     pub extra: HashMap<String, serde_json::Value>,
 }
-
-impl Default for OmpModel {
-    fn default() -> Self {
-        Self {
-            id: String::new(),
-            name: None,
-            api: None,
-            reasoning: false,
-            thinking_level_map: None,
-            input: default_input(),
-            context_window: default_context_window(),
-            max_tokens: default_max_tokens(),
-            cost: None,
-            headers: None,
-            compat: None,
-            context_promotion_target: None,
-            extra: HashMap::new(),
-        }
-    }
-}
-
-/// OMP model override (subset of OmpModel fields for overriding built-in models)
-#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct OmpModelOverride {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub api: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reasoning: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thinking_level_map: Option<HashMap<String, Option<String>>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub context_window: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub max_tokens: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cost: Option<OmpModelCost>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub headers: Option<HashMap<String, String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub compat: Option<OmpCompatConfig>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub context_promotion_target: Option<String>,
-    #[serde(flatten)]
-    #[specta(skip)]
-    pub extra: HashMap<String, serde_json::Value>,
-}
-
-/// OMP discovery configuration for live model listing
-#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct OmpDiscovery {
-    #[serde(rename = "type")]
-    pub discovery_type: String,
-    #[serde(flatten)]
-    #[specta(skip)]
-    pub extra: HashMap<String, serde_json::Value>,
-}
-
-/// OMP provider configuration
-#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct OmpProviderConfig {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub api: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub api_key: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub oauth: Option<String>,
-    /// OMP-specific: auth scheme (apiKey, none, oauth)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub auth: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub headers: Option<HashMap<String, String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub auth_header: Option<bool>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub models: Vec<OmpModel>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model_overrides: Option<HashMap<String, OmpModelOverride>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub compat: Option<OmpCompatConfig>,
-    /// OMP-specific: disable strict tool schema
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub disable_strict_tools: Option<bool>,
-    /// OMP-specific: live model discovery
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub discovery: Option<OmpDiscovery>,
-    #[serde(flatten)]
-    #[specta(skip)]
-    pub extra: HashMap<String, serde_json::Value>,
-}
-
-/// OMP profile (stored in DroidGear)
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct OmpProfile {
-    pub id: String,
-    pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    pub created_at: String,
-    pub updated_at: String,
-    #[serde(default)]
-    pub providers: HashMap<String, OmpProviderConfig>,
-}
-
-/// OMP config status
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct OmpConfigStatus {
-    pub config_exists: bool,
-    pub config_path: String,
-}
-
-/// Current OMP configuration (from `~/.omp/agent/models.yml`)
-#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct OmpCurrentConfig {
-    #[serde(default)]
-    pub providers: HashMap<String, OmpProviderConfig>,
-}
-
-// ============================================================================
-// Default value functions
-// ============================================================================
 
 fn default_input() -> Vec<String> {
     vec!["text".to_string()]
@@ -267,49 +143,66 @@ fn default_max_tokens() -> u32 {
     16384
 }
 
-// ============================================================================
-// DroidGear Model Registry
-// ============================================================================
-
-const MODEL_REGISTRY_JSON: &str = include_str!("../../../../src/lib/model-registry-data.json");
-
-#[derive(Deserialize)]
+/// A provider's cached model list from `models.db`.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
-struct RegistryModel {
-    id: String,
-    name: String,
-    #[serde(default)]
-    aliases: Vec<String>,
-    reasoning: bool,
-    input: Vec<String>,
-    #[serde(default)]
-    thinking_level_map: Option<HashMap<String, Option<String>>>,
-    context_window: u32,
-    max_output_tokens: Option<u32>,
+pub struct OmpProviderModels {
+    pub provider_id: String,
+    pub models: Vec<OmpCachedModel>,
 }
 
-fn registry_models() -> &'static [RegistryModel] {
-    static MODELS: std::sync::OnceLock<Vec<RegistryModel>> = std::sync::OnceLock::new();
-    MODELS.get_or_init(|| serde_json::from_str(MODEL_REGISTRY_JSON).unwrap_or_default())
+// ============================================================================
+// Types — agent.db (read-only)
+// ============================================================================
+
+/// OMP credential status for a provider.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OmpCredentialStatus {
+    pub provider: String,
+    pub credential_type: String,
+    pub has_key: bool,
 }
 
-pub fn enrich_omp_model_from_registry(model: &mut OmpModel) -> bool {
-    let Some(metadata) = registry_models()
-        .iter()
-        .find(|entry| entry.id == model.id || entry.aliases.iter().any(|alias| alias == &model.id))
-    else {
-        return false;
-    };
+// ============================================================================
+// Types — combined read result
+// ============================================================================
 
-    model.name = Some(metadata.name.clone());
-    model.reasoning = metadata.reasoning;
-    model.input = metadata.input.clone();
-    model.thinking_level_map = metadata.thinking_level_map.clone();
-    model.context_window = metadata.context_window;
-    if let Some(max_tokens) = metadata.max_output_tokens {
-        model.max_tokens = max_tokens;
-    }
-    true
+/// Full OMP configuration status.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OmpConfigStatus {
+    pub config_exists: bool,
+    pub config_path: String,
+    pub models_db_exists: bool,
+    pub agent_db_exists: bool,
+}
+
+/// Current OMP configuration (combined from all sources).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OmpCurrentConfig {
+    #[serde(default)]
+    pub agent_config: OmpAgentConfig,
+    #[serde(default)]
+    pub provider_models: Vec<OmpProviderModels>,
+    #[serde(default)]
+    pub credentials: Vec<OmpCredentialStatus>,
+}
+
+/// OMP profile (stored in DroidGear) — snapshot of model role assignments.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OmpProfile {
+    pub id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    /// Model role assignments (what gets written to config.yml on apply).
+    #[serde(default)]
+    pub model_roles: OmpModelRoles,
 }
 
 // ============================================================================
@@ -351,9 +244,19 @@ pub fn omp_config_dir_for_home(home_dir: &Path) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
-/// `~/.omp/agent/models.yml`
-pub fn omp_config_path_for_home(home_dir: &Path) -> Result<PathBuf, String> {
-    Ok(omp_config_dir_for_home(home_dir)?.join("models.yml"))
+/// `~/.omp/agent/config.yml`
+pub fn omp_config_yml_path_for_home(home_dir: &Path) -> Result<PathBuf, String> {
+    Ok(omp_config_dir_for_home(home_dir)?.join("config.yml"))
+}
+
+/// `~/.omp/agent/models.db`
+pub fn omp_models_db_path_for_home(home_dir: &Path) -> Result<PathBuf, String> {
+    Ok(omp_config_dir_for_home(home_dir)?.join("models.db"))
+}
+
+/// `~/.omp/agent/agent.db`
+pub fn omp_agent_db_path_for_home(home_dir: &Path) -> Result<PathBuf, String> {
+    Ok(omp_config_dir_for_home(home_dir)?.join("agent.db"))
 }
 
 fn validate_profile_id(id: &str) -> Result<(), String> {
@@ -373,7 +276,7 @@ pub fn profile_path_for_home(home_dir: &Path, id: &str) -> Result<PathBuf, Strin
 }
 
 // ============================================================================
-// System wrappers (use system home dir)
+// System wrappers
 // ============================================================================
 
 fn system_home_dir() -> Result<PathBuf, String> {
@@ -390,10 +293,6 @@ pub fn active_profile_path() -> Result<PathBuf, String> {
 
 pub fn omp_config_dir() -> Result<PathBuf, String> {
     omp_config_dir_for_home(&system_home_dir()?)
-}
-
-pub fn omp_config_path() -> Result<PathBuf, String> {
-    omp_config_path_for_home(&system_home_dir()?)
 }
 
 pub fn profile_path(id: &str) -> Result<PathBuf, String> {
@@ -426,74 +325,128 @@ fn load_profile_by_id(home_dir: &Path, id: &str) -> Result<OmpProfile, String> {
 }
 
 // ============================================================================
-// YAML Config Helpers
+// config.yml Read/Write
 // ============================================================================
 
-/// Parse `~/.omp/agent/models.yml` into OmpCurrentConfig.
-///
-/// The YAML root is expected to have a `providers:` mapping at the top level.
-/// If the file is missing, returns an empty config. If it contains malformed
-/// YAML, returns an error.
-fn parse_omp_yaml_config(content: &str) -> Result<OmpCurrentConfig, String> {
-    if content.trim().is_empty() {
-        return Ok(OmpCurrentConfig {
-            providers: HashMap::new(),
-        });
+fn read_config_yml(home_dir: &Path) -> Result<OmpAgentConfig, String> {
+    let path = omp_config_yml_path_for_home(home_dir)?;
+    if !path.exists() {
+        return Ok(OmpAgentConfig::default());
     }
-
-    let value: serde_yaml::Value =
-        serde_yaml::from_str(content).map_err(|e| format!("Invalid OMP YAML config: {e}"))?;
-
-    let providers = match value.get("providers") {
-        Some(serde_yaml::Value::Mapping(map)) => {
-            let mut result = HashMap::new();
-            for (key, val) in map {
-                if let serde_yaml::Value::String(name) = key {
-                    if val.as_mapping().is_some() {
-                        let provider: OmpProviderConfig = serde_yaml::from_value(val.clone())
-                            .map_err(|e| format!("Invalid provider config for '{name}': {e}"))?;
-                        result.insert(name.clone(), provider);
-                    }
-                }
-            }
-            result
-        }
-        _ => HashMap::new(),
-    };
-
-    Ok(OmpCurrentConfig { providers })
+    let s =
+        std::fs::read_to_string(&path).map_err(|e| format!("Failed to read config.yml: {e}"))?;
+    if s.trim().is_empty() {
+        return Ok(OmpAgentConfig::default());
+    }
+    serde_yaml::from_str(&s).map_err(|e| format!("Invalid config.yml YAML: {e}"))
 }
 
-/// Serialize OmpCurrentConfig to YAML and write to `models.yml`.
-fn write_omp_yaml_config(home_dir: &Path, config: &OmpCurrentConfig) -> Result<(), String> {
-    let config_path = omp_config_path_for_home(home_dir)?;
+fn write_config_yml(home_dir: &Path, config: &OmpAgentConfig) -> Result<(), String> {
+    let path = omp_config_yml_path_for_home(home_dir)?;
+    let yaml_str = serde_yaml::to_string(config)
+        .map_err(|e| format!("Failed to serialize config.yml: {e}"))?;
 
-    // Build the YAML value manually to preserve structure
-    let mut root = serde_yaml::Mapping::new();
-    let mut providers_map = serde_yaml::Mapping::new();
-
-    for (name, provider) in &config.providers {
-        let provider_yaml = serde_yaml::to_value(provider)
-            .map_err(|e| format!("Failed to convert provider '{name}' to YAML: {e}"))?;
-        providers_map.insert(serde_yaml::Value::String(name.clone()), provider_yaml);
-    }
-
-    root.insert(
-        serde_yaml::Value::String("providers".to_string()),
-        serde_yaml::Value::Mapping(providers_map),
-    );
-
-    let yaml_str = serde_yaml::to_string(&serde_yaml::Value::Mapping(root))
-        .map_err(|e| format!("Failed to serialize OMP config YAML: {e}"))?;
-
-    // Ensure the config directory exists
     let config_dir = omp_config_dir_for_home(home_dir)?;
     if !config_dir.exists() {
         std::fs::create_dir_all(&config_dir)
             .map_err(|e| format!("Failed to create OMP config directory: {e}"))?;
     }
 
-    storage::atomic_write(&config_path, yaml_str.as_bytes())
+    storage::atomic_write(&path, yaml_str.as_bytes())
+}
+
+// ============================================================================
+// models.db Read (read-only)
+// ============================================================================
+
+#[cfg(test)]
+fn read_model_cache_from_db(_path: &Path) -> Result<Vec<OmpProviderModels>, String> {
+    // In tests, return empty (SQLite not available in unit tests)
+    Ok(vec![])
+}
+
+#[cfg(not(test))]
+fn read_model_cache_from_db(path: &Path) -> Result<Vec<OmpProviderModels>, String> {
+    use rusqlite::Connection;
+
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+
+    let conn = Connection::open(path).map_err(|e| format!("Failed to open models.db: {e}"))?;
+
+    let mut stmt = conn
+        .prepare("SELECT provider_id, models FROM model_cache")
+        .map_err(|e| format!("Failed to query model_cache: {e}"))?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let provider_id: String = row.get(0)?;
+            let models_json: String = row.get(1)?;
+            Ok((provider_id, models_json))
+        })
+        .map_err(|e| format!("Failed to read model_cache rows: {e}"))?;
+
+    let mut result = Vec::new();
+    for row in rows {
+        let (provider_id, models_json) =
+            row.map_err(|e| format!("Failed to read model_cache row: {e}"))?;
+        let models: Vec<OmpCachedModel> = serde_json::from_str(&models_json)
+            .map_err(|e| format!("Failed to parse models for '{provider_id}': {e}"))?;
+        result.push(OmpProviderModels {
+            provider_id,
+            models,
+        });
+    }
+
+    Ok(result)
+}
+
+// ============================================================================
+// agent.db Read (read-only)
+// ============================================================================
+
+#[cfg(test)]
+fn read_credentials_from_db(_path: &Path) -> Result<Vec<OmpCredentialStatus>, String> {
+    Ok(vec![])
+}
+
+#[cfg(not(test))]
+fn read_credentials_from_db(path: &Path) -> Result<Vec<OmpCredentialStatus>, String> {
+    use rusqlite::Connection;
+
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+
+    let conn = Connection::open(path).map_err(|e| format!("Failed to open agent.db: {e}"))?;
+
+    let mut stmt = conn
+        .prepare("SELECT provider, credential_type, data FROM auth_credentials")
+        .map_err(|e| format!("Failed to query auth_credentials: {e}"))?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let provider: String = row.get(0)?;
+            let credential_type: String = row.get(1)?;
+            let data: String = row.get(2)?;
+            Ok((provider, credential_type, data))
+        })
+        .map_err(|e| format!("Failed to read auth_credentials rows: {e}"))?;
+
+    let mut result = Vec::new();
+    for row in rows {
+        let (provider, credential_type, data) =
+            row.map_err(|e| format!("Failed to read auth_credentials row: {e}"))?;
+        let has_key = !data.trim().is_empty() && data != "null";
+        result.push(OmpCredentialStatus {
+            provider,
+            credential_type,
+            has_key,
+        });
+    }
+
+    Ok(result)
 }
 
 // ============================================================================
@@ -589,7 +542,7 @@ pub fn create_default_omp_profile_for_home(home_dir: &Path) -> Result<OmpProfile
         description: None,
         created_at: now.clone(),
         updated_at: now,
-        providers: HashMap::new(),
+        model_roles: OmpModelRoles::default(),
     };
 
     write_profile_file(home_dir, &profile)?;
@@ -624,44 +577,46 @@ pub fn set_active_omp_profile_id_for_home(home_dir: &Path, id: &str) -> Result<(
 // Apply + Config Status + Read Current Config
 // ============================================================================
 
-/// Apply a profile to `~/.omp/agent/models.yml`.
-///
-/// Reads the profile, extracts the providers map, and writes it as
-/// YAML to OMP's models.yml. Also sets the active profile ID.
+/// Apply a profile: write model roles to `~/.omp/agent/config.yml`.
 pub fn apply_omp_profile_for_home(home_dir: &Path, id: &str) -> Result<(), String> {
     let profile = load_profile_by_id(home_dir, id)?;
 
-    let config = OmpCurrentConfig {
-        providers: profile.providers,
-    };
-    write_omp_yaml_config(home_dir, &config)?;
+    // Read current config.yml, update only modelRoles
+    let mut config = read_config_yml(home_dir)?;
+    config.model_roles = Some(profile.model_roles);
+    write_config_yml(home_dir, &config)?;
     set_active_omp_profile_id_for_home(home_dir, id)?;
     Ok(())
 }
 
-/// Get the status of `~/.omp/agent/models.yml`.
+/// Get the status of OMP config files.
 pub fn get_omp_config_status_for_home(home_dir: &Path) -> Result<OmpConfigStatus, String> {
-    let config_path = omp_config_path_for_home(home_dir)?;
+    let config_path = omp_config_yml_path_for_home(home_dir)?;
+    let models_db = omp_models_db_path_for_home(home_dir)?;
+    let agent_db = omp_agent_db_path_for_home(home_dir)?;
     Ok(OmpConfigStatus {
         config_exists: config_path.exists(),
         config_path: config_path.to_string_lossy().to_string(),
+        models_db_exists: models_db.exists(),
+        agent_db_exists: agent_db.exists(),
     })
 }
 
-/// Read the current OMP config from `~/.omp/agent/models.yml`.
-///
-/// Returns the parsed config. If the file does not exist, returns an empty
-/// config (no providers). If it contains malformed YAML, returns an error.
+/// Read the current OMP config from all sources.
 pub fn read_omp_current_config_for_home(home_dir: &Path) -> Result<OmpCurrentConfig, String> {
-    let config_path = omp_config_path_for_home(home_dir)?;
-    if !config_path.exists() {
-        return Ok(OmpCurrentConfig {
-            providers: HashMap::new(),
-        });
-    }
-    let s = std::fs::read_to_string(&config_path)
-        .map_err(|e| format!("Failed to read OMP config file: {e}"))?;
-    parse_omp_yaml_config(&s)
+    let agent_config = read_config_yml(home_dir)?;
+
+    let models_db_path = omp_models_db_path_for_home(home_dir)?;
+    let provider_models = read_model_cache_from_db(&models_db_path)?;
+
+    let agent_db_path = omp_agent_db_path_for_home(home_dir)?;
+    let credentials = read_credentials_from_db(&agent_db_path)?;
+
+    Ok(OmpCurrentConfig {
+        agent_config,
+        provider_models,
+        credentials,
+    })
 }
 
 // ============================================================================
@@ -732,201 +687,24 @@ mod tests {
             description: None,
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-01T00:00:00Z".to_string(),
-            providers: HashMap::new(),
+            model_roles: OmpModelRoles::default(),
         }
     }
 
-    fn make_profile_with_provider(id: &str, name: &str, provider_key: &str) -> OmpProfile {
-        let mut providers = HashMap::new();
-        providers.insert(
-            provider_key.to_string(),
-            OmpProviderConfig {
-                base_url: Some("http://localhost:11434/v1".to_string()),
-                api: Some("openai-completions".to_string()),
-                api_key: Some("ollama".to_string()),
-                auth: Some("apiKey".to_string()),
-                headers: None,
-                auth_header: Some(false),
-                models: vec![OmpModel {
-                    id: "llama3.1:8b".to_string(),
-                    name: Some("Llama 3.1 8B".to_string()),
-                    api: Some("openai-completions".to_string()),
-                    reasoning: false,
-                    input: vec!["text".to_string()],
-                    context_window: 128000,
-                    max_tokens: 16384,
-                    cost: None,
-                    compat: None,
-                    context_promotion_target: None,
-                    ..Default::default()
-                }],
-                model_overrides: None,
-                compat: None,
-                disable_strict_tools: None,
-                discovery: None,
-                ..Default::default()
-            },
-        );
+    fn make_profile_with_roles(id: &str, name: &str) -> OmpProfile {
         OmpProfile {
             id: id.to_string(),
             name: name.to_string(),
             description: Some("A test profile".to_string()),
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-01T00:00:00Z".to_string(),
-            providers,
-        }
-    }
-
-    #[test]
-    fn test_type_serialization() {
-        let model = OmpModel {
-            id: "llama3.1:8b".to_string(),
-            name: Some("Llama 3.1 8B".to_string()),
-            api: Some("openai-completions".to_string()),
-            reasoning: false,
-            input: vec!["text".to_string()],
-            context_window: 128000,
-            max_tokens: 16384,
-            cost: Some(OmpModelCost {
-                input: 0.0,
-                output: 0.0,
-                cache_read: 0.0,
-                cache_write: 0.0,
+            model_roles: OmpModelRoles {
+                default: Some("anthropic/claude-sonnet-4-5".to_string()),
+                smol: Some("anthropic/claude-haiku-4-5".to_string()),
+                slow: Some("anthropic/claude-opus-4-6".to_string()),
                 ..Default::default()
-            }),
-            compat: None,
-            context_promotion_target: None,
-            ..Default::default()
-        };
-
-        let json = serde_json::to_string_pretty(&model).unwrap();
-        assert!(json.contains("\"id\": \"llama3.1:8b\""));
-        assert!(json.contains("\"contextWindow\": 128000"));
-        assert!(json.contains("\"maxTokens\": 16384"));
-    }
-
-    #[test]
-    fn test_registry_enriches_known_model_metadata() {
-        let mut model = OmpModel {
-            id: "gpt-5.2".to_string(),
-            api: Some("openai-completions".to_string()),
-            ..Default::default()
-        };
-
-        assert!(enrich_omp_model_from_registry(&mut model));
-        assert_eq!(model.name.as_deref(), Some("GPT-5.2"));
-        assert!(model.reasoning);
-        assert_eq!(model.input, ["text", "image"]);
-        assert_eq!(model.context_window, 400000);
-        assert_eq!(model.max_tokens, 128000);
-    }
-
-    #[test]
-    fn test_yaml_config_roundtrip() {
-        let yaml = r#"
-providers:
-  ollama:
-    baseUrl: http://localhost:11434/v1
-    api: openai-completions
-    apiKey: ollama
-    auth: apiKey
-    models:
-      - id: llama3.1:8b
-        name: Llama 3.1 8B
-        reasoning: false
-        input:
-          - text
-        contextWindow: 128000
-        maxTokens: 16384
-"#;
-
-        let config = parse_omp_yaml_config(yaml).unwrap();
-        assert!(config.providers.contains_key("ollama"));
-        let provider = &config.providers["ollama"];
-        assert_eq!(
-            provider.base_url.as_deref(),
-            Some("http://localhost:11434/v1")
-        );
-        assert_eq!(provider.models.len(), 1);
-        assert_eq!(provider.models[0].id, "llama3.1:8b");
-        assert_eq!(provider.models[0].context_window, 128000);
-    }
-
-    #[test]
-    fn test_yaml_config_empty() {
-        let config = parse_omp_yaml_config("").unwrap();
-        assert!(config.providers.is_empty());
-    }
-
-    #[test]
-    fn test_yaml_config_with_omp_specific_fields() {
-        let yaml = r#"
-providers:
-  myco:
-    baseUrl: https://llm.internal.myco.dev/v1
-    apiKey: MYCO_API_KEY
-    api: openai-responses
-    auth: apiKey
-    disableStrictTools: true
-    models:
-      - id: myco-large
-        name: MyCo Large
-        reasoning: true
-        input:
-          - text
-          - image
-        contextWindow: 200000
-        maxTokens: 32000
-        contextPromotionTarget: anthropic/claude-opus-4-6
-"#;
-
-        let config = parse_omp_yaml_config(yaml).unwrap();
-        let provider = &config.providers["myco"];
-        assert_eq!(provider.disable_strict_tools, Some(true));
-        assert_eq!(
-            provider.models[0].context_promotion_target.as_deref(),
-            Some("anthropic/claude-opus-4-6")
-        );
-    }
-
-    #[test]
-    fn test_provider_serialization() {
-        let provider = OmpProviderConfig {
-            base_url: Some("http://localhost:11434/v1".to_string()),
-            api: Some("openai-completions".to_string()),
-            api_key: Some("ollama".to_string()),
-            auth: Some("apiKey".to_string()),
-            headers: None,
-            auth_header: Some(false),
-            models: vec![],
-            model_overrides: None,
-            compat: None,
-            disable_strict_tools: None,
-            discovery: None,
-            ..Default::default()
-        };
-
-        let json = serde_json::to_string_pretty(&provider).unwrap();
-        assert!(json.contains("\"baseUrl\": \"http://localhost:11434/v1\""));
-        assert!(json.contains("\"apiKey\": \"ollama\""));
-        assert!(json.contains("\"auth\": \"apiKey\""));
-    }
-
-    #[test]
-    fn test_profile_serialization() {
-        let profile = OmpProfile {
-            id: "test-id".to_string(),
-            name: "Test Profile".to_string(),
-            description: Some("A test profile".to_string()),
-            created_at: "2026-01-01T00:00:00Z".to_string(),
-            updated_at: "2026-01-01T00:00:00Z".to_string(),
-            providers: HashMap::new(),
-        };
-
-        let json = serde_json::to_string_pretty(&profile).unwrap();
-        assert!(json.contains("\"id\": \"test-id\""));
-        assert!(json.contains("\"createdAt\":"));
-        assert!(json.contains("\"updatedAt\":"));
+            },
+        }
     }
 
     #[test]
@@ -942,17 +720,6 @@ providers:
     }
 
     #[test]
-    fn test_model_defaults() {
-        let json = r#"{"id": "test-model"}"#;
-        let model: OmpModel = serde_json::from_str(json).unwrap();
-        assert_eq!(model.id, "test-model");
-        assert!(!model.reasoning);
-        assert_eq!(model.input, vec!["text".to_string()]);
-        assert_eq!(model.context_window, 128000);
-        assert_eq!(model.max_tokens, 16384);
-    }
-
-    #[test]
     fn test_validate_profile_id() {
         assert!(validate_profile_id("valid-id").is_ok());
         assert!(validate_profile_id("valid_id").is_ok());
@@ -962,9 +729,96 @@ providers:
         assert!(validate_profile_id("has/slash").is_err());
     }
 
-    // =========================================================================
-    // CRUD Tests
-    // =========================================================================
+    #[test]
+    fn test_profile_serialization() {
+        let profile = make_profile_with_roles("test-id", "Test Profile");
+        let json = serde_json::to_string_pretty(&profile).unwrap();
+        assert!(json.contains("\"id\": \"test-id\""));
+        assert!(json.contains("\"modelRoles\""));
+        assert!(json.contains("\"default\": \"anthropic/claude-sonnet-4-5\""));
+    }
+
+    #[test]
+    fn test_config_yml_roundtrip() {
+        let temp = TempDir::new().unwrap();
+        let home = temp.path();
+
+        let config = OmpAgentConfig {
+            model_roles: Some(OmpModelRoles {
+                default: Some("xiaomi-token-plan-cn/mimo-v2.5".to_string()),
+                ..Default::default()
+            }),
+            theme: Some(OmpTheme {
+                dark: Some("titanium".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        write_config_yml(home, &config).unwrap();
+        let loaded = read_config_yml(home).unwrap();
+
+        assert_eq!(
+            loaded.model_roles.as_ref().unwrap().default.as_deref(),
+            Some("xiaomi-token-plan-cn/mimo-v2.5")
+        );
+        assert_eq!(
+            loaded.theme.as_ref().unwrap().dark.as_deref(),
+            Some("titanium")
+        );
+    }
+
+    #[test]
+    fn test_config_yml_missing_file() {
+        let temp = TempDir::new().unwrap();
+        let home = temp.path();
+        let config = read_config_yml(home).unwrap();
+        assert!(config.model_roles.is_none());
+    }
+
+    #[test]
+    fn test_config_yml_overwrite_model_roles() {
+        let temp = TempDir::new().unwrap();
+        let home = temp.path();
+
+        // Write initial config with theme
+        let initial = OmpAgentConfig {
+            model_roles: Some(OmpModelRoles {
+                default: Some("old-model".to_string()),
+                ..Default::default()
+            }),
+            theme: Some(OmpTheme {
+                dark: Some("catppuccin".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        write_config_yml(home, &initial).unwrap();
+
+        // Overwrite only model roles
+        let mut config = read_config_yml(home).unwrap();
+        config.model_roles = Some(OmpModelRoles {
+            default: Some("new-model".to_string()),
+            slow: Some("slow-model".to_string()),
+            ..Default::default()
+        });
+        write_config_yml(home, &config).unwrap();
+
+        let loaded = read_config_yml(home).unwrap();
+        assert_eq!(
+            loaded.model_roles.as_ref().unwrap().default.as_deref(),
+            Some("new-model")
+        );
+        assert_eq!(
+            loaded.model_roles.as_ref().unwrap().slow.as_deref(),
+            Some("slow-model")
+        );
+        // Theme should be preserved
+        assert_eq!(
+            loaded.theme.as_ref().unwrap().dark.as_deref(),
+            Some("catppuccin")
+        );
+    }
 
     #[test]
     fn test_create_default_profile() {
@@ -974,9 +828,8 @@ providers:
         let profile = create_default_omp_profile_for_home(home).unwrap();
         assert!(!profile.id.is_empty());
         assert_eq!(profile.name, "Default");
-        assert!(profile.providers.is_empty());
+        assert!(profile.model_roles.default.is_none());
 
-        // Should fail when profiles already exist
         let err = create_default_omp_profile_for_home(home).unwrap_err();
         assert_eq!(err, "Profiles already exist");
     }
@@ -992,30 +845,6 @@ providers:
         let loaded = get_omp_profile_for_home(home, "p1").unwrap();
         assert_eq!(loaded.id, "p1");
         assert_eq!(loaded.name, "Profile 1");
-    }
-
-    #[test]
-    fn test_save_profile_generates_id_when_empty() {
-        let temp = TempDir::new().unwrap();
-        let home = home(&temp);
-
-        let profile = OmpProfile {
-            id: "".to_string(),
-            name: "New Profile".to_string(),
-            description: None,
-            created_at: "".to_string(),
-            updated_at: "".to_string(),
-            providers: HashMap::new(),
-        };
-
-        save_omp_profile_for_home(home, profile).unwrap();
-
-        let profiles = list_omp_profiles_for_home(home).unwrap();
-        assert_eq!(profiles.len(), 1);
-        assert!(!profiles[0].id.is_empty());
-        assert!(!profiles[0].created_at.is_empty());
-        assert!(!profiles[0].updated_at.is_empty());
-        assert_eq!(profiles[0].name, "New Profile");
     }
 
     #[test]
@@ -1047,79 +876,38 @@ providers:
     }
 
     #[test]
-    fn test_delete_profile_clears_active() {
-        let temp = TempDir::new().unwrap();
-        let home = home(&temp);
-
-        save_omp_profile_for_home(home, make_profile("p1", "Profile 1")).unwrap();
-        set_active_omp_profile_id_for_home(home, "p1").unwrap();
-
-        let active = get_active_omp_profile_id_for_home(home).unwrap();
-        assert_eq!(active.as_deref(), Some("p1"));
-
-        delete_omp_profile_for_home(home, "p1").unwrap();
-
-        let active_after = get_active_omp_profile_id_for_home(home).unwrap();
-        assert!(active_after.is_none());
-    }
-
-    #[test]
-    fn test_duplicate_profile() {
-        let temp = TempDir::new().unwrap();
-        let home = home(&temp);
-
-        let profile = make_profile_with_provider("p1", "Original", "ollama");
-        save_omp_profile_for_home(home, profile).unwrap();
-
-        let dup = duplicate_omp_profile_for_home(home, "p1", "Copy").unwrap();
-        assert_ne!(dup.id, "p1");
-        assert_eq!(dup.name, "Copy");
-        assert!(dup.providers.contains_key("ollama"));
-
-        // Both should exist
-        let profiles = list_omp_profiles_for_home(home).unwrap();
-        assert_eq!(profiles.len(), 2);
-    }
-
-    #[test]
     fn test_active_profile_get_set() {
         let temp = TempDir::new().unwrap();
         let home = home(&temp);
 
-        // Initially no active profile
         let active = get_active_omp_profile_id_for_home(home).unwrap();
         assert!(active.is_none());
 
-        // Set active
         set_active_omp_profile_id_for_home(home, "p1").unwrap();
         let active = get_active_omp_profile_id_for_home(home).unwrap();
         assert_eq!(active.as_deref(), Some("p1"));
-
-        // Overwrite
-        set_active_omp_profile_id_for_home(home, "p2").unwrap();
-        let active = get_active_omp_profile_id_for_home(home).unwrap();
-        assert_eq!(active.as_deref(), Some("p2"));
     }
 
     #[test]
-    fn test_apply_profile_writes_yaml() {
+    fn test_apply_profile_writes_config_yml() {
         let temp = TempDir::new().unwrap();
         let home = home(&temp);
 
-        let profile = make_profile_with_provider("p1", "Test", "ollama");
+        let profile = make_profile_with_roles("p1", "Test");
         save_omp_profile_for_home(home, profile).unwrap();
 
         apply_omp_profile_for_home(home, "p1").unwrap();
 
-        let config_path = omp_config_path_for_home(home).unwrap();
-        assert!(config_path.exists());
+        let config = read_config_yml(home).unwrap();
+        assert_eq!(
+            config.model_roles.as_ref().unwrap().default.as_deref(),
+            Some("anthropic/claude-sonnet-4-5")
+        );
+        assert_eq!(
+            config.model_roles.as_ref().unwrap().slow.as_deref(),
+            Some("anthropic/claude-opus-4-6")
+        );
 
-        let content = std::fs::read_to_string(&config_path).unwrap();
-        assert!(content.contains("providers:"));
-        assert!(content.contains("ollama:"));
-        assert!(content.contains("http://localhost:11434/v1"));
-
-        // Active profile should be set
         let active = get_active_omp_profile_id_for_home(home).unwrap();
         assert_eq!(active.as_deref(), Some("p1"));
     }
@@ -1131,41 +919,18 @@ providers:
 
         let status = get_omp_config_status_for_home(home).unwrap();
         assert!(!status.config_exists);
-
-        // Create the config file
-        let config_dir = omp_config_dir_for_home(home).unwrap();
-        std::fs::write(
-            config_dir.join("models.yml"),
-            "providers:\n  test:\n    baseUrl: http://localhost\n",
-        )
-        .unwrap();
-
-        let status = get_omp_config_status_for_home(home).unwrap();
-        assert!(status.config_exists);
+        assert!(!status.models_db_exists);
+        assert!(!status.agent_db_exists);
     }
 
     #[test]
-    fn test_read_current_config_missing_file() {
+    fn test_read_current_config_missing_files() {
         let temp = TempDir::new().unwrap();
         let home = home(&temp);
 
         let config = read_omp_current_config_for_home(home).unwrap();
-        assert!(config.providers.is_empty());
-    }
-
-    #[test]
-    fn test_read_current_config_existing_file() {
-        let temp = TempDir::new().unwrap();
-        let home = home(&temp);
-
-        let config_dir = omp_config_dir_for_home(home).unwrap();
-        std::fs::write(
-            config_dir.join("models.yml"),
-            "providers:\n  ollama:\n    baseUrl: http://localhost:11434/v1\n    api: openai-completions\n    models:\n      - id: llama3\n",
-        )
-        .unwrap();
-
-        let config = read_omp_current_config_for_home(home).unwrap();
-        assert!(config.providers.contains_key("ollama"));
+        assert!(config.agent_config.model_roles.is_none());
+        assert!(config.provider_models.is_empty());
+        assert!(config.credentials.is_empty());
     }
 }

@@ -62,9 +62,7 @@ use keys_mcp::{
     handle_mcp_args_key, handle_mcp_key, handle_mcp_key_values_key, handle_mcp_server_key,
 };
 use keys_missions::handle_missions_key;
-use keys_omp::{
-    handle_omp_key, handle_omp_model_key, handle_omp_profile_key, handle_omp_provider_key,
-};
+use keys_omp::{handle_omp_key, handle_omp_profile_key};
 use keys_openclaw::{
     handle_openclaw_helpers_key, handle_openclaw_key, handle_openclaw_model_key,
     handle_openclaw_profile_key, handle_openclaw_provider_key, handle_openclaw_subagent_detail_key,
@@ -245,7 +243,7 @@ fn refresh_screen_data(app: &mut app::App) {
             refresh_pi_detail(app);
         }
         app::Screen::Omp => refresh_omp(app),
-        app::Screen::OmpProfile | app::Screen::OmpProvider | app::Screen::OmpModel => {
+        app::Screen::OmpProfile => {
             refresh_omp(app);
             refresh_omp_detail(app);
         }

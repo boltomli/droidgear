@@ -328,20 +328,6 @@ pub(super) fn refresh_omp_detail(app: &mut app::App) {
     }
 }
 
-pub(super) fn omp_load_from_live_config(
-    app: &mut app::App,
-    profile_id: &str,
-) -> anyhow::Result<()> {
-    let live = droidgear_core::omp::read_omp_current_config_for_home(&app.home_dir)
-        .map_err(anyhow::Error::msg)?;
-    let mut profile = droidgear_core::omp::get_omp_profile_for_home(&app.home_dir, profile_id)
-        .map_err(anyhow::Error::msg)?;
-    profile.providers = live.providers;
-    droidgear_core::omp::save_omp_profile_for_home(&app.home_dir, profile)
-        .map_err(anyhow::Error::msg)?;
-    Ok(())
-}
-
 pub(super) fn refresh_sessions(app: &mut app::App) {
     match droidgear_core::sessions::list_sessions_for_home(&app.home_dir, None) {
         Ok(list) => app.sessions = list,

@@ -541,8 +541,6 @@ fn pi_input_action_variants_exist() {
 fn omp_screen_variants_exist() {
     let _omp = app::Screen::Omp;
     let _omp_profile = app::Screen::OmpProfile;
-    let _omp_provider = app::Screen::OmpProvider;
-    let _omp_model = app::Screen::OmpModel;
 }
 
 #[test]
@@ -561,10 +559,6 @@ fn omp_app_state_initializes_correctly() {
     assert!(app.omp_detail_id.is_none());
     assert!(app.omp_detail.is_none());
     assert_eq!(app.omp_detail_field_index, 0);
-    assert_eq!(app.omp_provider_index, 0);
-    assert_eq!(app.omp_provider_field_index, 0);
-    assert_eq!(app.omp_model_index, 0);
-    assert_eq!(app.omp_model_field_index, 0);
 }
 
 #[test]
@@ -583,15 +577,6 @@ fn omp_confirm_action_variants_exist() {
     let _delete = app::ConfirmAction::OmpDelete {
         id: "test".to_string(),
     };
-    let _del_prov = app::ConfirmAction::OmpDeleteProvider {
-        profile_id: "p".to_string(),
-        provider_id: "prov".to_string(),
-    };
-    let _del_model = app::ConfirmAction::OmpDeleteModel {
-        profile_id: "p".to_string(),
-        provider_id: "prov".to_string(),
-        model_index: 0,
-    };
 }
 
 #[test]
@@ -600,90 +585,10 @@ fn omp_input_action_variants_exist() {
     let _dup = app::InputAction::OmpDuplicate {
         id: "x".to_string(),
     };
-    let _name = app::InputAction::OmpSetProfileName {
-        id: "x".to_string(),
-    };
-    let _desc = app::InputAction::OmpSetProfileDescription {
-        id: "x".to_string(),
-    };
-    let _add_prov = app::InputAction::OmpAddProvider {
-        profile_id: "x".to_string(),
-    };
-    let _base_url = app::InputAction::OmpSetProviderBaseUrl {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-    };
-    let _api_key = app::InputAction::OmpSetProviderApiKey {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-    };
-    let _add_model = app::InputAction::OmpAddModel {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-    };
-    let _set_id = app::InputAction::OmpSetModelId {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-        model_index: 0,
-    };
-    let _set_name = app::InputAction::OmpSetModelName {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-        model_index: 0,
-    };
-    let _set_ctx = app::InputAction::OmpSetModelContextWindow {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-        model_index: 0,
-    };
-    let _set_max = app::InputAction::OmpSetModelMaxTokens {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-        model_index: 0,
-    };
-    let _set_cost = app::InputAction::OmpSetModelCost {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-        model_index: 0,
-    };
-    let _sel_api = app::SelectAction::OmpSetProviderApi {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-    };
-}
-
-#[test]
-fn omp_import_from_channel_action_variants_exist() {
-    let _import = app::SelectAction::OmpImportFromChannel {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-    };
-    let _set_key = app::InputAction::OmpImportSetApiKey {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-    };
-}
-
-#[test]
-fn omp_add_provider_from_channel_action_variants_exist() {
-    let _select = app::SelectAction::OmpAddProviderFromChannel {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-    };
-    let _input = app::InputAction::OmpAddProviderFromChannel {
-        profile_id: "x".to_string(),
-    };
-}
-
-#[test]
-fn omp_import_set_token_action_exists() {
-    let _set_token = app::SelectAction::OmpImportSetToken {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
-    };
-    let _toggle = app::SelectAction::OmpImportToggleModel {
-        profile_id: "x".to_string(),
-        provider_id: "y".to_string(),
+    let _update_name = app::InputAction::OmpUpdateProfileName;
+    let _update_desc = app::InputAction::OmpUpdateProfileDescription;
+    let _update_role = app::InputAction::OmpUpdateModelRole {
+        role: "default".to_string(),
     };
 }
 

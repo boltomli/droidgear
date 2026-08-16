@@ -1,17 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { CircuitBoard } from 'lucide-react'
+import { Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/components/ui/action-button'
 
-interface FeatureItem {
-  id: 'providers'
-  labelKey: string
-  icon: React.ElementType
-}
-
-const features: FeatureItem[] = [
-  { id: 'providers', labelKey: 'omp.features.providers', icon: CircuitBoard },
-]
+const features = [
+  { id: 'config', labelKey: 'omp.features.config', icon: Settings },
+] as const
 
 export function OmpFeatureList() {
   const { t } = useTranslation()

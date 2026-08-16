@@ -39,8 +39,6 @@ pub(super) fn handle_key(app: &mut app::App, code: KeyCode) -> Option<Action> {
         app::Screen::PiModel => handle_pi_model_key(app, code),
         app::Screen::Omp => handle_omp_key(app, code),
         app::Screen::OmpProfile => handle_omp_profile_key(app, code),
-        app::Screen::OmpProvider => handle_omp_provider_key(app, code),
-        app::Screen::OmpModel => handle_omp_model_key(app, code),
         app::Screen::Hermes => handle_hermes_key(app, code),
         app::Screen::HermesProfile => handle_hermes_profile_key(app, code),
         app::Screen::HermesProvider => handle_hermes_provider_key(app, code),

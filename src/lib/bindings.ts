@@ -2841,45 +2841,49 @@ export type PiConfigStatus = { configExists: boolean; configPath: string }
  */
 export type PiCurrentConfig = { providers?: Partial<{ [key in string]: PiProviderConfig }> }
 /**
- * OMP compatibility configuration. Unknown fields are retained for newer OMP versions.
+ * OMP agent configuration (from `~/.omp/agent/config.yml`).
  */
-export type OmpCompatConfig = { supportsStore?: boolean | null; supportsDeveloperRole?: boolean | null; supportsReasoningEffort?: boolean | null; reasoningEffortMap?: Partial<{ [key in string]: JsonValue }> | null; supportsUsageInStreaming?: boolean | null; maxTokensField?: string | null; requiresToolResultName?: boolean | null; requiresAssistantAfterToolResult?: boolean | null; requiresThinkingAsText?: boolean | null; requiresReasoningContentOnAssistantMessages?: boolean | null; thinkingFormat?: string | null; cacheControlFormat?: string | null; supportsStrictMode?: boolean | null; supportsLongCacheRetention?: boolean | null; supportsEagerToolInputStreaming?: boolean | null; openRouterRouting?: JsonValue | null; vercelGatewayRouting?: JsonValue | null }
+export type OmpAgentConfig = { modelRoles?: OmpModelRoles | null; theme?: OmpTheme | null; steeringMode?: string | null; followUpMode?: string | null; interruptMode?: string | null; symbolPreset?: string | null; setupVersion?: number | null }
 /**
- * OMP config status
+ * OMP cached model entry from `models.db` (read-only).
  */
-export type OmpConfigStatus = { configExists: boolean; configPath: string }
+export type OmpCachedModel = { id: string; name?: string | null; api?: string | null; provider?: string | null; baseUrl?: string | null; reasoning?: boolean; input?: string[]; cost?: OmpModelCost | null; contextWindow?: number; maxTokens?: number; thinking?: OmpThinkingConfig | null }
 /**
- * Current OMP configuration (from `~/.omp/agent/models.yml`)
+ * OMP config status.
  */
-export type OmpCurrentConfig = { providers?: Partial<{ [key in string]: OmpProviderConfig }> }
+export type OmpConfigStatus = { configExists: boolean; configPath: string; modelsDbExists: boolean; agentDbExists: boolean }
 /**
- * OMP discovery configuration for live model listing
+ * OMP credential status for a provider (from `agent.db`, read-only).
  */
-export type OmpDiscovery = { type: string }
+export type OmpCredentialStatus = { provider: string; credentialType: string; hasKey: boolean }
 /**
- * OMP model definition
+ * Current OMP configuration (combined from all sources).
  */
-export type OmpModel = { id: string; name?: string | null; api?: string | null; reasoning?: boolean; thinkingLevelMap?: Partial<{ [key in string]: string | null }> | null; input?: string[]; contextWindow?: number; maxTokens?: number; cost?: OmpModelCost | null; headers?: Partial<{ [key in string]: string }> | null; compat?: OmpCompatConfig | null; contextPromotionTarget?: string | null }
+export type OmpCurrentConfig = { agentConfig: OmpAgentConfig; providerModels: OmpProviderModels[]; credentials: OmpCredentialStatus[] }
 /**
- * OMP model cost configuration
+ * OMP model cost configuration.
  */
-export type OmpModelCost = { input?: number; output?: number; cacheRead?: number; cacheWrite?: number; tiers?: OmpModelCostTier[] | null }
+export type OmpModelCost = { input?: number; output?: number; cacheRead?: number; cacheWrite?: number }
 /**
- * OMP model cost tier. Rates are in dollars per million tokens.
+ * OMP model role assignments.
  */
-export type OmpModelCostTier = { inputTokensAbove: number; input: number; output: number; cacheRead: number; cacheWrite: number }
+export type OmpModelRoles = { default?: string | null; smol?: string | null; slow?: string | null; plan?: string | null; commit?: string | null }
 /**
- * OMP model override (subset of OmpModel fields for overriding built-in models)
+ * OMP profile (stored in DroidGear) — snapshot of model role assignments.
  */
-export type OmpModelOverride = { name?: string | null; api?: string | null; reasoning?: boolean | null; thinkingLevelMap?: Partial<{ [key in string]: string | null }> | null; input?: string[] | null; contextWindow?: number | null; maxTokens?: number | null; cost?: OmpModelCost | null; headers?: Partial<{ [key in string]: string }> | null; compat?: OmpCompatConfig | null; contextPromotionTarget?: string | null }
+export type OmpProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; modelRoles: OmpModelRoles }
 /**
- * OMP profile (stored in DroidGear)
+ * A provider's cached model list from `models.db` (read-only).
  */
-export type OmpProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; providers?: Partial<{ [key in string]: OmpProviderConfig }> }
+export type OmpProviderModels = { providerId: string; models: OmpCachedModel[] }
 /**
- * OMP provider configuration
+ * OMP thinking/reasoning configuration.
  */
-export type OmpProviderConfig = { baseUrl?: string | null; api?: string | null; apiKey?: string | null; oauth?: string | null; auth?: string | null; headers?: Partial<{ [key in string]: string }> | null; authHeader?: boolean | null; models: OmpModel[]; modelOverrides?: Partial<{ [key in string]: OmpModelOverride }> | null; compat?: OmpCompatConfig | null; disableStrictTools?: boolean | null; discovery?: OmpDiscovery | null }
+export type OmpThinkingConfig = { mode?: string | null; efforts?: string[] | null }
+/**
+ * OMP theme configuration.
+ */
+export type OmpTheme = { dark?: string | null; light?: string | null }
 /**
  * Pi model definition
  */

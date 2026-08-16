@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { CheckCircle, XCircle, FileText } from 'lucide-react'
+import { CheckCircle, XCircle, Database } from 'lucide-react'
 import type { OmpConfigStatus } from '@/lib/bindings'
 
 interface ConfigStatusProps {
@@ -12,31 +12,39 @@ export function ConfigStatus({ status }: ConfigStatusProps) {
   if (!status) return null
 
   return (
-    <div className="p-4 border rounded-lg space-y-2">
+    <div className="rounded-lg border p-3">
       <h3 className="text-sm font-medium text-muted-foreground">
         {t('omp.configStatus.title')}
       </h3>
       <div className="space-y-1 text-sm">
         <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-          <code className="flex-1 truncate text-xs bg-muted px-1 py-0.5 rounded select-all cursor-text">
-            {status.configPath}
-          </code>
           {status.configExists ? (
-            <>
-              <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-              <span className="text-xs text-green-600 shrink-0">
-                {t('common.exists')}
-              </span>
-            </>
+            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
           ) : (
-            <>
-              <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground shrink-0">
-                {t('common.missing')}
-              </span>
-            </>
+            <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
           )}
+          <span>config.yml</span>
+          <span className="text-muted-foreground text-xs truncate">
+            {status.configPath}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {status.modelsDbExists ? (
+            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+          ) : (
+            <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+          <Database className="h-3.5 w-3.5" />
+          <span>models.db</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {status.agentDbExists ? (
+            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+          ) : (
+            <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+          <Database className="h-3.5 w-3.5" />
+          <span>agent.db</span>
         </div>
       </div>
     </div>
