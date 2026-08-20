@@ -383,7 +383,9 @@ export function HermesConfigPage() {
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Label className="w-24">{t('hermes.model.default')}</Label>
+                <Label className="w-28 shrink-0">
+                  {t('hermes.model.default')}
+                </Label>
                 <Input
                   value={editingDefaultModel}
                   onChange={e => setEditingDefaultModel(e.target.value)}
@@ -392,7 +394,9 @@ export function HermesConfigPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label className="w-24">{t('hermes.model.provider')}</Label>
+                <Label className="w-28 shrink-0">
+                  {t('hermes.model.provider')}
+                </Label>
                 <Input
                   value={editingProvider}
                   onChange={e => setEditingProvider(e.target.value)}
@@ -401,7 +405,9 @@ export function HermesConfigPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label className="w-24">{t('hermes.model.baseUrl')}</Label>
+                <Label className="w-28 shrink-0">
+                  {t('hermes.model.baseUrl')}
+                </Label>
                 <Input
                   value={editingBaseUrl}
                   onChange={e => setEditingBaseUrl(e.target.value)}
@@ -410,7 +416,9 @@ export function HermesConfigPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label className="w-24">{t('hermes.model.apiKey')}</Label>
+                <Label className="w-28 shrink-0">
+                  {t('hermes.model.apiKey')}
+                </Label>
                 <Input
                   type="password"
                   value={editingApiKey}
@@ -420,7 +428,7 @@ export function HermesConfigPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label className="w-24">
+                <Label className="w-28 shrink-0">
                   {t('hermes.model.reasoningEffort')}
                 </Label>
                 <Select
