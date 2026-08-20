@@ -5,6 +5,7 @@ import {
   type OmpProfile,
   type OmpConfigStatus,
   type OmpCurrentConfig,
+  type OmpProviderTestResult,
 } from '@/lib/bindings'
 
 interface OmpState {
@@ -26,6 +27,7 @@ interface OmpState {
   deleteProfile: (id: string) => Promise<void>
   duplicateProfile: (id: string, newName: string) => Promise<void>
   applyProfile: (id: string) => Promise<void>
+  testProvider: (providerId: string) => Promise<OmpProviderTestResult | null>
   setError: (error: string | null) => void
 }
 
@@ -182,6 +184,24 @@ export const useOmpStore = create<OmpState>()(
         set({ activeProfileId: id }, undefined, 'omp/applyProfile/success')
         await get().loadConfigStatus()
         await get().loadLiveConfig()
+      },
+
+      testProvider: async providerId => {
+        try {
+          const result = await commands.testOmpProviderConnection(providerId)
+          if (result.status === 'ok') {
+            return result.data
+          }
+          set({ error: result.error }, undefined, 'omp/testProvider/error')
+          return null
+        } catch (e) {
+          set(
+            { error: String(e), isLoading: false },
+            undefined,
+            'omp/testProvider/exception'
+          )
+          return null
+        }
       },
 
       setError: error => set({ error }, undefined, 'omp/setError'),

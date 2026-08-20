@@ -1594,6 +1594,17 @@ async readOmpCurrentConfig() : Promise<Result<OmpCurrentConfig, string>> {
 }
 },
 /**
+ * Test an OMP provider connection via HTTP
+ */
+async testOmpProviderConnection(providerId: string) : Promise<Result<OmpProviderTestResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("test_omp_provider_connection", { providerId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Test a Pi provider using an isolated temporary models.json and Pi CLI run.
  */
 async testPiProviderConnection(providerId: string, config: PiProviderConfig) : Promise<Result<PiProviderTestResult, string>> {
@@ -2878,6 +2889,10 @@ modelRoles?: OmpModelRoles }
  * A provider's cached model list from `models.db`.
  */
 export type OmpProviderModels = { providerId: string; models: OmpCachedModel[] }
+/**
+ * Result of validating an OMP provider through HTTP connectivity testing.
+ */
+export type OmpProviderTestResult = { success: boolean; providerId: string; modelId: string; latencyMs: number; responseText?: string | null; error?: string | null }
 /**
  * OMP theme configuration.
  */

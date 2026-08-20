@@ -238,6 +238,7 @@ pub enum ConfirmAction {
     TrustedFoldersDelete {
         paths: Vec<String>,
     },
+    OmpTestAll,
 }
 
 #[derive(Debug, Clone)]

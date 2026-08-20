@@ -2043,6 +2043,42 @@ pub(super) fn run_confirm_action(
                 .map_err(anyhow::Error::msg)?;
             Ok(())
         }
+        app::ConfirmAction::OmpTestAll => {
+            let config = droidgear_core::omp::read_omp_current_config_for_home(&app.home_dir)
+                .map_err(anyhow::Error::msg)?;
+            if config.provider_models.is_empty() {
+                app.set_toast("No providers found in models.db", true);
+                return Ok(());
+            }
+            let mut results = Vec::new();
+            for pm in &config.provider_models {
+                match droidgear_core::omp::test_omp_provider_connection_for_home(
+                    &app.home_dir,
+                    &pm.provider_id,
+                ) {
+                    Ok(result) => {
+                        if result.success {
+                            results.push(format!(
+                                "{}: OK ({}ms)",
+                                result.provider_id, result.latency_ms
+                            ));
+                        } else {
+                            results.push(format!(
+                                "{}: FAILED - {}",
+                                result.provider_id,
+                                result.error.unwrap_or_else(|| "unknown error".to_string())
+                            ));
+                        }
+                    }
+                    Err(e) => {
+                        results.push(format!("{}: ERROR - {e}", pm.provider_id));
+                    }
+                }
+            }
+            let summary = results.join("\n");
+            app.set_toast(summary, false);
+            Ok(())
+        }
         app::ConfirmAction::HermesApply { id } => {
             droidgear_core::hermes::apply_hermes_profile_for_home(&app.home_dir, &id)
                 .map_err(anyhow::Error::msg)?;

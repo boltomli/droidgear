@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/dialog'
 import { useOmpStore } from '@/store/omp-store'
 import { ConfigStatus } from './ConfigStatus'
+import { ProviderCard } from './ProviderCard'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import type { OmpProfile } from '@/lib/bindings'
 
 const ROLE_KEYS = ['default', 'smol', 'slow', 'plan', 'commit'] as const
@@ -300,6 +302,36 @@ export function OmpConfigPage() {
           </Card>
         )}
 
+        {/* Providers */}
+        {liveConfig &&
+          liveConfig.providerModels &&
+          liveConfig.providerModels.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">
+                  {t('omp.providers.title')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <TooltipProvider>
+                  {liveConfig.providerModels.map(pm => {
+                    const cred = liveConfig.credentials?.find(
+                      c => c.provider === pm.providerId
+                    )
+                    return (
+                      <ProviderCard
+                        key={pm.providerId}
+                        providerId={pm.providerId}
+                        modelCount={pm.models.length}
+                        hasApiKey={cred?.hasKey ?? false}
+                      />
+                    )
+                  })}
+                </TooltipProvider>
+              </CardContent>
+            </Card>
+          )}
+
         {/* Live Config Preview */}
         {liveConfig && (
           <Card>
@@ -319,46 +351,6 @@ export function OmpConfigPage() {
                   </pre>
                 </div>
               )}
-              {liveConfig.credentials && liveConfig.credentials.length > 0 && (
-                <div>
-                  <span className="font-medium">
-                    {t('omp.liveConfig.credentials')}:
-                  </span>
-                  <div className="mt-1 space-y-1">
-                    {liveConfig.credentials.map((cred, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <Badge variant={cred.hasKey ? 'default' : 'outline'}>
-                          {cred.provider}
-                        </Badge>
-                        <span className="text-muted-foreground">
-                          {cred.credentialType}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {liveConfig.providerModels &&
-                liveConfig.providerModels.length > 0 && (
-                  <div>
-                    <span className="font-medium">
-                      {t('omp.liveConfig.providers')}:
-                    </span>
-                    <div className="mt-1 space-y-1">
-                      {liveConfig.providerModels.map(pm => (
-                        <div
-                          key={pm.providerId}
-                          className="flex items-center gap-2"
-                        >
-                          <Badge variant="outline">{pm.providerId}</Badge>
-                          <span className="text-muted-foreground">
-                            {pm.models.length} {t('omp.liveConfig.models')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
             </CardContent>
           </Card>
         )}

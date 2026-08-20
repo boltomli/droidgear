@@ -69,6 +69,12 @@ pub(super) fn handle_omp_key(app: &mut app::App, code: KeyCode) -> Option<Action
                 }
             }
         }
+        KeyCode::Char('t') => {
+            app.modal = Some(app::Modal::Confirm {
+                message: "Test all OMP providers?".to_string(),
+                action: app::ConfirmAction::OmpTestAll,
+            });
+        }
         _ => {}
     }
     None

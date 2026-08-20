@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use uuid::Uuid;
 
 use crate::{paths, storage};
@@ -188,6 +189,20 @@ pub struct OmpCurrentConfig {
     pub provider_models: Vec<OmpProviderModels>,
     #[serde(default)]
     pub credentials: Vec<OmpCredentialStatus>,
+}
+
+/// Result of validating an OMP provider through HTTP connectivity testing.
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OmpProviderTestResult {
+    pub success: bool,
+    pub provider_id: String,
+    pub model_id: String,
+    pub latency_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// OMP profile (stored in DroidGear) — snapshot of model role assignments.
@@ -618,6 +633,151 @@ pub fn read_omp_current_config_for_home(home_dir: &Path) -> Result<OmpCurrentCon
         provider_models,
         credentials,
     })
+}
+
+// ============================================================================
+// Connection Testing
+// ============================================================================
+
+const OMP_TEST_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Extract the API key for a specific provider from agent.db.
+#[cfg(not(test))]
+fn read_api_key_for_provider(home_dir: &Path, provider_id: &str) -> Result<String, String> {
+    use rusqlite::Connection;
+
+    let path = omp_agent_db_path_for_home(home_dir)?;
+    if !path.exists() {
+        return Err(format!("agent.db not found at {}", path.display()));
+    }
+
+    let conn = Connection::open(&path).map_err(|e| format!("Failed to open agent.db: {e}"))?;
+
+    let mut stmt = conn
+        .prepare("SELECT data FROM auth_credentials WHERE provider = ?1")
+        .map_err(|e| format!("Failed to query auth_credentials: {e}"))?;
+
+    let mut rows = stmt
+        .query([provider_id])
+        .map_err(|e| format!("Failed to query auth_credentials for '{provider_id}': {e}"))?;
+
+    if let Some(row) = rows
+        .next()
+        .map_err(|e| format!("Failed to read auth_credentials: {e}"))?
+    {
+        let data: String = row
+            .get(0)
+            .map_err(|e| format!("Failed to read data column: {e}"))?;
+        let data = data.trim().to_string();
+        if data.is_empty() || data == "null" {
+            return Err(format!(
+                "No API key configured for provider '{provider_id}'"
+            ));
+        }
+        // Data might be JSON like {"type":"api_key","api_key":"sk-..."} or plain key
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&data) {
+            if let Some(key) = parsed.get("api_key").and_then(|v| v.as_str()) {
+                return Ok(key.to_string());
+            }
+        }
+        return Ok(data);
+    }
+
+    Err(format!(
+        "No credentials found for provider '{provider_id}' in agent.db"
+    ))
+}
+
+#[cfg(test)]
+fn read_api_key_for_provider(_home_dir: &Path, _provider_id: &str) -> Result<String, String> {
+    Err("API key reading not available in tests".to_string())
+}
+
+/// Find the base URL and a model ID for a provider from models.db.
+fn find_provider_info(home_dir: &Path, provider_id: &str) -> Result<(String, String), String> {
+    let models_db_path = omp_models_db_path_for_home(home_dir)?;
+    let provider_models = read_model_cache_from_db(&models_db_path)?;
+
+    let pm = provider_models
+        .iter()
+        .find(|pm| pm.provider_id == provider_id)
+        .ok_or_else(|| format!("Provider '{provider_id}' not found in models.db"))?;
+
+    let model = pm
+        .models
+        .first()
+        .ok_or_else(|| format!("No models found for provider '{provider_id}' in models.db"))?;
+
+    let base_url = model
+        .base_url
+        .clone()
+        .unwrap_or_else(|| format!("https://api.{provider_id}.com"));
+
+    Ok((base_url, model.id.clone()))
+}
+
+/// Test an OMP provider by making an HTTP request to its API endpoint.
+pub fn test_omp_provider_connection_for_home(
+    home_dir: &Path,
+    provider_id: &str,
+) -> Result<OmpProviderTestResult, String> {
+    let provider_id = provider_id.trim().to_string();
+    if provider_id.is_empty() {
+        return Err("OMP provider ID cannot be empty".to_string());
+    }
+
+    let (base_url, model_id) = find_provider_info(home_dir, &provider_id)?;
+    let api_key = read_api_key_for_provider(home_dir, &provider_id)?;
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| format!("Failed to create tokio runtime: {e}"))?;
+
+    let tester = crate::connectivity::ModelTester::new();
+    let base_url_clone = base_url.clone();
+    let provider_id_clone = provider_id.clone();
+    let model_id_clone = model_id.clone();
+
+    let diagnostics = runtime.block_on(async {
+        tokio::time::timeout(
+            OMP_TEST_TIMEOUT,
+            tester.test_model_direct(
+                &provider_id_clone,
+                &base_url_clone,
+                &api_key,
+                &model_id_clone,
+            ),
+        )
+        .await
+        .unwrap_or_else(|_| crate::connectivity::ConnectionDiagnostics {
+            success: false,
+            provider: provider_id_clone.clone(),
+            model_id: model_id_clone.clone(),
+            latency_ms: OMP_TEST_TIMEOUT.as_millis() as u32,
+            error: Some(format!(
+                "OMP connection test timed out after {} seconds",
+                OMP_TEST_TIMEOUT.as_secs()
+            )),
+            timestamp: Utc::now().to_rfc3339(),
+            test_mode: crate::connectivity::TestMode::Ping,
+            response_text: None,
+            prompt_used: None,
+        })
+    });
+
+    Ok(OmpProviderTestResult {
+        success: diagnostics.success,
+        provider_id,
+        model_id: diagnostics.model_id,
+        latency_ms: diagnostics.latency_ms as u64,
+        response_text: diagnostics.response_text,
+        error: diagnostics.error,
+    })
+}
+
+pub fn test_omp_provider_connection(provider_id: &str) -> Result<OmpProviderTestResult, String> {
+    test_omp_provider_connection_for_home(&system_home_dir()?, provider_id)
 }
 
 // ============================================================================

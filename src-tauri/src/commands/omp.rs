@@ -2,7 +2,9 @@
 //!
 //! Core logic lives in `droidgear-core`.
 
-pub use droidgear_core::omp::{OmpConfigStatus, OmpCurrentConfig, OmpProfile};
+pub use droidgear_core::omp::{
+    OmpConfigStatus, OmpCurrentConfig, OmpProfile, OmpProviderTestResult,
+};
 
 /// List all OMP profiles
 #[tauri::command]
@@ -79,4 +81,17 @@ pub async fn get_omp_config_status() -> Result<OmpConfigStatus, String> {
 #[specta::specta]
 pub async fn read_omp_current_config() -> Result<OmpCurrentConfig, String> {
     droidgear_core::omp::read_omp_current_config()
+}
+
+/// Test an OMP provider connection via HTTP
+#[tauri::command]
+#[specta::specta]
+pub async fn test_omp_provider_connection(
+    provider_id: String,
+) -> Result<OmpProviderTestResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        droidgear_core::omp::test_omp_provider_connection(&provider_id)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
 }

@@ -151,6 +151,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         omp::apply_omp_profile,
         omp::get_omp_config_status,
         omp::read_omp_current_config,
+        omp::test_omp_provider_connection,
         pi::test_pi_provider_connection,
         opencode::list_opencode_profiles,
         opencode::get_opencode_profile,

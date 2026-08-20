@@ -1390,6 +1390,11 @@
   "omp.actions.noLiveRoles": "No model roles found in config.yml",
   "omp.actions.refreshLive": "Refresh",
 
+  "omp.providers.title": "Providers",
+  "omp.provider.modelsCount": "{{count}} models",
+  "omp.provider.apiKeyConfigured": "API Key Configured",
+  "omp.provider.apiKeyNotConfigured": "No API Key",
+
   "omp.liveConfig.title": "Live Config",
   "omp.liveConfig.currentRoles": "Current model roles",
   "omp.liveConfig.credentials": "Credentials",
@@ -1428,6 +1433,9 @@
   "connectivity.defaultPrompt": "Hi",
   "connectivity.responseText": "Response",
   "connectivity.inferenceWarning": "Inference mode consumes a small amount of tokens",
+  "connectivity.failed": "Connection Failed",
+  "connectivity.provider": "Provider",
+  "connectivity.model": "Model",
   "factoryAuth.title": "Auth Profiles",
   "factoryAuth.description": "Manage multiple Droid authentication profiles. Switch between accounts without re-logging in.",
   "factoryAuth.loadError": "Failed to load auth profiles",

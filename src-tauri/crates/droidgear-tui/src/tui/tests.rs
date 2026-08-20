@@ -612,6 +612,7 @@ fn omp_confirm_action_variants_exist() {
     let _delete = app::ConfirmAction::OmpDelete {
         id: "test".to_string(),
     };
+    let _test_all = app::ConfirmAction::OmpTestAll;
 }
 
 #[test]
