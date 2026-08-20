@@ -2,7 +2,7 @@
 
 [English](README_EN.md)
 
-[Factory Droid](https://factory.ai) / [Claude](https://claude.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev) 的桌面增强管理工具。
+[Factory Droid](https://factory.ai) / [Claude](https://claude.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Hermes Agent](https://hermes-agent.nousresearch.com) / [Pi](https://pi.dev) 的桌面增强管理工具。
 
 支持自定义 AI 模型（BYOK）、嵌入式终端、会话与 Specs 管理、MCP 服务器配置等。
 
@@ -26,6 +26,7 @@ xattr -cr /Applications/DroidGear.app
 
 - **多服务商支持** - 配置来自 Anthropic、OpenAI 或任何通用 Chat Completion API 的模型
 - **可视化模型管理** - 通过拖拽添加、编辑、删除和重新排序自定义模型
+- **模型收藏** - 收藏常用 Droid 模型，收藏管理器限制内置模型并保持对话框顺序
 - **批量操作** - 复制模型、筛选和批量删除、设置默认模型
 - **模型注册表** - 在偏好设置中浏览和搜索内置模型注册表中的可用 AI 模型
 - **API 模型发现** - 直接从服务商 API 获取可用模型列表，自动生成 ID 和显示名称
@@ -53,6 +54,7 @@ xattr -cr /Applications/DroidGear.app
 ### Droid 配置管理
 
 - **多配置文件** - 支持管理和切换多个 Factory Droid 配置文件（settings.json）
+- **信任文件夹** - 在 GUI 与 TUI 中查看和管理 Droid 信任文件夹
 - **终端偏好** - 为每个配置文件独立设置终端偏好
 - **面板刷新** - 切换配置文件时自动刷新相关面板
 
@@ -108,12 +110,14 @@ xattr -cr /Applications/DroidGear.app
 ### Hermes Agent 支持
 
 - **配置管理** - Hermes Agent YAML Profile 配置管理
+- **推理强度** - 为每个 Hermes Profile 独立设置推理强度（none/minimal/low/medium/high/xhigh/max/ultra）
 - **渠道导入** - 支持从渠道导入 Hermes Agent 配置
 
 ### Pi 支持
 
 - **Pi 编码代理集成** - Pi（pi.dev）自定义模型配置管理
 - **Provider/Model 管理** - 支持配置多个 Provider 及其模型（baseUrl, api, apiKey, headers, compat 等）
+- **连接测试** - 测试 Pi Provider 连通性
 - **Profile 管理** - 多 Profile 支持，一键应用到 `~/.pi/agent/models.json`
 - **实时配置读取** - 支持从 Pi 的 live config 加载现有配置
 - **模型注册表驱动** - 从内置模型注册表丰富 Pi Provider 模型，支持与 Provider 无关的思考级别映射
@@ -164,6 +168,7 @@ TUI 版本支持以下配置管理功能：
 - **Codex Profile**：配置文件管理、变更预览、一键应用
 - **OpenCode Profile**：Provider/Auth 配置管理
 - **OpenClaw Profile**：配置管理与应用（含 Subagents/Helpers 导航入口）
+- **Hermes Profile**：配置管理与应用
 - **Pi Profile**：Provider/Model 配置管理与应用
 - **Sessions**：会话浏览与管理
 - **Paths**：路径覆盖配置（适配服务器环境）
@@ -189,6 +194,7 @@ TUI 版本与桌面版共享配置文件：
 - Codex 配置：`~/.codex/`
 - OpenCode 配置：`~/.config/opencode/`
 - OpenClaw 配置：`~/.openclaw/`
+- Hermes 配置：`~/.hermes/`
 - Pi 配置：`~/.pi/agent/`
 
 详细设计文档见 [docs/developer/tui-design.md](docs/developer/tui-design.md)

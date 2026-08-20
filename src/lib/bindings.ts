@@ -142,6 +142,28 @@ async saveCustomModels(models: CustomModel[]) : Promise<Result<null, string>> {
 }
 },
 /**
+ * Loads modelFavorites from settings.json.
+ */
+async getModelFavorites() : Promise<Result<string[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_model_favorites") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Saves modelFavorites to settings.json (preserves other fields).
+ */
+async saveModelFavorites(favorites: string[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_model_favorites", { favorites }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Checks if legacy config.json exists and settings.json has customModels
  */
 async checkLegacyConfig() : Promise<Result<boolean, string>> {
@@ -1572,6 +1594,17 @@ async readOmpCurrentConfig() : Promise<Result<OmpCurrentConfig, string>> {
 }
 },
 /**
+ * Test a Pi provider using an isolated temporary models.json and Pi CLI run.
+ */
+async testPiProviderConnection(providerId: string, config: PiProviderConfig) : Promise<Result<PiProviderTestResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("test_pi_provider_connection", { providerId, config }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * List all OpenCode profiles
  */
 async listOpencodeProfiles() : Promise<Result<OpenCodeProfile[], string>> {
@@ -2141,6 +2174,50 @@ async launchDroid(cwd: string | null) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Lists trusted folders from the global Factory settings file.
+ */
+async listDroidTrustedFolders() : Promise<Result<TrustedFolder[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_droid_trusted_folders") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Adds a directory to Droid's global trusted-folder list.
+ */
+async addDroidTrustedFolder(path: string) : Promise<Result<TrustedFolder, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("add_droid_trusted_folder", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Removes a directory from Droid's global trusted-folder list.
+ */
+async removeDroidTrustedFolder(path: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("remove_droid_trusted_folder", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Removes multiple directories from Droid's global trusted-folder list.
+ */
+async removeDroidTrustedFolders(paths: string[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("remove_droid_trusted_folders", { paths }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async listFactoryAuthProfiles() : Promise<Result<AuthProfileState, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_factory_auth_profiles") };
@@ -2685,7 +2762,11 @@ export type HermesConfigStatus = { configExists: boolean; configPath: string }
 /**
  * 当前 Hermes Live 配置（从 `~/.hermes/config.yaml` 读取）
  */
-export type HermesCurrentConfig = { model: HermesModelConfig }
+export type HermesCurrentConfig = { model: HermesModelConfig; 
+/**
+ * 推理努力程度（对应 config.yaml 中的 agent.reasoning_effort）
+ */
+reasoningEffort?: string | null }
 /**
  * Hermes model 配置（对应 config.yaml 中的 model 节）
  */
@@ -2693,7 +2774,12 @@ export type HermesModelConfig = { default?: string | null; provider?: string | n
 /**
  * Hermes Profile（用于在 DroidGear 内部保存并切换）
  */
-export type HermesProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; model: HermesModelConfig }
+export type HermesProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; model: HermesModelConfig; 
+/**
+ * 推理努力程度（对应 config.yaml 中的 agent.reasoning_effort）
+ * 选项：none, minimal, low, medium, high, xhigh, max, ultra
+ */
+reasoningEffort?: string | null }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 /**
  * MCP server entry with name
@@ -2912,6 +2998,10 @@ export type PiProfile = { id: string; name: string; description?: string | null;
  * Pi provider configuration
  */
 export type PiProviderConfig = { baseUrl?: string | null; api?: string | null; apiKey?: string | null; oauth?: string | null; headers?: Partial<{ [key in string]: string }> | null; authHeader?: boolean | null; models: PiModel[]; modelOverrides?: Partial<{ [key in string]: PiModelOverride }> | null; compat?: PiCompatConfig | null }
+/**
+ * Result of validating a provider through Pi's own CLI runtime.
+ */
+export type PiProviderTestResult = { success: boolean; providerId: string; modelId: string; latencyMs: number; responseText?: string | null; error?: string | null }
 export type PortableUpdateInfo = { version: string; body: string | null; pubDate: string | null; url: string; signature: string; sha256: string; releaseUrl: string }
 /**
  * Provider types supported by Factory BYOK
@@ -3077,6 +3167,10 @@ platforms?: string[] }
  * Token usage statistics
  */
 export type TokenUsage = { inputTokens: number; outputTokens: number; cacheCreationTokens: number; cacheReadTokens: number; thinkingTokens: number }
+/**
+ * A folder trusted by Factory Droid.
+ */
+export type TrustedFolder = { path: string; trustedAt: string }
 export type UpdateChannel = "managed" | "portable"
 /**
  * WSL distribution info

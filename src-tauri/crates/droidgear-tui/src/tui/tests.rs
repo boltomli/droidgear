@@ -461,6 +461,41 @@ fn pi_clamp_indices_does_not_panic_on_empty_profiles() {
 }
 
 #[test]
+fn pi_provider_t_key_routes_through_test_action() {
+    let mut app = app::App::new(PathBuf::from("/tmp/test-home"));
+    let provider = droidgear_core::pi::PiProviderConfig {
+        api_key: Some("sk-test".to_string()),
+        models: vec![droidgear_core::pi::PiModel {
+            id: "test-model".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    app.pi_detail_id = Some("profile".to_string());
+    app.pi_detail = Some(droidgear_core::pi::PiProfile {
+        id: "profile".to_string(),
+        name: "Profile".to_string(),
+        description: None,
+        created_at: "2026-01-01T00:00:00Z".to_string(),
+        updated_at: "2026-01-01T00:00:00Z".to_string(),
+        providers: HashMap::from([("test-provider".to_string(), provider)]),
+    });
+
+    let action = super::keys_pi::handle_pi_provider_key(&mut app, KeyCode::Char('t'));
+
+    match action {
+        Some(super::Action::TestPiProvider {
+            provider_id,
+            config,
+        }) => {
+            assert_eq!(provider_id, "test-provider");
+            assert_eq!(config.models[0].id, "test-model");
+        }
+        other => panic!("expected TestPiProvider action, got {other:?}"),
+    }
+}
+
+#[test]
 fn pi_confirm_action_variants_exist() {
     let _apply = app::ConfirmAction::PiApply {
         id: "test".to_string(),
@@ -852,6 +887,7 @@ fn nav_groups_cover_all_screens_exactly_once() {
     let screens = [
         app::Screen::Paths,
         app::Screen::DroidSettingsFiles,
+        app::Screen::TrustedFolders,
         app::Screen::Factory,
         app::Screen::Mcp,
         app::Screen::ClaudeSettings,
@@ -879,6 +915,59 @@ fn nav_groups_cover_all_screens_exactly_once() {
             .count();
         assert_eq!(occurrences, 1, "{screen:?} should appear exactly once");
     }
+}
+
+#[test]
+fn trusted_folders_state_initializes_and_is_navigable() {
+    let mut app = app::App::new(PathBuf::from("/tmp/test-home"));
+    assert!(app.trusted_folders.is_empty());
+    assert_eq!(app.trusted_folders_index, 0);
+
+    let group = app::App::group_of_screen(app::Screen::TrustedFolders)
+        .expect("TrustedFolders should be a nav item");
+    assert_eq!(app::App::nav_groups()[group].label, "Droid");
+
+    app.screen = app::Screen::TrustedFolders;
+    super::keys_trusted_folders::handle_trusted_folders_key(&mut app, KeyCode::Char('a'));
+    assert!(matches!(
+        app.modal.as_ref(),
+        Some(app::Modal::Input {
+            action: app::InputAction::TrustedFolderAdd,
+            ..
+        })
+    ));
+}
+
+#[test]
+fn trusted_folders_support_marking_and_select_all_for_batch_delete() {
+    let mut app = app::App::new(PathBuf::from("/tmp/test-home"));
+    app.screen = app::Screen::TrustedFolders;
+    app.trusted_folders = vec![
+        droidgear_core::trusted_folders::TrustedFolder {
+            path: "/tmp/a".to_string(),
+            trusted_at: "a".to_string(),
+        },
+        droidgear_core::trusted_folders::TrustedFolder {
+            path: "/tmp/b".to_string(),
+            trusted_at: "b".to_string(),
+        },
+    ];
+
+    super::keys_trusted_folders::handle_trusted_folders_key(&mut app, KeyCode::Char('A'));
+    assert_eq!(app.trusted_folders_selected.len(), 2);
+    super::keys_trusted_folders::handle_trusted_folders_key(&mut app, KeyCode::Char('d'));
+
+    assert!(matches!(
+        app.modal.as_ref(),
+        Some(app::Modal::Confirm {
+            action: app::ConfirmAction::TrustedFoldersDelete { paths },
+            ..
+        }) if paths == &vec!["/tmp/a".to_string(), "/tmp/b".to_string()]
+    ));
+
+    app.modal = None;
+    super::keys_trusted_folders::handle_trusted_folders_key(&mut app, KeyCode::Char('A'));
+    assert!(app.trusted_folders_selected.is_empty());
 }
 
 #[test]
@@ -958,7 +1047,7 @@ fn feature_list_enter_opens_selected_feature() {
     let mut app = app::App::new(home.path().to_path_buf());
     app.screen = app::Screen::FeatureList;
     app.nav_index = app::App::group_of_screen(app::Screen::Factory).unwrap();
-    app.feature_index = 2; // Auth Profiles
+    app.feature_index = 3; // Auth Profiles
     super::keys_main::handle_feature_list_key(&mut app, KeyCode::Enter);
     assert_eq!(app.screen, app::Screen::FactoryAuth);
 }
@@ -1014,7 +1103,7 @@ fn nav_picker_filter_narrows_options_and_enter_resolves_by_label() {
     let Some(app::Modal::Select { options, .. }) = app.modal.clone() else {
         panic!("select modal should still be open");
     };
-    assert_eq!(options.len(), 7);
+    assert_eq!(options.len(), 8);
     assert!(options.iter().all(|o| o.starts_with("droid:")));
 
     // Enter picks the first filtered option ("droid: models" -> Factory).

@@ -390,6 +390,7 @@ fn draw_main(frame: &mut Frame, app: &app::App, area: Rect) {
         app::Screen::FeatureList => draw_feature_list(frame, app, area),
         app::Screen::Paths => draw_paths(frame, app, area),
         app::Screen::DroidSettingsFiles => draw_droid_settings_files(frame, app, area),
+        app::Screen::TrustedFolders => draw_trusted_folders(frame, app, area),
         app::Screen::Factory => draw_factory(frame, app, area),
         app::Screen::FactoryModel => draw_factory_model(frame, app, area),
         app::Screen::Mcp => draw_mcp(frame, app, area),
@@ -606,6 +607,52 @@ fn draw_droid_settings_files(frame: &mut Frame, app: &app::App, area: Rect) {
     frame.render_widget(help, chunks[1]);
 }
 
+fn draw_trusted_folders(frame: &mut Frame, app: &app::App, area: Rect) {
+    let t = theme();
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
+        .split(area);
+
+    let mut lines: Vec<Line> = Vec::new();
+    if app.trusted_folders.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "No trusted folders",
+            t.dim_style(),
+        )));
+    } else {
+        for (index, folder) in app.trusted_folders.iter().enumerate() {
+            let selected = index == app.trusted_folders_index;
+            let marked = app.trusted_folders_selected.contains(&folder.path);
+            let style = if selected {
+                t.selected_style()
+            } else {
+                Style::default()
+            };
+            lines.push(Line::from(vec![
+                Span::styled(if selected { "▸ " } else { "  " }, style),
+                Span::styled(if marked { "[x] " } else { "[ ] " }, style),
+                Span::styled(folder.path.clone(), style),
+                Span::styled(
+                    format!("  [{}]", folder.trusted_at),
+                    if selected { style } else { t.dim_style() },
+                ),
+            ]));
+        }
+    }
+
+    let paragraph = Paragraph::new(lines)
+        .block(block(crumb_title(app, "Trusted Folders")))
+        .wrap(Wrap { trim: false });
+    frame.render_widget(paragraph, chunks[0]);
+
+    let selected_count = app.trusted_folders_selected.len();
+    let help = help_paragraph(&format!(
+        "a: add  Space: mark  A: select/clear all  d/x: remove ({selected_count})  r: refresh  q/Esc: back"
+    ));
+    frame.render_widget(help, chunks[1]);
+}
+
 fn draw_factory(frame: &mut Frame, app: &app::App, area: Rect) {
     let t = theme();
     let chunks = Layout::default()
@@ -629,10 +676,12 @@ fn draw_factory(frame: &mut Frame, app: &app::App, area: Rect) {
             .factory_default_model_id
             .as_deref()
             .is_some_and(|d| d == id);
+        let is_favorite = app.model_favorites.iter().any(|favorite| favorite == id);
         if selected {
             let default_tag = if is_default { " *" } else { "" };
+            let favorite_tag = if is_favorite { " ♥" } else { "" };
             items.push(ListItem::new(Line::from(format!(
-                "{name}  ({id}){default_tag}"
+                "{name}  ({id}){default_tag}{favorite_tag}"
             ))));
         } else {
             let mut spans = Vec::new();
@@ -641,6 +690,9 @@ fn draw_factory(frame: &mut Frame, app: &app::App, area: Rect) {
             spans.push(Span::styled(format!("({id})"), t.dim_style()));
             if is_default {
                 spans.push(Span::styled(" *".to_string(), t.success_style()));
+            }
+            if is_favorite {
+                spans.push(Span::styled(" ♥".to_string(), t.success_style()));
             }
             items.push(ListItem::new(Line::from(spans)));
         }
@@ -668,7 +720,7 @@ fn draw_factory(frame: &mut Frame, app: &app::App, area: Rect) {
     render_list(frame, list, chunks[0], selected);
 
     let help = help_paragraph(
-        "Up/Down: select  Enter/e: open  n: new  c: copy  x: delete  d: set default  E: raw edit  r: refresh  q/Esc: back",
+        "Up/Down: select  Enter/e: open  n: new  c: copy  x: delete  d: set default  f: favorite  F: manage favorites  E: raw edit  r: refresh  q/Esc: back",
     );
     frame.render_widget(help, chunks[1]);
 }
@@ -2895,7 +2947,7 @@ fn draw_modal(frame: &mut Frame, app: &app::App) {
             }
             lines.push(Line::from(""));
             lines.push(hint_line(
-                "Up/Down: move  Space/Enter: toggle  Tab/c: confirm  Esc: cancel",
+                "Up/Down: move  Space/Enter: toggle  a: all  x: clear  Tab/c: confirm  Esc: cancel",
             ));
             let block = block(title.as_str()).border_style(t.focused_border_style());
             let p = Paragraph::new(lines)
@@ -3229,7 +3281,7 @@ fn draw_pi_provider(frame: &mut Frame, app: &app::App, area: Rect) {
     render_list(frame, models_list, chunks[1], models_selected);
 
     let help = help_paragraph(
-        "Up/Down: move  Enter/e: edit field  m: open model  n: add model  d: del model  i: import from channel  q/Esc: back",
+        "Up/Down: move  Enter/e: edit field  t: test  m: open model  n: add model  d: del model  i: import from channel  q/Esc: back",
     );
     frame.render_widget(help, chunks[2]);
 }
@@ -3495,6 +3547,13 @@ fn draw_hermes_profile(frame: &mut Frame, app: &app::App, area: Rect) {
             } else {
                 "(not set)".to_string()
             },
+        ),
+        (
+            "Reasoning Effort",
+            profile
+                .reasoning_effort
+                .clone()
+                .unwrap_or_else(|| "(none)".to_string()),
         ),
     ];
 

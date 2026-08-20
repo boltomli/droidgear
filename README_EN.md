@@ -2,7 +2,7 @@
 
 [中文](README.md)
 
-A desktop enhancement tool for [Factory Droid](https://factory.ai) / [Claude](https://claude.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Pi](https://pi.dev).
+A desktop enhancement tool for [Factory Droid](https://factory.ai) / [Claude](https://claude.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Hermes Agent](https://hermes-agent.nousresearch.com) / [Pi](https://pi.dev).
 
 Supports custom AI models (BYOK), embedded terminal, session & specs management, MCP server configuration, and more.
 
@@ -26,6 +26,7 @@ Run the installer directly.
 
 - **Multi-Provider Support** - Configure models from Anthropic, OpenAI, or any Generic Chat Completion API
 - **Visual Model Management** - Add, edit, delete, and reorder custom models with drag-and-drop
+- **Model Favorites** - Favorite frequently used Droid models; the manager limits built-in models and preserves dialog order
 - **Batch Operations** - Copy models, filter and batch delete, set default model
 - **Model Registry** - Browse and search available AI models from a built-in registry in Preferences
 - **API Model Discovery** - Fetch available models directly from provider APIs with auto-generated IDs and display names
@@ -53,6 +54,7 @@ Run the installer directly.
 ### Droid Configuration Management
 
 - **Multi-Settings Files** - Manage and switch between multiple Factory Droid configuration files (settings.json)
+- **Trusted Folders** - View and manage Droid trusted folders in GUI and TUI
 - **Terminal Preferences** - Set terminal preferences independently for each configuration file
 - **Panel Refresh** - Automatically refresh relevant panels when switching configuration files
 
@@ -108,12 +110,14 @@ Run the installer directly.
 ### Hermes Agent Support
 
 - **Configuration Management** - Hermes Agent YAML profile management
+- **Reasoning Effort** - Set reasoning effort independently for each Hermes profile (none/minimal/low/medium/high/xhigh/max/ultra)
 - **Channel Import** - Import Hermes Agent configuration from channels
 
 ### Pi Support
 
 - **Pi Coding Agent Integration** - Pi (pi.dev) custom model configuration management
 - **Provider/Model Management** - Support configuring multiple providers and their models (baseUrl, api, apiKey, headers, compat, etc.)
+- **Connection Test** - Test Pi provider connectivity
 - **Profile Management** - Multi-profile support with one-click apply to `~/.pi/agent/models.json`
 - **Live Config Reading** - Load existing configuration from Pi's live config
 - **Registry-Driven Models** - Enrich Pi provider models from the built-in model registry, with provider-neutral thinking level mapping
@@ -165,6 +169,7 @@ The TUI version supports the following configuration management features:
 - **Codex Profiles**: Configuration file management, change preview, one-click apply
 - **OpenCode Profiles**: Provider/Auth configuration management
 - **OpenClaw Profiles**: Configuration management and apply (with Subagents/Helpers nav entries)
+- **Hermes Profiles**: Configuration management and apply
 - **Pi Profiles**: Provider/Model configuration management and apply
 - **Sessions**: Session browsing and management
 - **Paths**: Path override configuration (for server environments)
@@ -190,6 +195,7 @@ The TUI version shares configuration files with the desktop version:
 - Codex config: `~/.codex/`
 - OpenCode config: `~/.config/opencode/`
 - OpenClaw config: `~/.openclaw/`
+- Hermes config: `~/.hermes/`
 - Pi config: `~/.pi/agent/`
 
 For detailed design documentation, see [docs/developer/tui-design.md](docs/developer/tui-design.md)

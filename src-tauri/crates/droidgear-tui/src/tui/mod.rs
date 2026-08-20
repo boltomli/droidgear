@@ -35,6 +35,7 @@ mod keys_paths;
 mod keys_pi;
 mod keys_sessions;
 mod keys_specs;
+mod keys_trusted_folders;
 mod modal;
 mod refresh;
 mod utils;
@@ -76,6 +77,7 @@ use keys_paths::handle_paths_key;
 use keys_pi::{handle_pi_key, handle_pi_model_key, handle_pi_profile_key, handle_pi_provider_key};
 use keys_sessions::handle_sessions_key;
 use keys_specs::handle_specs_key;
+use keys_trusted_folders::handle_trusted_folders_key;
 use modal::handle_modal_key;
 use refresh::*;
 use utils::{
@@ -110,24 +112,63 @@ impl Drop for TerminalGuard {
 #[derive(Debug, Clone)]
 enum Action {
     EditFactoryModels,
-    EditCodexProfile { id: String },
-    EditOpenCodeProfile { id: String },
-    EditOpenClawProfile { id: String },
-    PreviewDroidRun { settings_path: String },
-    RunDroidRun { settings_path: String },
-    PreviewClaudeRun { name: String },
-    RunClaudeRun { name: String, skip_dangerous: bool },
-    PreviewCodexApply { id: String },
-    PreviewCodexRun { id: String },
-    RunCodexRun { id: String },
-    PreviewOpenCodeApply { id: String },
-    PreviewOpenClawApply { id: String },
-    ViewSession { path: String },
-    EditSpec { path: String },
+    EditCodexProfile {
+        id: String,
+    },
+    EditOpenCodeProfile {
+        id: String,
+    },
+    EditOpenClawProfile {
+        id: String,
+    },
+    PreviewDroidRun {
+        settings_path: String,
+    },
+    RunDroidRun {
+        settings_path: String,
+    },
+    PreviewClaudeRun {
+        name: String,
+    },
+    RunClaudeRun {
+        name: String,
+        skip_dangerous: bool,
+    },
+    PreviewCodexApply {
+        id: String,
+    },
+    PreviewCodexRun {
+        id: String,
+    },
+    RunCodexRun {
+        id: String,
+    },
+    PreviewOpenCodeApply {
+        id: String,
+    },
+    PreviewOpenClawApply {
+        id: String,
+    },
+    TestPiProvider {
+        provider_id: String,
+        config: Box<droidgear_core::pi::PiProviderConfig>,
+    },
+    ViewSession {
+        path: String,
+    },
+    EditSpec {
+        path: String,
+    },
     EditChannels,
-    EditChannelAuth { id: String },
-    SetActiveSettingsFile { name: Option<String> },
-    SetActiveClaudeSettingsFile { name: Option<String> },
+    EditChannelAuth {
+        id: String,
+    },
+    SetActiveSettingsFile {
+        name: Option<String>,
+    },
+    SetActiveClaudeSettingsFile {
+        name: Option<String>,
+    },
 }
 
 pub fn run(app: &mut app::App) -> anyhow::Result<()> {
@@ -258,6 +299,7 @@ fn refresh_screen_data(app: &mut app::App) {
         app::Screen::ChannelsEdit => {}
         app::Screen::Missions => refresh_missions(app),
         app::Screen::DroidSettingsFiles => refresh_droid_settings_files(app),
+        app::Screen::TrustedFolders => refresh_trusted_folders(app),
         app::Screen::FactoryAuth => keys_factory_auth::refresh_factory_auth(app),
         app::Screen::CodexAuth => keys_codex_auth::refresh_codex_auth(app),
     }

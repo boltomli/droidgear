@@ -241,6 +241,28 @@ pub(super) fn handle_modal_key(app: &mut app::App, code: KeyCode, modal: app::Mo
                     action,
                 });
             }
+            KeyCode::Char('a') => {
+                selected.fill(true);
+                app.pi_import_pending_selected = Some(selected.clone());
+                app.modal = Some(app::Modal::MultiSelect {
+                    title,
+                    options,
+                    selected,
+                    index,
+                    action,
+                });
+            }
+            KeyCode::Char('x') => {
+                selected.fill(false);
+                app.pi_import_pending_selected = Some(selected.clone());
+                app.modal = Some(app::Modal::MultiSelect {
+                    title,
+                    options,
+                    selected,
+                    index,
+                    action,
+                });
+            }
             KeyCode::Tab | KeyCode::Char('c') => {
                 // Sync final selection to app state and confirm
                 app.pi_import_pending_selected = Some(selected);
@@ -860,6 +882,23 @@ pub(super) fn run_select_action(
             if draft.base_url.trim().is_empty() {
                 draft.base_url = default_base_url.to_string();
             }
+            Ok(())
+        }
+        app::SelectAction::FactorySaveFavorites => {
+            let selected = app.pi_import_pending_selected.take().unwrap_or_default();
+            let next_favorites = app
+                .model_favorites
+                .iter()
+                .enumerate()
+                .filter(|(index, _)| selected.get(*index).copied().unwrap_or(false))
+                .map(|(_, favorite)| favorite.clone())
+                .collect::<Vec<_>>();
+            droidgear_core::factory_settings::save_model_favorites_for_home(
+                &app.home_dir,
+                next_favorites,
+            )
+            .map_err(anyhow::Error::msg)?;
+            app.set_toast("Favorites saved", false);
             Ok(())
         }
         app::SelectAction::FactoryDraftSetReasoningEffort => {
@@ -1522,6 +1561,21 @@ pub(super) fn run_select_action(
             });
             Ok(())
         }
+        app::SelectAction::HermesSetProfileReasoningEffort { id } => {
+            let mut profile =
+                droidgear_core::hermes::get_hermes_profile_for_home(&app.home_dir, &id)
+                    .map_err(anyhow::Error::msg)?;
+            profile.reasoning_effort = selected.and_then(|s| {
+                if s == "(none)" {
+                    None
+                } else {
+                    Some(s.to_string())
+                }
+            });
+            droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)
+                .map_err(anyhow::Error::msg)?;
+            Ok(())
+        }
     }
 }
 
@@ -1629,6 +1683,16 @@ pub(super) fn run_confirm_action(
         }
         app::ConfirmAction::PathsResetKey { key } => {
             droidgear_core::paths::reset_config_path_for_home(&app.home_dir, &key)
+                .map_err(anyhow::Error::msg)?;
+            Ok(())
+        }
+        app::ConfirmAction::TrustedFolderDelete { path } => {
+            droidgear_core::trusted_folders::remove_trusted_folder_for_home(&app.home_dir, &path)
+                .map_err(anyhow::Error::msg)?;
+            Ok(())
+        }
+        app::ConfirmAction::TrustedFoldersDelete { paths } => {
+            droidgear_core::trusted_folders::remove_trusted_folders_for_home(&app.home_dir, &paths)
                 .map_err(anyhow::Error::msg)?;
             Ok(())
         }
@@ -2047,6 +2111,11 @@ pub(super) fn run_input_action(
     match action {
         app::InputAction::PathsSetKey { key } => {
             droidgear_core::paths::save_config_path_for_home(&app.home_dir, &key, trimmed)
+                .map_err(anyhow::Error::msg)?;
+            Ok(())
+        }
+        app::InputAction::TrustedFolderAdd => {
+            droidgear_core::trusted_folders::add_trusted_folder_for_home(&app.home_dir, trimmed)
                 .map_err(anyhow::Error::msg)?;
             Ok(())
         }
@@ -3549,6 +3618,7 @@ pub(super) fn run_input_action(
                     base_url: Some(String::new()),
                     api_key: Some(String::new()),
                 },
+                reasoning_effort: None,
             };
 
             droidgear_core::hermes::save_hermes_profile_for_home(&app.home_dir, profile)

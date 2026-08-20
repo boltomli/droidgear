@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf};
 
 use droidgear_core::{
     channel::Channel,
@@ -17,6 +17,7 @@ use droidgear_core::{
     pi::PiProfile,
     sessions::SessionSummary,
     specs::SpecFile,
+    trusted_folders::TrustedFolder,
 };
 use serde_json::Value as JsonValue;
 
@@ -26,6 +27,7 @@ pub enum Screen {
     FeatureList,
     Paths,
     DroidSettingsFiles,
+    TrustedFolders,
     Factory,
     FactoryModel,
     Mcp,
@@ -230,6 +232,12 @@ pub enum ConfirmAction {
         name: String,
         label: String,
     },
+    TrustedFolderDelete {
+        path: String,
+    },
+    TrustedFoldersDelete {
+        paths: Vec<String>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -247,6 +255,7 @@ pub enum InputAction {
     ClaudeSettingsImportApiKey {
         channel_id: String,
     },
+    TrustedFolderAdd,
     CodexCreateProfile,
     CodexDuplicate {
         id: String,
@@ -579,6 +588,7 @@ pub enum SelectAction {
         id: String,
     },
     FactoryDraftSetProvider,
+    FactorySaveFavorites,
     FactoryDraftSetReasoningEffort,
     FactoryDraftSetReasoningFormat,
     McpDraftSetType,
@@ -612,6 +622,9 @@ pub enum SelectAction {
     },
     HermesImportFromChannel {
         profile_id: String,
+    },
+    HermesSetProfileReasoningEffort {
+        id: String,
     },
 }
 
@@ -654,7 +667,12 @@ pub struct App {
     pub droid_settings_files: Vec<SettingsFileInfo>,
     pub droid_settings_files_index: usize,
 
+    pub trusted_folders: Vec<TrustedFolder>,
+    pub trusted_folders_index: usize,
+    pub trusted_folders_selected: HashSet<String>,
+
     pub custom_models: Vec<CustomModel>,
+    pub model_favorites: Vec<String>,
     pub factory_default_model_id: Option<String>,
     pub factory_models_index: usize,
     pub factory_edit_index: Option<usize>,
@@ -830,7 +848,11 @@ impl App {
             paths_index: 0,
             droid_settings_files: Vec::new(),
             droid_settings_files_index: 0,
+            trusted_folders: Vec::new(),
+            trusted_folders_index: 0,
+            trusted_folders_selected: HashSet::new(),
             custom_models: Vec::new(),
+            model_favorites: Vec::new(),
             factory_default_model_id: None,
             factory_models_index: 0,
             factory_edit_index: None,
@@ -972,6 +994,7 @@ impl App {
                 items: &[
                     ("Models", Screen::Factory),
                     ("Settings", Screen::DroidSettingsFiles),
+                    ("Trusted Folders", Screen::TrustedFolders),
                     ("Auth Profiles", Screen::FactoryAuth),
                     ("Specs", Screen::Specs),
                     ("Missions", Screen::Missions),
@@ -1197,6 +1220,9 @@ impl App {
         }
         if self.claude_index >= self.claude_files.len() {
             self.claude_index = self.claude_files.len().saturating_sub(1);
+        }
+        if self.trusted_folders_index >= self.trusted_folders.len() {
+            self.trusted_folders_index = self.trusted_folders.len().saturating_sub(1);
         }
         let claude_fields_count = 14;
         if self.claude_detail_field_index >= claude_fields_count {
@@ -1444,7 +1470,7 @@ impl App {
             self.hermes_index = self.hermes_profiles.len().saturating_sub(1);
         }
         // HermesProfile screen has 6 fields: Name, Description, Default Model, Provider, Base URL, API Key
-        let hermes_detail_fields_count = 6;
+        let hermes_detail_fields_count = 7; // Name, Description, Default Model, Provider, Base URL, API Key, Reasoning Effort
         if self.hermes_detail_field_index >= hermes_detail_fields_count {
             self.hermes_detail_field_index = hermes_detail_fields_count.saturating_sub(1);
         }
