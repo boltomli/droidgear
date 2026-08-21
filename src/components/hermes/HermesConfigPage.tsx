@@ -278,7 +278,9 @@ export function HermesConfigPage() {
         {/* Profile Section */}
         <div className="space-y-3 p-4 border rounded-lg">
           <div className="flex items-center gap-2">
-            <Label className="w-24">{t('hermes.profile.select')}</Label>
+            <Label className="w-24 shrink-0">
+              {t('hermes.profile.select')}
+            </Label>
             <Select
               value={currentProfile?.id ?? ''}
               onValueChange={handleProfileChange}
@@ -330,8 +332,11 @@ export function HermesConfigPage() {
           {currentProfile && (
             <>
               <div className="flex items-center gap-2">
-                <Label className="w-24">{t('hermes.profile.name')}</Label>
+                <Label className="w-24 shrink-0">
+                  {t('hermes.profile.name')}
+                </Label>
                 <Input
+                  className="flex-1"
                   value={editingName}
                   onChange={e => setEditingName(e.target.value)}
                   onBlur={handleProfileFieldBlur}
@@ -339,10 +344,11 @@ export function HermesConfigPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label className="w-24">
+                <Label className="w-24 shrink-0">
                   {t('hermes.profile.description')}
                 </Label>
                 <Input
+                  className="flex-1"
                   value={editingDescription}
                   onChange={e => setEditingDescription(e.target.value)}
                   onBlur={handleProfileFieldBlur}
