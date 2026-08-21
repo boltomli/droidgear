@@ -383,7 +383,7 @@ export function HermesConfigPage() {
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Label className="w-28 shrink-0">
+                <Label className="w-24 shrink-0">
                   {t('hermes.model.default')}
                 </Label>
                 <Input
@@ -394,7 +394,7 @@ export function HermesConfigPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label className="w-28 shrink-0">
+                <Label className="w-24 shrink-0">
                   {t('hermes.model.provider')}
                 </Label>
                 <Input
@@ -405,7 +405,7 @@ export function HermesConfigPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label className="w-28 shrink-0">
+                <Label className="w-24 shrink-0">
                   {t('hermes.model.baseUrl')}
                 </Label>
                 <Input
@@ -416,7 +416,7 @@ export function HermesConfigPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label className="w-28 shrink-0">
+                <Label className="w-24 shrink-0">
                   {t('hermes.model.apiKey')}
                 </Label>
                 <Input
@@ -428,7 +428,7 @@ export function HermesConfigPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label className="w-28 shrink-0">
+                <Label className="w-24 shrink-0">
                   {t('hermes.model.reasoningEffort')}
                 </Label>
                 <Select
