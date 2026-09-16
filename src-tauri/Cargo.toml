@@ -21,6 +21,7 @@ tauri-build = { version = "3.0.0-alpha.0", features = [] }
 [dependencies]
 droidgear-core = { path = "crates/droidgear-core" }
 tauri = { version = "3.0.0-alpha.1", features = ["macos-private-api"] }
+tauri-runtime-wry = "3.0.0-alpha.1"
 tauri-plugin-opener = "3.0.0-alpha.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
