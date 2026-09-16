@@ -416,9 +416,13 @@ pub fn get_dsh_config_status_for_home(home_dir: &Path) -> Result<DshConfigStatus
     let credentials_path = dsh_credentials_path_for_home(home_dir);
     Ok(DshConfigStatus {
         config_exists: config_path.exists(),
-        config_path: config_path.to_string_lossy().to_string(),
+        config_path: config_path
+            .to_string_lossy()
+            .replace('/', std::path::MAIN_SEPARATOR_STR),
         credentials_exists: credentials_path.exists(),
-        credentials_path: credentials_path.to_string_lossy().to_string(),
+        credentials_path: credentials_path
+            .to_string_lossy()
+            .replace('/', std::path::MAIN_SEPARATOR_STR),
     })
 }
 
@@ -1122,8 +1126,13 @@ agent-default-model:
         let status = get_dsh_config_status_for_home(home(&temp)).unwrap();
         assert!(!status.config_exists);
         assert!(!status.credentials_exists);
-        assert!(status.config_path.ends_with(".dsh/settings.yaml"));
-        assert!(status.credentials_path.ends_with(".dsh/.credentials.yaml"));
+        assert!(status
+            .config_path
+            .ends_with(&format!(".dsh{}settings.yaml", std::path::MAIN_SEPARATOR)));
+        assert!(status.credentials_path.ends_with(&format!(
+            ".dsh{}.credentials.yaml",
+            std::path::MAIN_SEPARATOR
+        )));
 
         save_dsh_provider_for_home(home(&temp), "openai", &sample_provider()).unwrap();
         let status = get_dsh_config_status_for_home(home(&temp)).unwrap();

@@ -417,7 +417,9 @@ fn read_session(path: &Path, include_messages: bool) -> Result<PiSessionDetail, 
             modified_at,
             message_count,
             token_usage: usage,
-            path: path.to_string_lossy().to_string(),
+            path: path
+                .to_string_lossy()
+                .replace('/', std::path::MAIN_SEPARATOR_STR),
         },
         messages,
     })
@@ -535,7 +537,11 @@ mod tests {
         assert_eq!(session.token_usage.output_tokens, 7.0);
         assert_eq!(session.token_usage.total_tokens, 24.0);
         assert_eq!(session.token_usage.cost, 0.04);
-        assert_eq!(session.path, path.to_string_lossy());
+        assert_eq!(
+            session.path,
+            path.to_string_lossy()
+                .replace('/', std::path::MAIN_SEPARATOR_STR)
+        );
     }
 
     #[test]
