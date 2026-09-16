@@ -28,7 +28,10 @@ import { enrichPiModelFromRegistry } from '@/lib/pi-model-metadata'
 import type {
   PiProfile,
   PiProviderConfig,
+  PiProviderConfig_Serialize,
   PiModel,
+  PiModel_Deserialize,
+  PiModel_Serialize,
   PiCompatConfig,
   PiModelCost,
 } from '@/lib/bindings'
@@ -198,15 +201,15 @@ function ProviderForm({
   }
 
   const handleAddModel = () => {
-    const newModel: PiModel = {
+    const newModel: PiModel_Deserialize = {
       id: '',
       name: null,
       api: null,
       reasoning: false,
+      thinkingLevelMap: null,
       input: ['text'],
-      contextWindow: undefined,
-      maxTokens: undefined,
       cost: null,
+      headers: null,
       compat: null,
     }
     setModels([...models, newModel])
@@ -256,7 +259,7 @@ function ProviderForm({
         const updated = [...models]
         const model = updated[index]
         if (!model) return
-        updated[index] = { ...model, compat: parsed }
+        updated[index] = { ...model, compat: parsed } as PiModel_Deserialize
         setModels(updated)
       } catch {
         // ignore
@@ -265,7 +268,7 @@ function ProviderForm({
       const updated = [...models]
       const model = updated[index]
       if (!model) return
-      updated[index] = { ...model, compat: null }
+      updated[index] = { ...model, compat: null } as PiModel_Deserialize
       setModels(updated)
     }
   }
@@ -290,7 +293,7 @@ function ProviderForm({
       ...currentCost,
       [field]: numValue,
     }
-    updated[index] = { ...model, cost: newCost }
+    updated[index] = { ...model, cost: newCost } as PiModel_Deserialize
     setModels(updated)
   }
 
@@ -344,17 +347,17 @@ function ProviderForm({
     // Filter out models with empty IDs
     const validModels = models.filter(m => m.id.trim())
 
-    const config: PiProviderConfig = {
+    const config = {
       ...existingConfig,
       baseUrl: trimToNull(baseUrl),
       api: api || null,
       apiKey: trimToNull(apiKey),
       headers: headers as PiProviderConfig['headers'],
       authHeader: authHeader || null,
-      models: validModels,
+      models: validModels as PiModel_Serialize[],
       modelOverrides: modelOverrides as PiProviderConfig['modelOverrides'],
       compat,
-    }
+    } as PiProviderConfig_Serialize
 
     if (isEditing) {
       updateProvider(providerId, config)

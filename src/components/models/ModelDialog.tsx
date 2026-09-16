@@ -25,9 +25,11 @@ import {
 import {
   commands,
   type CustomModel,
+  type CustomModel_Serialize,
   type Provider,
   type ModelInfo,
   type JsonValue,
+  type Value,
 } from '@/lib/bindings'
 import {
   containsRegexSpecialChars,
@@ -254,7 +256,10 @@ function ModelForm({
 
   const [reasoningEffort, setReasoningEffort] = useState(() => {
     const extracted = extractReasoningEffort(
-      model?.extraArgs,
+      model?.extraArgs as unknown as
+        | Partial<Record<string, JsonValue>>
+        | null
+        | undefined,
       model?.model,
       provider
     )
@@ -262,7 +267,12 @@ function ModelForm({
     return clampEffortToModel(extracted, modelIdForClamp, provider)
   })
   const [effortFormat, setEffortFormat] = useState<EffortFormat>(() =>
-    detectEffortFormat(model?.extraArgs)
+    detectEffortFormat(
+      model?.extraArgs as unknown as
+        | Partial<Record<string, JsonValue>>
+        | null
+        | undefined
+    )
   )
   // Track whether maxTokens was auto-filled vs user-edited, so effort changes
   // can re-fill only when the user hasn't manually overridden the value.
@@ -617,7 +627,7 @@ function ModelForm({
     if (!modelId || !baseUrl || !apiKey) return
     if (!extraArgsValid || !extraHeadersValid) return
 
-    const newModel: CustomModel = {
+    const newModel = {
       model: modelId.trim(),
       baseUrl: baseUrl.trim(),
       apiKey: apiKey.trim(),
@@ -625,7 +635,9 @@ function ModelForm({
       displayName: displayName || undefined,
       maxOutputTokens: maxTokens ? parseInt(maxTokens) : undefined,
       noImageSupport: noImageSupport || false,
-      extraArgs: buildExtraArgs(),
+      extraArgs: buildExtraArgs() as unknown as
+        | Record<string, Value>
+        | undefined,
       extraHeaders: (() => {
         const parsed = parseJsonSafe(extraHeaders) as
           | Record<string, string>
@@ -647,7 +659,7 @@ function ModelForm({
         }
         return parsed as Record<string, string> | null | undefined
       })(),
-    }
+    } as CustomModel_Serialize
 
     onSave(newModel)
   }

@@ -23,7 +23,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useDshStore } from '@/store/dsh-store'
-import { commands, type DshModel, type DshProviderConfig } from '@/lib/bindings'
+import {
+  commands,
+  type DshModel,
+  type DshModel_Deserialize,
+  type DshProviderConfig,
+} from '@/lib/bindings'
 import { findModelByIdOrAlias, getSupportedEfforts } from '@/lib/model-registry'
 import { providerToClientApiType } from '@/lib/model-protocol'
 import { ensureOpenAICompatibleV1 } from '@/lib/sub2api-platform'
@@ -103,7 +108,7 @@ function draftToModel(draft: ModelDraft): DshModel {
     name: draft.name.trim() || null,
     contextWindow: contextWindow ? Number(contextWindow) : null,
     maxTokens: maxTokens ? Number(maxTokens) : null,
-  }
+  } as DshModel_Deserialize
 }
 
 function sanitizeProviderId(name: string): string {
@@ -355,7 +360,7 @@ export function ProviderDialog({
     const base = isEditing ? providers[providerId] : undefined
     const supportsDevRole = SUPPORTS_DEV_ROLE_PROTOCOLS.has(api)
     const baseCompat = base?.compat ?? {}
-    const config: DshProviderConfig = {
+    const config = {
       ...(base ?? {}),
       displayName: displayName.trim() || null,
       baseURL: baseUrl.trim() || null,
@@ -364,8 +369,8 @@ export function ProviderDialog({
       compat: supportsDevRole
         ? { ...baseCompat, supportsDeveloperRole }
         : { ...baseCompat },
-      models: models.map(draftToModel),
-    }
+      models: models.map(draftToModel) as DshModel_Deserialize[],
+    } as DshProviderConfig
 
     try {
       await saveProvider(id, config)

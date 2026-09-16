@@ -141,7 +141,7 @@ function PageLoadingFallback() {
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
 import { useTerminalActive } from '@/hooks/use-terminal-active'
-import type { Channel } from '@/lib/bindings'
+import type { ApiChannel } from '@/lib/bindings'
 import { saveChannelAuth } from '@/lib/channel-utils'
 
 interface MainWindowContentProps {
@@ -180,7 +180,7 @@ export function MainWindowContent({
   }
 
   const handleSaveChannel = async (
-    channel: Channel,
+    channel: ApiChannel,
     username: string,
     password: string
   ) => {

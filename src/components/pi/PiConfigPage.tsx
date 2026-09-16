@@ -48,7 +48,11 @@ import {
   PiImportFromChannelDialog,
   type PiImportResult,
 } from './PiImportFromChannelDialog'
-import type { PiProviderConfig } from '@/lib/bindings'
+import type {
+  PiProviderConfig,
+  PiModel_Deserialize,
+  PiProfile,
+} from '@/lib/bindings'
 
 export function PiConfigPage() {
   const { t } = useTranslation()
@@ -175,16 +179,16 @@ export function PiConfigPage() {
   }
 
   const handleImportFromChannel = async (result: PiImportResult) => {
-    const config: PiProviderConfig = {
+    const config = {
       baseUrl: result.baseUrl,
       api: result.api,
       apiKey: result.apiKey,
       headers: null,
       authHeader: null,
-      models: result.models,
+      models: result.models as PiModel_Deserialize[],
       modelOverrides: null,
       compat: null,
-    }
+    } as PiProviderConfig
     await addProvider(result.providerId, config)
     toast.success(t('pi.provider.importDialog.imported'))
   }
@@ -200,7 +204,7 @@ export function PiConfigPage() {
       name: editingName || currentProfile.name,
       description: editingDescription || null,
       updatedAt: new Date().toISOString(),
-    }
+    } as PiProfile
     usePiStore.setState(
       { currentProfile: updated },
       undefined,

@@ -48,7 +48,7 @@ import { DshFeatureList } from '@/components/dsh/DshFeatureList'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
-import type { Channel } from '@/lib/bindings'
+import type { ApiChannel } from '@/lib/bindings'
 import { saveChannelAuth } from '@/lib/channel-utils'
 
 type NavigationView =
@@ -80,7 +80,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   const modelHasChanges = useModelStore(state => state.hasChanges)
 
   const [channelDialogOpen, setChannelDialogOpen] = useState(false)
-  const [editingChannel, setEditingChannel] = useState<Channel | undefined>()
+  const [editingChannel, setEditingChannel] = useState<ApiChannel | undefined>()
   const [pendingView, setPendingView] = useState<NavigationView | null>(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
@@ -185,7 +185,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   }
 
   const handleSaveChannel = async (
-    channel: Channel,
+    channel: ApiChannel,
     username: string,
     password: string
   ) => {

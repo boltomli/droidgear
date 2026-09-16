@@ -2,7 +2,7 @@ import {
   findModelByIdOrAlias,
   type ModelRegistryEntry,
 } from '@/lib/model-registry'
-import type { PiModel } from '@/lib/bindings'
+import type { PiModel, PiModel_Deserialize } from '@/lib/bindings'
 
 export function createPiModelFromRegistry(entry: ModelRegistryEntry): PiModel {
   return {
@@ -18,7 +18,7 @@ export function createPiModelFromRegistry(entry: ModelRegistryEntry): PiModel {
     maxTokens: entry.maxOutputTokens,
     cost: null,
     compat: null,
-  }
+  } as PiModel_Deserialize
 }
 
 export function enrichPiModelFromRegistry(model: PiModel): PiModel {
@@ -35,5 +35,5 @@ export function enrichPiModelFromRegistry(model: PiModel): PiModel {
       : null,
     contextWindow: entry.contextWindow,
     maxTokens: entry.maxOutputTokens ?? model.maxTokens,
-  }
+  } as PiModel_Deserialize
 }

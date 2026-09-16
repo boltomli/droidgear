@@ -7,6 +7,7 @@ import {
   type OpenCodeConfigStatus,
   type ProviderTemplate,
   type JsonValue,
+  type Value,
 } from '@/lib/bindings'
 
 interface OpenCodeState {
@@ -280,7 +281,11 @@ export const useOpenCodeStore = create<OpenCodeState>()(
           description: description || null,
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'updateProfileDescription')
+        set(
+          { currentProfile: updated as OpenCodeProfile },
+          undefined,
+          'updateProfileDescription'
+        )
         await get().saveProfile()
       },
 
@@ -295,7 +300,11 @@ export const useOpenCodeStore = create<OpenCodeState>()(
             : currentProfile.auth,
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'addProvider')
+        set(
+          { currentProfile: updated as OpenCodeProfile },
+          undefined,
+          'addProvider'
+        )
         await get().saveProfile()
       },
 
@@ -310,7 +319,11 @@ export const useOpenCodeStore = create<OpenCodeState>()(
             : currentProfile.auth,
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'updateProvider')
+        set(
+          { currentProfile: updated as OpenCodeProfile },
+          undefined,
+          'updateProvider'
+        )
         await get().saveProfile()
       },
 
@@ -325,7 +338,11 @@ export const useOpenCodeStore = create<OpenCodeState>()(
           auth,
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'deleteProvider')
+        set(
+          { currentProfile: updated as OpenCodeProfile },
+          undefined,
+          'deleteProvider'
+        )
         await get().saveProfile()
       },
 
@@ -347,7 +364,7 @@ export const useOpenCodeStore = create<OpenCodeState>()(
           if (authValue === undefined) continue
           const exists = id in currentProfile.auth
           if (exists && strategy === 'skip') continue
-          newAuth[id] = authValue
+          newAuth[id] = authValue as unknown as Value
         }
 
         const updated = {
@@ -356,7 +373,11 @@ export const useOpenCodeStore = create<OpenCodeState>()(
           auth: newAuth,
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'importProviders')
+        set(
+          { currentProfile: updated as OpenCodeProfile },
+          undefined,
+          'importProviders'
+        )
         await get().saveProfile()
       },
 

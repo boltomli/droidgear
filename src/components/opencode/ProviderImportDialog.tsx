@@ -95,7 +95,7 @@ export function ProviderImportDialog({
       }
       const auth = importConfig.auth[id]
       if (auth !== undefined) {
-        selectedAuth[id] = auth
+        selectedAuth[id] = auth as unknown as JsonValue
       }
     }
 

@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Channel } from '@/lib/bindings'
+import type { ApiChannel } from '@/lib/bindings'
 
 export type ChannelMergeStrategy = 'skip' | 'replace' | 'keep-both'
 
@@ -39,7 +39,7 @@ interface ChannelImportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   importChannels: ChannelExportEntry[]
-  existingChannels: Channel[]
+  existingChannels: ApiChannel[]
   onImport: (
     channels: ChannelExportEntry[],
     strategy: ChannelMergeStrategy
@@ -48,7 +48,7 @@ interface ChannelImportDialogProps {
 
 function isDuplicate(
   channel: ChannelExportEntry,
-  existingChannels: Channel[]
+  existingChannels: ApiChannel[]
 ): boolean {
   return existingChannels.some(
     existing =>

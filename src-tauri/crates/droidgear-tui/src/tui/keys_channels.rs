@@ -13,7 +13,7 @@ pub(super) fn handle_channels_key(app: &mut app::App, code: KeyCode) -> Option<A
                 .unwrap_or_default()
                 .as_millis() as f64;
 
-            app.channels_edit_draft = Some(droidgear_core::channel::Channel {
+            app.channels_edit_draft = Some(droidgear_core::channel::ApiChannel {
                 id,
                 name: String::new(),
                 channel_type: droidgear_core::channel::ChannelType::General,
@@ -84,7 +84,7 @@ pub(super) fn channel_type_uses_api_key(
 
 pub(super) fn load_channel_auth_into_edit_state(
     app: &mut app::App,
-    channel: &droidgear_core::channel::Channel,
+    channel: &droidgear_core::channel::ApiChannel,
 ) {
     app.channels_edit_username.clear();
     app.channels_edit_password.clear();

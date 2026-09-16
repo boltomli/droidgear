@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/dialog'
 import { useHermesStore } from '@/store/hermes-store'
 import { trimToNull } from '@/lib/utils'
-import type { HermesModelConfig } from '@/lib/bindings'
+import type { HermesModelConfig, HermesProfile } from '@/lib/bindings'
 import { ConfigStatus } from './ConfigStatus'
 import { ImportFromChannelDialog } from './ImportFromChannelDialog'
 
@@ -187,7 +187,7 @@ export function HermesConfigPage() {
       models: models.map(cleanEntry),
       reasoningEffort: trimToNull(effort),
       updatedAt: new Date().toISOString(),
-    }
+    } as HermesProfile
     useHermesStore.setState(
       { currentProfile: updated },
       undefined,
@@ -252,7 +252,7 @@ export function HermesConfigPage() {
       name: editingName || currentProfile.name,
       description: editingDescription || null,
       updatedAt: new Date().toISOString(),
-    }
+    } as HermesProfile
     useHermesStore.setState(
       { currentProfile: updated },
       undefined,

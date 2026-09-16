@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import {
   commands,
-  type Channel,
+  type ApiChannel,
   type ChannelToken,
   type ChannelType,
 } from '@/lib/bindings'
@@ -14,8 +14,8 @@ interface KeysFetchState {
 }
 
 interface ChannelState {
-  channels: Channel[]
-  originalChannels: Channel[]
+  channels: ApiChannel[]
+  originalChannels: ApiChannel[]
   selectedChannelId: string | null
   keys: Record<string, ChannelToken[]>
   keysFetchState: Record<string, KeysFetchState>
@@ -26,8 +26,8 @@ interface ChannelState {
   // Actions
   loadChannels: () => Promise<void>
   saveChannels: () => Promise<void>
-  addChannel: (channel: Channel) => void
-  updateChannel: (id: string, channel: Partial<Channel>) => void
+  addChannel: (channel: ApiChannel) => void
+  updateChannel: (id: string, channel: Partial<ApiChannel>) => void
   deleteChannel: (id: string) => Promise<void>
   selectChannel: (id: string | null) => void
   fetchKeys: (
@@ -39,7 +39,7 @@ interface ChannelState {
   setError: (error: string | null) => void
 }
 
-function channelsEqual(a: Channel[], b: Channel[]): boolean {
+function channelsEqual(a: ApiChannel[], b: ApiChannel[]): boolean {
   if (a.length !== b.length) return false
   return JSON.stringify(a) === JSON.stringify(b)
 }

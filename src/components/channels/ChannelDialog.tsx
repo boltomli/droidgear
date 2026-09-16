@@ -21,14 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { commands, type Channel, type ChannelType } from '@/lib/bindings'
+import { commands, type ApiChannel, type ChannelType } from '@/lib/bindings'
 import { isApiKeyAuthChannel } from '@/lib/channel-utils'
 
 interface ChannelDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  channel?: Channel
-  onSave: (channel: Channel, username: string, password: string) => void
+  channel?: ApiChannel
+  onSave: (channel: ApiChannel, username: string, password: string) => void
 }
 
 const defaultBaseUrls: Record<ChannelType, string> = {
@@ -41,8 +41,8 @@ const defaultBaseUrls: Record<ChannelType, string> = {
 }
 
 interface ChannelFormProps {
-  channel?: Channel
-  onSave: (channel: Channel, username: string, password: string) => void
+  channel?: ApiChannel
+  onSave: (channel: ApiChannel, username: string, password: string) => void
   onCancel: () => void
 }
 
@@ -178,7 +178,7 @@ function ChannelForm({ channel, onSave, onCancel }: ChannelFormProps) {
   const handleSave = () => {
     if (!name || !baseUrl) return
 
-    const newChannel: Channel = {
+    const newChannel: ApiChannel = {
       id: channel?.id ?? crypto.randomUUID(),
       name: name.trim(),
       type: channelType,
@@ -376,7 +376,7 @@ export function ChannelDialog({
   const formKey = channel ? `edit-${channel.id}` : 'new'
 
   const handleSave = (
-    newChannel: Channel,
+    newChannel: ApiChannel,
     username: string,
     password: string
   ) => {

@@ -35,7 +35,7 @@ function updateMainAllowAgents(
       allowAgents: updater(current),
       maxConcurrent: a.subagents?.maxConcurrent ?? null,
     }
-    return { ...a, subagents: subagentsConfig }
+    return { ...a, subagents: subagentsConfig } as OpenClawSubAgent
   })
 }
 

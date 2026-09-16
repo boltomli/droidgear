@@ -1,7 +1,7 @@
 use std::{collections::HashSet, path::PathBuf};
 
 use droidgear_core::{
-    channel::Channel,
+    channel::ApiChannel,
     claude_settings_files::ClaudeSettingsFileInfo,
     codex::CodexProfile,
     codex_auth_profiles::CodexAuthProfile,
@@ -914,9 +914,9 @@ pub struct App {
     pub specs: Vec<SpecFile>,
     pub specs_index: usize,
 
-    pub channels: Vec<Channel>,
+    pub channels: Vec<ApiChannel>,
     pub channels_index: usize,
-    pub channels_edit_draft: Option<Channel>,
+    pub channels_edit_draft: Option<ApiChannel>,
     pub channels_edit_field_index: usize,
     pub channels_edit_username: String,
     pub channels_edit_password: String,

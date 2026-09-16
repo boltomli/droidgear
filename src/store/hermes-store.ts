@@ -4,6 +4,7 @@ import {
   commands,
   type HermesModelConfig,
   type HermesProfile,
+  type HermesProfile_Deserialize,
   type HermesConfigStatus,
   type HermesCurrentConfig,
 } from '@/lib/bindings'
@@ -150,14 +151,14 @@ export const useHermesStore = create<HermesState>()(
           apiKey: null,
           isDefault: true,
         }
-        const profile: HermesProfile = {
+        const profile = {
           id: '',
           name,
           description: null,
           createdAt: now,
           updatedAt: now,
           models: [emptyModel],
-        }
+        } as HermesProfile_Deserialize
         const result = await commands.saveHermesProfile(profile)
         if (result.status !== 'ok') throw new Error(result.error)
         await get().loadProfiles()
@@ -249,13 +250,13 @@ export const useHermesStore = create<HermesState>()(
                   isDefault: true,
                 } satisfies HermesModelConfig,
               ]
-        const updated: HermesProfile = {
+        const updated = {
           ...currentProfile,
           models: liveModels,
           reasoningEffort:
             live.reasoningEffort ?? currentProfile.reasoningEffort,
           updatedAt: new Date().toISOString(),
-        }
+        } as HermesProfile
         set(
           { currentProfile: updated },
           undefined,
@@ -285,13 +286,13 @@ export const useHermesStore = create<HermesState>()(
         const models = currentProfile.models.map(m => ({
           ...m,
           isDefault: false,
-        }))
+        })) as HermesModelConfig[]
         models.push(imported)
-        const updated: HermesProfile = {
+        const updated = {
           ...currentProfile,
           models,
           updatedAt: new Date().toISOString(),
-        }
+        } as HermesProfile
         set({ currentProfile: updated }, undefined, 'hermes/importFromChannel')
         await get().saveProfile()
       },

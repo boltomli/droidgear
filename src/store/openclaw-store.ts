@@ -3,6 +3,7 @@ import { devtools } from 'zustand/middleware'
 import {
   commands,
   type OpenClawProfile,
+  type OpenClawProfile_Deserialize,
   type OpenClawProviderConfig,
   type OpenClawConfigStatus,
   type BlockStreamingConfig,
@@ -149,7 +150,7 @@ export const useOpenClawStore = create<OpenClawState>()(
 
       createProfile: async name => {
         const now = new Date().toISOString()
-        const profile: OpenClawProfile = {
+        const profile = {
           id: '',
           name,
           description: null,
@@ -158,7 +159,7 @@ export const useOpenClawStore = create<OpenClawState>()(
           defaultModel: null,
           failoverModels: null,
           providers: {},
-        }
+        } as OpenClawProfile_Deserialize
         const result = await commands.saveOpenclawProfile(profile)
         if (result.status !== 'ok') throw new Error(result.error)
         await get().loadProfiles()
@@ -244,12 +245,12 @@ export const useOpenClawStore = create<OpenClawState>()(
           return
         }
         const live = result.data
-        const updated: OpenClawProfile = {
+        const updated = {
           ...currentProfile,
           defaultModel: live.defaultModel ?? currentProfile.defaultModel,
-          providers: live.providers as Record<string, OpenClawProviderConfig>,
+          providers: live.providers ?? {},
           updatedAt: new Date().toISOString(),
-        }
+        } as OpenClawProfile
         set(
           { currentProfile: updated },
           undefined,
@@ -266,7 +267,7 @@ export const useOpenClawStore = create<OpenClawState>()(
           updatedAt: new Date().toISOString(),
         }
         set(
-          { currentProfile: updated },
+          { currentProfile: updated as OpenClawProfile },
           undefined,
           'openclaw/updateProfileName'
         )
@@ -282,7 +283,7 @@ export const useOpenClawStore = create<OpenClawState>()(
           updatedAt: new Date().toISOString(),
         }
         set(
-          { currentProfile: updated },
+          { currentProfile: updated as OpenClawProfile },
           undefined,
           'openclaw/updateProfileDescription'
         )
@@ -298,7 +299,7 @@ export const useOpenClawStore = create<OpenClawState>()(
           updatedAt: new Date().toISOString(),
         }
         set(
-          { currentProfile: updated },
+          { currentProfile: updated as OpenClawProfile },
           undefined,
           'openclaw/updateDefaultModel'
         )
@@ -314,7 +315,7 @@ export const useOpenClawStore = create<OpenClawState>()(
           updatedAt: new Date().toISOString(),
         }
         set(
-          { currentProfile: updated },
+          { currentProfile: updated as OpenClawProfile },
           undefined,
           'openclaw/updateFailoverModels'
         )
@@ -329,7 +330,11 @@ export const useOpenClawStore = create<OpenClawState>()(
           providers: { ...currentProfile.providers, [id]: config },
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'openclaw/addProvider')
+        set(
+          { currentProfile: updated as OpenClawProfile },
+          undefined,
+          'openclaw/addProvider'
+        )
         await get().saveProfile()
       },
 
@@ -341,7 +346,11 @@ export const useOpenClawStore = create<OpenClawState>()(
           providers: { ...currentProfile.providers, [id]: config },
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'openclaw/updateProvider')
+        set(
+          { currentProfile: updated as OpenClawProfile },
+          undefined,
+          'openclaw/updateProvider'
+        )
         await get().saveProfile()
       },
 
@@ -354,7 +363,11 @@ export const useOpenClawStore = create<OpenClawState>()(
           providers,
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'openclaw/deleteProvider')
+        set(
+          { currentProfile: updated as OpenClawProfile },
+          undefined,
+          'openclaw/deleteProvider'
+        )
         await get().saveProfile()
       },
 
@@ -367,7 +380,7 @@ export const useOpenClawStore = create<OpenClawState>()(
           updatedAt: new Date().toISOString(),
         }
         set(
-          { currentProfile: updated },
+          { currentProfile: updated as OpenClawProfile },
           undefined,
           'openclaw/updateBlockStreamingConfig'
         )

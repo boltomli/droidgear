@@ -211,11 +211,11 @@ export const usePiStore = create<PiState>()(
           return
         }
         const live: PiCurrentConfig = result.data
-        const updated: PiProfile = {
+        const updated = {
           ...currentProfile,
           providers: live.providers || {},
           updatedAt: new Date().toISOString(),
-        }
+        } as PiProfile
         set(
           { currentProfile: updated },
           undefined,
@@ -227,11 +227,11 @@ export const usePiStore = create<PiState>()(
       addProvider: async (id, config) => {
         const { currentProfile } = get()
         if (!currentProfile) return
-        const updated: PiProfile = {
+        const updated = {
           ...currentProfile,
           providers: { ...(currentProfile.providers ?? {}), [id]: config },
           updatedAt: new Date().toISOString(),
-        }
+        } as PiProfile
         set({ currentProfile: updated }, undefined, 'pi/addProvider')
         await get().saveProfile()
       },
@@ -239,11 +239,11 @@ export const usePiStore = create<PiState>()(
       updateProvider: async (id, config) => {
         const { currentProfile } = get()
         if (!currentProfile) return
-        const updated: PiProfile = {
+        const updated = {
           ...currentProfile,
           providers: { ...(currentProfile.providers ?? {}), [id]: config },
           updatedAt: new Date().toISOString(),
-        }
+        } as PiProfile
         set({ currentProfile: updated }, undefined, 'pi/updateProvider')
         await get().saveProfile()
       },
@@ -252,11 +252,11 @@ export const usePiStore = create<PiState>()(
         const { currentProfile } = get()
         if (!currentProfile) return
         const { [id]: _removed, ...providers } = currentProfile.providers ?? {}
-        const updated: PiProfile = {
+        const updated = {
           ...currentProfile,
           providers,
           updatedAt: new Date().toISOString(),
-        }
+        } as PiProfile
         set({ currentProfile: updated }, undefined, 'pi/deleteProvider')
         await get().saveProfile()
       },

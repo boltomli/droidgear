@@ -35,7 +35,7 @@ import {
 } from '@/lib/channel-utils'
 import {
   commands,
-  type Channel,
+  type ApiChannel,
   type ChannelToken,
   type ModelInfo,
 } from '@/lib/bindings'
@@ -86,7 +86,7 @@ export function ImportFromChannelDialog({
   const [isResolvingKey, setIsResolvingKey] = useState(false)
   const [resolveError, setResolveError] = useState<string | null>(null)
 
-  const selectedChannel: Channel | undefined = channels.find(
+  const selectedChannel: ApiChannel | undefined = channels.find(
     c => c.id === selectedChannelId
   )
   const tokens: ChannelToken[] = keysMap[selectedChannelId] ?? []

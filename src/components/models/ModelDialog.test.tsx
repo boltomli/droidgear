@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@/test/test-utils'
 import userEvent from '@testing-library/user-event'
+import type { Value } from '@/lib/bindings'
 import { ModelDialog } from './ModelDialog'
 
 describe('ModelDialog', () => {
@@ -53,7 +54,7 @@ describe('ModelDialog', () => {
           extraArgs: {
             thinking: { type: 'adaptive' },
             output_config: { effort: 'xhigh' },
-          },
+          } as unknown as Record<string, Value>,
         }}
         onSave={onSave}
       />
@@ -90,7 +91,7 @@ describe('ModelDialog', () => {
           extraArgs: {
             thinking: { type: 'adaptive' },
             output_config: { effort: 'xhigh' },
-          },
+          } as unknown as Record<string, Value>,
         }}
         onSave={onSave}
       />
@@ -134,7 +135,7 @@ describe('ModelDialog', () => {
             temperature: 0.7,
             top_p: 0.9,
             top_k: 40,
-          },
+          } as unknown as Record<string, Value>,
         }}
         onSave={onSave}
       />
@@ -204,7 +205,10 @@ describe('ModelDialog', () => {
           baseUrl: 'https://example.com',
           apiKey: 'test-key',
           displayName: 'Custom',
-          extraArgs: { thinking: { type: 'enabled' } },
+          extraArgs: { thinking: { type: 'enabled' } } as unknown as Record<
+            string,
+            Value
+          >,
         }}
         onSave={onSave}
       />
@@ -238,7 +242,7 @@ describe('ModelDialog', () => {
           extraArgs: {
             thinking: { type: 'enabled' },
             reasoning_effort: 'high',
-          },
+          } as unknown as Record<string, Value>,
         }}
         onSave={onSave}
       />

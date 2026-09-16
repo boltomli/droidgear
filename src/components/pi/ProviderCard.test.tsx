@@ -23,12 +23,14 @@ vi.stubGlobal(
   }
 )
 
+import type { PiProviderConfig, PiModel_Deserialize } from '@/lib/bindings'
+
 const providerConfig = {
   baseUrl: 'https://api.example.com/v1',
   api: 'openai-completions',
   apiKey: 'sk-test',
-  models: [{ id: 'test-model' }],
-}
+  models: [{ id: 'test-model' } as PiModel_Deserialize],
+} as PiProviderConfig
 
 describe('Pi ProviderCard', () => {
   beforeEach(() => {
@@ -96,7 +98,12 @@ describe('Pi ProviderCard', () => {
     render(
       <ProviderCard
         providerId="empty-provider"
-        config={{ ...providerConfig, models: [{ id: '  ' }] }}
+        config={
+          {
+            ...providerConfig,
+            models: [{ id: '  ' } as PiModel_Deserialize],
+          } as PiProviderConfig
+        }
         onEdit={() => undefined}
         onDelete={() => undefined}
       />

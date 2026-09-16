@@ -452,7 +452,7 @@ export function SpecsPage() {
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                           <Clock className="h-3 w-3" />
-                          {formatDate(spec.modifiedAt)}
+                          {formatDate(spec.modifiedAt ?? 0)}
                         </div>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -546,7 +546,7 @@ export function SpecsPage() {
                     </h2>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {formatDate(selectedSpec.modifiedAt)}
+                    {formatDate(selectedSpec.modifiedAt ?? 0)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

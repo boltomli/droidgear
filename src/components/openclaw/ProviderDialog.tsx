@@ -28,6 +28,8 @@ import {
   commands,
   type OpenClawProfile,
   type OpenClawModel,
+  type OpenClawModel_Deserialize,
+  type OpenClawProviderConfig_Deserialize,
   type ModelInfo,
   type CustomModel,
 } from '@/lib/bindings'
@@ -248,11 +250,15 @@ function ProviderForm({
           name: registry.name,
           contextWindow: registry.contextWindow,
           maxTokens: registry.maxOutputTokens ?? model.maxTokens,
-        }
+        } as OpenClawModel_Deserialize
       } else if (shouldAutoFill) {
-        updated[index] = { ...model, id: value, name: value || null }
+        updated[index] = {
+          ...model,
+          id: value,
+          name: value || null,
+        } as OpenClawModel_Deserialize
       } else {
-        updated[index] = { ...model, id: value }
+        updated[index] = { ...model, id: value } as OpenClawModel_Deserialize
       }
     } else {
       updated[index] = { ...model, [field]: value }
@@ -275,7 +281,7 @@ function ProviderForm({
       apiKey: trimToNull(apiKey),
       api: api || null,
       models: validModels,
-    }
+    } as OpenClawProviderConfig_Deserialize
 
     if (isEditing) {
       updateProvider(providerId, config)

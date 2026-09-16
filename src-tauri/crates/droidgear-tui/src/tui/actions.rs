@@ -211,7 +211,7 @@ pub(super) fn run_action(app: &mut app::App, action: Action) -> anyhow::Result<(
         Action::EditChannels => {
             let channels = droidgear_core::channel::load_channels_for_home(&app.home_dir)
                 .map_err(anyhow::Error::msg)?;
-            let edited: Vec<droidgear_core::channel::Channel> = edit_json_in_editor(&channels)?;
+            let edited: Vec<droidgear_core::channel::ApiChannel> = edit_json_in_editor(&channels)?;
             droidgear_core::channel::save_channels_for_home(&app.home_dir, edited)
                 .map_err(anyhow::Error::msg)?;
             app.set_toast("Saved", false);

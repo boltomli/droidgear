@@ -11,7 +11,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { commands } from '@/lib/bindings'
-import type { MissionModelSettings, CustomModel } from '@/lib/bindings'
+import type {
+  MissionModelSettings,
+  MissionModelSettings_Deserialize,
+  CustomModel,
+} from '@/lib/bindings'
 
 const REASONING_EFFORT_OPTIONS = ['none', 'low', 'medium', 'high'] as const
 const NOT_SET_VALUE = '__not_set__'
@@ -66,28 +70,28 @@ export function MissionsPage() {
     saveSettings({
       ...settings,
       workerModel: value === NOT_SET_VALUE ? null : value,
-    })
+    } as MissionModelSettings_Deserialize)
   }
 
   const handleWorkerReasoningEffortChange = (value: string) => {
     saveSettings({
       ...settings,
       workerReasoningEffort: value === NOT_SET_VALUE ? null : value,
-    })
+    } as MissionModelSettings_Deserialize)
   }
 
   const handleValidationWorkerModelChange = (value: string) => {
     saveSettings({
       ...settings,
       validationWorkerModel: value === NOT_SET_VALUE ? null : value,
-    })
+    } as MissionModelSettings_Deserialize)
   }
 
   const handleValidationWorkerReasoningEffortChange = (value: string) => {
     saveSettings({
       ...settings,
       validationWorkerReasoningEffort: value === NOT_SET_VALUE ? null : value,
-    })
+    } as MissionModelSettings_Deserialize)
   }
 
   const getModelDisplayLabel = (model: CustomModel) => {

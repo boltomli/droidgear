@@ -32,7 +32,7 @@ pub enum ChannelType {
 /// Channel configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
-pub struct Channel {
+pub struct ApiChannel {
     /// Unique identifier (UUID)
     pub id: String,
     /// User-defined name
@@ -109,15 +109,15 @@ fn auth_file_path_for_home(home_dir: &Path, channel_id: &str) -> PathBuf {
 // File helpers
 // ============================================================================
 
-fn read_channels_from_file(path: &Path) -> Result<Vec<Channel>, String> {
+fn read_channels_from_file(path: &Path) -> Result<Vec<ApiChannel>, String> {
     let content =
         fs::read_to_string(path).map_err(|e| format!("Failed to read channels file: {e}"))?;
-    let channels: Vec<Channel> = serde_json::from_str(&content)
+    let channels: Vec<ApiChannel> = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse channels file: {e}"))?;
     Ok(channels)
 }
 
-fn write_channels_to_file(path: &Path, channels: &[Channel]) -> Result<(), String> {
+fn write_channels_to_file(path: &Path, channels: &[ApiChannel]) -> Result<(), String> {
     let content = serde_json::to_string_pretty(channels)
         .map_err(|e| format!("Failed to serialize channels: {e}"))?;
     fs::write(path, content).map_err(|e| format!("Failed to write channels file: {e}"))?;
@@ -167,7 +167,7 @@ fn delete_channel_auth_for_home(home_dir: &Path, channel_id: &str) -> Result<(),
 
 /// Loads all channels from ~/.droidgear/channels.json
 /// Falls back to Factory settings.json for migration
-pub fn load_channels_for_home(home_dir: &Path) -> Result<Vec<Channel>, String> {
+pub fn load_channels_for_home(home_dir: &Path) -> Result<Vec<ApiChannel>, String> {
     let droidgear_path = channels_path_for_home(home_dir)?;
     log::info!("Channel: channels file path: {}", droidgear_path.display());
 
@@ -195,7 +195,7 @@ pub fn load_channels_for_home(home_dir: &Path) -> Result<Vec<Channel>, String> {
                 if let Some(channels_value) = config.get("channels") {
                     if let Some(arr) = channels_value.as_array() {
                         if !arr.is_empty() {
-                            let channels: Vec<Channel> = arr
+                            let channels: Vec<ApiChannel> = arr
                                 .iter()
                                 .filter_map(|v| serde_json::from_value(v.clone()).ok())
                                 .collect();
@@ -219,18 +219,18 @@ pub fn load_channels_for_home(home_dir: &Path) -> Result<Vec<Channel>, String> {
     Ok(vec![])
 }
 
-pub fn load_channels() -> Result<Vec<Channel>, String> {
+pub fn load_channels() -> Result<Vec<ApiChannel>, String> {
     let home = crate::paths::get_home_dir()?;
     log::info!("Channel: loading channels from home: {}", home.display());
     load_channels_for_home(&home)
 }
 
-pub fn save_channels_for_home(home_dir: &Path, channels: Vec<Channel>) -> Result<(), String> {
+pub fn save_channels_for_home(home_dir: &Path, channels: Vec<ApiChannel>) -> Result<(), String> {
     let path = channels_path_for_home(home_dir)?;
     write_channels_to_file(&path, &channels)
 }
 
-pub fn save_channels(channels: Vec<Channel>) -> Result<(), String> {
+pub fn save_channels(channels: Vec<ApiChannel>) -> Result<(), String> {
     save_channels_for_home(&crate::paths::get_home_dir()?, channels)
 }
 

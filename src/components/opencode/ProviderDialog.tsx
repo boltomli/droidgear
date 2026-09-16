@@ -27,6 +27,7 @@ import {
   type OpenCodeProfile,
   type OpenCodeProviderConfig,
   type OpenCodeModelConfig,
+  type OpenCodeModelConfig_Serialize,
   type CustomModel,
 } from '@/lib/bindings'
 import { ChannelModelPickerDialog } from '@/components/channels/ChannelModelPickerDialog'
@@ -209,7 +210,7 @@ export function ProviderDialog({
     if (!providerId.trim()) return
 
     const trimmedApiKey = trimToNull(apiKey)
-    const config: OpenCodeProviderConfig = {
+    const config = {
       npm: trimToNull(npm),
       name: trimToNull(name),
       options: {
@@ -218,8 +219,11 @@ export function ProviderDialog({
         timeout: timeout ? parseInt(timeout, 10) : null,
         headers: null,
       },
-      models: Object.keys(models).length > 0 ? models : null,
-    }
+      models:
+        Object.keys(models).length > 0
+          ? (models as Record<string, OpenCodeModelConfig_Serialize>)
+          : null,
+    } as OpenCodeProviderConfig
 
     const auth = trimmedApiKey ? { type: 'api', key: trimmedApiKey } : undefined
 

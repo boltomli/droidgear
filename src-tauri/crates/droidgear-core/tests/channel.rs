@@ -1,8 +1,8 @@
-use droidgear_core::channel::{self, Channel, ChannelType};
+use droidgear_core::channel::{self, ApiChannel, ChannelType};
 use tempfile::TempDir;
 
-fn mk_channel(id: &str, channel_type: ChannelType) -> Channel {
-    Channel {
+fn mk_channel(id: &str, channel_type: ChannelType) -> ApiChannel {
+    ApiChannel {
         id: id.to_string(),
         name: format!("Channel {id}"),
         channel_type,

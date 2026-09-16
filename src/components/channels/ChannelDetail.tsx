@@ -34,7 +34,7 @@ import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
 import {
   commands,
-  type Channel,
+  type ApiChannel,
   type ChannelToken,
   type ChannelType,
   type ModelInfo,
@@ -66,7 +66,7 @@ const channelTypeI18nKeys: Record<ChannelType, string> = {
 }
 
 interface ChannelDetailProps {
-  channel: Channel
+  channel: ApiChannel
   onEdit: () => void
 }
 

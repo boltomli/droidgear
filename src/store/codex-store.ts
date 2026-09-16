@@ -253,18 +253,15 @@ export const useCodexStore = create<CodexState>()(
           return
         }
         const live: CodexCurrentConfig = result.data
-        const updated: CodexProfile = {
+        const updated = {
           ...currentProfile,
-          providers: (live.providers ?? {}) as Record<
-            string,
-            CodexProviderConfig
-          >,
+          providers: live.providers ?? {},
           modelProvider: live.modelProvider,
           model: live.model,
           modelReasoningEffort: live.modelReasoningEffort ?? null,
           apiKey: live.apiKey ?? null,
           updatedAt: new Date().toISOString(),
-        }
+        } as CodexProfile
         set(
           { currentProfile: updated },
           undefined,
@@ -294,7 +291,7 @@ export const useCodexStore = create<CodexState>()(
           updatedAt: new Date().toISOString(),
         }
         set(
-          { currentProfile: updated },
+          { currentProfile: updated as CodexProfile },
           undefined,
           'codex/updateProfileDescription'
         )
@@ -326,7 +323,11 @@ export const useCodexStore = create<CodexState>()(
           authProfileName,
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'codex/updateModelProvider')
+        set(
+          { currentProfile: updated as CodexProfile },
+          undefined,
+          'codex/updateModelProvider'
+        )
         await get().saveProfile()
       },
 
@@ -339,7 +340,7 @@ export const useCodexStore = create<CodexState>()(
           updatedAt: new Date().toISOString(),
         }
         set(
-          { currentProfile: updated },
+          { currentProfile: updated as CodexProfile },
           undefined,
           'codex/updateAuthProfileName'
         )
@@ -367,7 +368,7 @@ export const useCodexStore = create<CodexState>()(
           updatedAt: new Date().toISOString(),
         }
         set(
-          { currentProfile: updated },
+          { currentProfile: updated as CodexProfile },
           undefined,
           'codex/updateProfileReasoningEffort'
         )
@@ -390,7 +391,11 @@ export const useCodexStore = create<CodexState>()(
           providers,
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'codex/addProvider')
+        set(
+          { currentProfile: updated as CodexProfile },
+          undefined,
+          'codex/addProvider'
+        )
         await get().saveProfile()
       },
 
@@ -417,7 +422,11 @@ export const useCodexStore = create<CodexState>()(
           }),
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'codex/updateProvider')
+        set(
+          { currentProfile: updated as CodexProfile },
+          undefined,
+          'codex/updateProvider'
+        )
         await get().saveProfile()
       },
 
@@ -436,7 +445,11 @@ export const useCodexStore = create<CodexState>()(
           providers,
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'codex/deleteProvider')
+        set(
+          { currentProfile: updated as CodexProfile },
+          undefined,
+          'codex/deleteProvider'
+        )
         await get().saveProfile()
       },
 
@@ -458,7 +471,11 @@ export const useCodexStore = create<CodexState>()(
           apiKey: providerConfig?.apiKey ?? currentProfile.apiKey,
           updatedAt: new Date().toISOString(),
         }
-        set({ currentProfile: updated }, undefined, 'codex/setActiveProvider')
+        set(
+          { currentProfile: updated as CodexProfile },
+          undefined,
+          'codex/setActiveProvider'
+        )
         await get().saveProfile()
       },
 

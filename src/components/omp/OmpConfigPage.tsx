@@ -26,7 +26,7 @@ import { useOmpStore } from '@/store/omp-store'
 import { ConfigStatus } from './ConfigStatus'
 import { ProviderCard } from './ProviderCard'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import type { OmpProfile } from '@/lib/bindings'
+import type { OmpProfile, OmpProfile_Serialize } from '@/lib/bindings'
 
 const ROLE_KEYS = ['default', 'smol', 'slow', 'plan', 'commit'] as const
 
@@ -129,7 +129,10 @@ export function OmpConfigPage() {
   const updateCurrentProfile = async (patch: Partial<OmpProfile>) => {
     const store = useOmpStore.getState()
     if (!store.currentProfile) return
-    const updated = { ...store.currentProfile, ...patch }
+    const updated = {
+      ...store.currentProfile,
+      ...patch,
+    } as OmpProfile_Serialize
     store.selectProfile(store.currentProfile.id)
     useOmpStore.setState({ currentProfile: updated })
     await saveProfile()
@@ -143,7 +146,7 @@ export function OmpConfigPage() {
     if (latest?.agentConfig?.modelRoles) {
       await updateCurrentProfile({
         modelRoles: latest.agentConfig.modelRoles,
-      })
+      } as Partial<OmpProfile_Serialize>)
       toast.success(t('omp.actions.loadedFromLive'))
     } else {
       toast.warning(t('omp.actions.noLiveRoles'))
@@ -157,7 +160,7 @@ export function OmpConfigPage() {
         ...currentProfile.modelRoles,
         [role]: value || undefined,
       },
-    })
+    } as Partial<OmpProfile_Serialize>)
   }
 
   return (

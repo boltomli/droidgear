@@ -159,9 +159,9 @@ export function ExportTemplatesPage() {
             <span className="ml-2 font-mono text-xs">
               {lastResult.outputPath}
             </span>
-            {lastResult.warnings.length > 0 && (
+            {(lastResult.warnings?.length ?? 0) > 0 && (
               <ul className="mt-1 list-disc list-inside text-xs text-yellow-600">
-                {lastResult.warnings.map((w, i) => (
+                {lastResult.warnings?.map((w, i) => (
                   <li key={i}>{w}</li>
                 ))}
               </ul>

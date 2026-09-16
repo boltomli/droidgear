@@ -35,7 +35,9 @@ import {
 import {
   commands,
   type McpServer,
+  type McpServer_Serialize,
   type McpServerConfig,
+  type McpServerConfig_Serialize,
   type McpServerType,
 } from '@/lib/bindings'
 import { trimToNull } from '@/lib/utils'
@@ -261,10 +263,10 @@ export function McpPage() {
       .map(h => ({ key: h.key.trim(), value: h.value.trim() }))
       .filter(h => h.key.length > 0)
 
-    const config: McpServerConfig =
+    const config = (
       serverType === 'stdio'
         ? {
-            type: 'stdio',
+            type: 'stdio' as const,
             disabled: editingServer?.config.disabled ?? false,
             command: trimToNull(command),
             args: cleanArgs.length > 0 ? cleanArgs : null,
@@ -274,7 +276,7 @@ export function McpPage() {
                 : null,
           }
         : {
-            type: 'http',
+            type: 'http' as const,
             disabled: editingServer?.config.disabled ?? false,
             url: trimToNull(url),
             headers:
@@ -282,6 +284,7 @@ export function McpPage() {
                 ? Object.fromEntries(cleanHeaders.map(h => [h.key, h.value]))
                 : null,
           }
+    ) as McpServerConfig_Serialize
 
     const result = await commands.saveMcpServer({
       name: serverName.trim(),
@@ -303,7 +306,12 @@ export function McpPage() {
     if (result.status === 'ok') {
       setServers(prev =>
         prev.map(s =>
-          s.name === name ? { ...s, config: { ...s.config, disabled } } : s
+          s.name === name
+            ? ({
+                ...s,
+                config: { ...s.config, disabled },
+              } as McpServer_Serialize)
+            : s
         )
       )
     } else {
@@ -398,7 +406,10 @@ export function McpPage() {
 
     const result = await commands.saveMcpServer({
       name: preset.id,
-      config: { ...preset.config, disabled: false } as McpServerConfig,
+      config: {
+        ...preset.config,
+        disabled: false,
+      } as McpServerConfig_Serialize,
     })
 
     if (result.status === 'ok') {
@@ -424,7 +435,7 @@ export function McpPage() {
       )
       if (!selectedVariant) return
 
-      let finalConfig: McpServerConfig
+      let finalConfig: McpServerConfig_Serialize
 
       if (selectedVariant.apiKeyConfig?.type === 'urlParam') {
         // HTTP variant: add API key as URL parameter
@@ -437,21 +448,21 @@ export function McpPage() {
           ...selectedVariant.config,
           url: urlWithKey,
           disabled: false,
-        } as McpServerConfig
+        } as McpServerConfig_Serialize
       } else if (selectedVariant.apiKeyConfig?.type === 'header') {
         // HTTP variant: add API key as header
         finalConfig = {
           ...selectedVariant.config,
           headers: { [selectedVariant.apiKeyConfig.key]: apiKeyInput.trim() },
           disabled: false,
-        } as McpServerConfig
+        } as McpServerConfig_Serialize
       } else if (selectedVariant.apiKeyConfig?.type === 'env') {
         // Stdio variant: add API key as environment variable
         finalConfig = {
           ...selectedVariant.config,
           env: { [selectedVariant.apiKeyConfig.key]: apiKeyInput.trim() },
           disabled: false,
-        } as McpServerConfig
+        } as McpServerConfig_Serialize
       } else if (selectedVariant.apiKeyConfig?.type === 'arg') {
         // Stdio variant: add API key as command line argument
         const baseArgs =
@@ -466,12 +477,12 @@ export function McpPage() {
             apiKeyInput.trim(),
           ],
           disabled: false,
-        } as McpServerConfig
+        } as McpServerConfig_Serialize
       } else {
         finalConfig = {
           ...selectedVariant.config,
           disabled: false,
-        } as McpServerConfig
+        } as McpServerConfig_Serialize
       }
 
       const result = await commands.saveMcpServer({

@@ -12,7 +12,7 @@
 //! without recompilation.
 
 use crate::channel::{
-    fetch_channel_tokens, get_channel_api_key, get_channel_credentials, load_channels, Channel,
+    fetch_channel_tokens, get_channel_api_key, get_channel_credentials, load_channels, ApiChannel,
     ChannelToken, ChannelType,
 };
 use crate::factory_settings::ModelInfo;
@@ -220,7 +220,7 @@ fn resolve_protocol(model_id: &str, overrides: &HashMap<String, String>) -> Stri
 
 /// Build a record from channel + token + model data, selecting only the fields specified.
 fn build_flat_record(
-    channel: &Channel,
+    channel: &ApiChannel,
     token: &ChannelToken,
     model: Option<&ModelInfo>,
     protocol: Option<&str>,
@@ -344,7 +344,7 @@ fn build_flat_record(
 // ============================================================================
 
 /// Resolve auth and fetch tokens for a channel.
-fn fetch_tokens_for_channel(channel: &Channel) -> Result<Vec<ChannelToken>, String> {
+fn fetch_tokens_for_channel(channel: &ApiChannel) -> Result<Vec<ChannelToken>, String> {
     match channel.channel_type {
         ChannelType::NewApi | ChannelType::Sub2Api => {
             let creds = get_channel_credentials(&channel.id)?;
@@ -382,7 +382,7 @@ fn fetch_tokens_for_channel(channel: &Channel) -> Result<Vec<ChannelToken>, Stri
 }
 
 fn fetch_channel_tokens_blocking(
-    _channel: &Channel,
+    _channel: &ApiChannel,
     username: &str,
     password: &str,
 ) -> Result<Vec<ChannelToken>, String> {
@@ -452,7 +452,7 @@ pub fn run_export(template: &ExportTemplate) -> Result<ExportResult, String> {
     let all_channels = load_channels()?;
 
     // 2. Filter channels
-    let channels: Vec<&Channel> = all_channels
+    let channels: Vec<&ApiChannel> = all_channels
         .iter()
         .filter(|ch| {
             if template.channels.enabled_only && !ch.enabled {
@@ -712,7 +712,7 @@ mod tests {
 
     #[test]
     fn test_build_flat_record_all_fields() {
-        let channel = Channel {
+        let channel = ApiChannel {
             id: "ch-1".to_string(),
             name: "Test Channel".to_string(),
             channel_type: ChannelType::NewApi,
@@ -759,7 +759,7 @@ mod tests {
 
     #[test]
     fn test_build_flat_record_selected_fields_with_rename() {
-        let channel = Channel {
+        let channel = ApiChannel {
             id: "ch-1".to_string(),
             name: "Test Channel".to_string(),
             channel_type: ChannelType::NewApi,

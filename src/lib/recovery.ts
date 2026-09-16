@@ -4,6 +4,7 @@ import {
   type JsonValue,
   type RecoveryError,
 } from '@/lib/tauri-bindings'
+import type { Value } from '@/lib/bindings'
 
 /** Convert RecoveryError to a human-readable message */
 function formatRecoveryError(error: RecoveryError): string {
@@ -56,7 +57,10 @@ export async function saveEmergencyData(
 ): Promise<void> {
   logger.debug('Saving emergency data', { filename, dataType: typeof data })
 
-  const result = await commands.saveEmergencyData(filename, data)
+  const result = await commands.saveEmergencyData(
+    filename,
+    data as unknown as Value
+  )
 
   if (result.status === 'error') {
     const message = formatRecoveryError(result.error)
@@ -181,7 +185,7 @@ export async function saveCrashState(
   }
 
   try {
-    await saveEmergencyData(filename, crashData, { silent: true })
+    await saveEmergencyData(filename, crashData as JsonValue, { silent: true })
     logger.info('Crash state saved', { filename, timestamp })
   } catch (error) {
     // Don't throw from crash handler - just log

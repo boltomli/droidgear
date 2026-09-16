@@ -174,7 +174,9 @@ export function OpenClawConfigPage() {
     if (!currentProfile) return []
     return Object.entries(currentProfile.providers ?? {}).flatMap(
       ([providerId, config]) =>
-        (config?.models ?? []).map(m => `${providerId}/${m.id}`)
+        (config?.models ?? []).map(
+          (m: { id: string }) => `${providerId}/${m.id}`
+        )
     )
   }, [currentProfile])
 

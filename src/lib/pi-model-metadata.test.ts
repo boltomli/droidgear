@@ -4,6 +4,7 @@ import {
   enrichPiModelFromRegistry,
 } from './pi-model-metadata'
 import { findModelByIdOrAlias } from './model-registry'
+import type { PiModel, PiModel_Deserialize } from '@/lib/bindings'
 
 const registryModel = findModelByIdOrAlias('gpt-5.2')
 
@@ -38,7 +39,7 @@ describe('pi model metadata', () => {
       maxTokens: 2,
       cost: null,
       compat: { supportsDeveloperRole: false },
-    })
+    } as PiModel_Deserialize)
 
     expect(model.name).toBe(registryModel.name)
     expect(model.contextWindow).toBe(registryModel.contextWindow)
@@ -54,7 +55,7 @@ describe('pi model metadata', () => {
     const model = {
       id: 'private-model',
       name: 'Private model',
-    }
+    } as PiModel
 
     expect(enrichPiModelFromRegistry(model)).toBe(model)
   })

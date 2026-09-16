@@ -4,20 +4,20 @@
 
 use super::config::ModelInfo;
 
-pub use droidgear_core::channel::{Channel, ChannelToken, ChannelType};
+pub use droidgear_core::channel::{ApiChannel, ChannelToken, ChannelType};
 
 /// Loads all channels from ~/.droidgear/channels.json
 /// Falls back to ~/.factory/settings.json for migration
 #[tauri::command]
 #[specta::specta]
-pub async fn load_channels() -> Result<Vec<Channel>, String> {
+pub async fn load_channels() -> Result<Vec<ApiChannel>, String> {
     droidgear_core::channel::load_channels()
 }
 
 /// Saves all channels to ~/.droidgear/channels.json
 #[tauri::command]
 #[specta::specta]
-pub async fn save_channels(channels: Vec<Channel>) -> Result<(), String> {
+pub async fn save_channels(channels: Vec<ApiChannel>) -> Result<(), String> {
     droidgear_core::channel::save_channels(channels)
 }
 

@@ -44,7 +44,7 @@ export function ProviderCard({
 
   const hasApiKey = config?.apiKey && config.apiKey.length > 0
   const canTest = Boolean(
-    config?.models.some(model => model.id.trim().length > 0)
+    config?.models?.some(model => model.id.trim().length > 0)
   )
 
   const handleTestConnection = async () => {

@@ -336,7 +336,7 @@ export function SessionsPage() {
       <div className="font-medium text-sm truncate">{session.title}</div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
         <Clock className="h-3 w-3" />
-        {formatDate(session.modifiedAt)}
+        {formatDate(session.modifiedAt ?? 0)}
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
         <Badge variant="outline" className="text-xs px-1 py-0">
@@ -533,12 +533,12 @@ export function SessionsPage() {
                       {selectedSession.title}
                     </h2>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                      <span>{formatDate(selectedSession.modifiedAt)}</span>
+                      <span>{formatDate(selectedSession.modifiedAt ?? 0)}</span>
                       <span>{selectedSession.model}</span>
                       <span>
                         {formatTokens(
-                          selectedSession.tokenUsage.inputTokens +
-                            selectedSession.tokenUsage.outputTokens
+                          (selectedSession.tokenUsage.inputTokens ?? 0) +
+                            (selectedSession.tokenUsage.outputTokens ?? 0)
                         )}{' '}
                         tokens
                       </span>

@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { useChannelStore } from '@/store/channel-store'
 import { useUIStore } from '@/store/ui-store'
-import { commands, type Channel, type ChannelType } from '@/lib/bindings'
+import { commands, type ApiChannel, type ChannelType } from '@/lib/bindings'
 import { trimToNull } from '@/lib/utils'
 import { isApiKeyAuthChannel } from '@/lib/channel-utils'
 import { ChannelExportDialog } from './ChannelExportDialog'
@@ -42,7 +42,7 @@ function ChannelItem({
   isSelected,
   onClick,
 }: {
-  channel: Channel
+  channel: ApiChannel
   isSelected: boolean
   onClick: () => void
 }) {
@@ -108,7 +108,7 @@ export function ChannelList({ onAddChannel }: ChannelListProps) {
           type: ch.type,
           baseUrl: ch.baseUrl,
           enabled: ch.enabled,
-          createdAt: ch.createdAt,
+          createdAt: ch.createdAt ?? 0,
         }
 
         if (includeCredentials) {
@@ -212,7 +212,7 @@ export function ChannelList({ onAddChannel }: ChannelListProps) {
       const dupId = findDuplicateId(normalized)
 
       if (!dupId) {
-        const newChannel: Channel = {
+        const newChannel: ApiChannel = {
           id: crypto.randomUUID(),
           name: normalized.name,
           type: normalized.type as ChannelType,
@@ -236,7 +236,7 @@ export function ChannelList({ onAddChannel }: ChannelListProps) {
             await saveCredentialsForEntry(dupId, normalized)
             break
           case 'keep-both': {
-            const newChannel: Channel = {
+            const newChannel: ApiChannel = {
               id: crypto.randomUUID(),
               name: normalized.name,
               type: normalized.type as ChannelType,

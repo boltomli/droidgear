@@ -154,10 +154,14 @@ export function KeyList({
                     )}
                   </TableCell>
                   <TableCell>
-                    {formatQuota(apiKey.remainQuota, apiKey.unlimitedQuota, t)}
+                    {formatQuota(
+                      apiKey.remainQuota ?? 0,
+                      apiKey.unlimitedQuota,
+                      t
+                    )}
                   </TableCell>
                   <TableCell>
-                    {formatQuota(apiKey.usedQuota, false, t)}
+                    {formatQuota(apiKey.usedQuota ?? 0, false, t)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">

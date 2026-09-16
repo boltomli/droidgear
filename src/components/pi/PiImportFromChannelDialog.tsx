@@ -35,10 +35,11 @@ import { normalizeBaseUrl } from '@/lib/sub2api-platform'
 import { enrichPiModelFromRegistry } from '@/lib/pi-model-metadata'
 import {
   commands,
-  type Channel,
+  type ApiChannel,
   type ChannelToken,
   type ModelInfo,
   type PiModel,
+  type PiModel_Deserialize,
 } from '@/lib/bindings'
 
 export interface PiImportResult {
@@ -118,7 +119,7 @@ export function PiImportFromChannelDialog({
   const [isResolvingKey, setIsResolvingKey] = useState(false)
   const [resolveError, setResolveError] = useState<string | null>(null)
 
-  const selectedChannel: Channel | undefined = channels.find(
+  const selectedChannel: ApiChannel | undefined = channels.find(
     c => c.id === selectedChannelId
   )
   const tokens: ChannelToken[] = keysMap[selectedChannelId] ?? []
@@ -168,7 +169,7 @@ export function PiImportFromChannelDialog({
   }
 
   const computeDefaultProviderId = (
-    channel: Channel,
+    channel: ApiChannel,
     tokenName?: string
   ): string => {
     const base = sanitizeProviderId(
@@ -291,7 +292,7 @@ export function PiImportFromChannelDialog({
         maxTokens: 16384,
         cost: null,
         compat: null,
-      })
+      } as PiModel_Deserialize)
     )
     onImported({
       providerId: providerId.trim(),

@@ -259,8 +259,12 @@ export function PiSessionsPage() {
   }, {})
 
   const groupedProjectNames = Object.keys(groupedSessions).sort((a, b) => {
-    const maxA = Math.max(...(groupedSessions[a] ?? []).map(s => s.modifiedAt))
-    const maxB = Math.max(...(groupedSessions[b] ?? []).map(s => s.modifiedAt))
+    const maxA = Math.max(
+      ...(groupedSessions[a] ?? []).map(s => s.modifiedAt ?? 0)
+    )
+    const maxB = Math.max(
+      ...(groupedSessions[b] ?? []).map(s => s.modifiedAt ?? 0)
+    )
     return maxB - maxA
   })
 
@@ -280,7 +284,7 @@ export function PiSessionsPage() {
       <div className="font-medium text-sm truncate">{session.title}</div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
         <Clock className="h-3 w-3" />
-        {formatDate(session.modifiedAt)}
+        {formatDate(session.modifiedAt ?? 0)}
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
         {projectLabel(session.project) && (
@@ -481,7 +485,7 @@ export function PiSessionsPage() {
                   <div className="min-w-0 flex-1">
                     <h2 className="font-medium truncate">{summary.title}</h2>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                      <span>{formatDate(summary.modifiedAt)}</span>
+                      <span>{formatDate(summary.modifiedAt ?? 0)}</span>
                       <span>
                         {summary.modelProvider
                           ? `${summary.modelProvider}/`
@@ -490,8 +494,8 @@ export function PiSessionsPage() {
                       </span>
                       <span>
                         {formatTokens(
-                          summary.tokenUsage.inputTokens +
-                            summary.tokenUsage.outputTokens
+                          (summary.tokenUsage.inputTokens ?? 0) +
+                            (summary.tokenUsage.outputTokens ?? 0)
                         )}{' '}
                         tokens
                       </span>

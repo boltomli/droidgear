@@ -1743,7 +1743,7 @@ pub(super) fn run_select_action(
 /// (channel → key/token → model → write into the editor).
 fn claude_import_fetch_models(
     app: &mut app::App,
-    channel: &droidgear_core::channel::Channel,
+    channel: &droidgear_core::channel::ApiChannel,
     api_key: &str,
 ) {
     match droidgear_core::channel::fetch_models_by_api_key_blocking(
