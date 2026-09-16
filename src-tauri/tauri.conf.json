@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
+  "$schema": "https://schema.tauri.app/config/3",
   "productName": "DroidGear",
   "version": "1.3.1",
   "identifier": "com.droidgear.app",
