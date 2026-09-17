@@ -22,7 +22,10 @@ pub fn run() {
     bindings::export_ts_bindings();
 
     // Build with common plugins
-    let mut app_builder = tauri::Builder::default();
+    // Tauri v3 requires an explicit runtime selection — v3 decoupled the
+    // webview backend into tauri-runtime-wry; without this call .run()
+    // panics with RuntimeNotConfigured.
+    let mut app_builder = tauri::Builder::default().runtime(tauri_runtime_wry::Wry::default());
 
     // Single instance plugin must be registered FIRST
     // When user tries to open a second instance, focus the existing window instead
