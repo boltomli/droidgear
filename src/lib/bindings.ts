@@ -14,7 +14,7 @@ export const commands = {
 	 *  Loads user preferences from disk.
 	 *  Returns default preferences if the file doesn't exist.
 	 */
-	loadPreferences: () => typedError<AppPreferences_Serialize, string>(__TAURI_INVOKE("load_preferences")),
+	loadPreferences: () => typedError<AppPreferences, string>(__TAURI_INVOKE("load_preferences")),
 	/**
 	 *  Saves user preferences to disk.
 	 *  Uses atomic write (temp file + rename) to prevent corruption.
@@ -47,7 +47,7 @@ export const commands = {
 	/**  Resets the config file to an empty JSON object */
 	resetConfigFile: () => typedError<null, string>(__TAURI_INVOKE("reset_config_file")),
 	/**  Loads custom models from settings.json */
-	loadCustomModels: () => typedError<CustomModel_Serialize[], string>(__TAURI_INVOKE("load_custom_models")),
+	loadCustomModels: () => typedError<CustomModel[], string>(__TAURI_INVOKE("load_custom_models")),
 	/**  Saves custom models to settings.json (preserves other fields) */
 	saveCustomModels: (models: CustomModel[]) => typedError<null, string>(__TAURI_INVOKE("save_custom_models", { models })),
 	/**  Loads modelFavorites from settings.json. */
@@ -110,14 +110,14 @@ export const commands = {
 	 *  Gets the missionModelSettings from settings.json
 	 *  Returns empty settings if not set
 	 */
-	getMissionModelSettings: () => typedError<MissionModelSettings_Serialize, string>(__TAURI_INVOKE("get_mission_model_settings")),
+	getMissionModelSettings: () => typedError<MissionModelSettings, string>(__TAURI_INVOKE("get_mission_model_settings")),
 	/**  Saves the missionModelSettings to settings.json */
 	saveMissionModelSettings: (settings: MissionModelSettings) => typedError<null, string>(__TAURI_INVOKE("save_mission_model_settings", { settings })),
 	/**
 	 *  Gets the sessionDefaultSettings from settings.json
 	 *  Returns empty settings if not set
 	 */
-	getSessionDefaultSettings: () => typedError<SessionDefaultSettings_Serialize, string>(__TAURI_INVOKE("get_session_default_settings")),
+	getSessionDefaultSettings: () => typedError<SessionDefaultSettings, string>(__TAURI_INVOKE("get_session_default_settings")),
 	/**  Saves the sessionDefaultSettings to settings.json */
 	saveSessionDefaultSettings: (settings: SessionDefaultSettings) => typedError<null, string>(__TAURI_INVOKE("save_session_default_settings", { settings })),
 	/**
@@ -165,7 +165,7 @@ export const commands = {
 	/**  Fetches models using an API key (for quick model addition from channels) */
 	fetchModelsByApiKey: (baseUrl: string, apiKey: string, platform: string | null) => typedError<ModelInfo[], string>(__TAURI_INVOKE("fetch_models_by_api_key", { baseUrl, apiKey, platform })),
 	/**  Load all export templates from config file. */
-	loadExportTemplates: () => typedError<ExportTemplate_Serialize[], string>(__TAURI_INVOKE("load_export_templates")),
+	loadExportTemplates: () => typedError<ExportTemplate[], string>(__TAURI_INVOKE("load_export_templates")),
 	/**
 	 *  Save (create or update) an export template by name.
 	 *  If a template with the same name exists, it's replaced.
@@ -174,7 +174,7 @@ export const commands = {
 	/**  Delete an export template by name. */
 	deleteExportTemplate: (name: string) => typedError<null, string>(__TAURI_INVOKE("delete_export_template", { name })),
 	/**  Run an export template by name and return the result. */
-	runExportTemplate: (name: string) => typedError<ExportResult_Serialize, string>(__TAURI_INVOKE("run_export_template", { name })),
+	runExportTemplate: (name: string) => typedError<ExportResult, string>(__TAURI_INVOKE("run_export_template", { name })),
 	/**
 	 *  Gets the value of an environment variable.
 	 *  Returns None if the variable is not set.
@@ -211,7 +211,7 @@ export const commands = {
 	/**  Stops watching the specs directory. */
 	stopSpecsWatcher: () => typedError<null, string>(__TAURI_INVOKE("stop_specs_watcher")),
 	/**  Loads all MCP servers from ~/.factory/mcp.json */
-	loadMcpServers: () => typedError<McpServer_Serialize[], string>(__TAURI_INVOKE("load_mcp_servers")),
+	loadMcpServers: () => typedError<McpServer[], string>(__TAURI_INVOKE("load_mcp_servers")),
 	/**  Saves an MCP server (creates or updates) */
 	saveMcpServer: (server: McpServer) => typedError<null, string>(__TAURI_INVOKE("save_mcp_server", { server })),
 	/**  Deletes an MCP server by name */
@@ -219,17 +219,17 @@ export const commands = {
 	/**  Toggles an MCP server's disabled state */
 	toggleMcpServer: (name: string, disabled: boolean) => typedError<null, string>(__TAURI_INVOKE("toggle_mcp_server", { name, disabled })),
 	/**  List all Claude Code profiles */
-	listClaudeProfiles: () => typedError<ClaudeCodeProfile_Serialize[], string>(__TAURI_INVOKE("list_claude_profiles")),
+	listClaudeProfiles: () => typedError<ClaudeCodeProfile[], string>(__TAURI_INVOKE("list_claude_profiles")),
 	/**  Get a profile by ID */
-	getClaudeProfile: (id: string) => typedError<ClaudeCodeProfile_Serialize, string>(__TAURI_INVOKE("get_claude_profile", { id })),
+	getClaudeProfile: (id: string) => typedError<ClaudeCodeProfile, string>(__TAURI_INVOKE("get_claude_profile", { id })),
 	/**  Save a profile (create or update) */
 	saveClaudeProfile: (profile: ClaudeCodeProfile) => typedError<null, string>(__TAURI_INVOKE("save_claude_profile", { profile })),
 	/**  Delete a profile */
 	deleteClaudeProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("delete_claude_profile", { id })),
 	/**  Duplicate a profile */
-	duplicateClaudeProfile: (id: string, newName: string) => typedError<ClaudeCodeProfile_Serialize, string>(__TAURI_INVOKE("duplicate_claude_profile", { id, newName })),
+	duplicateClaudeProfile: (id: string, newName: string) => typedError<ClaudeCodeProfile, string>(__TAURI_INVOKE("duplicate_claude_profile", { id, newName })),
 	/**  Create default profile (when no profiles exist) */
-	createDefaultClaudeProfile: () => typedError<ClaudeCodeProfile_Serialize, string>(__TAURI_INVOKE("create_default_claude_profile")),
+	createDefaultClaudeProfile: () => typedError<ClaudeCodeProfile, string>(__TAURI_INVOKE("create_default_claude_profile")),
 	/**  Get active profile ID */
 	getActiveClaudeProfileId: () => typedError<string | null, string>(__TAURI_INVOKE("get_active_claude_profile_id")),
 	/**  Set active profile ID */
@@ -237,9 +237,9 @@ export const commands = {
 	/**  Apply a profile to `~/.claude/settings.json` */
 	applyClaudeProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("apply_claude_profile", { id })),
 	/**  Get Claude Code config status */
-	getClaudeConfigStatus: () => typedError<ClaudeConfigStatus_Serialize, string>(__TAURI_INVOKE("get_claude_config_status")),
+	getClaudeConfigStatus: () => typedError<ClaudeConfigStatus, string>(__TAURI_INVOKE("get_claude_config_status")),
 	/**  Read current Claude Code configuration from settings.json */
-	readClaudeCurrentConfig: () => typedError<ClaudeCurrentConfig_Serialize, string>(__TAURI_INVOKE("read_claude_current_config")),
+	readClaudeCurrentConfig: () => typedError<ClaudeCurrentConfig, string>(__TAURI_INVOKE("read_claude_current_config")),
 	/**  Build the temporary-run launch plan preview for a Claude Code profile. */
 	getClaudeTemporaryRunPlan: (id: string) => typedError<ClaudeTemporaryRunPlan, string>(__TAURI_INVOKE("get_claude_temporary_run_plan", { id })),
 	/**  Launch Claude Code using a runtime settings overlay instead of mutating live config. */
@@ -272,7 +272,7 @@ export const commands = {
 	/**  Plan a temporary run using a named settings file (instead of a profile). */
 	planClaudeTemporaryRunFromFile: (name: string) => typedError<ClaudeTemporaryRunPlan, string>(__TAURI_INVOKE("plan_claude_temporary_run_from_file", { name })),
 	/**  Debug-preview a temporary run from a named settings file. */
-	previewClaudeTemporaryRunFromFile: (name: string) => typedError<ClaudeTemporaryRunDebugPreview_Serialize, string>(__TAURI_INVOKE("preview_claude_temporary_run_from_file", { name })),
+	previewClaudeTemporaryRunFromFile: (name: string) => typedError<ClaudeTemporaryRunDebugPreview, string>(__TAURI_INVOKE("preview_claude_temporary_run_from_file", { name })),
 	/**
 	 *  Launches Claude Code in a terminal using the active settings file. The
 	 *  settings file is copied into a runtime-private directory so the live
@@ -281,17 +281,17 @@ export const commands = {
 	 */
 	launchClaudeWithSettings: (cwd: string | null, skipDangerous: boolean) => typedError<null, string>(__TAURI_INVOKE("launch_claude_with_settings", { cwd, skipDangerous })),
 	/**  List all Codex profiles */
-	listCodexProfiles: () => typedError<CodexProfile_Serialize[], string>(__TAURI_INVOKE("list_codex_profiles")),
+	listCodexProfiles: () => typedError<CodexProfile[], string>(__TAURI_INVOKE("list_codex_profiles")),
 	/**  Get a profile by ID */
-	getCodexProfile: (id: string) => typedError<CodexProfile_Serialize, string>(__TAURI_INVOKE("get_codex_profile", { id })),
+	getCodexProfile: (id: string) => typedError<CodexProfile, string>(__TAURI_INVOKE("get_codex_profile", { id })),
 	/**  Save a profile (create or update) */
 	saveCodexProfile: (profile: CodexProfile) => typedError<null, string>(__TAURI_INVOKE("save_codex_profile", { profile })),
 	/**  Delete a profile */
 	deleteCodexProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("delete_codex_profile", { id })),
 	/**  Duplicate a profile */
-	duplicateCodexProfile: (id: string, newName: string) => typedError<CodexProfile_Serialize, string>(__TAURI_INVOKE("duplicate_codex_profile", { id, newName })),
+	duplicateCodexProfile: (id: string, newName: string) => typedError<CodexProfile, string>(__TAURI_INVOKE("duplicate_codex_profile", { id, newName })),
 	/**  Create default profile (when no profiles exist) */
-	createDefaultCodexProfile: () => typedError<CodexProfile_Serialize, string>(__TAURI_INVOKE("create_default_codex_profile")),
+	createDefaultCodexProfile: () => typedError<CodexProfile, string>(__TAURI_INVOKE("create_default_codex_profile")),
 	/**  Get active profile ID */
 	getActiveCodexProfileId: () => typedError<string | null, string>(__TAURI_INVOKE("get_active_codex_profile_id")),
 	/**  Apply a profile to `~/.codex/*` */
@@ -299,7 +299,7 @@ export const commands = {
 	/**  Get Codex config status */
 	getCodexConfigStatus: () => typedError<CodexConfigStatus, string>(__TAURI_INVOKE("get_codex_config_status")),
 	/**  Read current Codex configuration from config files */
-	readCodexCurrentConfig: () => typedError<CodexCurrentConfig_Serialize, string>(__TAURI_INVOKE("read_codex_current_config")),
+	readCodexCurrentConfig: () => typedError<CodexCurrentConfig, string>(__TAURI_INVOKE("read_codex_current_config")),
 	/**
 	 *  Inspect the installed Codex CLI and report whether temporary-run launch-time
 	 *  overrides are supported.
@@ -317,17 +317,17 @@ export const commands = {
 	/**  Launch Codex using a runtime `CODEX_HOME` snapshot instead of mutating live config. */
 	launchCodex: (id: string, cwd: string | null) => typedError<null, string>(__TAURI_INVOKE("launch_codex", { id, cwd })),
 	/**  List all Hermes profiles */
-	listHermesProfiles: () => typedError<HermesProfile_Serialize[], string>(__TAURI_INVOKE("list_hermes_profiles")),
+	listHermesProfiles: () => typedError<HermesProfile[], string>(__TAURI_INVOKE("list_hermes_profiles")),
 	/**  Get a profile by ID */
-	getHermesProfile: (id: string) => typedError<HermesProfile_Serialize, string>(__TAURI_INVOKE("get_hermes_profile", { id })),
+	getHermesProfile: (id: string) => typedError<HermesProfile, string>(__TAURI_INVOKE("get_hermes_profile", { id })),
 	/**  Save a profile (create or update) */
 	saveHermesProfile: (profile: HermesProfile) => typedError<null, string>(__TAURI_INVOKE("save_hermes_profile", { profile })),
 	/**  Delete a profile */
 	deleteHermesProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("delete_hermes_profile", { id })),
 	/**  Duplicate a profile */
-	duplicateHermesProfile: (id: string, newName: string) => typedError<HermesProfile_Serialize, string>(__TAURI_INVOKE("duplicate_hermes_profile", { id, newName })),
+	duplicateHermesProfile: (id: string, newName: string) => typedError<HermesProfile, string>(__TAURI_INVOKE("duplicate_hermes_profile", { id, newName })),
 	/**  Create default profile (when no profiles exist) */
-	createDefaultHermesProfile: () => typedError<HermesProfile_Serialize, string>(__TAURI_INVOKE("create_default_hermes_profile")),
+	createDefaultHermesProfile: () => typedError<HermesProfile, string>(__TAURI_INVOKE("create_default_hermes_profile")),
 	/**  Get active profile ID */
 	getActiveHermesProfileId: () => typedError<string | null, string>(__TAURI_INVOKE("get_active_hermes_profile_id")),
 	/**  Apply a profile to `~/.hermes/config.yaml` */
@@ -335,19 +335,19 @@ export const commands = {
 	/**  Get Hermes config status */
 	getHermesConfigStatus: () => typedError<HermesConfigStatus, string>(__TAURI_INVOKE("get_hermes_config_status")),
 	/**  Read current Hermes configuration from config files */
-	readHermesCurrentConfig: () => typedError<HermesCurrentConfig_Serialize, string>(__TAURI_INVOKE("read_hermes_current_config")),
+	readHermesCurrentConfig: () => typedError<HermesCurrentConfig, string>(__TAURI_INVOKE("read_hermes_current_config")),
 	/**  List all Pi profiles */
-	listPiProfiles: () => typedError<PiProfile_Serialize[], string>(__TAURI_INVOKE("list_pi_profiles")),
+	listPiProfiles: () => typedError<PiProfile[], string>(__TAURI_INVOKE("list_pi_profiles")),
 	/**  Get a profile by ID */
-	getPiProfile: (id: string) => typedError<PiProfile_Serialize, string>(__TAURI_INVOKE("get_pi_profile", { id })),
+	getPiProfile: (id: string) => typedError<PiProfile, string>(__TAURI_INVOKE("get_pi_profile", { id })),
 	/**  Save a profile (create or update) */
 	savePiProfile: (profile: PiProfile) => typedError<null, string>(__TAURI_INVOKE("save_pi_profile", { profile })),
 	/**  Delete a profile */
 	deletePiProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("delete_pi_profile", { id })),
 	/**  Duplicate a profile */
-	duplicatePiProfile: (id: string, newName: string) => typedError<PiProfile_Serialize, string>(__TAURI_INVOKE("duplicate_pi_profile", { id, newName })),
+	duplicatePiProfile: (id: string, newName: string) => typedError<PiProfile, string>(__TAURI_INVOKE("duplicate_pi_profile", { id, newName })),
 	/**  Create default profile (when no profiles exist) */
-	createDefaultPiProfile: () => typedError<PiProfile_Serialize, string>(__TAURI_INVOKE("create_default_pi_profile")),
+	createDefaultPiProfile: () => typedError<PiProfile, string>(__TAURI_INVOKE("create_default_pi_profile")),
 	/**  Get active profile ID */
 	getActivePiProfileId: () => typedError<string | null, string>(__TAURI_INVOKE("get_active_pi_profile_id")),
 	/**  Set active profile ID */
@@ -357,19 +357,19 @@ export const commands = {
 	/**  Get Pi config status */
 	getPiConfigStatus: () => typedError<PiConfigStatus, string>(__TAURI_INVOKE("get_pi_config_status")),
 	/**  Read current Pi configuration from config files */
-	readPiCurrentConfig: () => typedError<PiCurrentConfig_Serialize, string>(__TAURI_INVOKE("read_pi_current_config")),
+	readPiCurrentConfig: () => typedError<PiCurrentConfig, string>(__TAURI_INVOKE("read_pi_current_config")),
 	/**  List all OMP profiles */
-	listOmpProfiles: () => typedError<OmpProfile_Serialize[], string>(__TAURI_INVOKE("list_omp_profiles")),
+	listOmpProfiles: () => typedError<OmpProfile[], string>(__TAURI_INVOKE("list_omp_profiles")),
 	/**  Get a profile by ID */
-	getOmpProfile: (id: string) => typedError<OmpProfile_Serialize, string>(__TAURI_INVOKE("get_omp_profile", { id })),
+	getOmpProfile: (id: string) => typedError<OmpProfile, string>(__TAURI_INVOKE("get_omp_profile", { id })),
 	/**  Save a profile (create or update) */
 	saveOmpProfile: (profile: OmpProfile) => typedError<null, string>(__TAURI_INVOKE("save_omp_profile", { profile })),
 	/**  Delete a profile */
 	deleteOmpProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("delete_omp_profile", { id })),
 	/**  Duplicate a profile */
-	duplicateOmpProfile: (id: string, newName: string) => typedError<OmpProfile_Serialize, string>(__TAURI_INVOKE("duplicate_omp_profile", { id, newName })),
+	duplicateOmpProfile: (id: string, newName: string) => typedError<OmpProfile, string>(__TAURI_INVOKE("duplicate_omp_profile", { id, newName })),
 	/**  Create default profile (when no profiles exist) */
-	createDefaultOmpProfile: () => typedError<OmpProfile_Serialize, string>(__TAURI_INVOKE("create_default_omp_profile")),
+	createDefaultOmpProfile: () => typedError<OmpProfile, string>(__TAURI_INVOKE("create_default_omp_profile")),
 	/**  Get active profile ID */
 	getActiveOmpProfileId: () => typedError<string | null, string>(__TAURI_INVOKE("get_active_omp_profile_id")),
 	/**  Set active profile ID */
@@ -379,28 +379,28 @@ export const commands = {
 	/**  Get OMP config status */
 	getOmpConfigStatus: () => typedError<OmpConfigStatus, string>(__TAURI_INVOKE("get_omp_config_status")),
 	/**  Read current OMP configuration from config files */
-	readOmpCurrentConfig: () => typedError<OmpCurrentConfig_Serialize, string>(__TAURI_INVOKE("read_omp_current_config")),
+	readOmpCurrentConfig: () => typedError<OmpCurrentConfig, string>(__TAURI_INVOKE("read_omp_current_config")),
 	/**  Test an OMP provider connection via HTTP */
-	testOmpProviderConnection: (providerId: string) => typedError<OmpProviderTestResult_Serialize, string>(__TAURI_INVOKE("test_omp_provider_connection", { providerId })),
+	testOmpProviderConnection: (providerId: string) => typedError<OmpProviderTestResult, string>(__TAURI_INVOKE("test_omp_provider_connection", { providerId })),
 	/**  Test a Pi provider using an isolated temporary models.json and Pi CLI run. */
-	testPiProviderConnection: (providerId: string, config: PiProviderConfig) => typedError<PiProviderTestResult_Serialize, string>(__TAURI_INVOKE("test_pi_provider_connection", { providerId, config })),
+	testPiProviderConnection: (providerId: string, config: PiProviderConfig) => typedError<PiProviderTestResult, string>(__TAURI_INVOKE("test_pi_provider_connection", { providerId, config })),
 	listPiSessions: () => typedError<PiSessionSummary[], string>(__TAURI_INVOKE("list_pi_sessions")),
-	getPiSessionDetail: (sessionPath: string) => typedError<PiSessionDetail_Serialize, string>(__TAURI_INVOKE("get_pi_session_detail", { sessionPath })),
+	getPiSessionDetail: (sessionPath: string) => typedError<PiSessionDetail, string>(__TAURI_INVOKE("get_pi_session_detail", { sessionPath })),
 	deletePiSession: (sessionPath: string) => typedError<null, string>(__TAURI_INVOKE("delete_pi_session", { sessionPath })),
 	startPiSessionsWatcher: () => typedError<null, string>(__TAURI_INVOKE("start_pi_sessions_watcher")),
 	stopPiSessionsWatcher: () => typedError<null, string>(__TAURI_INVOKE("stop_pi_sessions_watcher")),
 	/**  List all OpenCode profiles */
-	listOpencodeProfiles: () => typedError<OpenCodeProfile_Serialize[], string>(__TAURI_INVOKE("list_opencode_profiles")),
+	listOpencodeProfiles: () => typedError<OpenCodeProfile[], string>(__TAURI_INVOKE("list_opencode_profiles")),
 	/**  Get a profile by ID */
-	getOpencodeProfile: (id: string) => typedError<OpenCodeProfile_Serialize, string>(__TAURI_INVOKE("get_opencode_profile", { id })),
+	getOpencodeProfile: (id: string) => typedError<OpenCodeProfile, string>(__TAURI_INVOKE("get_opencode_profile", { id })),
 	/**  Save a profile (create or update) */
 	saveOpencodeProfile: (profile: OpenCodeProfile) => typedError<null, string>(__TAURI_INVOKE("save_opencode_profile", { profile })),
 	/**  Delete a profile */
 	deleteOpencodeProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("delete_opencode_profile", { id })),
 	/**  Duplicate a profile */
-	duplicateOpencodeProfile: (id: string, newName: string) => typedError<OpenCodeProfile_Serialize, string>(__TAURI_INVOKE("duplicate_opencode_profile", { id, newName })),
+	duplicateOpencodeProfile: (id: string, newName: string) => typedError<OpenCodeProfile, string>(__TAURI_INVOKE("duplicate_opencode_profile", { id, newName })),
 	/**  Create default profile if none exists */
-	createDefaultProfile: () => typedError<OpenCodeProfile_Serialize, string>(__TAURI_INVOKE("create_default_profile")),
+	createDefaultProfile: () => typedError<OpenCodeProfile, string>(__TAURI_INVOKE("create_default_profile")),
 	/**  Get active profile ID */
 	getActiveOpencodeProfileId: () => typedError<string | null, string>(__TAURI_INVOKE("get_active_opencode_profile_id")),
 	/**  Apply a profile to OpenCode config files */
@@ -408,23 +408,23 @@ export const commands = {
 	/**  Get OpenCode config status */
 	getOpencodeConfigStatus: () => typedError<OpenCodeConfigStatus, string>(__TAURI_INVOKE("get_opencode_config_status")),
 	/**  Get provider templates */
-	getOpencodeProviderTemplates: () => typedError<ProviderTemplate_Serialize[], string>(__TAURI_INVOKE("get_opencode_provider_templates")),
+	getOpencodeProviderTemplates: () => typedError<ProviderTemplate[], string>(__TAURI_INVOKE("get_opencode_provider_templates")),
 	/**  Test provider connection */
 	testOpencodeProviderConnection: (providerId: string, baseUrl: string, apiKey: string) => typedError<boolean, string>(__TAURI_INVOKE("test_opencode_provider_connection", { providerId, baseUrl, apiKey })),
 	/**  Read current OpenCode configuration from config files */
-	readOpencodeCurrentConfig: () => typedError<OpenCodeCurrentConfig_Serialize, string>(__TAURI_INVOKE("read_opencode_current_config")),
+	readOpencodeCurrentConfig: () => typedError<OpenCodeCurrentConfig, string>(__TAURI_INVOKE("read_opencode_current_config")),
 	/**  List all OpenClaw profiles */
-	listOpenclawProfiles: () => typedError<OpenClawProfile_Serialize[], string>(__TAURI_INVOKE("list_openclaw_profiles")),
+	listOpenclawProfiles: () => typedError<OpenClawProfile[], string>(__TAURI_INVOKE("list_openclaw_profiles")),
 	/**  Get a profile by ID */
-	getOpenclawProfile: (id: string) => typedError<OpenClawProfile_Serialize, string>(__TAURI_INVOKE("get_openclaw_profile", { id })),
+	getOpenclawProfile: (id: string) => typedError<OpenClawProfile, string>(__TAURI_INVOKE("get_openclaw_profile", { id })),
 	/**  Save a profile (create or update) */
 	saveOpenclawProfile: (profile: OpenClawProfile) => typedError<null, string>(__TAURI_INVOKE("save_openclaw_profile", { profile })),
 	/**  Delete a profile */
 	deleteOpenclawProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("delete_openclaw_profile", { id })),
 	/**  Duplicate a profile */
-	duplicateOpenclawProfile: (id: string, newName: string) => typedError<OpenClawProfile_Serialize, string>(__TAURI_INVOKE("duplicate_openclaw_profile", { id, newName })),
+	duplicateOpenclawProfile: (id: string, newName: string) => typedError<OpenClawProfile, string>(__TAURI_INVOKE("duplicate_openclaw_profile", { id, newName })),
 	/**  Create default profile (when no profiles exist) */
-	createDefaultOpenclawProfile: () => typedError<OpenClawProfile_Serialize, string>(__TAURI_INVOKE("create_default_openclaw_profile")),
+	createDefaultOpenclawProfile: () => typedError<OpenClawProfile, string>(__TAURI_INVOKE("create_default_openclaw_profile")),
 	/**  Get active profile ID */
 	getActiveOpenclawProfileId: () => typedError<string | null, string>(__TAURI_INVOKE("get_active_openclaw_profile_id")),
 	/**  Apply a profile to `~/.openclaw/openclaw.json` */
@@ -432,13 +432,13 @@ export const commands = {
 	/**  Get OpenClaw config status */
 	getOpenclawConfigStatus: () => typedError<OpenClawConfigStatus, string>(__TAURI_INVOKE("get_openclaw_config_status")),
 	/**  Read current OpenClaw configuration from config file */
-	readOpenclawCurrentConfig: () => typedError<OpenClawCurrentConfig_Serialize, string>(__TAURI_INVOKE("read_openclaw_current_config")),
+	readOpenclawCurrentConfig: () => typedError<OpenClawCurrentConfig, string>(__TAURI_INVOKE("read_openclaw_current_config")),
 	/**  Read subagents from OpenClaw config file */
-	readOpenclawSubagents: () => typedError<OpenClawSubAgent_Serialize[], string>(__TAURI_INVOKE("read_openclaw_subagents")),
+	readOpenclawSubagents: () => typedError<OpenClawSubAgent[], string>(__TAURI_INVOKE("read_openclaw_subagents")),
 	/**  Save subagents to OpenClaw config file */
 	saveOpenclawSubagents: (subagents: OpenClawSubAgent[]) => typedError<null, string>(__TAURI_INVOKE("save_openclaw_subagents", { subagents })),
 	/**  Read the current Dsh providers from `~/.dsh/settings.yaml`. */
-	readDshCurrentConfig: () => typedError<DshCurrentConfig_Serialize, string>(__TAURI_INVOKE("read_dsh_current_config")),
+	readDshCurrentConfig: () => typedError<DshCurrentConfig, string>(__TAURI_INVOKE("read_dsh_current_config")),
 	/**  Insert or update one provider in `llm-pi-ai.providers`. */
 	saveDshProvider: (providerId: string, config: DshProviderConfig) => typedError<null, string>(__TAURI_INVOKE("save_dsh_provider", { providerId, config })),
 	/**  Remove one provider from `llm-pi-ai.providers`. */
@@ -446,7 +446,7 @@ export const commands = {
 	/**  Get the status of `~/.dsh/settings.yaml`. */
 	getDshConfigStatus: () => typedError<DshConfigStatus, string>(__TAURI_INVOKE("get_dsh_config_status")),
 	/**  Read env-var → API key refs from `~/.dsh/.credentials.yaml`. */
-	readDshCredentials: () => typedError<DshCredentials_Serialize, string>(__TAURI_INVOKE("read_dsh_credentials")),
+	readDshCredentials: () => typedError<DshCredentials, string>(__TAURI_INVOKE("read_dsh_credentials")),
 	/**
 	 *  Insert or update one credential ref (env var name → value) in
 	 *  `~/.dsh/.credentials.yaml`. An empty value removes the entry.
@@ -459,27 +459,27 @@ export const commands = {
 	 *  the given API key, with registry metadata enrichment (reasoningEfforts,
 	 *  contextWindow, maxTokens, name).
 	 */
-	fetchDshModels: (baseUrl: string, apiKey: string, api: string | null) => typedError<DshModel_Serialize[], string>(__TAURI_INVOKE("fetch_dsh_models", { baseUrl, apiKey, api })),
+	fetchDshModels: (baseUrl: string, apiKey: string, api: string | null) => typedError<DshModel[], string>(__TAURI_INVOKE("fetch_dsh_models", { baseUrl, apiKey, api })),
 	/**  Lists all session projects from ~/.factory/sessions directory. */
 	listSessionProjects: () => typedError<SessionProject[], string>(__TAURI_INVOKE("list_session_projects")),
 	/**  Lists all sessions, optionally filtered by project. */
 	listSessions: (project: string | null) => typedError<SessionSummary[], string>(__TAURI_INVOKE("list_sessions", { project })),
 	/**  Gets detailed session information including messages. */
-	getSessionDetail: (sessionPath: string) => typedError<SessionDetail_Serialize, string>(__TAURI_INVOKE("get_session_detail", { sessionPath })),
+	getSessionDetail: (sessionPath: string) => typedError<SessionDetail, string>(__TAURI_INVOKE("get_session_detail", { sessionPath })),
 	/**  Starts watching the sessions directory for changes. */
 	startSessionsWatcher: () => typedError<null, string>(__TAURI_INVOKE("start_sessions_watcher")),
 	/**  Stops watching the sessions directory. */
 	stopSessionsWatcher: () => typedError<null, string>(__TAURI_INVOKE("stop_sessions_watcher")),
 	/**  Deletes a session by removing its .jsonl and .settings.json files. */
 	deleteSession: (sessionPath: string) => typedError<null, string>(__TAURI_INVOKE("delete_session", { sessionPath })),
-	testModelConnection: (modelId: string) => typedError<ModelTestResult_Serialize, string>(__TAURI_INVOKE("test_model_connection", { modelId })),
-	testAllModelConnectionsCommand: () => typedError<ModelTestResult_Serialize[], string>(__TAURI_INVOKE("test_all_model_connections_command")),
+	testModelConnection: (modelId: string) => typedError<ModelTestResult, string>(__TAURI_INVOKE("test_model_connection", { modelId })),
+	testAllModelConnectionsCommand: () => typedError<ModelTestResult[], string>(__TAURI_INVOKE("test_all_model_connections_command")),
 	getConnectivitySummary: (results: ModelTestResult[]) => typedError<ConnectivitySummary, string>(__TAURI_INVOKE("get_connectivity_summary", { results })),
-	testProviderConnection: (provider: string, baseUrl: string, apiKey: string, modelId: string) => typedError<ConnectionDiagnostics_Serialize, string>(__TAURI_INVOKE("test_provider_connection", { provider, baseUrl, apiKey, modelId })),
-	testModelConnectionWithMode: (modelId: string, mode: TestMode, prompt: string | null) => typedError<ModelTestResult_Serialize, string>(__TAURI_INVOKE("test_model_connection_with_mode", { modelId, mode, prompt })),
-	testAllModelConnectionsWithMode: (mode: TestMode, prompt: string | null) => typedError<ModelTestResult_Serialize[], string>(__TAURI_INVOKE("test_all_model_connections_with_mode", { mode, prompt })),
+	testProviderConnection: (provider: string, baseUrl: string, apiKey: string, modelId: string) => typedError<ConnectionDiagnostics, string>(__TAURI_INVOKE("test_provider_connection", { provider, baseUrl, apiKey, modelId })),
+	testModelConnectionWithMode: (modelId: string, mode: TestMode, prompt: string | null) => typedError<ModelTestResult, string>(__TAURI_INVOKE("test_model_connection_with_mode", { modelId, mode, prompt })),
+	testAllModelConnectionsWithMode: (mode: TestMode, prompt: string | null) => typedError<ModelTestResult[], string>(__TAURI_INVOKE("test_all_model_connections_with_mode", { mode, prompt })),
 	/**  Gets the current configuration paths (custom values only) */
-	getConfigPaths: () => typedError<ConfigPaths_Serialize, string>(__TAURI_INVOKE("get_config_paths")),
+	getConfigPaths: () => typedError<ConfigPaths, string>(__TAURI_INVOKE("get_config_paths")),
 	/**  Gets all effective paths with default indicators */
 	getEffectivePaths: () => typedError<EffectivePaths, string>(__TAURI_INVOKE("get_effective_paths")),
 	/**  Saves a single configuration path */
@@ -533,7 +533,7 @@ export const commands = {
 	deleteFactoryAuthProfile: (name: string) => typedError<null, string>(__TAURI_INVOKE("delete_factory_auth_profile", { name })),
 	renameFactoryAuthProfile: (name: string, label: string) => typedError<null, string>(__TAURI_INVOKE("rename_factory_auth_profile", { name, label })),
 	/**  List all Codex auth profiles */
-	listCodexAuthProfiles: () => typedError<CodexAuthProfileState_Serialize, string>(__TAURI_INVOKE("list_codex_auth_profiles")),
+	listCodexAuthProfiles: () => typedError<CodexAuthProfileState, string>(__TAURI_INVOKE("list_codex_auth_profiles")),
 	/**  Check if current auth is official */
 	isCodexOfficialAuth: () => typedError<boolean, string>(__TAURI_INVOKE("is_codex_official_auth")),
 	/**  Save current auth.json as a named profile */
@@ -553,7 +553,7 @@ export const commands = {
 	/**  Lists all Codex model providers aggregated from every configured profile. */
 	listCodexSessionProviders: () => typedError<CodexSessionProvider[], string>(__TAURI_INVOKE("list_codex_session_providers")),
 	/**  Gets detailed Codex session information including messages. */
-	getCodexSessionDetail: (sessionPath: string) => typedError<CodexSessionDetail_Serialize, string>(__TAURI_INVOKE("get_codex_session_detail", { sessionPath })),
+	getCodexSessionDetail: (sessionPath: string) => typedError<CodexSessionDetail, string>(__TAURI_INVOKE("get_codex_session_detail", { sessionPath })),
 	/**  Deletes a Codex session by removing its .jsonl file. */
 	deleteCodexSession: (sessionPath: string) => typedError<null, string>(__TAURI_INVOKE("delete_codex_session", { sessionPath })),
 	/**  Rewrites the `model_provider` of a session file's `session_meta` line. */
@@ -2890,15 +2890,11 @@ async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; dat
     }
 }
 
-/** JSON-compatible value type */
-export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue }
 
-/** Rust-style Result type */
-export type Result<T, E> = { status: "ok"; data: T } | { status: "error"; error: E }
+/** JSON value type (no longer auto-generated by tauri-specta v3) */
+export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>;
 
+/** Result type (no longer auto-generated by tauri-specta v3) */
+export type Result<T, E> =
+	| { status: "ok"; data: T }
+	| { status: "error"; error: E };

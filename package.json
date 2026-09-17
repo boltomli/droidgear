@@ -29,7 +29,7 @@
     "rust:clippy": "cd src-tauri && cargo clippy -p droidgear-core -p droidgear-tui -- -D warnings",
     "rust:clippy:fix": "cd src-tauri && cargo clippy -p droidgear-core -p droidgear-tui --fix --allow-dirty",
     "rust:test": "cd src-tauri && cargo test -p droidgear-core -p droidgear-tui",
-    "rust:bindings": "cd src-tauri && cargo test export_bindings -- --ignored --nocapture",
+    "rust:bindings": "cd src-tauri && cargo run --bin export_bindings",
     "tauri": "tauri",
     "tauri:dev": "bash scripts/tauri-dev.sh",
     "tui": "cd src-tauri && cargo run -p droidgear-tui --",
