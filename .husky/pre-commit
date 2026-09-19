@@ -17,11 +17,11 @@ if ! npm run typecheck; then
     exit 1
 fi
 
-# ESLint
+# Ast-grep
 echo ""
-echo "📏 Running ESLint..."
-if ! npm run lint; then
-    echo "❌ ESLint failed!"
+echo "📏 Running ast-grep..."
+if ! npm run ast:lint; then
+    echo "❌ ast-grep failed!"
     exit 1
 fi
 

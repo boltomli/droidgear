@@ -1,0 +1,22 @@
+id: no-explicit-any
+message: |
+  Avoid `any` type. Use `unknown`, generics, or specific types instead.
+severity: warning
+language: TypeScript
+ignores:
+  - 'src/lib/bindings.ts'
+rule:
+  any:
+    - pattern: 'let $NAME: any = $INIT'
+    - pattern: 'const $NAME: any = $INIT'
+    - pattern: 'var $NAME: any = $INIT'
+    - pattern: 'function $NAME($$$PARAMS): any { $$$BODY }'
+    - pattern: '($$$PARAMS): any => $BODY'
+    - pattern: '$X as any'
+note: |
+  `any` disables type checking. Prefer:
+  - `unknown` for truly unknown values
+  - Generics for flexible types
+  - Specific types when the shape is known
+
+  Use `// ast-grep-ignore` for justified exceptions.
