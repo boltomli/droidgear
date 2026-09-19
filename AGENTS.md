@@ -40,9 +40,7 @@ Tauri v3.x (alpha), React 19.x, Zustand v5.x, Tailwind v4.x, shadcn/ui v4.x, Vit
 
 ### Go-based TypeScript
 
-TypeScript 7.0 (dev, pinned `7.0.0-dev.20260707.2`) is installed via `@typescript/native-preview` and uses the `tsgo` entry point instead of `tsc`. The stable `typescript` package (v6.0.x) is retained for knip compatibility.
-
-- `npm run typecheck` / `npm run build` → uses `tsgo` (TS7)
+TypeScript 7.0.x is the stable native compiler. `npm run typecheck` / `npm run build` use `tsc` (TS7).
 
 ## File Organization
 
@@ -153,7 +151,7 @@ docs/
 ```bash
 npm run dev              # Vite dev server (port 1420)
 npm run tauri:dev         # Full Tauri app with hot reload
-npm run build            # tsgo + vite build
+npm run build            # tsc + vite build
 npm run check:all        # Full quality gate (typecheck + biome + ast + format + rust + tests)
 npm run fix:all          # Auto-fix (biome + format + ast + rust:fmt + clippy)
 npm run test:run         # Vitest single run

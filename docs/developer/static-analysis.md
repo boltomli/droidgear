@@ -27,9 +27,9 @@ npm run fix:all      # Auto-fix what can be fixed
 
 ## Tool Details
 
-### TypeScript (tsgo, TS7)
+### TypeScript (tsc, TS7)
 
-Type checking via the Go-based TypeScript compiler.
+Type checking via the native TypeScript compiler.
 
 ```bash
 npm run typecheck    # Check types

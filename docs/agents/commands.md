@@ -26,7 +26,7 @@ npm run check:all        # All checks: typecheck, ast-grep, format, rust checks,
 ## Individual Checks
 
 ```bash
-npm run typecheck        # TypeScript type checking (tsgo, TS7)
+npm run typecheck        # TypeScript type checking (tsc, TS7)
 npm run biome:lint       # Biome: exhaustive-deps + import type
 npm run biome:fix        # Biome with auto-fix
 npm run format           # Prettier format all files
