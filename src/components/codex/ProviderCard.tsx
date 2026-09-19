@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Pencil, Trash2, CheckCircle2, Star, Key, KeyRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import type { CodexProviderConfig } from '@/lib/bindings'
+import { type CodexProviderConfig } from '@/lib/bindings'
 import { cn } from '@/lib/utils'
 
 interface ProviderCardProps {

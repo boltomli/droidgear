@@ -1,4 +1,4 @@
-import type { AppPlatform } from '@/hooks/use-platform'
+import { type AppPlatform } from '@/hooks/use-platform'
 
 /**
  * Platform-specific UI strings.

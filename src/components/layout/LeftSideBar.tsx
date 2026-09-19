@@ -48,7 +48,7 @@ import { DshFeatureList } from '@/components/dsh/DshFeatureList'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
-import type { ApiChannel } from '@/lib/bindings'
+import { type ApiChannel } from '@/lib/bindings'
 import { saveChannelAuth } from '@/lib/channel-utils'
 
 type NavigationView =

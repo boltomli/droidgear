@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/command'
 import { getAllRegistryModels } from '@/lib/model-registry'
 import { createPiModelFromRegistry } from '@/lib/pi-model-metadata'
-import type { PiModel } from '@/lib/bindings'
+import { type PiModel } from '@/lib/bindings'
 
 interface PiModelRegistryDialogProps {
   open: boolean

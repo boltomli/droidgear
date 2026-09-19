@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, XCircle, FileText } from 'lucide-react'
-import type { HermesConfigStatus } from '@/lib/bindings'
+import { type HermesConfigStatus } from '@/lib/bindings'
 
 interface ConfigStatusProps {
   status: HermesConfigStatus | null

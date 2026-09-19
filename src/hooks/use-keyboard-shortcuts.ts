@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { CommandContext } from '@/lib/commands/types'
+import { type CommandContext } from '@/lib/commands/types'
 
 /**
  * Handles global keyboard shortcuts for the application.

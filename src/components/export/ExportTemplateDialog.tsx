@@ -22,13 +22,13 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useExportStore } from '@/store/export-store'
-import type {
-  ExportTemplate,
-  ExportFormat,
-  OutputStructure,
-  ChannelType,
-  ChannelFilter,
-  TokenFilter,
+import {
+  type ExportTemplate,
+  type ExportFormat,
+  type OutputStructure,
+  type ChannelType,
+  type ChannelFilter,
+  type TokenFilter,
 } from '@/lib/bindings'
 
 interface ExportTemplateDialogProps {

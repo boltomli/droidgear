@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { ClaudeTemporaryRunDebugPreview } from '@/lib/bindings'
+import { type ClaudeTemporaryRunDebugPreview } from '@/lib/bindings'
 import { formatClaudePreview } from './claude-preview-format'
 
 function makePreview(

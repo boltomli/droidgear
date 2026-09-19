@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import type { CustomModel } from '@/lib/bindings'
+import { type CustomModel } from '@/lib/bindings'
 import { getAllRegistryModels } from '@/lib/model-registry'
 
 interface ModelFavoritesDialogProps {
@@ -123,7 +123,7 @@ export function ModelFavoritesDialog({
     if (!open) return
     setSelectionMode(false)
     setSelectedIds(new Set())
-  }, [open, favorites])
+  }, [open])
 
   const persist = async (nextFavorites: string[]) => {
     setIsSaving(true)

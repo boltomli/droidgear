@@ -1,4 +1,4 @@
-import type { CustomModel, Provider } from '@/lib/bindings'
+import { type CustomModel, type Provider } from '@/lib/bindings'
 import {
   containsRegexSpecialChars,
   getDefaultMaxOutputTokens,

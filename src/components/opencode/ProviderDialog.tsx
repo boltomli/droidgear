@@ -31,7 +31,7 @@ import {
   type CustomModel,
 } from '@/lib/bindings'
 import { ChannelModelPickerDialog } from '@/components/channels/ChannelModelPickerDialog'
-import type { ChannelProviderContext } from '@/components/channels'
+import { type ChannelProviderContext } from '@/components/channels'
 import {
   inferModelProtocol,
   providerToModelProtocol,

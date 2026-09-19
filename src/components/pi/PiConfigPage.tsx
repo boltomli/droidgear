@@ -48,10 +48,10 @@ import {
   PiImportFromChannelDialog,
   type PiImportResult,
 } from './PiImportFromChannelDialog'
-import type {
-  PiProviderConfig,
-  PiModel_Deserialize,
-  PiProfile,
+import {
+  type PiProviderConfig,
+  type PiModel_Deserialize,
+  type PiProfile,
 } from '@/lib/bindings'
 
 export function PiConfigPage() {

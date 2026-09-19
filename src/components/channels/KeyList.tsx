@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table'
 import { useChannelStore } from '@/store/channel-store'
 import { platformColors } from '@/lib/platform-colors'
-import type { ChannelToken, ChannelType } from '@/lib/bindings'
+import { type ChannelToken, type ChannelType } from '@/lib/bindings'
 
 interface KeyListProps {
   channelId: string

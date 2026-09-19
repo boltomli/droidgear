@@ -38,8 +38,8 @@
     "tauri:check:ts6": "npm run typecheck:ts6 && npm run tauri build --check",
     "tauri:check": "npm run typecheck && npm run tauri build --check",
     "test:all": "npm run test:run && npm run rust:test",
-    "check:all": "npm run typecheck && npm run ast:lint && npm run format:check && npm run rust:fmt:check && npm run rust:clippy && npm run test:run && npm run rust:test",
-    "fix:all": "npm run format && npm run ast:fix && npm run rust:fmt && npm run rust:clippy:fix",
+    "check:all": "npm run typecheck && npm run biome:lint && npm run ast:lint && npm run format:check && npm run rust:fmt:check && npm run rust:clippy && npm run test:run && npm run rust:test",
+    "fix:all": "npm run biome:fix && npm run format && npm run ast:fix && npm run rust:fmt && npm run rust:clippy:fix",
     "ts7:version": "tsgo --version",
     "build:analyze": "vite build && echo '\\n📊 Bundle analysis complete. Check dist/ folder sizes or use a tool like webpack-bundle-analyzer on the dist folder.'",
     "release:prepare": "node scripts/prepare-release.js",
@@ -50,6 +50,8 @@
     "models:sync-pi-thinking": "node scripts/sync-pi-thinking-level-maps.js",
     "ast:lint": "ast-grep scan",
     "ast:fix": "ast-grep scan --fix",
+    "biome:lint": "biome check --formatter-enabled=false",
+    "biome:fix": "biome check --formatter-enabled=false --write",
     "prepare": "husky"
   },
   "dependencies": {
@@ -112,6 +114,7 @@
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.40.3",
+    "@biomejs/biome": "^2.5.14",
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "3.0.0-alpha.1",
     "@testing-library/jest-dom": "^6.9.1",

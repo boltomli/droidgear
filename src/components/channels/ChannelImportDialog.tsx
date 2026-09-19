@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ApiChannel } from '@/lib/bindings'
+import { type ApiChannel } from '@/lib/bindings'
 
 export type ChannelMergeStrategy = 'skip' | 'replace' | 'keep-both'
 

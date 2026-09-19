@@ -1,4 +1,4 @@
-import type { ModelProtocol } from './types'
+import { type ModelProtocol } from './types'
 
 /**
  * 全局模型名称推断

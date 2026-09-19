@@ -11,10 +11,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { commands } from '@/lib/bindings'
-import type {
-  MissionModelSettings,
-  MissionModelSettings_Deserialize,
-  CustomModel,
+import {
+  type MissionModelSettings,
+  type MissionModelSettings_Deserialize,
+  type CustomModel,
 } from '@/lib/bindings'
 
 const REASONING_EFFORT_OPTIONS = ['none', 'low', 'medium', 'high'] as const

@@ -33,8 +33,8 @@ import { findModelByIdOrAlias, getSupportedEfforts } from '@/lib/model-registry'
 import { providerToClientApiType } from '@/lib/model-protocol'
 import { ensureOpenAICompatibleV1 } from '@/lib/sub2api-platform'
 import { ChannelModelPickerDialog } from '@/components/channels/ChannelModelPickerDialog'
-import type { ChannelProviderContext } from '@/components/channels'
-import type { CustomModel } from '@/lib/bindings'
+import { type ChannelProviderContext } from '@/components/channels'
+import { type CustomModel } from '@/lib/bindings'
 
 const API_OPTIONS = [
   'openai-completions',

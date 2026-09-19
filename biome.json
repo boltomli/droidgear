@@ -1,0 +1,54 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "files": {
+    "includes": ["src/**/*.ts", "src/**/*.tsx", "!src/lib/bindings.ts"]
+  },
+  "css": {
+    "parser": {
+      "cssModules": true,
+      "tailwindDirectives": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": false,
+      "a11y": {
+        "useAltText": "off",
+        "useButtonType": "off",
+        "useValidAriaRole": "off"
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "error",
+        "noUnusedImports": "off",
+        "noUnusedVariables": "off"
+      },
+      "style": {
+        "useImportType": {
+          "level": "warn",
+          "options": {
+            "style": "inlineType"
+          }
+        },
+        "noNonNullAssertion": "off",
+        "useConsistentArrayType": "off",
+        "useShorthandAssign": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "off"
+      },
+      "complexity": {
+        "noForEach": "off"
+      },
+      "nursery": {
+        "useSortedClasses": "off"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": false
+  },
+  "assist": {
+    "enabled": false
+  }
+}

@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react'
+import { type ComponentProps } from 'react'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 
 /**

@@ -19,10 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type {
-  OpenCodeProviderConfig,
-  OpenCodeCurrentConfig,
-  JsonValue,
+import {
+  type OpenCodeProviderConfig,
+  type OpenCodeCurrentConfig,
+  type JsonValue,
 } from '@/lib/bindings'
 
 export type ImportMergeStrategy = 'skip' | 'replace'

@@ -1,5 +1,5 @@
-import type { TFunction } from 'i18next'
-import type { AppCommand, CommandContext } from './types'
+import { type TFunction } from 'i18next'
+import { type AppCommand, type CommandContext } from './types'
 
 const commandRegistry = new Map<string, AppCommand>()
 

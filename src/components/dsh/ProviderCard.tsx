@@ -3,7 +3,7 @@ import { Key, KeyRound, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useDshStore } from '@/store/dsh-store'
-import type { DshProviderConfig } from '@/lib/bindings'
+import { type DshProviderConfig } from '@/lib/bindings'
 
 interface ProviderCardProps {
   providerId: string

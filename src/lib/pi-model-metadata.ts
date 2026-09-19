@@ -2,7 +2,7 @@ import {
   findModelByIdOrAlias,
   type ModelRegistryEntry,
 } from '@/lib/model-registry'
-import type { PiModel, PiModel_Deserialize } from '@/lib/bindings'
+import { type PiModel, type PiModel_Deserialize } from '@/lib/bindings'
 
 export function createPiModelFromRegistry(entry: ModelRegistryEntry): PiModel {
   return {

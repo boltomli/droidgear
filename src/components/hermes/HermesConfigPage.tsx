@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/dialog'
 import { useHermesStore } from '@/store/hermes-store'
 import { trimToNull } from '@/lib/utils'
-import type { HermesModelConfig, HermesProfile } from '@/lib/bindings'
+import { type HermesModelConfig, type HermesProfile } from '@/lib/bindings'
 import { ConfigStatus } from './ConfigStatus'
 import { ImportFromChannelDialog } from './ImportFromChannelDialog'
 

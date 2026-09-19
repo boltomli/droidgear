@@ -4,7 +4,7 @@ import {
   enrichPiModelFromRegistry,
 } from './pi-model-metadata'
 import { findModelByIdOrAlias } from './model-registry'
-import type { PiModel, PiModel_Deserialize } from '@/lib/bindings'
+import { type PiModel, type PiModel_Deserialize } from '@/lib/bindings'
 
 const registryModel = findModelByIdOrAlias('gpt-5.2')
 

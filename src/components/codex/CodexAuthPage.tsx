@@ -35,7 +35,10 @@ import {
 } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { commands } from '@/lib/bindings'
-import type { CodexAuthProfile, CodexAuthProfileState } from '@/lib/bindings'
+import {
+  type CodexAuthProfile,
+  type CodexAuthProfileState,
+} from '@/lib/bindings'
 
 export function CodexAuthPage() {
   const { t } = useTranslation()

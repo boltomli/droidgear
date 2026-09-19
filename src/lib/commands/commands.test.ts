@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import type { TFunction } from 'i18next'
-import type { CommandContext, AppCommand } from './types'
+import { type TFunction } from 'i18next'
+import { type CommandContext, type AppCommand } from './types'
 
 const mockUIStore = {
   getState: vi.fn(() => ({

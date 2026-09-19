@@ -3,7 +3,7 @@ import {
   protocolToOpenCodeNpm,
   normalizeBaseUrlForOpenCode,
 } from './opencode-npm'
-import type { ModelProtocol } from './types'
+import { type ModelProtocol } from './types'
 
 describe('protocolToOpenCodeNpm', () => {
   it('should map anthropic to @ai-sdk/anthropic', () => {

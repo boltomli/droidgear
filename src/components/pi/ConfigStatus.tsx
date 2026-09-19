@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, XCircle, FileText } from 'lucide-react'
-import type { PiConfigStatus } from '@/lib/bindings'
+import { type PiConfigStatus } from '@/lib/bindings'
 
 interface ConfigStatusProps {
   status: PiConfigStatus | null

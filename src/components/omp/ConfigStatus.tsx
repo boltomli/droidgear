@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, XCircle, Database } from 'lucide-react'
-import type { OmpConfigStatus } from '@/lib/bindings'
+import { type OmpConfigStatus } from '@/lib/bindings'
 
 interface ConfigStatusProps {
   status: OmpConfigStatus | null

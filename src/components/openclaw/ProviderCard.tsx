@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Pencil, Trash2, Key, KeyRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import type { OpenClawProviderConfig } from '@/lib/bindings'
+import { type OpenClawProviderConfig } from '@/lib/bindings'
 
 interface ProviderCardProps {
   providerId: string

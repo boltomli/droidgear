@@ -22,7 +22,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { providerColors, providerLabels } from '@/lib/platform-colors'
-import type { CustomModel } from '@/lib/bindings'
+import { type CustomModel } from '@/lib/bindings'
 import { useConnectivityStore } from '@/store/connectivity-store'
 
 interface ModelCardProps {

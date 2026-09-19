@@ -1,6 +1,6 @@
 import { Sidebar, PanelRight, Settings } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
-import type { AppCommand } from './types'
+import { type AppCommand } from './types'
 
 export const navigationCommands: AppCommand[] = [
   {

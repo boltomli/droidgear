@@ -28,7 +28,7 @@ import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
 import { toast } from 'sonner'
 import { useExportStore } from '@/store/export-store'
 import { useUIStore } from '@/store/ui-store'
-import type { ExportTemplate } from '@/lib/bindings'
+import { type ExportTemplate } from '@/lib/bindings'
 import { ExportTemplateDialog } from './ExportTemplateDialog'
 import { Loader2 } from 'lucide-react'
 

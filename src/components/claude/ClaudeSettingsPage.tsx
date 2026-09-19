@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import type { JsonValue } from '@/lib/bindings'
+import { type JsonValue } from '@/lib/bindings'
 import {
   CLAUDE_AUTH_TOKEN_ENV,
   CLAUDE_BASE_URL_ENV,

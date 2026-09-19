@@ -1,7 +1,7 @@
-import type {
-  ChannelInferrer,
-  ChannelInferenceContext,
-  ModelProtocol,
+import {
+  type ChannelInferrer,
+  type ChannelInferenceContext,
+  type ModelProtocol,
 } from '../types'
 import { isMultiProtocolPlatform } from '@/lib/sub2api-platform'
 

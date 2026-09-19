@@ -23,7 +23,7 @@ vi.stubGlobal(
   }
 )
 
-import type { PiProviderConfig, PiModel_Deserialize } from '@/lib/bindings'
+import { type PiProviderConfig, type PiModel_Deserialize } from '@/lib/bindings'
 
 const providerConfig = {
   baseUrl: 'https://api.example.com/v1',

@@ -17,6 +17,14 @@ if ! npm run typecheck; then
     exit 1
 fi
 
+# Biome (exhaustive-deps, useImportType)
+echo ""
+echo "🔬 Running Biome..."
+if ! npm run biome:lint; then
+    echo "❌ Biome failed!"
+    exit 1
+fi
+
 # Ast-grep
 echo ""
 echo "📏 Running ast-grep..."

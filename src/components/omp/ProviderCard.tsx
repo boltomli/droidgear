@@ -8,7 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import type { OmpProviderTestResult } from '@/lib/bindings'
+import { type OmpProviderTestResult } from '@/lib/bindings'
 import { useOmpStore } from '@/store/omp-store'
 
 interface ProviderCardProps {

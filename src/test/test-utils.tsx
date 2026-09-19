@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import { render, type RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'

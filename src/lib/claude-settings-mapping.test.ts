@@ -17,7 +17,7 @@ import {
   setSmallModelMirroring,
   setThinkingMode,
 } from './claude-settings-mapping'
-import type { ClaudeSettingsDoc } from '@/store/claude-settings-store'
+import { type ClaudeSettingsDoc } from '@/store/claude-settings-store'
 
 describe('setEnvString', () => {
   it('writes a value into env', () => {

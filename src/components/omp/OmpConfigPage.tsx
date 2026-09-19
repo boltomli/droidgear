@@ -26,7 +26,7 @@ import { useOmpStore } from '@/store/omp-store'
 import { ConfigStatus } from './ConfigStatus'
 import { ProviderCard } from './ProviderCard'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import type { OmpProfile, OmpProfile_Serialize } from '@/lib/bindings'
+import { type OmpProfile, type OmpProfile_Serialize } from '@/lib/bindings'
 
 const ROLE_KEYS = ['default', 'smol', 'slow', 'plan', 'commit'] as const
 

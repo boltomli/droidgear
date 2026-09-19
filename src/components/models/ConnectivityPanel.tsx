@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useConnectivityStore } from '@/store/connectivity-store'
 import { useModelStore } from '@/store/model-store'
-import type { ModelTestResult, TestMode } from '@/lib/bindings'
+import { type ModelTestResult, type TestMode } from '@/lib/bindings'
 
 interface ConnectivityPanelProps {
   onTestAll: () => Promise<void>

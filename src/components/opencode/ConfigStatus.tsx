@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, XCircle, FileText } from 'lucide-react'
-import type { OpenCodeConfigStatus } from '@/lib/bindings'
+import { type OpenCodeConfigStatus } from '@/lib/bindings'
 
 interface ConfigStatusProps {
   status: OpenCodeConfigStatus | null

@@ -154,8 +154,8 @@ docs/
 npm run dev              # Vite dev server (port 1420)
 npm run tauri:dev         # Full Tauri app with hot reload
 npm run build            # tsgo + vite build
-npm run check:all        # Full quality gate (typecheck + ast:lint + format + rust + tests)
-npm run fix:all          # Auto-fix (format + ast:fix + rust:fmt + clippy)
+npm run check:all        # Full quality gate (typecheck + biome + ast + format + rust + tests)
+npm run fix:all          # Auto-fix (biome + format + ast + rust:fmt + clippy)
 npm run test:run         # Vitest single run
 npm run rust:test        # Cargo test (core + tui)
 npm run rust:bindings    # Regenerate TypeScript bindings

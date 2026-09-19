@@ -45,7 +45,7 @@ import { ConnectivityPanel } from './ConnectivityPanel'
 import { ModelFavoritesDialog } from './ModelFavoritesDialog'
 import { useModelStore } from '@/store/model-store'
 import { useConnectivityStore } from '@/store/connectivity-store'
-import type { CustomModel } from '@/lib/bindings'
+import { type CustomModel } from '@/lib/bindings'
 import { useTranslation } from 'react-i18next'
 
 interface ExportData {

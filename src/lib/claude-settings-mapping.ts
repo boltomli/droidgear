@@ -1,5 +1,5 @@
-import type { JsonValue } from '@/lib/bindings'
-import type { ClaudeSettingsDoc } from '@/store/claude-settings-store'
+import { type JsonValue } from '@/lib/bindings'
+import { type ClaudeSettingsDoc } from '@/store/claude-settings-store'
 
 export const CLAUDE_BASE_URL_ENV = 'ANTHROPIC_BASE_URL'
 export const CLAUDE_AUTH_TOKEN_ENV = 'ANTHROPIC_AUTH_TOKEN'

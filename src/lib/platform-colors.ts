@@ -3,7 +3,7 @@
  * Used by both KeyList (platform) and ModelCard (provider)
  */
 
-import type { Provider } from '@/lib/bindings'
+import { type Provider } from '@/lib/bindings'
 
 export const platformColors: Record<string, string> = {
   anthropic:

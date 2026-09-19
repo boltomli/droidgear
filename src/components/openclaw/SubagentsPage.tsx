@@ -16,7 +16,7 @@ import {
 import { useSubagentsStore } from '@/store/subagents-store'
 import { SubagentCard } from './SubagentCard'
 import { SubagentDialog } from './SubagentDialog'
-import type { OpenClawSubAgent } from '@/lib/bindings'
+import { type OpenClawSubAgent } from '@/lib/bindings'
 
 export function SubagentsPage() {
   const { t } = useTranslation()

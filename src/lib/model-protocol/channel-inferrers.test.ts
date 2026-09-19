@@ -3,7 +3,7 @@ import { Sub2ApiInferrer } from './channel-inferrers/sub2api-inferrer'
 import { NewApiInferrer } from './channel-inferrers/newapi-inferrer'
 import { CliProxyInferrer } from './channel-inferrers/cliproxy-inferrer'
 import { GeneralInferrer } from './channel-inferrers/general-inferrer'
-import type { ChannelInferenceContext } from './types'
+import { type ChannelInferenceContext } from './types'
 
 describe('Sub2ApiInferrer', () => {
   const inferrer = new Sub2ApiInferrer()

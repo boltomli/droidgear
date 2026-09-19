@@ -1,4 +1,4 @@
-import type { AppCommand } from './types'
+import { type AppCommand } from './types'
 import { notifications } from '@/lib/notifications'
 import { buildReleaseUrl, showUpdateNotification } from '@/services/updater'
 

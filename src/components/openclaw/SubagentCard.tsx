@@ -3,7 +3,7 @@ import { Pencil, Trash2, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import type { OpenClawSubAgent } from '@/lib/bindings'
+import { type OpenClawSubAgent } from '@/lib/bindings'
 
 interface SubagentCardProps {
   agent: OpenClawSubAgent

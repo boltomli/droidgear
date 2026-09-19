@@ -1,4 +1,4 @@
-import type { ChannelInferenceContext, ModelProtocol } from '../types'
+import { type ChannelInferenceContext, type ModelProtocol } from '../types'
 import { GeneralInferrer } from './general-inferrer'
 
 /**

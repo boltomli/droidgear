@@ -1,5 +1,5 @@
-import type { ChannelType } from '@/lib/bindings'
-import type { ChannelInferrer } from './types'
+import { type ChannelType } from '@/lib/bindings'
+import { type ChannelInferrer } from './types'
 import { Sub2ApiInferrer } from './channel-inferrers/sub2api-inferrer'
 import { NewApiInferrer } from './channel-inferrers/newapi-inferrer'
 import { CliProxyInferrer } from './channel-inferrers/cliproxy-inferrer'

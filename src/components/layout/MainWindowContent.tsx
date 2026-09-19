@@ -141,7 +141,7 @@ function PageLoadingFallback() {
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
 import { useTerminalActive } from '@/hooks/use-terminal-active'
-import type { ApiChannel } from '@/lib/bindings'
+import { type ApiChannel } from '@/lib/bindings'
 import { saveChannelAuth } from '@/lib/channel-utils'
 
 interface MainWindowContentProps {

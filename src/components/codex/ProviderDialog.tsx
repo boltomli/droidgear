@@ -22,13 +22,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCodexStore } from '@/store/codex-store'
-import type {
-  CodexProviderConfig,
-  CodexProfile,
-  CustomModel,
+import {
+  type CodexProviderConfig,
+  type CodexProfile,
+  type CustomModel,
 } from '@/lib/bindings'
 import { ChannelModelPickerDialog } from '@/components/channels/ChannelModelPickerDialog'
-import type { ChannelProviderContext } from '@/components/channels'
+import { type ChannelProviderContext } from '@/components/channels'
 import { inferModelProtocol } from '@/lib/model-protocol'
 import {
   ensureOpenAICompatibleV1,

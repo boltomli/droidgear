@@ -42,7 +42,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useCodexStore } from '@/store/codex-store'
-import type { CodexAuthProfile, CodexProviderConfig } from '@/lib/bindings'
+import { type CodexAuthProfile, type CodexProviderConfig } from '@/lib/bindings'
 import { ProviderCard } from './ProviderCard'
 import { ProviderDialog } from './ProviderDialog'
 import { ConfigStatus } from './ConfigStatus'
@@ -157,7 +157,7 @@ export function CodexConfigPage() {
     return () => {
       cancelled = true
     }
-  }, [isOpenaiModelProvider, currentProfile?.id])
+  }, [isOpenaiModelProvider])
 
   const handleProfileChange = (profileId: string) => {
     selectProfile(profileId)

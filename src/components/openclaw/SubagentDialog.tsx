@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useOpenClawStore } from '@/store/openclaw-store'
-import type { OpenClawSubAgent } from '@/lib/bindings'
+import { type OpenClawSubAgent } from '@/lib/bindings'
 
 interface SubagentDialogProps {
   open: boolean

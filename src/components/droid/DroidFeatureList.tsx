@@ -54,8 +54,8 @@ import { useUIStore } from '@/store/ui-store'
 import { useModelStore } from '@/store/model-store'
 import { useIsWindows } from '@/hooks/use-platform'
 import { commands } from '@/lib/tauri-bindings'
-import type { DroidSubView } from '@/store/ui-store'
-import type { SettingsFileInfo } from '@/lib/tauri-bindings'
+import { type DroidSubView } from '@/store/ui-store'
+import { type SettingsFileInfo } from '@/lib/tauri-bindings'
 
 interface FeatureItem {
   id: DroidSubView

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { BundledTheme } from 'shiki'
+import { type BundledTheme } from 'shiki'
 import {
   RefreshCw,
   FileText,

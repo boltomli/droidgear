@@ -1,8 +1,8 @@
-import type { ChannelType, Provider } from '@/lib/bindings'
-import type {
-  ModelProtocol,
-  ModelProtocolInfo,
-  ChannelInferenceContext,
+import { type ChannelType, type Provider } from '@/lib/bindings'
+import {
+  type ModelProtocol,
+  type ModelProtocolInfo,
+  type ChannelInferenceContext,
 } from './types'
 import { getInferrer } from './inferrer-registry'
 import { inferProtocolFromModelId } from './global-inference'

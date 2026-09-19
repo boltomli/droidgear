@@ -4,18 +4,19 @@ All static analysis tools configured in this app and how to use them.
 
 ## Quick Reference
 
-| Tool           | Purpose                  | Command                  | In check:all |
-| -------------- | ------------------------ | ------------------------ | ------------ |
-| TypeScript     | Type checking            | `npm run typecheck`      | Yes          |
-| ast-grep       | Code quality + rules     | `npm run ast:lint`       | Yes          |
-| Prettier       | Code formatting          | `npm run format:check`   | Yes          |
-| React Compiler | Automatic memoization    | Build-time               | Yes          |
-| cargo fmt      | Rust formatting          | `npm run rust:fmt:check` | Yes          |
-| clippy         | Rust linting             | `npm run rust:clippy`    | Yes          |
-| Vitest         | Frontend tests           | `npm run test:run`       | Yes          |
-| cargo test     | Rust tests               | `npm run rust:test`      | Yes          |
-| knip           | Unused code detection    | `npm run knip`           | No           |
-| jscpd          | Duplicate code detection | `npm run jscpd`          | No           |
+| Tool           | Purpose                       | Command                  | In check:all |
+| -------------- | ----------------------------- | ------------------------ | ------------ |
+| TypeScript     | Type checking                 | `npm run typecheck`      | Yes          |
+| Biome          | exhaustive-deps + import type | `npm run biome:lint`     | Yes          |
+| ast-grep       | Code quality + rules          | `npm run ast:lint`       | Yes          |
+| Prettier       | Code formatting               | `npm run format:check`   | Yes          |
+| React Compiler | Automatic memoization         | Build-time               | Yes          |
+| cargo fmt      | Rust formatting               | `npm run rust:fmt:check` | Yes          |
+| clippy         | Rust linting                  | `npm run rust:clippy`    | Yes          |
+| Vitest         | Frontend tests                | `npm run test:run`       | Yes          |
+| cargo test     | Rust tests                    | `npm run rust:test`      | Yes          |
+| knip           | Unused code detection         | `npm run knip`           | No           |
+| jscpd          | Duplicate code detection      | `npm run jscpd`          | No           |
 
 ## Running All Checks
 
@@ -36,6 +37,22 @@ npm run build        # Type check + Vite build
 ```
 
 Configuration in `tsconfig.json`. Strict mode enabled with all recommended checks.
+
+### Biome
+
+Enforces React hooks dependency correctness and TypeScript import type consistency.
+
+```bash
+npm run biome:lint    # Check for issues
+npm run biome:fix     # Auto-fix issues
+```
+
+**Key rules:**
+
+- `useExhaustiveDependencies` — correct dependency arrays for useEffect/useMemo/useCallback
+- `useImportType` — enforce `import { type X }` for type-only imports
+
+Configuration in `biome.json`. Only these two rules are enabled; formatting is handled by Prettier.
 
 ### ast-grep
 
@@ -115,6 +132,8 @@ npm run check:all
 ```
 
 ## Adding New Rules
+
+**Biome:** Modify `biome.json`
 
 **ast-grep:** Create YAML files in `.ast-grep/rules/`. See [writing-ast-grep-rules.md](./writing-ast-grep-rules.md).
 

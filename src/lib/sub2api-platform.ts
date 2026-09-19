@@ -1,4 +1,4 @@
-import type { Provider } from '@/lib/bindings'
+import { type Provider } from '@/lib/bindings'
 
 export interface ProviderConfig {
   provider: Provider

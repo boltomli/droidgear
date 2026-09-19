@@ -12,13 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { CustomModel, Provider, ModelInfo } from '@/lib/bindings'
+import { type CustomModel, type Provider, type ModelInfo } from '@/lib/bindings'
 import {
   containsRegexSpecialChars,
   getDefaultMaxOutputTokens,
   hasOfficialModelNamePrefix,
 } from '@/lib/utils'
-import type { BatchModelConfig } from '@/lib/batch-model-utils'
+import { type BatchModelConfig } from '@/lib/batch-model-utils'
 
 interface BatchModelSelectorProps {
   models: ModelInfo[]

@@ -1,6 +1,6 @@
 import { useUIStore } from '@/store/ui-store'
 import { notify } from '@/lib/notifications'
-import type { CommandContext } from '@/lib/commands/types'
+import { type CommandContext } from '@/lib/commands/types'
 
 /**
  * Module-level singleton actions safe to call outside React components.

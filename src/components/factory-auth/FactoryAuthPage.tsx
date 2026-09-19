@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { commands } from '@/lib/bindings'
-import type { AuthProfile, AuthProfileState } from '@/lib/bindings'
+import { type AuthProfile, type AuthProfileState } from '@/lib/bindings'
 
 export function FactoryAuthPage() {
   const { t } = useTranslation()

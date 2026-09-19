@@ -11,7 +11,7 @@ import {
   ChannelModelPicker,
   type ChannelProviderContext,
 } from './ChannelModelPicker'
-import type { CustomModel } from '@/lib/bindings'
+import { type CustomModel } from '@/lib/bindings'
 
 interface ChannelModelPickerDialogProps {
   open: boolean

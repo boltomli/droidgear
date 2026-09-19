@@ -1,4 +1,4 @@
-import type { ClaudeTemporaryRunDebugPreview } from '@/lib/bindings'
+import { type ClaudeTemporaryRunDebugPreview } from '@/lib/bindings'
 
 /**
  * Formats a temporary-run debug preview as plain text for display.

@@ -1,4 +1,4 @@
-import type { ModelProtocol } from './types'
+import { type ModelProtocol } from './types'
 
 /**
  * Map ModelProtocol to OpenCode npm package name

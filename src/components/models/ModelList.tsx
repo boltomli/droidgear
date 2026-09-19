@@ -16,7 +16,7 @@ import {
 import { ModelCard } from './ModelCard'
 import { useModelStore } from '@/store/model-store'
 import { useConnectivityStore } from '@/store/connectivity-store'
-import type { CustomModel } from '@/lib/bindings'
+import { type CustomModel } from '@/lib/bindings'
 
 interface FilteredModel {
   model: CustomModel

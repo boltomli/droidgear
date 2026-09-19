@@ -3,7 +3,7 @@ import { Server, KeyRound, TerminalSquare, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/components/ui/action-button'
 import { useUIStore } from '@/store/ui-store'
-import type { CodexSubView } from '@/store/ui-store'
+import { type CodexSubView } from '@/store/ui-store'
 
 interface FeatureItem {
   id: CodexSubView

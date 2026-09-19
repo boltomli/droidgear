@@ -43,6 +43,7 @@ export function TrustedFoldersPage() {
   const [removingPath, setRemovingPath] = useState<string | null>(null)
   const [foldersToRemove, setFoldersToRemove] = useState<TrustedFolder[]>([])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: droidRefreshKey and reloadNonce are intentional reload triggers
   useEffect(() => {
     let cancelled = false
 

@@ -19,12 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { CustomModel, SessionDefaultSettings } from '@/lib/bindings'
+import { type CustomModel, type SessionDefaultSettings } from '@/lib/bindings'
 import {
   clampEffortToSupported,
   getSupportedEfforts,
 } from '@/lib/model-registry'
-import type { ReasoningEffort } from '@/lib/utils'
+import { type ReasoningEffort } from '@/lib/utils'
 
 const FALLBACK_REASONING_EFFORTS: ReasoningEffort[] = [
   'none',

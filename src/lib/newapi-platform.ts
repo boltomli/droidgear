@@ -1,4 +1,4 @@
-import type { Provider } from '@/lib/bindings'
+import { type Provider } from '@/lib/bindings'
 import { normalizeBaseUrl } from '@/lib/sub2api-platform'
 
 export const inferProviderForNewApi = (modelId: string): Provider => {

@@ -1,5 +1,5 @@
 import registryData from './model-registry-data.json'
-import type { ReasoningEffort } from './utils'
+import { type ReasoningEffort } from './utils'
 
 export type ModelPlatform =
   | 'openai-completions'

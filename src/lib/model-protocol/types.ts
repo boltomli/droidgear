@@ -1,4 +1,4 @@
-import type { ChannelType } from '@/lib/bindings'
+import { type ChannelType } from '@/lib/bindings'
 
 /**
  * 模型协议类型

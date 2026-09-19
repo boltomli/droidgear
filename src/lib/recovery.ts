@@ -4,7 +4,7 @@ import {
   type JsonValue,
   type RecoveryError,
 } from '@/lib/tauri-bindings'
-import type { Value } from '@/lib/bindings'
+import { type Value } from '@/lib/bindings'
 
 /** Convert RecoveryError to a human-readable message */
 function formatRecoveryError(error: RecoveryError): string {

@@ -27,6 +27,8 @@ npm run check:all        # All checks: typecheck, ast-grep, format, rust checks,
 
 ```bash
 npm run typecheck        # TypeScript type checking (tsgo, TS7)
+npm run biome:lint       # Biome: exhaustive-deps + import type
+npm run biome:fix        # Biome with auto-fix
 npm run format           # Prettier format all files
 npm run format:check     # Check formatting without changes
 npm run ast:lint         # ast-grep code quality + architecture rules

@@ -25,15 +25,15 @@ import {
 import { usePiStore } from '@/store/pi-store'
 import { trimToNull } from '@/lib/utils'
 import { enrichPiModelFromRegistry } from '@/lib/pi-model-metadata'
-import type {
-  PiProfile,
-  PiProviderConfig,
-  PiProviderConfig_Serialize,
-  PiModel,
-  PiModel_Deserialize,
-  PiModel_Serialize,
-  PiCompatConfig,
-  PiModelCost,
+import {
+  type PiProfile,
+  type PiProviderConfig,
+  type PiProviderConfig_Serialize,
+  type PiModel,
+  type PiModel_Deserialize,
+  type PiModel_Serialize,
+  type PiCompatConfig,
+  type PiModelCost,
 } from '@/lib/bindings'
 import {
   PiImportFromChannelDialog,

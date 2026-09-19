@@ -8,7 +8,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import type { DerivedTerminal } from '@/store/terminal-store'
+import { type DerivedTerminal } from '@/store/terminal-store'
 import { CreateDerivedDialog } from './CreateDerivedDialog'
 
 interface DerivedTerminalBarProps {

@@ -43,7 +43,7 @@ import { useOpenCodeStore } from '@/store/opencode-store'
 import { ProviderCard } from './ProviderCard'
 import { ProviderDialog } from './ProviderDialog'
 import { ProviderImportDialog } from './ProviderImportDialog'
-import type { ImportMergeStrategy } from './ProviderImportDialog'
+import { type ImportMergeStrategy } from './ProviderImportDialog'
 import { ConfigStatus } from './ConfigStatus'
 import {
   commands,

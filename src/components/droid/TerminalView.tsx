@@ -48,7 +48,7 @@ export interface TerminalViewRef {
 export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
   function TerminalView(
     {
-      terminalId,
+      terminalId: _terminalId,
       cwd,
       forceDark,
       copyOnSelect,
@@ -180,6 +180,7 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
     }, [isDark])
 
     // Initialize terminal only once when component mounts or reloads
+    // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey is an intentional re-init trigger
     useEffect(() => {
       // Wait for shell environment to be loaded
       if (!shellEnvLoaded) return
@@ -475,7 +476,7 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
         ptyRef.current = null
         isInitializedRef.current = false
       }
-    }, [reloadKey, terminalId, shellEnvLoaded, shellEnvData])
+    }, [reloadKey, shellEnvLoaded, shellEnvData])
 
     // Update theme when it changes
     useEffect(() => {
