@@ -40,11 +40,9 @@ Tauri v3.x (alpha), React 19.x, Zustand v5.x, Tailwind v4.x, shadcn/ui v4.x, Vit
 
 ### Go-based TypeScript
 
-TypeScript 7.0 (dev, pinned `7.0.0-dev.20260707.2`) is installed via `@typescript/native-preview` and uses the `tsgo` entry point instead of `tsc`. The stable `typescript` package (v6.0.x) is retained for tooling compatibility (typescript-eslint, etc.). `typescript-eslint` peer dep (`<6.1.0`) blocks full unification until it adds TS7 support — once it does, replace `@typescript/native-preview` with `typescript@^7` and change `tsgo` → `tsc` in scripts.
+TypeScript 7.0 (dev, pinned `7.0.0-dev.20260707.2`) is installed via `@typescript/native-preview` and uses the `tsgo` entry point instead of `tsc`. The stable `typescript` package (v6.0.x) is retained for knip compatibility.
 
 - `npm run typecheck` / `npm run build` → uses `tsgo` (TS7)
-- `npm run typecheck:ts6` → uses `tsc` (TS6)
-- `npm run ts7:version` → shows TS7 version
 
 ## File Organization
 
@@ -156,8 +154,8 @@ docs/
 npm run dev              # Vite dev server (port 1420)
 npm run tauri:dev         # Full Tauri app with hot reload
 npm run build            # tsgo + vite build
-npm run check:all        # Full quality gate (typecheck + lint + ast + format + rust + tests)
-npm run fix:all          # Auto-fix all linters
+npm run check:all        # Full quality gate (typecheck + ast:lint + format + rust + tests)
+npm run fix:all          # Auto-fix (format + ast:fix + rust:fmt + clippy)
 npm run test:run         # Vitest single run
 npm run rust:test        # Cargo test (core + tui)
 npm run rust:bindings    # Regenerate TypeScript bindings

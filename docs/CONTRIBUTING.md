@@ -56,7 +56,8 @@ npm run check:all
 All PRs must pass:
 
 - TypeScript type checking
-- ESLint and Prettier
+- ast-grep code quality rules
+- Prettier formatting
 - Rust formatting and clippy
 - Tests
 

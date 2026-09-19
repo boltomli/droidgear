@@ -7,9 +7,8 @@ All static analysis tools configured in this app and how to use them.
 | Tool           | Purpose                  | Command                  | In check:all |
 | -------------- | ------------------------ | ------------------------ | ------------ |
 | TypeScript     | Type checking            | `npm run typecheck`      | Yes          |
-| ESLint         | Syntax, style, TS rules  | `npm run lint`           | Yes          |
+| ast-grep       | Code quality + rules     | `npm run ast:lint`       | Yes          |
 | Prettier       | Code formatting          | `npm run format:check`   | Yes          |
-| ast-grep       | Architecture patterns    | `npm run ast:lint`       | Yes          |
 | React Compiler | Automatic memoization    | Build-time               | Yes          |
 | cargo fmt      | Rust formatting          | `npm run rust:fmt:check` | Yes          |
 | clippy         | Rust linting             | `npm run rust:clippy`    | Yes          |
@@ -27,16 +26,34 @@ npm run fix:all      # Auto-fix what can be fixed
 
 ## Tool Details
 
-### ESLint
+### TypeScript (tsgo, TS7)
 
-Handles syntax, style, and TypeScript-specific rules.
+Type checking via the Go-based TypeScript compiler.
 
 ```bash
-npm run lint        # Check for issues
-npm run lint:fix    # Auto-fix issues
+npm run typecheck    # Check types
+npm run build        # Type check + Vite build
 ```
 
-Configuration in `eslint.config.js`.
+Configuration in `tsconfig.json`. Strict mode enabled with all recommended checks.
+
+### ast-grep
+
+Enforces code quality rules and architectural patterns. Catches violations like explicit `any` types, Zustand destructuring, and hooks in wrong directories.
+
+```bash
+npm run ast:lint    # Scan for violations
+npm run ast:fix     # Auto-fix where possible
+```
+
+**Key rules:**
+
+- No explicit `any` types (use `unknown` or generics)
+- No Zustand destructuring (causes render cascades)
+- Hooks must be in `hooks/` directory
+- No store subscriptions in `lib/`
+
+See [writing-ast-grep-rules.md](./writing-ast-grep-rules.md) for creating new rules.
 
 ### Prettier
 
@@ -48,23 +65,6 @@ npm run format         # Fix formatting
 ```
 
 Configuration in `prettier.config.js`.
-
-### ast-grep
-
-Enforces architectural patterns ESLint can't detect. Catches violations like Zustand destructuring and hooks in wrong directories.
-
-```bash
-npm run ast:lint    # Scan for violations
-npm run ast:fix     # Auto-fix where possible
-```
-
-**Key rules:**
-
-- No Zustand destructuring (causes render cascades)
-- Hooks must be in `hooks/` directory
-- No store subscriptions in `lib/`
-
-See [writing-ast-grep-rules.md](./writing-ast-grep-rules.md) for creating new rules.
 
 ### React Compiler
 
@@ -115,8 +115,6 @@ npm run check:all
 ```
 
 ## Adding New Rules
-
-**ESLint:** Add rules to `eslint.config.js`
 
 **ast-grep:** Create YAML files in `.ast-grep/rules/`. See [writing-ast-grep-rules.md](./writing-ast-grep-rules.md).
 

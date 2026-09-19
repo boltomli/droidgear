@@ -86,7 +86,7 @@ Build the feature, running quality checks periodically:
 npm run check:all
 ```
 
-This runs TypeScript, ESLint, Prettier, Rust checks, and tests in one command.
+This runs TypeScript, ast-grep, Prettier, Rust checks, and tests in one command.
 
 ### 3. Check Before Finishing
 

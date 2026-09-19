@@ -7,7 +7,7 @@ Reference for creating custom ast-grep rules. Intended for AI agents but readabl
 Add ast-grep rules when:
 
 - You identify a repeated architectural violation
-- ESLint can't express the rule (pattern-based matching needed)
+- Pattern-based matching is needed (beyond type checking)
 - The pattern has caused bugs or performance issues
 
 ## Rule Structure

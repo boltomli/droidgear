@@ -43,14 +43,14 @@ Technical documentation for building and extending this app. These docs describe
 
 ## Quality & Tooling
 
-| Document                                              | Description                                             |
-| ----------------------------------------------------- | ------------------------------------------------------- |
-| [Static Analysis](./static-analysis.md)               | ESLint, Prettier, ast-grep, knip, jscpd, React Compiler |
-| [Writing ast-grep Rules](./writing-ast-grep-rules.md) | AI reference for creating custom rules                  |
-| [Testing](./testing.md)                               | Test patterns, Tauri mocking                            |
-| [Bundle Optimization](./bundle-optimization.md)       | Bundle size management                                  |
-| [Logging](./logging.md)                               | Rust and TypeScript logging                             |
-| [Writing Docs](./writing-docs.md)                     | Guide for creating and maintaining these docs           |
+| Document                                              | Description                                                 |
+| ----------------------------------------------------- | ----------------------------------------------------------- |
+| [Static Analysis](./static-analysis.md)               | TypeScript, ast-grep, Prettier, knip, jscpd, React Compiler |
+| [Writing ast-grep Rules](./writing-ast-grep-rules.md) | AI reference for creating custom rules                      |
+| [Testing](./testing.md)                               | Test patterns, Tauri mocking                                |
+| [Bundle Optimization](./bundle-optimization.md)       | Bundle size management                                      |
+| [Logging](./logging.md)                               | Rust and TypeScript logging                                 |
+| [Writing Docs](./writing-docs.md)                     | Guide for creating and maintaining these docs               |
 
 ## Release & Distribution
 

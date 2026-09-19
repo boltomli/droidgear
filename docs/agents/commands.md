@@ -20,18 +20,16 @@ npm run tauri:build      # Full Tauri production build
 
 ```bash
 # Run after significant changes (REQUIRED)
-npm run check:all        # All checks: typecheck, lint, ast-grep, format, rust checks, tests
+npm run check:all        # All checks: typecheck, ast-grep, format, rust checks, tests
 ```
 
 ## Individual Checks
 
 ```bash
-npm run typecheck        # TypeScript type checking
-npm run lint             # ESLint (strict, zero warnings allowed)
-npm run lint:fix         # ESLint with auto-fix
+npm run typecheck        # TypeScript type checking (tsgo, TS7)
 npm run format           # Prettier format all files
 npm run format:check     # Check formatting without changes
-npm run ast:lint         # ast-grep architecture rules
+npm run ast:lint         # ast-grep code quality + architecture rules
 npm run ast:fix          # ast-grep with auto-fix
 ```
 
@@ -63,8 +61,6 @@ npm run rust:fmt         # Format Rust code
 npm run rust:fmt:check   # Check Rust formatting
 npm run rust:clippy      # Rust linter (warnings = errors)
 npm run rust:bindings    # Regenerate tauri-specta TypeScript bindings
-
-## All Commands (Quick Reference)
 
 | Category | Command | Description |
 |----------|---------|-------------|
