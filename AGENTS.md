@@ -19,7 +19,7 @@ For deep-dive topics, see `docs/developer/README.md`.
 
 ## Overview
 
-Tauri v2 + React 19 desktop app. Uses npm (NOT pnpm), TypeScript strict mode, Zustand for state, TanStack Query for persistence.
+Tauri v3 + React 19 desktop app. Uses npm (NOT pnpm), TypeScript strict mode, Zustand for state, TanStack Query for persistence.
 
 ## Core Rules (Always Apply)
 
@@ -28,7 +28,7 @@ Tauri v2 + React 19 desktop app. Uses npm (NOT pnpm), TypeScript strict mode, Zu
 3. **Read before editing** — Understand context first
 4. **Run `npm run check:all`** after significant changes
 5. **No manual memoization** — React Compiler handles it
-6. **Tauri v2 docs only** — v1 patterns are incompatible
+6. **Tauri v3 docs only** — v1/v2 patterns are incompatible
 7. **No unsolicited commits** — Only when explicitly requested
 8. **Use `rm -f`** when removing files
 9. **GUI/TUI parity** — When implementing a new GUI feature, synchronously implement the corresponding TUI version
@@ -36,11 +36,11 @@ Tauri v2 + React 19 desktop app. Uses npm (NOT pnpm), TypeScript strict mode, Zu
 
 ## Version Requirements
 
-Tauri v2.x, React 19.x, Zustand v5.x, Tailwind v4.x, shadcn/ui v4.x, Vite v8.x, Vitest v4.x
+Tauri v3.x (alpha), React 19.x, Zustand v5.x, Tailwind v4.x, shadcn/ui v4.x, Vite v8.x, Vitest v4.x
 
 ### Go-based TypeScript
 
-TypeScript 7.0 (beta) is installed via `@typescript/native-preview@beta` and uses the `tsgo` entry point instead of `tsc`. The stable `typescript` package (v6.x) is retained for tooling compatibility (typescript-eslint, etc.).
+TypeScript 7.0 (dev, pinned `7.0.0-dev.20260707.2`) is installed via `@typescript/native-preview` and uses the `tsgo` entry point instead of `tsc`. The stable `typescript` package (v6.0.x) is retained for tooling compatibility (typescript-eslint, etc.). `typescript-eslint` peer dep (`<6.1.0`) blocks full unification until it adds TS7 support — once it does, replace `@typescript/native-preview` with `typescript@^7` and change `tsgo` → `tsc` in scripts.
 
 - `npm run typecheck` / `npm run build` → uses `tsgo` (TS7)
 - `npm run typecheck:ts6` → uses `tsc` (TS6)
@@ -74,11 +74,11 @@ docs/
 | ------------------------ | -------------------------------------- | ------------------------------ |
 | Build/lint/test commands | `docs/agents/commands.md`              | Full command reference         |
 | TypeScript/React style   | `docs/agents/code-style-typescript.md` | Import ordering, naming        |
-| Rust style               | `docs/agents/code-style-rust.md`       | Edition 2021, MSRV 1.82        |
+| Rust style               | `docs/agents/code-style-rust.md`       | Edition 2021, MSRV 1.95        |
 | State management         | `docs/agents/state-management.md`      | Three-layer onion model        |
 | Architecture patterns    | `docs/agents/architecture.md`          | Event bridge, command system   |
 | UI components (Radix)    | `docs/agents/ui-components.md`         | Focus management, IME          |
-| Deep-dive docs           | `docs/developer/README.md`             | 26 technical references        |
+| Deep-dive docs           | `docs/developer/README.md`             | Technical references           |
 | Zustand stores           | `src/store/AGENTS.md`                  | Store patterns and conventions |
 | Component architecture   | `src/components/AGENTS.md`             | Barrel exports, feature dirs   |
 | Rust backend             | `src-tauri/AGENTS.md`                  | Crates, commands, bindings     |
@@ -100,13 +100,13 @@ docs/
 
 | LOC   | File                                              | Notes                       |
 | ----- | ------------------------------------------------- | --------------------------- |
-| 4,801 | `src-tauri/crates/droidgear-tui/src/tui/modal.rs` | TUI modal system            |
-| 4,043 | `src-tauri/crates/droidgear-tui/src/ui.rs`        | TUI draw() function         |
-| 3,429 | `src/lib/bindings.ts`                             | Auto-generated, DO NOT EDIT |
+| 4,894 | `src-tauri/crates/droidgear-tui/src/tui/modal.rs` | TUI modal system            |
+| 4,150 | `src-tauri/crates/droidgear-tui/src/ui.rs`        | TUI draw() function         |
+| 2,900 | `src/lib/bindings.ts`                             | Auto-generated, DO NOT EDIT |
 | 2,812 | `src-tauri/crates/droidgear-core/src/openclaw.rs` | OpenClaw business logic     |
 | 1,835 | `src-tauri/crates/droidgear-core/src/pi.rs`       | Pi AI integration           |
 | 1,759 | `src-tauri/crates/droidgear-core/src/hermes.rs`   | Hermes integration          |
-| 1,155 | `src/components/models/ModelDialog.tsx`           | Model management dialog     |
+| 1,167 | `src/components/models/ModelDialog.tsx`           | Model management dialog     |
 | 1,026 | `src/components/droid/DroidSettingsPage.tsx`      | Core settings page          |
 
 ## Conventions
@@ -137,7 +137,7 @@ docs/
 
 - Translation keys: dotted paths (e.g., `commands.showLeftSidebar.label`)
 - Interpolation: `{{variableName}}` mustache syntax
-- Both `en.json` and `zh.json` must stay in sync (1,469 keys each)
+- Both `en.json` and `zh.json` must stay in sync (1,508 keys each)
 
 ## Anti-Patterns (This Project)
 
@@ -148,7 +148,7 @@ docs/
 - ❌ Modifying `src/components/ui/` — shadcn/ui managed code
 - ❌ Missing `onCloseAutoFocus` on dialogs — breaks IME
 - ❌ Using pnpm — this project uses npm exclusively
-- ❌ Tauri v1 patterns — v2 only
+- ❌ Tauri v1/v2 patterns — v3 only
 
 ## Commands
 

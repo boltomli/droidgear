@@ -148,7 +148,7 @@ export function setupMenuLanguageListener(): () => void {
 function handleAbout(): void {
   logger.info('About menu item clicked')
   alert(
-    `${APP_NAME}\n\nVersion: ${__APP_VERSION__}\n\nBuilt with Tauri v2 + React + TypeScript`
+    `${APP_NAME}\n\nVersion: ${__APP_VERSION__}\n\nBuilt with Tauri v3 + React + TypeScript`
   )
 }
 

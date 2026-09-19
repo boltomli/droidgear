@@ -156,7 +156,7 @@ See [quick-panes.md](./quick-panes.md) for a complete implementation example.
 
 ### Tauri Capabilities
 
-Tauri v2 uses a permission-based capabilities system. Each window only gets the permissions it needs.
+Tauri v3 uses a permission-based capabilities system. Each window only gets the permissions it needs.
 
 **Location:** `src-tauri/capabilities/default.json`
 
@@ -225,7 +225,7 @@ std::fs::write(&temp_path, content)?;
 std::fs::rename(&temp_path, &final_path)?;
 ```
 
-See [Tauri Security Documentation](https://v2.tauri.app/security/) for detailed guidance.
+See [Tauri Security Documentation](https://v3.tauri.app/security/) for detailed guidance.
 
 ## Type-Safe Tauri Commands
 

@@ -260,7 +260,7 @@ npm run tauri build
 ## Tech Stack
 
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
-- **Backend**: Tauri v2, Rust
+- **Backend**: Tauri v3, Rust
 - **State**: Zustand
 
 ## Privacy

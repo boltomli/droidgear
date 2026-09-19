@@ -5,7 +5,7 @@ Code style guidelines for Rust code in this project.
 ## Basics
 
 - **Edition**: 2021
-- **MSRV**: 1.82
+- **MSRV**: 1.95
 - All warnings treated as errors via clippy
 
 ## Formatting

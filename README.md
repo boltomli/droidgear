@@ -259,7 +259,7 @@ npm run tauri build
 ## 技术栈
 
 - **前端**: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
-- **后端**: Tauri v2, Rust
+- **后端**: Tauri v3, Rust
 - **状态管理**: Zustand
 
 ## 隐私声明

@@ -173,7 +173,7 @@ await openPath('/path/to/document.pdf')
 
 ### System Tray
 
-Built into Tauri v2 via the `tray-icon` feature. See [Tauri docs](https://v2.tauri.app/learn/system-tray/).
+Built into Tauri v3 via the `tray-icon` feature. See [Tauri docs](https://v3.tauri.app/learn/system-tray/).
 
 ### App Menus
 
@@ -222,7 +222,7 @@ The order plugins are registered matters:
 
 ## References
 
-- [Tauri v2 Plugin Documentation](https://v2.tauri.app/plugin/)
+- [Tauri v3 Plugin Documentation](https://v3.tauri.app/plugin/)
 - [Official Plugins Repository](https://github.com/tauri-apps/plugins-workspace)
-- [Window State Plugin](https://v2.tauri.app/plugin/window-state/)
-- [Single Instance Plugin](https://v2.tauri.app/plugin/single-instance/)
+- [Window State Plugin](https://v3.tauri.app/plugin/window-state/)
+- [Single Instance Plugin](https://v3.tauri.app/plugin/single-instance/)

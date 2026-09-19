@@ -188,7 +188,7 @@ const parts = filePath.split('/')
 
 ## Tauri Configuration
 
-Tauri v2 automatically merges platform-specific config files using [JSON Merge Patch](https://datatracker.ietf.org/doc/html/rfc7396).
+Tauri v3 automatically merges platform-specific config files using [JSON Merge Patch](https://datatracker.ietf.org/doc/html/rfc7396).
 
 ### Config Files
 

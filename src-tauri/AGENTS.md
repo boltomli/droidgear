@@ -1,8 +1,8 @@
-# src-tauri — Rust Backend (Tauri v2)
+# src-tauri — Rust Backend (Tauri v3)
 
 ## OVERVIEW
 
-Tauri v2 application shell with 3 crates: `droidgear` (app), `droidgear-core` (business logic), `droidgear-tui` (terminal UI). 96 Rust files, ~51K LOC. Edition 2021, MSRV 1.82.
+Tauri v3 application shell with 3 crates: `droidgear` (app), `droidgear-core` (business logic), `droidgear-tui` (terminal UI). 175 Rust source files, ~236K LOC. Edition 2021, MSRV 1.95.
 
 ## STRUCTURE
 
@@ -12,10 +12,10 @@ src-tauri/
 │   ├── lib.rs              # Plugin registration, window setup
 │   ├── bindings.rs         # tauri-specta TS binding generation
 │   ├── types.rs            # Shared command types
-│   ├── commands/           # 26 command modules (thin wrappers)
+│   ├── commands/           # 29 command modules (thin wrappers)
 │   └── utils/              # Platform helpers, terminal launch
 ├── crates/
-│   ├── droidgear-core/     # Business logic library (26 modules)
+│   ├── droidgear-core/     # Business logic library (28 modules)
 │   │   ├── src/            # One file per domain concept
 │   │   ├── tests/          # Characterization tests
 │   │   └── res/            # Bundled JSON model registries

@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-125+ component files across 18 feature subdirectories. Each subfolder has a barrel `index.ts` with named exports. `ui/` contains shadcn/ui primitives — don't modify.
+175 component files across 21 feature subdirectories. Each subfolder has a barrel `index.ts` with named exports. `ui/` contains shadcn/ui primitives — don't modify.
 
 ## STRUCTURE
 
