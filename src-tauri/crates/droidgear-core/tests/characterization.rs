@@ -92,6 +92,7 @@ base_url = "https://api.openai.com/v1"
         model: "fallback-model".to_string(),
         model_reasoning_effort: Some("medium".to_string()),
         api_key: Some("sk-profile-level".to_string()),
+        api_key_model_discovery: false,
         auth_profile_name: None,
     };
     let profile_json = serde_json::to_string_pretty(&profile).unwrap();
@@ -277,6 +278,7 @@ fn codex_apply_can_remove_openai_api_key_without_destroying_official_auth() {
         model: "gpt-5.2".to_string(),
         model_reasoning_effort: None,
         api_key: None,
+        api_key_model_discovery: false,
         auth_profile_name: None,
     };
     write_file(
@@ -324,6 +326,7 @@ fn codex_apply_openai_mode_deletes_auth_json_when_only_api_key_exists() {
         model_reasoning_effort: None,
         // Residual key must be ignored in openai mode.
         api_key: Some("sk-residual".to_string()),
+        api_key_model_discovery: false,
         auth_profile_name: None,
     };
     write_file(
@@ -368,6 +371,7 @@ fn codex_apply_openai_mode_preserves_auth_mode_session() {
         model: "gpt-5.2".to_string(),
         model_reasoning_effort: None,
         api_key: Some("sk-ignored".to_string()),
+        api_key_model_discovery: false,
         auth_profile_name: None,
     };
     write_file(
@@ -456,6 +460,7 @@ model = ""
         model: String::new(),
         model_reasoning_effort: None,
         api_key: Some("sk-ignored".to_string()),
+        api_key_model_discovery: false,
         auth_profile_name: Some("sub1".to_string()),
     };
     write_file(
@@ -705,11 +710,17 @@ fn claude_temporary_run_plan_writes_overlay_tombstones_without_mutating_live_set
 }
 
 #[test]
-fn droid_temporary_run_plan_uses_active_settings_file_without_mutating_it() {
+fn droid_run_plan_uses_active_settings_file_directly_without_mutating_it() {
     let temp = TempDir::new().unwrap();
     let home = home_dir(&temp);
 
-    let settings_path = home.join(".droidgear/droid-settings/profile-a.json");
+    // Build the fixture with the same join style as production
+    // (`droid_settings_dir_for_home`), so the expected `--settings` argument
+    // matches on every platform.
+    let settings_path = home
+        .join(".droidgear")
+        .join("droid-settings")
+        .join("profile-a.json");
     write_file(
         &settings_path,
         r#"{"sessionDefaultSettings":{"model":"claude-test","apiKey":"sk-droid-live"}}"#,
@@ -719,7 +730,7 @@ fn droid_temporary_run_plan_uses_active_settings_file_without_mutating_it() {
         .unwrap();
 
     let before_settings = read_to_string(&settings_path);
-    let plan = droid_runtime::build_temporary_run_plan_for_home(
+    let plan = droid_runtime::build_run_plan_for_home(
         home,
         &droid_runtime::DroidRunPreferences::default(),
     )
@@ -727,7 +738,8 @@ fn droid_temporary_run_plan_uses_active_settings_file_without_mutating_it() {
 
     assert_eq!(plan.program, "droid");
     assert_eq!(plan.args[0], "--settings");
-    assert_eq!(plan.args[1], plan.temp_settings_path.to_string_lossy());
+    assert_eq!(plan.args[1], settings_path.to_string_lossy());
+    assert_eq!(plan.settings_path, Some(settings_path.clone()));
     assert_eq!(
         plan.env,
         vec![(
@@ -736,7 +748,9 @@ fn droid_temporary_run_plan_uses_active_settings_file_without_mutating_it() {
         )]
     );
     assert_eq!(plan.unset_env, vec!["ANTHROPIC_AUTH_TOKEN".to_string()]);
-    assert_eq!(read_to_string(&plan.temp_settings_path), before_settings);
+    // The profile file is passed through directly: no temp snapshot is
+    // created and the file contents stay untouched.
+    assert!(!home.join(".droidgear/runtime").exists());
     assert_eq!(read_to_string(&settings_path), before_settings);
 }
 
@@ -792,6 +806,7 @@ model = "existing-live-model"
         model: "fallback".to_string(),
         model_reasoning_effort: Some("medium".to_string()),
         api_key: Some("sk-profile".to_string()),
+        api_key_model_discovery: false,
         auth_profile_name: None,
     };
     write_file(

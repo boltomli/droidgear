@@ -1,15 +1,16 @@
 use std::{collections::HashSet, path::PathBuf};
 
 use droidgear_core::{
-    channel::ApiChannel,
+    channel::{ApiChannel, ChannelToken},
     claude_settings_files::ClaudeSettingsFileInfo,
     codex::CodexProfile,
     codex_auth_profiles::CodexAuthProfile,
     codex_sessions::CodexSessionSummary,
+    copilot::{CopilotChannelSelection, CopilotProfile},
     droid_settings_files::SettingsFileInfo,
     dsh::DshProviderConfig,
     factory_auth_profiles::AuthProfile,
-    factory_settings::{CustomModel, MissionModelSettings},
+    factory_settings::{CustomModel, MissionModelSettings, ModelInfo},
     hermes::HermesProfile,
     mcp::McpServer,
     omp::OmpProfile,
@@ -59,7 +60,8 @@ pub enum Screen {
     PiModel,
     Omp,
     OmpProfile,
-    Dsh,
+    DshDesktop,
+    DshWeb,
     DshProvider,
     DshModel,
     Hermes,
@@ -73,6 +75,7 @@ pub enum Screen {
     FactoryAuth,
     CodexAuth,
     CodexSessions,
+    Copilot,
     PiSessions,
 }
 
@@ -130,6 +133,12 @@ pub enum ConfirmAction {
         id: String,
     },
     CodexDelete {
+        id: String,
+    },
+    CopilotApply {
+        id: String,
+    },
+    CopilotDelete {
         id: String,
     },
     CodexDeleteProvider {
@@ -283,6 +292,14 @@ pub enum InputAction {
     },
     TrustedFolderAdd,
     CodexCreateProfile,
+    CopilotCreateProfile,
+    CopilotDuplicate {
+        id: String,
+    },
+    CopilotImportApiKey {
+        profile_id: String,
+        channel: ApiChannel,
+    },
     CodexDuplicate {
         id: String,
     },
@@ -611,6 +628,7 @@ pub enum InputAction {
     FactoryAuthRename {
         name: String,
     },
+    DroidSettingsLink,
     CodexAuthSaveProfile,
     CodexAuthRename {
         name: String,
@@ -620,6 +638,24 @@ pub enum InputAction {
 #[derive(Debug, Clone)]
 pub enum SelectAction {
     GoToNav,
+    CopilotImportChannel {
+        profile_id: String,
+        channels: Vec<ApiChannel>,
+    },
+    CopilotImportToken {
+        profile_id: String,
+        channel: ApiChannel,
+        tokens: Vec<ChannelToken>,
+    },
+    CopilotImportProtocol {
+        profile_id: String,
+        selection: CopilotChannelSelection,
+    },
+    CopilotImportModel {
+        profile_id: String,
+        selection: CopilotChannelSelection,
+        models: Vec<ModelInfo>,
+    },
     ClaudeSettingsSetReasoningEffort,
     ClaudeSettingsSetThinkingMode,
     ClaudeSettingsSetPermissionsDefaultMode,
@@ -866,6 +902,9 @@ pub struct App {
 
     pub dsh_providers: Vec<(String, DshProviderConfig)>,
     pub dsh_credentials: std::collections::HashMap<String, String>,
+    /// Official profile this screen manages; set when the desktop/web page
+    /// is opened from the feature list.
+    pub dsh_active_profile: Option<String>,
     pub dsh_index: usize,
     pub dsh_provider_id: Option<String>,
     pub dsh_provider_field_index: usize,
@@ -936,6 +975,9 @@ pub struct App {
 
     pub codex_sessions: Vec<CodexSessionSummary>,
     pub codex_sessions_index: usize,
+    pub copilot_profiles: Vec<CopilotProfile>,
+    pub copilot_active_id: Option<String>,
+    pub copilot_index: usize,
     pub pi_sessions: Vec<PiSessionSummary>,
     pub pi_sessions_index: usize,
 }
@@ -1059,6 +1101,7 @@ impl App {
             omp_detail_field_index: 0,
             dsh_providers: Vec::new(),
             dsh_credentials: std::collections::HashMap::new(),
+            dsh_active_profile: None,
             dsh_index: 0,
             dsh_provider_id: None,
             dsh_provider_field_index: 0,
@@ -1116,6 +1159,9 @@ impl App {
             codex_auth_index: 0,
             codex_sessions: Vec::new(),
             codex_sessions_index: 0,
+            copilot_profiles: Vec::new(),
+            copilot_active_id: None,
+            copilot_index: 0,
             pi_sessions: Vec::new(),
             pi_sessions_index: 0,
         }
@@ -1185,8 +1231,13 @@ impl App {
                 system: false,
             },
             NavGroup {
+                label: "Copilot",
+                items: &[("Profiles", Screen::Copilot)],
+                system: false,
+            },
+            NavGroup {
                 label: "Dsh",
-                items: &[("Providers", Screen::Dsh)],
+                items: &[("Desktop", Screen::DshDesktop), ("Web", Screen::DshWeb)],
                 system: false,
             },
             NavGroup {
@@ -1223,6 +1274,16 @@ impl App {
     }
 
     /// Index of the group containing `screen`, if it is a nav item.
+    /// The Dsh providers screen matching the active profile; detail screens
+    /// navigate back to it.
+    pub fn dsh_list_screen(&self) -> Screen {
+        if self.dsh_active_profile.as_deref() == Some("web") {
+            Screen::DshWeb
+        } else {
+            Screen::DshDesktop
+        }
+    }
+
     pub fn group_of_screen(screen: Screen) -> Option<usize> {
         Self::nav_groups()
             .iter()
@@ -1257,7 +1318,13 @@ impl App {
                         Screen::Main
                     };
                 } else {
-                    self.screen = Self::parent_screen(self.screen);
+                    self.screen = match self.screen {
+                        // Detail screens return to the desktop/web page that
+                        // opened them.
+                        Screen::DshProvider => self.dsh_list_screen(),
+                        Screen::DshModel => Screen::DshProvider,
+                        screen => Self::parent_screen(screen),
+                    };
                 }
             }
         }
@@ -1285,8 +1352,6 @@ impl App {
             Screen::PiProvider => Screen::PiProfile,
             Screen::PiModel => Screen::PiProvider,
             Screen::OmpProfile => Screen::Omp,
-            Screen::DshProvider => Screen::Dsh,
-            Screen::DshModel => Screen::DshProvider,
             Screen::HermesProfile => Screen::Hermes,
             Screen::HermesProvider => Screen::HermesProfile,
             Screen::ChannelsEdit => Screen::Channels,
@@ -1383,6 +1448,9 @@ impl App {
         if self.claude_index >= self.claude_files.len() {
             self.claude_index = self.claude_files.len().saturating_sub(1);
         }
+        if self.copilot_index >= self.copilot_profiles.len() {
+            self.copilot_index = self.copilot_profiles.len().saturating_sub(1);
+        }
         if self.trusted_folders_index >= self.trusted_folders.len() {
             self.trusted_folders_index = self.trusted_folders.len().saturating_sub(1);
         }
@@ -1436,7 +1504,7 @@ impl App {
         if self.codex_index >= self.codex_profiles.len() {
             self.codex_index = self.codex_profiles.len().saturating_sub(1);
         }
-        let codex_fields_count = 6;
+        let codex_fields_count = 8;
         if self.codex_detail_field_index >= codex_fields_count {
             self.codex_detail_field_index = codex_fields_count.saturating_sub(1);
         }

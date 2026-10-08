@@ -1188,6 +1188,7 @@ mod tests {
             model: "gpt-5".to_string(),
             model_reasoning_effort: None,
             api_key: None,
+            api_key_model_discovery: false,
             auth_profile_name: None,
         };
         crate::codex::save_codex_profile_for_home(&home, openai_profile).unwrap();
@@ -1240,6 +1241,7 @@ mod tests {
             model: "deepseek-v4-pro".to_string(),
             model_reasoning_effort: None,
             api_key: None,
+            api_key_model_discovery: false,
             auth_profile_name: None,
         };
         crate::codex::save_codex_profile_for_home(&home, custom_profile).unwrap();

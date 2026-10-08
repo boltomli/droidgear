@@ -3,7 +3,7 @@ import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import path, { resolve } from 'path'
-import packageJson from './package.json'
+import packageJson from './package.json' with { type: 'json' }
 
 const host = process.env.TAURI_DEV_HOST
 const port = parseInt(process.env.TAURI_DEV_PORT || '1420', 10)
@@ -22,9 +22,9 @@ export default defineConfig(async () => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(import.meta.dirname, './src'),
         'tauri-pty': path.resolve(
-          __dirname,
+          import.meta.dirname,
           './node_modules/tauri-pty/dist/index.es.js'
         ),
       },
@@ -34,7 +34,7 @@ export default defineConfig(async () => {
       cssMinify: 'lightningcss',
       rollupOptions: {
         input: {
-          main: resolve(__dirname, 'index.html'),
+          main: resolve(import.meta.dirname, 'index.html'),
         },
       },
     },

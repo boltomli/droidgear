@@ -54,6 +54,7 @@ Run the installer directly.
 ### Droid Configuration Management
 
 - **Multi-Settings Files** - Manage and switch between multiple Factory Droid configuration files (settings.json)
+- **Link Local Settings** - Link a local JSON file as a launch settings profile (`--settings`); the file stays at its original location (GUI and TUI)
 - **Trusted Folders** - View and manage Droid trusted folders in GUI and TUI
 - **Terminal Preferences** - Set terminal preferences independently for each configuration file
 - **Panel Refresh** - Automatically refresh relevant panels when switching configuration files
@@ -124,11 +125,19 @@ Run the installer directly.
 
 ### Dsh (DeepSeek Harness) Support
 
-- **Provider Configuration** - Manage `llm-pi-ai.providers` in `~/.dsh/settings.yaml` (displayName, baseURL, apiKeyEnv, api, compat, model list), preserving the rest of the file and unknown fields
+- **Provider Configuration** - Manage `llm-pi-ai.providers` in the modern multi-profile DSH `cordis.patch.yml` (displayName, baseURL, apiKeyEnv, api, compat, model list): supports the official `desktop` / `web` runtime profiles (default `desktop`), preserves other patch entries and `!!js` expressions on write; falls back to the legacy `~/.dsh/settings.yaml` without a profile, and merges legacy → profile patch → home patch on read
 - **API Key Values** - Configure API key values in `~/.dsh/.credentials.yaml` (0600 permissions), linked to the `apiKeyEnv` variable name
 - **Channel Import** - Import providers from channels (auto-fills ID, base URL, key, and API type)
 - **Model Fetching** - Fetch the model list from the provider API after configuring the URL and key, with multi-select before adding
 - **Registry Auto-Adaptation** - Auto-fill model name, context window, max tokens, and reasoning efforts from the registry by model ID
+
+### GitHub Copilot Support
+
+- **BYOK Profile Management** - Manage GitHub Copilot BYOK profiles (OpenAI / Anthropic providers, model, and token limits) with create, duplicate, delete, apply, and load-applied operations
+- **Channel Import** - Import providers and models from channels, normalizing base URLs automatically (add `/v1` for OpenAI, strip `/v1` for Anthropic)
+- **Official Subscription Mode** - Clear BYOK overrides and use the Copilot CLI's existing login or auth token
+- **Temporary Run** - Launch Copilot with the selected profile in one click (process-scoped environment variables plus an explicit `--model` argument)
+- **Standalone Launcher** - Ships `copilot-local.sh` / `copilot-local.cmd` launchers to run Copilot with an exported profile without the GUI
 
 ### Other Features
 
@@ -180,6 +189,7 @@ The TUI version supports the following configuration management features:
 - **Hermes Profiles**: Configuration management and apply
 - **Pi Profiles**: Provider/Model configuration management and apply
 - **Dsh Providers**: `llm-pi-ai.providers` configuration and credential value management (with channel import and model fetching)
+- **Copilot Profiles**: BYOK profile configuration and apply (with channel import and temporary run)
 - **Sessions**: Session browsing and management
 - **Paths**: Path override configuration (for server environments)
 - **Channels**: Proxy platform and credential management

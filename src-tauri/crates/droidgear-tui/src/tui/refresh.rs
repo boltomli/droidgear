@@ -8,7 +8,7 @@ pub(super) fn refresh_paths(app: &mut app::App) {
 }
 
 pub(super) fn refresh_droid_settings_files(app: &mut app::App) {
-    match droidgear_core::droid_settings_files::list_settings_files() {
+    match droidgear_core::droid_settings_files::list_settings_files_for_home(&app.home_dir) {
         Ok(files) => {
             app.droid_settings_files = files;
             if app.droid_settings_files_index >= app.droid_settings_files.len() {
@@ -111,6 +111,26 @@ pub(super) fn refresh_codex(app: &mut app::App) {
     }
 }
 
+pub(super) fn refresh_copilot(app: &mut app::App) {
+    match droidgear_core::copilot::list_copilot_profiles_for_home(&app.home_dir) {
+        Ok(list) => app.copilot_profiles = list,
+        Err(e) => app.set_toast(e, true),
+    }
+
+    if app.copilot_profiles.is_empty() {
+        if let Ok(profile) =
+            droidgear_core::copilot::create_default_copilot_profile_for_home(&app.home_dir)
+        {
+            app.copilot_profiles = vec![profile];
+        }
+    }
+
+    match droidgear_core::copilot::get_active_copilot_profile_id_for_home(&app.home_dir) {
+        Ok(id) => app.copilot_active_id = id,
+        Err(e) => app.set_toast(e, true),
+    }
+}
+
 pub(super) fn refresh_codex_detail(app: &mut app::App) {
     let Some(id) = app.codex_detail_id.clone() else {
         app.codex_detail = None;
@@ -158,6 +178,7 @@ pub(super) fn codex_load_from_live_config(
     profile.model_provider = live.model_provider;
     profile.model = live.model;
     profile.model_reasoning_effort = live.model_reasoning_effort;
+    profile.api_key_model_discovery = live.api_key_model_discovery;
     profile.api_key = live.api_key;
     droidgear_core::codex::save_codex_profile_for_home(&app.home_dir, profile)
         .map_err(anyhow::Error::msg)?;
@@ -352,7 +373,12 @@ pub(super) fn refresh_omp_detail(app: &mut app::App) {
 }
 
 pub(super) fn refresh_dsh(app: &mut app::App) {
-    match droidgear_core::dsh::read_dsh_current_config_for_home(&app.home_dir) {
+    // The active profile follows the desktop/web screen the user opened; the
+    // profile is set when the screen is entered from the feature list.
+    match droidgear_core::dsh::read_dsh_current_config_for_profile(
+        &app.home_dir,
+        app.dsh_active_profile.as_deref(),
+    ) {
         Ok(config) => {
             let mut providers: Vec<(String, droidgear_core::dsh::DshProviderConfig)> =
                 config.providers.into_iter().collect();

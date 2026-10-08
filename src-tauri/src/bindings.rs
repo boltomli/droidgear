@@ -3,9 +3,9 @@ use tauri_specta::{collect_commands, Builder};
 pub fn generate_bindings() -> Builder<tauri::DynRuntime> {
     use crate::commands::{
         channel, channel_export, claude, claude_settings, codex, codex_auth_profiles,
-        codex_sessions, config, connectivity, droid_settings, dsh, env, factory_auth_profiles,
-        hermes, mcp, notifications, omp, openclaw, opencode, paths, pi, pi_sessions, preferences,
-        recovery, sessions, specs, updater, window,
+        codex_sessions, config, connectivity, copilot, droid_settings, dsh, env,
+        factory_auth_profiles, hermes, mcp, notifications, omp, openclaw, opencode, paths, pi,
+        pi_sessions, preferences, recovery, sessions, specs, updater, window,
     };
 
     Builder::new()
@@ -107,6 +107,18 @@ pub fn generate_bindings() -> Builder<tauri::DynRuntime> {
             claude_settings::plan_claude_temporary_run_from_file,
             claude_settings::preview_claude_temporary_run_from_file,
             claude_settings::launch_claude_with_settings,
+            copilot::list_copilot_profiles,
+            copilot::get_copilot_profile,
+            copilot::save_copilot_profile,
+            copilot::prepare_copilot_channel_import,
+            copilot::delete_copilot_profile,
+            copilot::duplicate_copilot_profile,
+            copilot::create_default_copilot_profile,
+            copilot::get_active_copilot_profile_id,
+            copilot::apply_copilot_profile,
+            copilot::get_copilot_config_status,
+            copilot::read_copilot_current_config,
+            copilot::launch_copilot,
             codex::list_codex_profiles,
             codex::get_codex_profile,
             codex::save_codex_profile,
@@ -184,6 +196,7 @@ pub fn generate_bindings() -> Builder<tauri::DynRuntime> {
             openclaw::read_openclaw_current_config,
             openclaw::read_openclaw_subagents,
             openclaw::save_openclaw_subagents,
+            dsh::list_dsh_profiles,
             dsh::read_dsh_current_config,
             dsh::save_dsh_provider,
             dsh::delete_dsh_provider,
@@ -220,6 +233,8 @@ pub fn generate_bindings() -> Builder<tauri::DynRuntime> {
             droid_settings::set_active_droid_settings_file,
             droid_settings::create_droid_settings_file,
             droid_settings::delete_droid_settings_file,
+            droid_settings::link_droid_settings_file,
+            droid_settings::unlink_droid_settings_file,
             droid_settings::get_droid_launch_command,
             droid_settings::launch_droid,
             droid_settings::list_droid_trusted_folders,

@@ -419,7 +419,7 @@ fn draw_main(frame: &mut Frame, app: &app::App, area: Rect) {
         app::Screen::PiModel => draw_pi_model(frame, app, area),
         app::Screen::Omp => draw_omp_profiles(frame, app, area),
         app::Screen::OmpProfile => draw_omp_profile(frame, app, area),
-        app::Screen::Dsh => draw_dsh_providers(frame, app, area),
+        app::Screen::DshDesktop | app::Screen::DshWeb => draw_dsh_providers(frame, app, area),
         app::Screen::DshProvider => draw_dsh_provider(frame, app, area),
         app::Screen::DshModel => draw_dsh_model(frame, app, area),
         app::Screen::Hermes => draw_hermes_profiles(frame, app, area),
@@ -427,6 +427,7 @@ fn draw_main(frame: &mut Frame, app: &app::App, area: Rect) {
         app::Screen::HermesProvider => draw_hermes_provider(frame, app, area),
         app::Screen::Sessions => draw_sessions(frame, app, area),
         app::Screen::CodexSessions => draw_codex_sessions(frame, app, area),
+        app::Screen::Copilot => draw_copilot_profiles(frame, app, area),
         app::Screen::PiSessions => draw_pi_sessions(frame, app, area),
         app::Screen::Specs => draw_specs(frame, app, area),
         app::Screen::Channels => draw_channels(frame, app, area),
@@ -608,7 +609,7 @@ fn draw_droid_settings_files(frame: &mut Frame, app: &app::App, area: Rect) {
         .wrap(Wrap { trim: false });
     frame.render_widget(p, chunks[0]);
 
-    let help = help_paragraph("Enter: set active  r: refresh  q/Esc: back");
+    let help = help_paragraph("Enter: set active  i: link local JSON  r: refresh  q/Esc: back");
     frame.render_widget(help, chunks[1]);
 }
 
@@ -1131,6 +1132,20 @@ fn draw_codex_profiles(frame: &mut Frame, app: &app::App, area: Rect) {
         active,
         selected_index,
         "Up/Down: select  Enter/e: open  E: raw edit  p: preview  a: apply  n: new  c: copy  d: delete  r: refresh  q/Esc: back",
+    );
+}
+
+fn draw_copilot_profiles(frame: &mut Frame, app: &app::App, area: Rect) {
+    draw_profile_list(
+        frame,
+        area,
+        &crumb_title(app, "Copilot Profiles"),
+        app.copilot_profiles
+            .iter()
+            .map(|profile| (profile.name.as_str(), profile.id.as_str())),
+        app.copilot_active_id.as_deref(),
+        app.copilot_index,
+        "Enter/t: run  e: edit JSON  i: import channel  n: new  c: copy  d: delete  a: apply  l: load config  r: refresh  q/Esc: back",
     );
 }
 
@@ -2323,6 +2338,14 @@ fn draw_codex_profile(frame: &mut Frame, app: &app::App, area: Rect) {
                 "********".to_string()
             } else {
                 "(not set)".to_string()
+            },
+        ),
+        (
+            "Discover models with API key",
+            if profile.api_key_model_discovery {
+                "[x]".to_string()
+            } else {
+                "[ ]".to_string()
             },
         ),
     ];
@@ -3521,9 +3544,13 @@ fn draw_dsh_providers(frame: &mut Frame, app: &app::App, area: Rect) {
         .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
         .split(area);
 
+    let profile_label = match app.dsh_active_profile.as_deref() {
+        Some(name) => format!("Dsh Providers [profile: {name}]"),
+        None => "Dsh Providers [legacy settings.yaml]".to_string(),
+    };
     let highlight = (!app.dsh_providers.is_empty()).then_some(app.dsh_index);
     let list = List::new(items)
-        .block(block("Dsh Providers"))
+        .block(block(profile_label.as_str()))
         .highlight_style(t.selected_row_style());
     render_list(frame, list, chunks[0], highlight);
 

@@ -12,6 +12,15 @@ pub(super) fn run_action(app: &mut app::App, action: Action) -> anyhow::Result<(
             app.set_toast("Saved", false);
             Ok(())
         }
+        Action::EditCopilotProfile { id } => {
+            let profile = droidgear_core::copilot::get_copilot_profile_for_home(&app.home_dir, &id)
+                .map_err(anyhow::Error::msg)?;
+            let edited = edit_json_in_editor(&profile)?;
+            droidgear_core::copilot::save_copilot_profile_for_home(&app.home_dir, edited)
+                .map_err(anyhow::Error::msg)?;
+            app.set_toast("Saved", false);
+            Ok(())
+        }
         Action::EditOpenCodeProfile { id } => {
             let profile =
                 droidgear_core::opencode::get_opencode_profile_for_home(&app.home_dir, &id)
@@ -33,12 +42,12 @@ pub(super) fn run_action(app: &mut app::App, action: Action) -> anyhow::Result<(
             Ok(())
         }
         Action::PreviewDroidRun { settings_path } => {
-            let preview = preview_droid_temporary_run(&app.home_dir, Path::new(&settings_path))?;
+            let preview = preview_droid_run(&app.home_dir, Path::new(&settings_path))?;
             open_text_in_pager(&preview)?;
             Ok(())
         }
         Action::RunDroidRun { settings_path } => {
-            run_droid_temporary_run(&app.home_dir, Path::new(&settings_path))?;
+            run_droid_run(&app.home_dir, Path::new(&settings_path))?;
             app.should_quit = true;
             Ok(())
         }
@@ -67,6 +76,11 @@ pub(super) fn run_action(app: &mut app::App, action: Action) -> anyhow::Result<(
         }
         Action::RunCodexRun { id } => {
             run_codex_temporary_run(&app.home_dir, &id)?;
+            app.should_quit = true;
+            Ok(())
+        }
+        Action::RunCopilotRun { id } => {
+            run_copilot_temporary_run(&app.home_dir, &id)?;
             app.should_quit = true;
             Ok(())
         }
@@ -105,8 +119,11 @@ pub(super) fn run_action(app: &mut app::App, action: Action) -> anyhow::Result<(
             Ok(())
         }
         Action::FetchDshModels { provider_id } => {
-            let config = droidgear_core::dsh::read_dsh_current_config_for_home(&app.home_dir)
-                .map_err(anyhow::Error::msg)?;
+            let config = droidgear_core::dsh::read_dsh_current_config_for_profile(
+                &app.home_dir,
+                app.dsh_active_profile.as_deref(),
+            )
+            .map_err(anyhow::Error::msg)?;
             let Some(provider) = config.providers.get(&provider_id) else {
                 return Err(anyhow::anyhow!("Provider not found"));
             };
@@ -232,8 +249,11 @@ pub(super) fn run_action(app: &mut app::App, action: Action) -> anyhow::Result<(
             Ok(())
         }
         Action::SetActiveSettingsFile { name } => {
-            droidgear_core::droid_settings_files::set_active_settings_file(name)
-                .map_err(|e| anyhow::anyhow!("{e}"))?;
+            droidgear_core::droid_settings_files::set_active_settings_file_for_home(
+                &app.home_dir,
+                name,
+            )
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
             refresh_droid_settings_files(app);
             Ok(())
         }
