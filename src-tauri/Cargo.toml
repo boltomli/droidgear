@@ -5,6 +5,9 @@ description = "BYOK Model Configuration for Factory Droid"
 authors = ["you"]
 edition = "2021"
 rust-version = "1.95"
+# Two binaries exist (the app plus `export_bindings`); the CLI needs to know
+# which one is the app entry point.
+default-run = "droidgear"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -16,25 +19,25 @@ name = "droidgear_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "3.0.0-alpha.0", features = [] }
+tauri-build = { version = "3.0.0-alpha.3", features = [] }
 
 [dependencies]
 droidgear-core = { path = "crates/droidgear-core" }
-tauri = { version = "3.0.0-alpha.1", features = ["macos-private-api"] }
-tauri-runtime-wry = "3.0.0-alpha.1"
-tauri-plugin-opener = "3.0.0-alpha.0"
+tauri = { version = "3.0.0-alpha.4", features = [] }
+tauri-runtime-wry = "3.0.0-alpha.4"
+tauri-plugin-opener = "3.0.0-alpha.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 base64 = "0.22"
-tauri-plugin-clipboard-manager = "3.0.0-alpha.0"
-tauri-plugin-dialog = "3.0.0-alpha.0"
-tauri-plugin-fs = "3.0.0-alpha.0"
-tauri-plugin-log = "3.0.0-alpha.0"
-tauri-plugin-notification = "3.0.0-alpha.0"
-tauri-plugin-persisted-scope = "3.0.0-alpha.0"
-tauri-plugin-process = "3.0.0-alpha.0"
-tauri-plugin-os = "3.0.0-alpha.0"
-tauri-plugin-global-shortcut = "3.0.0-alpha.0"
+tauri-plugin-clipboard-manager = "3.0.0-alpha.2"
+tauri-plugin-dialog = "3.0.0-alpha.3"
+tauri-plugin-fs = "3.0.0-alpha.2"
+tauri-plugin-log = "3.0.0-alpha.2"
+tauri-plugin-notification = "3.0.0-alpha.2"
+tauri-plugin-persisted-scope = "3.0.0-alpha.2"
+tauri-plugin-process = "3.0.0-alpha.2"
+tauri-plugin-os = "3.0.0-alpha.2"
+tauri-plugin-global-shortcut = "3.0.0-alpha.2"
 log = "0.4"
 regex = "1"
 reqwest = { version = "0.12", features = ["json", "cookies"] }
@@ -55,9 +58,9 @@ specta-typescript = "=0.0.13"
 tauri-plugin-system-fonts = { path = "../../tauri-plugin-system-fonts" }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-single-instance = "3.0.0-alpha.0"
-tauri-plugin-updater = "3.0.0-alpha.0"
-tauri-plugin-window-state = "3.0.0-alpha.0"
+tauri-plugin-single-instance = "3.0.0-alpha.2"
+tauri-plugin-updater = "3.0.0-alpha.2"
+tauri-plugin-window-state = "3.0.0-alpha.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 self-replace = "1.5"

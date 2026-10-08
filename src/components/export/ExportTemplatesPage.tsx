@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
+import { openPath, revealItemsInDir } from '@tauri-apps/plugin-opener'
 import { toast } from 'sonner'
 import { useExportStore } from '@/store/export-store'
 import { useUIStore } from '@/store/ui-store'
@@ -82,7 +82,7 @@ export function ExportTemplatesPage() {
   const handleOpenDir = async (filePath: string) => {
     try {
       // First try to reveal the file in the file manager
-      await revealItemInDir(filePath)
+      await revealItemsInDir(filePath)
     } catch {
       // Fallback: open the parent directory
       const normalized = filePath.replace(/\\/g, '/')

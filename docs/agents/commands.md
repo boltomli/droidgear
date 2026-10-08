@@ -14,6 +14,7 @@ npm run tauri:dev        # Start full Tauri app with hot reload
 ```bash
 npm run build            # TypeScript check + Vite build
 npm run tauri:build      # Full Tauri production build
+npm run tauri:check      # Typecheck + compile the Tauri app, no installers (--no-bundle)
 ```
 
 ## Quality Gates
@@ -71,6 +72,7 @@ npm run rust:bindings    # Regenerate tauri-specta TypeScript bindings
 | Dev | `npm run tui:dev` | TUI with auto-rebuild |
 | Build | `npm run build` | TypeScript check + Vite build |
 | Build | `npm run tauri:build` | Tauri production build |
+| Check | `npm run tauri:check` | Typecheck + Tauri app compile, no installers |
 | Build | `npm run tui:build` | TUI release build |
 | Check | `npm run tui:check` | TUI compile check |
 | Run | `npm run tui` | Run TUI |

@@ -224,13 +224,22 @@ The order plugins are registered matters:
 
 Tauri v3 is still alpha, so three dependencies are consumed from **local forks** that must exist as siblings of this repository (paths in `src-tauri/Cargo.toml` are relative to `src-tauri/`):
 
-| Path                           | Upstream                                     | Fork changes                                                                                                                                       |
-| ------------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `../tauri-specta`              | `specta-rs/tauri-specta` `2.0.0-rc.25`       | `tauri = 3.0.0-alpha.1` with the `specta` feature; dependencies inlined so the crate works as an out-of-tree path dependency                       |
-| `../tauri-plugin-pty`          | `Tnze/tauri-plugin-pty` `0.3.0`              | `tauri = 3.0.0-alpha.1`; PTY `read`/`write` run on `spawn_blocking` so terminal IO can never occupy an async worker (that stalled window dragging) |
-| `../tauri-plugin-system-fonts` | `ayangweb/tauri-plugin-system-fonts` `2.0.2` | `tauri = 3.0.0-alpha.1`                                                                                                                            |
+| Path                           | Upstream                                     | Fork changes                                                                                                                                                   |
+| ------------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `../tauri-specta`              | `specta-rs/tauri-specta` `2.0.0-rc.25`       | tracks the `tauri` 3.0.0-alpha line (currently `alpha.4`) with the `specta` feature; dependencies inlined so the crate works as an out-of-tree path dependency |
+| `../tauri-plugin-pty`          | `Tnze/tauri-plugin-pty` `0.3.0`              | tracks the `tauri` 3.0.0-alpha line; PTY `read`/`write` run on `spawn_blocking` so terminal IO can never occupy an async worker (that stalled window dragging) |
+| `../tauri-plugin-system-fonts` | `ayangweb/tauri-plugin-system-fonts` `2.0.2` | tracks the `tauri` 3.0.0-alpha line                                                                                                                            |
 
-Upstream pins `tauri = "^2"` in all three, so they cannot be used unchanged. `specta`/`specta-typescript` themselves come from a git revision via `[patch.crates-io]` in `src-tauri/Cargo.toml`, because the `2.0.0-rc.26` crates are not published yet.
+Upstream pins `tauri = "^2"` in all three, so they cannot be used unchanged. When bumping `tauri`, bump the `tauri` requirement in all three forks to the same alpha. `specta`/`specta-typescript` themselves come from a git revision via `[patch.crates-io]` in `src-tauri/Cargo.toml`, because the `2.0.0-rc.26` crates are not published yet.
+
+If those directories are missing, cargo fails with `failed to load manifest for dependency ...`, and `npm run rust:bindings` cannot regenerate `src/lib/bindings.ts` (which is a generated file — never hand-edit it).
+
+### Tauri v3 alpha upgrade notes
+
+- The v3 alphas must move as one set: `tauri`, `tauri-build`, `tauri-runtime-wry`, every `tauri-plugin-*`, and the `@tauri-apps/*` npm packages. Mixing trains breaks compilation (for example `Builder::js_init_script` disappeared from the plugin builder).
+- `tauri 3.0.0-alpha.4` removed the `macos-private-api` Cargo feature **and** the `app > macOSPrivateApi` config option — window transparency and `fullScreenEnabled` no longer use macOS private APIs, so they are always available.
+- `tauri-plugin-fs 3.0.0-alpha.2` replaced per-command permissions (`fs:allow-write-text-file`) with command sets: use `fs:read-files` / `fs:write-files` (or `fs:read-all` / `fs:write-all`) in `src-tauri/capabilities/`.
+- `@tauri-apps/plugin-opener 3.0.0-alpha.2` renamed `revealItemInDir` to `revealItemsInDir` (accepts a path or an array of paths).
 
 If those directories are missing, cargo fails with `failed to load manifest for dependency ...`, and `npm run rust:bindings` cannot regenerate `src/lib/bindings.ts` (which is a generated file — never hand-edit it).
 
