@@ -24,6 +24,12 @@ import {
 } from '@/components/ui/dialog'
 import { useDshStore } from '@/store/dsh-store'
 import {
+  draftFromChannelModel,
+  draftToModel,
+  modelToDraft,
+  type DshModelDraft as ModelDraft,
+} from './model-draft'
+import {
   commands,
   type DshModel,
   type DshModel_Deserialize,
@@ -31,7 +37,10 @@ import {
 } from '@/lib/bindings'
 import { findModelByIdOrAlias, getSupportedEfforts } from '@/lib/model-registry'
 import { providerToClientApiType } from '@/lib/model-protocol'
-import { ensureOpenAICompatibleV1 } from '@/lib/sub2api-platform'
+import {
+  ensureOpenAICompatibleV1,
+  needsOpenAICompatibleV1,
+} from '@/lib/sub2api-platform'
 import { ChannelModelPickerDialog } from '@/components/channels/ChannelModelPickerDialog'
 import { type ChannelProviderContext } from '@/components/channels'
 import { type CustomModel } from '@/lib/bindings'
@@ -59,15 +68,6 @@ interface ProviderDialogProps {
   editingProviderId: string | null
 }
 
-interface ModelDraft {
-  id: string
-  name: string
-  contextWindow: string
-  maxTokens: string
-  /** Original model, kept so reasoningEfforts/extra fields survive edits. */
-  base: DshModel | null
-}
-
 function formatReasoningEfforts(
   efforts: Partial<Record<string, string | null>> | null | undefined
 ): string {
@@ -87,28 +87,6 @@ function reasoningEffortsLabel(model: DshModel | null, id: string): string {
   }
   const entry = findModelByIdOrAlias(id)
   return formatReasoningEfforts(entry?.thinkingLevelMap)
-}
-
-function modelToDraft(model: DshModel): ModelDraft {
-  return {
-    id: model.id,
-    name: model.name ?? '',
-    contextWindow: model.contextWindow?.toString() ?? '',
-    maxTokens: model.maxTokens?.toString() ?? '',
-    base: model,
-  }
-}
-
-function draftToModel(draft: ModelDraft): DshModel {
-  const contextWindow = draft.contextWindow.trim()
-  const maxTokens = draft.maxTokens.trim()
-  return {
-    ...(draft.base ?? {}),
-    id: draft.id.trim(),
-    name: draft.name.trim() || null,
-    contextWindow: contextWindow ? Number(contextWindow) : null,
-    maxTokens: maxTokens ? Number(maxTokens) : null,
-  } as DshModel_Deserialize
 }
 
 function sanitizeProviderId(name: string): string {
@@ -306,31 +284,27 @@ export function ProviderDialog({
     context: ChannelProviderContext
   ) => {
     const sanitizedId = sanitizeProviderId(context.channelName)
+    const apiType = context.provider
+      ? providerToClientApiType(context.provider)
+      : inferApiType(context.baseUrl, context.platform)
     setProviderId(sanitizedId)
     setDisplayName(context.channelName)
-    // 通用兼容模式走 OpenAI 兼容端点，Base URL 必须带 /v1
+    // 通用兼容模式，以及 sub2api 渠道的 openai-completions 端点，都必须带 /v1
     setBaseUrl(
-      context.provider === 'generic-chat-completion-api'
+      needsOpenAICompatibleV1(
+        context.channelType,
+        context.provider,
+        apiType === 'openai-completions'
+      )
         ? ensureOpenAICompatibleV1(context.baseUrl)
         : context.baseUrl
     )
     const envName = envNameForProviderId(sanitizedId)
     setApiKeyEnv(envName)
     setApiKeyValue(context.apiKey)
-    setApi(
-      context.provider
-        ? providerToClientApiType(context.provider)
-        : inferApiType(context.baseUrl, context.platform)
-    )
-    setModels(
-      selectedModels.map(model => ({
-        id: model.model,
-        name: model.displayName ?? '',
-        contextWindow: '',
-        maxTokens: model.maxOutputTokens?.toString() ?? '',
-        base: null,
-      }))
-    )
+    setApi(apiType)
+    // 用内置注册表补齐上下文窗口等元数据，和保存时的后端填充保持一致
+    setModels(selectedModels.map(draftFromChannelModel))
   }
 
   const handleSave = async () => {

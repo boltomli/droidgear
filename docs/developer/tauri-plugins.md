@@ -220,6 +220,20 @@ The order plugins are registered matters:
 3. **updater** - Desktop only
 4. All other plugins in any order
 
+## Tauri v3 Local Fork Dependencies
+
+Tauri v3 is still alpha, so three dependencies are consumed from **local forks** that must exist as siblings of this repository (paths in `src-tauri/Cargo.toml` are relative to `src-tauri/`):
+
+| Path                           | Upstream                                     | Fork changes                                                                                                                                       |
+| ------------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `../tauri-specta`              | `specta-rs/tauri-specta` `2.0.0-rc.25`       | `tauri = 3.0.0-alpha.1` with the `specta` feature; dependencies inlined so the crate works as an out-of-tree path dependency                       |
+| `../tauri-plugin-pty`          | `Tnze/tauri-plugin-pty` `0.3.0`              | `tauri = 3.0.0-alpha.1`; PTY `read`/`write` run on `spawn_blocking` so terminal IO can never occupy an async worker (that stalled window dragging) |
+| `../tauri-plugin-system-fonts` | `ayangweb/tauri-plugin-system-fonts` `2.0.2` | `tauri = 3.0.0-alpha.1`                                                                                                                            |
+
+Upstream pins `tauri = "^2"` in all three, so they cannot be used unchanged. `specta`/`specta-typescript` themselves come from a git revision via `[patch.crates-io]` in `src-tauri/Cargo.toml`, because the `2.0.0-rc.26` crates are not published yet.
+
+If those directories are missing, cargo fails with `failed to load manifest for dependency ...`, and `npm run rust:bindings` cannot regenerate `src/lib/bindings.ts` (which is a generated file — never hand-edit it).
+
 ## References
 
 - [Tauri v3 Plugin Documentation](https://v3.tauri.app/plugin/)

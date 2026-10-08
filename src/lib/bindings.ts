@@ -280,6 +280,24 @@ export const commands = {
 	 *  `--dangerously-skip-permissions` flag is appended.
 	 */
 	launchClaudeWithSettings: (cwd: string | null, skipDangerous: boolean) => typedError<null, string>(__TAURI_INVOKE("launch_claude_with_settings", { cwd, skipDangerous })),
+	listCopilotProfiles: () => typedError<CopilotProfile[], string>(__TAURI_INVOKE("list_copilot_profiles")),
+	getCopilotProfile: (id: string) => typedError<CopilotProfile, string>(__TAURI_INVOKE("get_copilot_profile", { id })),
+	saveCopilotProfile: (profile: CopilotProfile) => typedError<null, string>(__TAURI_INVOKE("save_copilot_profile", { profile })),
+	prepareCopilotChannelImport: (profile: CopilotProfile, selection: CopilotChannelSelection) => typedError<CopilotProfile, string>(__TAURI_INVOKE("prepare_copilot_channel_import", { profile, selection })),
+	deleteCopilotProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("delete_copilot_profile", { id })),
+	duplicateCopilotProfile: (id: string, newName: string) => typedError<CopilotProfile, string>(__TAURI_INVOKE("duplicate_copilot_profile", { id, newName })),
+	createDefaultCopilotProfile: () => typedError<CopilotProfile, string>(__TAURI_INVOKE("create_default_copilot_profile")),
+	getActiveCopilotProfileId: () => typedError<string | null, string>(__TAURI_INVOKE("get_active_copilot_profile_id")),
+	applyCopilotProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("apply_copilot_profile", { id })),
+	getCopilotConfigStatus: () => typedError<CopilotConfigStatus, string>(__TAURI_INVOKE("get_copilot_config_status")),
+	readCopilotCurrentConfig: () => typedError<CopilotCurrentConfig, string>(__TAURI_INVOKE("read_copilot_current_config")),
+	/**
+	 *  Launch Copilot with the selected profile's environment overlay.
+	 *  The live profile file is not changed by this command.  The terminal
+	 *  launcher writes the API key into a short-lived secure wrapper when needed,
+	 *  then removes that wrapper after Copilot exits.
+	 */
+	launchCopilot: (id: string, cwd: string | null) => typedError<null, string>(__TAURI_INVOKE("launch_copilot", { id, cwd })),
 	/**  List all Codex profiles */
 	listCodexProfiles: () => typedError<CodexProfile[], string>(__TAURI_INVOKE("list_codex_profiles")),
 	/**  Get a profile by ID */
@@ -437,14 +455,31 @@ export const commands = {
 	readOpenclawSubagents: () => typedError<OpenClawSubAgent[], string>(__TAURI_INVOKE("read_openclaw_subagents")),
 	/**  Save subagents to OpenClaw config file */
 	saveOpenclawSubagents: (subagents: OpenClawSubAgent[]) => typedError<null, string>(__TAURI_INVOKE("save_openclaw_subagents", { subagents })),
-	/**  Read the current Dsh providers from `~/.dsh/settings.yaml`. */
-	readDshCurrentConfig: () => typedError<DshCurrentConfig, string>(__TAURI_INVOKE("read_dsh_current_config")),
-	/**  Insert or update one provider in `llm-pi-ai.providers`. */
-	saveDshProvider: (providerId: string, config: DshProviderConfig) => typedError<null, string>(__TAURI_INVOKE("save_dsh_provider", { providerId, config })),
-	/**  Remove one provider from `llm-pi-ai.providers`. */
-	deleteDshProvider: (providerId: string) => typedError<null, string>(__TAURI_INVOKE("delete_dsh_provider", { providerId })),
-	/**  Get the status of `~/.dsh/settings.yaml`. */
-	getDshConfigStatus: () => typedError<DshConfigStatus, string>(__TAURI_INVOKE("get_dsh_config_status")),
+	/**  List the Dsh profiles under `~/.dsh/profiles/`. */
+	listDshProfiles: () => typedError<DshProfile[], string>(__TAURI_INVOKE("list_dsh_profiles")),
+	/**
+	 *  Read the effective Dsh providers. Without a profile the default
+	 *  resolution is used (official `desktop` > `web` > legacy
+	 *  `settings.yaml`).
+	 */
+	readDshCurrentConfig: (profile: string | null) => typedError<DshCurrentConfig, string>(__TAURI_INVOKE("read_dsh_current_config", { profile })),
+	/**
+	 *  Insert or update one provider in the target profile's `llm-pi-ai`
+	 *  patch entry (`cordis.patch.yml`), or in the legacy `settings.yaml` when
+	 *  no profile exists.
+	 */
+	saveDshProvider: (profile: string | null, providerId: string, config: DshProviderConfig) => typedError<null, string>(__TAURI_INVOKE("save_dsh_provider", { profile, providerId, config })),
+	/**
+	 *  Remove one provider from the target profile's `llm-pi-ai` patch entry
+	 *  (`cordis.patch.yml`), or from the legacy `settings.yaml` when no profile
+	 *  exists.
+	 */
+	deleteDshProvider: (profile: string | null, providerId: string) => typedError<null, string>(__TAURI_INVOKE("delete_dsh_provider", { profile, providerId })),
+	/**
+	 *  Get the Dsh configuration file status for a profile (or the legacy
+	 *  `settings.yaml` layout when no profile exists).
+	 */
+	getDshConfigStatus: (profile: string | null) => typedError<DshConfigStatus, string>(__TAURI_INVOKE("get_dsh_config_status", { profile })),
 	/**  Read env-var → API key refs from `~/.dsh/.credentials.yaml`. */
 	readDshCredentials: () => typedError<DshCredentials, string>(__TAURI_INVOKE("read_dsh_credentials")),
 	/**
@@ -507,6 +542,17 @@ export const commands = {
 	createDroidSettingsFile: (name: string, copyFromActive: boolean) => typedError<SettingsFileInfo, string>(__TAURI_INVOKE("create_droid_settings_file", { name, copyFromActive })),
 	/**  Deletes a custom settings file. Cannot delete the global file. */
 	deleteDroidSettingsFile: (name: string) => typedError<null, string>(__TAURI_INVOKE("delete_droid_settings_file", { name })),
+	/**
+	 *  Links a local JSON file as a settings profile by reference (never copied).
+	 *  The file becomes the active settings file and is passed to Droid's native
+	 *  `--settings` flag when launching.
+	 */
+	linkDroidSettingsFile: (path: string) => typedError<SettingsFileInfo, string>(__TAURI_INVOKE("link_droid_settings_file", { path })),
+	/**
+	 *  Removes the registration of a linked external settings file. The file on
+	 *  disk is never touched.
+	 */
+	unlinkDroidSettingsFile: (path: string) => typedError<null, string>(__TAURI_INVOKE("unlink_droid_settings_file", { path })),
 	/**
 	 *  Gets the launch command for Droid with the active settings file.
 	 *  Returns [command_string, settings_path].
@@ -628,7 +674,7 @@ export type AppPreferences_Deserialize = {
 	 *  If None, defaults to platform-appropriate default
 	 */
 	preferred_terminal?: string | null,
-	/**  Droid temporary-run runtime policy. */
+	/**  Droid launch runtime policy (env hygiene for launched droid sessions). */
 	droid_run?: DroidRunPreferences_Deserialize | null,
 };
 
@@ -666,7 +712,7 @@ export type AppPreferences_Serialize = {
 	 *  If None, defaults to platform-appropriate default
 	 */
 	preferred_terminal: string | null,
-	/**  Droid temporary-run runtime policy. */
+	/**  Droid launch runtime policy (env hygiene for launched droid sessions). */
 	droid_run: DroidRunPreferences_Serialize | null,
 };
 
@@ -1013,6 +1059,7 @@ export type CodexCurrentConfig_Deserialize = {
 	modelProvider: string,
 	model: string,
 	modelReasoningEffort: string | null,
+	apiKeyModelDiscovery?: boolean,
 	apiKey: string | null,
 };
 
@@ -1022,6 +1069,7 @@ export type CodexCurrentConfig_Serialize = {
 	modelProvider: string,
 	model: string,
 	modelReasoningEffort?: string,
+	apiKeyModelDiscovery: boolean,
 	apiKey?: string,
 };
 
@@ -1058,6 +1106,7 @@ export type CodexProfile_Deserialize = {
 	apiKey: string | null,
 	/**  Saved Codex auth profile name to restore on apply (openai mode only). */
 	authProfileName?: string | null,
+	apiKeyModelDiscovery?: boolean,
 };
 
 /**  Codex Profile（用于在 DroidGear 内部保存并切换） */
@@ -1074,6 +1123,7 @@ export type CodexProfile_Serialize = {
 	apiKey?: string,
 	/**  Saved Codex auth profile name to restore on apply (openai mode only). */
 	authProfileName?: string,
+	apiKeyModelDiscovery: boolean,
 };
 
 /**  Codex Provider 配置（对应 config.toml 中的 [model_providers.<id>]） */
@@ -1308,6 +1358,75 @@ export type ContentBlock_Serialize = {
 	thinking?: string,
 };
 
+export type CopilotChannelSelection = {
+	channelType: ChannelType,
+	baseUrl: string,
+	apiKey: string,
+	platform: string | null,
+	provider: Provider | null,
+	model: string,
+	maxOutputTokens: number | null,
+};
+
+export type CopilotConfigStatus = {
+	configExists: boolean,
+	configPath: string,
+};
+
+export type CopilotCurrentConfig = CopilotCurrentConfig_Serialize | CopilotCurrentConfig_Deserialize;
+
+export type CopilotCurrentConfig_Deserialize = {
+	isByok: boolean,
+	baseUrl: string | null,
+	providerType: string | null,
+	apiKey: string | null,
+	model: string | null,
+	maxPromptTokens: number | null,
+	maxOutputTokens: number | null,
+};
+
+export type CopilotCurrentConfig_Serialize = {
+	isByok: boolean,
+	baseUrl?: string,
+	providerType?: string,
+	apiKey?: string,
+	model?: string,
+	maxPromptTokens?: number,
+	maxOutputTokens?: number,
+};
+
+export type CopilotProfile = CopilotProfile_Serialize | CopilotProfile_Deserialize;
+
+export type CopilotProfile_Deserialize = {
+	id: string,
+	name: string,
+	description: string | null,
+	createdAt: string,
+	updatedAt: string,
+	useOfficialAuth?: boolean,
+	baseUrl: string | null,
+	providerType: string | null,
+	apiKey: string | null,
+	model: string | null,
+	maxPromptTokens: number | null,
+	maxOutputTokens: number | null,
+};
+
+export type CopilotProfile_Serialize = {
+	id: string,
+	name: string,
+	description?: string,
+	createdAt: string,
+	updatedAt: string,
+	useOfficialAuth?: boolean,
+	baseUrl?: string,
+	providerType?: string,
+	apiKey?: string,
+	model?: string,
+	maxPromptTokens?: number,
+	maxOutputTokens?: number,
+};
+
 /**  Custom model configuration */
 export type CustomModel = CustomModel_Serialize | CustomModel_Deserialize;
 
@@ -1388,10 +1507,25 @@ export type DshCompatConfig_Serialize = {
 	supportsDeveloperRole?: boolean,
 };
 
-/**  Dsh settings.yaml file status. */
+/**  Dsh configuration file status. */
 export type DshConfigStatus = {
+	/**
+	 *  Resolved profile name (`None` when no profile exists and the legacy
+	 *  `settings.yaml` layout is used).
+	 */
+	profileName: string | null,
 	configExists: boolean,
+	/**
+	 *  Effective file DroidGear writes providers into: the profile's
+	 *  `cordis.patch.yml`, or the legacy `settings.yaml` without a profile.
+	 */
 	configPath: string,
+	/**
+	 *  Whether the legacy `~/.dsh/settings.yaml` still exists (modern Dsh
+	 *  imports it once and renames it to `settings.yaml.imported`).
+	 */
+	legacyExists: boolean,
+	legacyPath: string,
 	credentialsExists: boolean,
 	credentialsPath: string,
 };
@@ -1413,15 +1547,15 @@ export type DshCredentials_Serialize = {
 	refs: { [key in string]: string },
 };
 
-/**  Current Dsh configuration read from `~/.dsh/settings.yaml`. */
+/**  Current Dsh configuration (the merged provider map across config layers). */
 export type DshCurrentConfig = DshCurrentConfig_Serialize | DshCurrentConfig_Deserialize;
 
-/**  Current Dsh configuration read from `~/.dsh/settings.yaml`. */
+/**  Current Dsh configuration (the merged provider map across config layers). */
 export type DshCurrentConfig_Deserialize = {
 	providers?: { [key in string]: DshProviderConfig_Deserialize },
 };
 
-/**  Current Dsh configuration read from `~/.dsh/settings.yaml`. */
+/**  Current Dsh configuration (the merged provider map across config layers). */
 export type DshCurrentConfig_Serialize = {
 	providers: { [key in string]: DshProviderConfig_Serialize },
 };
@@ -1447,6 +1581,16 @@ export type DshModel_Serialize = {
 	maxTokens?: number,
 	/**  Reasoning effort mapping, e.g. `{"off": null, "high": "high"}`. */
 	reasoningEfforts?: { [key in string]: string | null },
+};
+
+/**  One Dsh profile directory under `~/.dsh/profiles/`. */
+export type DshProfile = {
+	/**  Profile name (directory name under `~/.dsh/profiles/`). */
+	name: string,
+	/**  Absolute profile directory. */
+	dir: string,
+	/**  Absolute path of the profile's user patch layer (`cordis.patch.yml`). */
+	patchPath: string,
 };
 
 /**  Dsh provider configuration (one entry of `llm-pi-ai.providers`). */
@@ -2796,6 +2940,8 @@ export type SettingsFileInfo = {
 	isActive: boolean,
 	/**  Whether the file exists on disk */
 	exists: boolean,
+	/**  Whether this is a linked external file kept at its original location */
+	isExternal: boolean,
 };
 
 /**  Spec file metadata */

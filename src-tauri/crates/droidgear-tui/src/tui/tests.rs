@@ -1,7 +1,7 @@
 use super::*;
 use crate::tui::utils::{
     format_claude_temporary_run_preview, load_droid_run_preferences_from_path,
-    preview_codex_temporary_run, preview_droid_temporary_run,
+    preview_codex_temporary_run, preview_droid_run,
 };
 use crossterm::event::KeyCode;
 use std::collections::HashMap;
@@ -632,15 +632,18 @@ fn omp_screen_variants_exist() {
 
 #[test]
 fn dsh_screen_variants_exist() {
-    let _dsh = app::Screen::Dsh;
+    let _dsh_desktop = app::Screen::DshDesktop;
+    let _dsh_web = app::Screen::DshWeb;
     let _dsh_provider = app::Screen::DshProvider;
     let _dsh_model = app::Screen::DshModel;
 }
 
 #[test]
 fn dsh_is_in_dsh_nav_group() {
-    let group = app::App::group_of_screen(app::Screen::Dsh).expect("Dsh should be a nav item");
-    assert_eq!(app::App::nav_groups()[group].label, "Dsh");
+    for screen in [app::Screen::DshDesktop, app::Screen::DshWeb] {
+        let group = app::App::group_of_screen(screen).expect("Dsh screens should be nav items");
+        assert_eq!(app::App::nav_groups()[group].label, "Dsh");
+    }
 }
 
 #[test]
@@ -813,7 +816,7 @@ fn load_droid_run_preferences_from_path_reads_nested_policy() {
 }
 
 #[test]
-fn preview_droid_temporary_run_uses_selected_settings_path_without_dumping_contents() {
+fn preview_droid_run_uses_selected_settings_path_without_dumping_contents() {
     let temp = TempDir::new().unwrap();
     let settings_path = temp.path().join(".droidgear/droid-settings/profile-a.json");
     write_file(
@@ -821,9 +824,9 @@ fn preview_droid_temporary_run_uses_selected_settings_path_without_dumping_conte
         r#"{"apiKey":"sk-droid-secret","model":"demo"}"#,
     );
 
-    let preview = preview_droid_temporary_run(temp.path(), &settings_path).unwrap();
+    let preview = preview_droid_run(temp.path(), &settings_path).unwrap();
 
-    assert!(preview.contains("Droid temporary run preview"));
+    assert!(preview.contains("Droid run preview"));
     assert!(preview.contains(settings_path.to_string_lossy().as_ref()));
     assert!(preview.contains("FACTORY_DROID_AUTO_UPDATE_ENABLED=0"));
     assert!(preview.contains("ANTHROPIC_AUTH_TOKEN"));
@@ -831,7 +834,7 @@ fn preview_droid_temporary_run_uses_selected_settings_path_without_dumping_conte
 }
 
 #[test]
-fn list_droid_temporary_run_targets_lists_global_and_custom_names() {
+fn list_droid_run_targets_lists_global_and_custom_names() {
     let temp = TempDir::new().unwrap();
     write_file(&temp.path().join(".factory/settings.json"), "{}");
     write_file(
@@ -844,7 +847,7 @@ fn list_droid_temporary_run_targets_lists_global_and_custom_names() {
     )
     .unwrap();
 
-    let output = list_droid_temporary_run_targets(temp.path()).unwrap();
+    let output = list_droid_run_targets(temp.path()).unwrap();
 
     assert!(output.contains("Available Droid run targets:"));
     assert!(output.contains(" global"));
@@ -868,6 +871,7 @@ fn list_codex_temporary_run_targets_lists_index_name_and_id() {
             model: "gpt-5".to_string(),
             model_reasoning_effort: None,
             api_key: None,
+            api_key_model_discovery: false,
             auth_profile_name: None,
         },
     )
@@ -885,6 +889,7 @@ fn list_codex_temporary_run_targets_lists_index_name_and_id() {
             model: "gpt-5".to_string(),
             model_reasoning_effort: None,
             api_key: None,
+            api_key_model_discovery: false,
             auth_profile_name: None,
         },
     )
@@ -915,6 +920,7 @@ fn preview_codex_temporary_run_lists_secret_keys_without_secret_values() {
             model: "gpt-5".to_string(),
             model_reasoning_effort: None,
             api_key: Some("sk-secret".to_string()),
+            api_key_model_discovery: false,
             auth_profile_name: None,
         },
     )
@@ -964,6 +970,7 @@ fn codex_set_provider_context_window_links_auto_compact_preset() {
             model: "gpt-5.6-sol".to_string(),
             model_reasoning_effort: None,
             api_key: None,
+            api_key_model_discovery: false,
             auth_profile_name: None,
         },
     )
@@ -1145,7 +1152,8 @@ fn nav_groups_cover_all_screens_exactly_once() {
         app::Screen::CodexAuth,
         app::Screen::OpenClawSubagents,
         app::Screen::OpenClawHelpers,
-        app::Screen::Dsh,
+        app::Screen::DshDesktop,
+        app::Screen::DshWeb,
     ];
     for screen in screens {
         let group = app::App::group_of_screen(screen)
@@ -1353,4 +1361,44 @@ fn nav_picker_filter_narrows_options_and_enter_resolves_by_label() {
     assert_eq!(app.screen, app::Screen::Factory);
     assert!(app.modal.is_none());
     assert!(app.modal_filter.is_empty());
+}
+
+#[test]
+fn droid_settings_link_key_opens_input_and_links_local_json_file() {
+    let temp = TempDir::new().unwrap();
+    write_file(&temp.path().join(".factory/settings.json"), "{}");
+    let external = temp.path().join("team-settings.json");
+    write_file(&external, r#"{"customModels":[]}"#);
+
+    let mut app = app::App::new(temp.path().to_path_buf());
+    app.screen = app::Screen::DroidSettingsFiles;
+
+    super::keys_droid_settings::handle_droid_settings_files_key(&mut app, KeyCode::Char('i'));
+    assert!(matches!(
+        app.modal.as_ref(),
+        Some(app::Modal::Input {
+            action: app::InputAction::DroidSettingsLink,
+            ..
+        })
+    ));
+
+    modal::run_input_action(
+        &mut app,
+        app::InputAction::DroidSettingsLink,
+        external.to_string_lossy().to_string(),
+    )
+    .unwrap();
+
+    let files =
+        droidgear_core::droid_settings_files::list_settings_files_for_home(temp.path()).unwrap();
+    assert!(files
+        .iter()
+        .any(|f| f.is_external && f.is_active && f.name == "team-settings"));
+
+    // The source file stays untouched at its original location.
+    assert!(external.exists());
+    assert_eq!(
+        std::fs::read_to_string(&external).unwrap(),
+        r#"{"customModels":[]}"#
+    );
 }

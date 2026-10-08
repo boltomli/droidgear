@@ -54,6 +54,7 @@ xattr -cr /Applications/DroidGear.app
 ### Droid 配置管理
 
 - **多配置文件** - 支持管理和切换多个 Factory Droid 配置文件（settings.json）
+- **关联本地配置** - 关联本地 JSON 文件作为启动配置（`--settings`），文件保留在原位置（GUI 与 TUI）
 - **信任文件夹** - 在 GUI 与 TUI 中查看和管理 Droid 信任文件夹
 - **终端偏好** - 为每个配置文件独立设置终端偏好
 - **面板刷新** - 切换配置文件时自动刷新相关面板
@@ -124,11 +125,19 @@ xattr -cr /Applications/DroidGear.app
 
 ### Dsh（DeepSeek Harness）支持
 
-- **Provider 配置管理** - 管理 `~/.dsh/settings.yaml` 的 `llm-pi-ai.providers`（displayName、baseURL、apiKeyEnv、api、compat、模型列表），保留文件其余段落与未知字段
+- **Provider 配置管理** - 管理新版 DSH 多 Profile 的 `cordis.patch.yml` 中 `llm-pi-ai.providers`（displayName、baseURL、apiKeyEnv、api、compat、模型列表）：支持官方 desktop / web 两种运行时 profile（默认 desktop），写入时保留其余 patch 条目与 `!!js` 表达式；无 profile 时回退到旧版 `~/.dsh/settings.yaml`，读取时按 旧版 settings.yaml → profile patch → home patch 顺序合并
 - **密钥值管理** - 在 `~/.dsh/.credentials.yaml` 中配置 API 密钥值（0600 权限），与 `apiKeyEnv` 环境变量名联动
 - **渠道导入** - 从渠道导入 Provider（自动填充 ID、Base URL、密钥与 API 类型）
 - **模型拉取** - 配置 URL 与密钥后从服务商 API 拉取模型列表，多选添加
 - **注册表自动适配** - 按模型 ID 自动填充名称、上下文窗口、最大 Token 与推理强度（reasoningEfforts）
+
+### GitHub Copilot 支持
+
+- **BYOK Profile 管理** - 管理 GitHub Copilot BYOK 配置（OpenAI / Anthropic 提供商、模型与 Token 限制），支持创建、复制、删除、应用与加载已应用配置
+- **渠道导入** - 从渠道导入 Provider 与模型，自动规范 Base URL（OpenAI 补 `/v1`、Anthropic 去 `/v1`）
+- **官方订阅模式** - 清除 BYOK 覆盖，使用 Copilot CLI 现有登录或认证 Token
+- **临时运行** - 一键以所选配置启动 Copilot（进程级环境变量 + 显式 `--model` 参数）
+- **独立启动器** - 附带 `copilot-local.sh` / `copilot-local.cmd` 启动器，无需 GUI 即可用已导出的配置启动 Copilot
 
 ### 其他功能
 
@@ -179,6 +188,7 @@ TUI 版本支持以下配置管理功能：
 - **Hermes Profile**：配置管理与应用
 - **Pi Profile**：Provider/Model 配置管理与应用
 - **Dsh Provider**：`llm-pi-ai.providers` 配置管理与凭据值管理（含渠道导入、模型拉取）
+- **Copilot Profile**：BYOK Profile 配置管理与应用（含渠道导入、临时运行）
 - **Sessions**：会话浏览与管理
 - **Paths**：路径覆盖配置（适配服务器环境）
 - **Channels**：代理平台与凭据管理

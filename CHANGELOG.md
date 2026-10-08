@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.3.3
+
+**New Features / 新功能**
+
+- GitHub Copilot BYOK support: a new Copilot section in the sidebar and TUI manages BYOK profiles for OpenAI and Anthropic providers (with channel import and official subscription mode), plus a standalone `copilot-local` launcher that runs the GitHub Copilot CLI with a profile's environment and an explicit `--model` argument / 新增 GitHub Copilot BYOK 支持：侧边栏与 TUI 新增 Copilot 区块，管理 OpenAI / Anthropic 提供商的 BYOK 配置（支持渠道导入与官方订阅模式），并提供独立的 `copilot-local` 启动器，以配置的环境变量与显式 `--model` 参数启动 GitHub Copilot CLI
+
+**Bug Fixes / 问题修复**
+
+- Prevent terminal I/O from blocking window dragging: the bundled pty plugin now reports write-backpressure status instead of polling IO, and the titlebar drag region is marked `deep` so dragging works over the embedded terminal / 修复终端 IO 阻塞窗口拖拽：内置 pty 插件改为上报写入背压状态（不再轮询 IO），并将标题栏拖拽区域标记为 `deep`，使嵌入式终端上方可正常拖拽窗口
+
+## v1.3.2
+
+**New Features / 新功能**
+
+- Dsh (DeepSeek Harness) multi-profile support: manage the official `desktop` / `web` runtime profiles, each as its own page in the sidebar and TUI menu instead of a profile switcher; providers are read from the profile's `cordis.patch.yml` merged with the legacy `settings.yaml` and the home-level `cordis.patch.yml`, and writes update only the `llm-pi-ai` entry while preserving every other patch entry and `!!js` expressions / Dsh（DeepSeek Harness）多 Profile 支持：管理官方 desktop / web 运行时 Profile，在侧边栏与 TUI 菜单中各自独立成页（不再有 Profile 切换器）；Provider 从 Profile 的 `cordis.patch.yml` 叠加旧版 `settings.yaml` 与 home 级 `cordis.patch.yml` 合并读取，写入时只更新 `llm-pi-ai` 条目并保留其余 patch 条目与 `!!js` 表达式
+- Link local JSON files as Droid launch settings, passing the selected profile files directly to the native `--settings` flag / 支持将本地 JSON 文件关联为 Droid 启动设置，把选中的 Profile 文件直接传给原生 `--settings` 参数
+
+**Bug Fixes / 问题修复**
+
+- Fix the `/v1` suffix for sub2api channels on Chat Completions endpoints: the generic compatible protocol now requires `/v1` when adding models from a channel, and every client protocol that talks OpenAI Chat Completions (Dsh, Codex `chat` wire API, OpenCode `@ai-sdk/openai-compatible`, Pi, OpenClaw, Droid custom models) gets `/v1` on import, while Responses / Anthropic / Gemini protocols keep their own base URL / 修复 sub2api 渠道在 Chat Completions 端点上的 `/v1` 后缀：从渠道添加模型时通用兼容协议强制带 `/v1`；凡是走 OpenAI Chat Completions 的客户端导入协议（Dsh、Codex 的 `chat` wire API、OpenCode 的 `@ai-sdk/openai-compatible`、Pi、OpenClaw 与 Droid 自定义模型）都会补上 `/v1`，Responses / Anthropic / Gemini 协议保持各自的 Base URL
+- Dsh channel imports fill model metadata again: context window and max tokens are taken from the built-in registry when importing from a channel, and the provider list reflects the saved values after saving / 修复 Dsh 从渠道导入模型不再填充元数据：从渠道导入时即按内置注册表补齐上下文窗口与最大 Token，保存后 Provider 列表展示已写入的配置
+
 ## v1.3.1
 
 **New Features / 新功能**
