@@ -143,6 +143,6 @@
     "smol-toml": "^1.7.1"
   },
   "allowScripts": {
-    "@ast-grep/cli@0.40.3": true
+    "@ast-grep/cli@0.40.5": true
   }
 }
