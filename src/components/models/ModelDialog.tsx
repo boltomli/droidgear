@@ -257,9 +257,7 @@ function ModelForm({
   const [reasoningEffort, setReasoningEffort] = useState(() => {
     const extracted = extractReasoningEffort(
       model?.extraArgs as unknown as
-        | Partial<Record<string, JsonValue>>
-        | null
-        | undefined,
+        Partial<Record<string, JsonValue>> | null | undefined,
       model?.model,
       provider
     )
@@ -269,9 +267,7 @@ function ModelForm({
   const [effortFormat, setEffortFormat] = useState<EffortFormat>(() =>
     detectEffortFormat(
       model?.extraArgs as unknown as
-        | Partial<Record<string, JsonValue>>
-        | null
-        | undefined
+        Partial<Record<string, JsonValue>> | null | undefined
     )
   )
   // Track whether maxTokens was auto-filled vs user-edited, so effort changes
@@ -636,13 +632,10 @@ function ModelForm({
       maxOutputTokens: maxTokens ? parseInt(maxTokens) : undefined,
       noImageSupport: noImageSupport || false,
       extraArgs: buildExtraArgs() as unknown as
-        | Record<string, Value>
-        | undefined,
+        Record<string, Value> | undefined,
       extraHeaders: (() => {
         const parsed = parseJsonSafe(extraHeaders) as
-          | Record<string, string>
-          | null
-          | undefined
+          Record<string, string> | null | undefined
         if (provider === 'anthropic' && context1MSupport) {
           return {
             ...(parsed ?? {}),

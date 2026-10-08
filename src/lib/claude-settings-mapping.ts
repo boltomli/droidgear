@@ -15,11 +15,7 @@ export const CLAUDE_MAX_THINKING_TOKENS_ENV = 'MAX_THINKING_TOKENS'
 export const MODEL_1M_SUFFIX = '[1m]'
 
 export type ClaudeReasoningEffort =
-  | 'inherit'
-  | 'low'
-  | 'medium'
-  | 'high'
-  | 'max'
+  'inherit' | 'low' | 'medium' | 'high' | 'max'
 
 export type ClaudeThinkingMode = 'inherit' | 'on' | 'off'
 
