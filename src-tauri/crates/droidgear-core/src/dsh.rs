@@ -1343,6 +1343,7 @@ pub fn fetch_dsh_models_blocking(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::slashes;
     use tempfile::TempDir;
 
     fn home(temp: &TempDir) -> &Path {
@@ -1674,13 +1675,8 @@ agent-default-model:
         let status = get_dsh_config_status_for_home(home(&temp)).unwrap();
         assert!(!status.config_exists);
         assert!(!status.credentials_exists);
-        assert!(status
-            .config_path
-            .ends_with(&format!(".dsh{}settings.yaml", std::path::MAIN_SEPARATOR)));
-        assert!(status.credentials_path.ends_with(&format!(
-            ".dsh{}.credentials.yaml",
-            std::path::MAIN_SEPARATOR
-        )));
+        assert!(slashes(&status.config_path).ends_with(".dsh/settings.yaml"));
+        assert!(slashes(&status.credentials_path).ends_with(".dsh/.credentials.yaml"));
         assert_eq!(status.profile_name, None);
         assert!(!status.legacy_exists);
 
@@ -1731,10 +1727,7 @@ agent-default-model:
         let profiles = list_dsh_profiles_for_home(home(&temp)).unwrap();
         let names: Vec<_> = profiles.iter().map(|p| p.name.as_str()).collect();
         assert_eq!(names, vec!["desktop", "web"]);
-        assert!(profiles[0].patch_path.ends_with(&format!(
-            "desktop{}cordis.patch.yml",
-            std::path::MAIN_SEPARATOR
-        )));
+        assert!(slashes(&profiles[0].patch_path).ends_with("desktop/cordis.patch.yml"));
 
         // Default preference: desktop, then web.
         assert_eq!(
@@ -1892,14 +1885,9 @@ agent-default-model:
         let status = get_dsh_config_status_for_profile(home(&temp), Some("desktop")).unwrap();
         assert_eq!(status.profile_name.as_deref(), Some("desktop"));
         assert!(!status.config_exists);
-        assert!(status.config_path.ends_with(&format!(
-            "desktop{}cordis.patch.yml",
-            std::path::MAIN_SEPARATOR
-        )));
+        assert!(slashes(&status.config_path).ends_with("desktop/cordis.patch.yml"));
         assert!(!status.legacy_exists);
-        assert!(status
-            .legacy_path
-            .ends_with(&format!(".dsh{}settings.yaml", std::path::MAIN_SEPARATOR)));
+        assert!(slashes(&status.legacy_path).ends_with(".dsh/settings.yaml"));
 
         save_dsh_provider_for_profile(home(&temp), Some("desktop"), "openai", &sample_provider())
             .unwrap();
