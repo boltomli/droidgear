@@ -13,7 +13,7 @@ import '@xterm/xterm/css/xterm.css'
 import { spawn, type IPty } from 'tauri-pty'
 import { writeText, readText } from '@tauri-apps/plugin-clipboard-manager'
 import { useTheme } from '@/hooks/use-theme'
-import { platform } from '@tauri-apps/plugin-os'
+import { platform, version } from '@tauri-apps/plugin-os'
 import { usePreferences } from '@/services/preferences'
 import { notify } from '@/lib/notifications'
 import { getShellEnv } from '@/services/shell-env'
@@ -25,6 +25,12 @@ import { logger } from '@/lib/logger'
 
 // Default fallback fonts for terminal
 const DEFAULT_TERMINAL_FONTS = 'Menlo, Monaco, "Courier New", monospace'
+
+// Windows build number from the OS version string (e.g. "10.0.26300" -> 26300).
+function parseWindowsBuild(osVersion: string): number | undefined {
+  const build = Number.parseInt(osVersion.split('.').pop() ?? '', 10)
+  return Number.isFinite(build) ? build : undefined
+}
 
 interface TerminalViewProps {
   terminalId: string
@@ -82,6 +88,7 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
     const initialShellCommandRef = useRef<string | null | undefined>(undefined)
     const [reloadKey, setReloadKey] = useState(0)
     const [shellEnvLoaded, setShellEnvLoaded] = useState(false)
+    const [layoutReady, setLayoutReady] = useState(false)
     const [shellEnvData, setShellEnvData] = useState<Record<
       string,
       string
@@ -179,11 +186,34 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       }
     }, [isDark])
 
+    // Terminal creation waits until the container has a real layout. While
+    // hidden (display:none) FitAddon parses the wrapper's `100%` dimensions
+    // as 100px and would spawn the PTY at a bogus ~10x5 size; the shell
+    // output then wraps at 10 columns and stays broken forever, because
+    // ConPTY emits real line breaks that xterm.js cannot unwrap on resize.
+    useEffect(() => {
+      const container = containerRef.current
+      if (!container || layoutReady) return
+      if (container.clientWidth > 0 && container.clientHeight > 0) {
+        setLayoutReady(true)
+        return
+      }
+      const observer = new ResizeObserver(() => {
+        if (container.clientWidth > 0 && container.clientHeight > 0) {
+          setLayoutReady(true)
+        }
+      })
+      observer.observe(container)
+      return () => observer.disconnect()
+    }, [layoutReady])
+
     // Initialize terminal only once when component mounts or reloads
     // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey is an intentional re-init trigger
     useEffect(() => {
       // Wait for shell environment to be loaded
       if (!shellEnvLoaded) return
+      // Wait until the container is measurable so the PTY gets real dimensions
+      if (!layoutReady) return
       // Skip if already initialized
       if (isInitializedRef.current) return
       if (!containerRef.current) return
@@ -210,10 +240,32 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
           : 'rgba(0, 0, 0, 0.3)',
       }
 
+      const currentPlatform = platform()
+
       const terminal = new Terminal({
         cursorBlink: true,
         fontSize: 14,
         fontFamily,
+        // At fontSize 14 rows are 16px while CJK fallback glyphs measure
+        // ~17px, so the default lineHeight of 1 clips the bottom stroke of
+        // every Chinese character. 1.2 gives rows ≥ the CJK line box.
+        lineHeight: 1.2,
+        // ANSI black / brightBlack (e.g. PSReadLine parameters) are
+        // near-invisible on the #1e1e1e background; lift any foreground
+        // that fails WCAG AA contrast.
+        minimumContrastRatio: 4.5,
+        // ConPTY reprints its screen on resize and does not restore rows
+        // from scrollback on its own. Without this hint xterm.js also
+        // adjusts the viewport when rows grow, so the reprint replaces rows
+        // and top lines go missing (visible when a terminal that spawned
+        // hidden at the default 80x24 is first resized to its real size).
+        windowsPty:
+          currentPlatform === 'windows'
+            ? {
+                backend: 'conpty',
+                buildNumber: parseWindowsBuild(version()),
+              }
+            : undefined,
         theme: themeColors,
         allowProposedApi: true,
         scrollback: 10000,
@@ -232,7 +284,6 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       fitAddonRef.current = fitAddon
 
       // Determine shell based on platform
-      const currentPlatform = platform()
       let shell: string
       let shellArgs: string[]
 
@@ -530,7 +581,7 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
         ptyRef.current = null
         isInitializedRef.current = false
       }
-    }, [reloadKey, shellEnvLoaded, shellEnvData])
+    }, [reloadKey, shellEnvLoaded, shellEnvData, layoutReady])
 
     // Update theme when it changes
     useEffect(() => {
@@ -543,7 +594,20 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       <div
         ref={containerRef}
         className="h-full w-full"
-        onPointerDown={() => {
+        onPointerDown={e => {
+          // Cancel pointerdown only while an IME composition is active: the
+          // cancel suppresses the compatibility mousedown that xterm.js
+          // starts drag selection with, so an unconditional cancel made the
+          // terminal unselectable (regression of dcbfc67, which only meant
+          // to block selection while composing).
+          //
+          // Composition state is read live from xterm's composition view
+          // (kept in sync by its own compositionstart/end handling) instead
+          // of tracking the events here: a missed compositionend would leave
+          // a local flag stuck and make the terminal unselectable again.
+          if (containerRef.current?.querySelector('.composition-view.active')) {
+            e.preventDefault()
+          }
           terminalRef.current?.focus()
         }}
         onMouseDown={e => {

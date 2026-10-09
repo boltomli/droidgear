@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+**Bug Fixes / 问题修复**
+
+- Embedded terminal styles (font, theme, selection colors) now actually load: Tauri v3 injects a `nonce` into `style-src`, which makes CSP ignore `unsafe-inline` for style elements and silently blocked xterm.js's runtime-injected `<style>` (glyph bottoms clipped at 16px sans-serif in 14px cells, black text on black background in dark mode, invisible mouse-selection highlight). An explicit `style-src-elem` directive restores them / 嵌入式终端样式（字体、主题、选区颜色）恢复生效：Tauri v3 会向 `style-src` 注入 `nonce`，导致 CSP 对样式元素忽略 `unsafe-inline`，xterm.js 运行时注入的 `<style>` 被静默拦截（16px sans-serif 字形塞进 14px 单元格导致字的下半部分被截断、暗色模式黑底黑字、鼠标选中高亮不可见）。显式声明 `style-src-elem` 恢复样式生效
+- Embedded terminal no longer loses or chops its top lines on first open: terminal creation now waits until the container has a real layout. Previously a terminal that mounted hidden spawned its PTY at a bogus ~10x5 size (FitAddon parses the wrapper's `100%` dimensions as 100px while `display:none`), and the shell output stayed wrapped at 10 columns forever since ConPTY sends real line breaks. xterm.js is also told the Windows PTY is ConPTY (`windowsPty`) so later resizes cannot let ConPTY's screen reprint replace buffer rows / 嵌入式终端首次打开不再丢失或截断顶部若干行：终端改为在容器具备真实布局后才创建。此前隐藏状态挂载的终端会以约 10x5 的错误尺寸启动 PTY（display:none 下 FitAddon 把容器的 `100%` 尺寸解析为 100px），输出被永久折行在 10 列（ConPTY 发送的是真实换行，无法再合并）。同时通过 `windowsPty` 告知 xterm.js Windows PTY 为 ConPTY，避免后续尺寸调整让 ConPTY 重绘替换缓冲区行
+- Embedded terminal readability: rows use `lineHeight: 1.2` so CJK fallback glyphs cannot clip at the bottom, and `minimumContrastRatio: 4.5` lifts near-invisible ANSI black/brightBlack foregrounds (e.g. PSReadLine parameter colors) on the dark background / 嵌入式终端可读性：行高改为 1.2，避免中文字形底部被截断；启用 `minimumContrastRatio: 4.5`，提升暗色背景下几乎不可见的 ANSI black/brightBlack 前景（如 PSReadLine 参数色）
+- Embedded terminal IME guard: pointerdown is cancelled only while an IME composition is active, so clicks during Chinese IME input never start an accidental selection while normal selection and copy keep working. The state is read live from xterm's composition view, so a missed `compositionend` can never leave the terminal unselectable / 嵌入式终端 IME 守卫：pointerdown 仅在 IME 组合输入期间拦截，中文输入法下点击不会误触选择，同时不影响正常的选择与复制。组合状态实时读取自 xterm 的 composition view，即使漏掉 `compositionend` 也不会导致终端无法选中
+
 ## v1.3.4
 
 **New Features / 新功能**
