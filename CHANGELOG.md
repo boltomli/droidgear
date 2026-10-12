@@ -9,9 +9,23 @@
 - Embedded terminal readability: rows use `lineHeight: 1.2` so CJK fallback glyphs cannot clip at the bottom, and `minimumContrastRatio: 4.5` lifts near-invisible ANSI black/brightBlack foregrounds (e.g. PSReadLine parameter colors) on the dark background / 嵌入式终端可读性：行高改为 1.2，避免中文字形底部被截断；启用 `minimumContrastRatio: 4.5`，提升暗色背景下几乎不可见的 ANSI black/brightBlack 前景（如 PSReadLine 参数色）
 - Embedded terminal IME guard: pointerdown is cancelled only while an IME composition is active, so clicks during Chinese IME input never start an accidental selection while normal selection and copy keep working. The state is read live from xterm's composition view, so a missed `compositionend` can never leave the terminal unselectable / 嵌入式终端 IME 守卫：pointerdown 仅在 IME 组合输入期间拦截，中文输入法下点击不会误触选择，同时不影响正常的选择与复制。组合状态实时读取自 xterm 的 composition view，即使漏掉 `compositionend` 也不会导致终端无法选中
 
+## v1.3.5
+
+**New Features / 新功能**
+
+- Register the Claude 5.5 family and recent vendor models: `claude-opus-5-5`, `claude-sonnet-5-5`, and `claude-haiku-5-5` (1M context, 128K output), plus `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`, `grok-4.7`, `mimo-v2.6-pro`, and `mimo-v2.6-flash`. Official Droid names gain Opus 5.5 and Sonnet 5.5, and registry metadata is synced (context windows, max output, reasoning efforts) / 注册 Claude 5.5 系列与近期厂商模型：`claude-opus-5-5`、`claude-sonnet-5-5`、`claude-haiku-5-5`（1M 上下文、128K 输出），以及 `gpt-6-luna`、`gpt-6-sol`、`gpt-6.1-sol`、`grok-4.7`、`mimo-v2.6-pro`、`mimo-v2.6-flash`。官方 Droid 模型名新增 Opus 5.5 与 Sonnet 5.5，并同步注册表中的上下文窗口、最大输出与推理力度
+- Claude model picker (GUI + TUI): fetch model IDs from the configured provider with the bearer token and pick the main or small model, while still allowing a manual ID. Channel model discovery strips a duplicated `/v1`, sends Anthropic `x-api-key` headers, and keeps display names / Claude 模型选择（GUI + TUI）：用已配置 Provider 的 Bearer Token 拉取模型 ID，主模型与 Small 模型可从列表选择，仍可手动输入。渠道拉模型时去掉重复的 `/v1`，Anthropic 请求附带 `x-api-key`，并保留显示名称
+- Claude small-model default: leaving the small model empty keeps `ANTHROPIC_DEFAULT_HAIKU_MODEL` unset so Claude Code uses its own default (Haiku 5.5). Mirroring the main model is now explicit / Claude Small 模型默认行为：留空时不再写入 `ANTHROPIC_DEFAULT_HAIKU_MODEL`，由 Claude Code 使用自身默认模型（Haiku 5.5）。跟随主模型改为显式开启
+
+**Bug Fixes / 问题修复**
+
+- Fix missing terminal glyphs in installed builds. Tauri's CSP nonce on inline styles was blocking the `<style>` tags xterm.js injects, so Nerd Font and Powerline glyphs rendered as boxes. Splash CSS now lives in `public/loader.css` / 修复安装版终端字形丢失：Tauri 给内联样式盖上 CSP nonce 后，xterm.js 运行时注入的 `<style>` 被拦截，Nerd Font / Powerline 字形显示为方框。启动画面样式改为外链 `public/loader.css`
+
 ## v1.3.4
 
 **New Features / 新功能**
+
+- OMP custom providers now read and write the official `~/.omp/agent/models.yml` format, with GUI and TUI CRUD plus channel-based model/provider updates that preserve unrelated providers and unknown fields / OMP 自定义 Provider 现按官方 `~/.omp/agent/models.yml` 格式读写，GUI 与 TUI 支持增删改及按渠道更新模型和 Provider，并保留其他 Provider 与未知字段
 
 - Codex profiles can enable API key model discovery: a checkbox on the Codex config page and in the TUI writes `features.api_key_model_discovery` in `config.toml` without touching the other feature flags / Codex Profile 支持启用 API Key 模型发现：Codex 配置页与 TUI 新增复选框，向 `config.toml` 写入 `features.api_key_model_discovery`，不影响其他 feature 开关
 
