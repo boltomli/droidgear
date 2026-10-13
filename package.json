@@ -111,14 +111,14 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
-    "@ast-grep/cli": "^0.40.3",
+    "@ast-grep/cli": "^0.50.0",
     "@biomejs/biome": "^2.5.14",
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "3.0.0-alpha.4",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^25.0.2",
+    "@types/node": "^26.6.5",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -129,7 +129,7 @@
     "jsdom": "^27.3.0",
     "knip": "^6.40.0",
     "lightningcss": "^1.31.1",
-    "lint-staged": "^16.3.2",
+    "lint-staged": "^17.6.0",
     "prettier": "^3.7.4",
     "tw-animate-css": "^1.4.0",
     "typescript": "^7.0.2",
@@ -143,6 +143,6 @@
     "smol-toml": "^1.7.1"
   },
   "allowScripts": {
-    "@ast-grep/cli@0.40.5": true
+    "@ast-grep/cli@0.50.0": true
   }
 }
