@@ -130,6 +130,48 @@ describe('getSupportedEfforts', () => {
     ])
   })
 
+  it('returns the official GPT-6 and Grok 4.7 efforts', () => {
+    expect(getSupportedEfforts('gpt-6.1-sol', 'openai')).toEqual([
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+      'max',
+    ])
+    expect(getSupportedEfforts('gpt-6-luna', 'openai')).toEqual([
+      'none',
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+      'max',
+    ])
+    expect(getSupportedEfforts('grok-4.7', 'openai')).toEqual([
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+    ])
+  })
+
+  it('returns the official Claude 5.5 efforts', () => {
+    expect(getSupportedEfforts('claude-opus-5.5', 'anthropic')).toEqual([
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+      'max',
+    ])
+    expect(getSupportedEfforts('claude-haiku-5.5', 'anthropic')).toEqual([
+      'none',
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+      'max',
+    ])
+  })
+
   it('returns deepseek whitelist', () => {
     expect(getSupportedEfforts('deepseek-v4-pro', 'openai')).toEqual([
       'none',
@@ -180,12 +222,20 @@ describe('getSupportedEfforts', () => {
 
   it('returns gpt-6-astra full effort list with max', () => {
     expect(getSupportedEfforts('gpt-6-astra', 'openai')).toEqual([
-      'none',
       'low',
       'medium',
       'high',
       'xhigh',
       'max',
+    ])
+  })
+
+  it('returns grok-4.7 efforts with xhigh but no max', () => {
+    expect(getSupportedEfforts('grok-4.7', 'openai')).toEqual([
+      'low',
+      'medium',
+      'high',
+      'xhigh',
     ])
   })
 
@@ -369,6 +419,20 @@ describe('aliases resolve reasoning config', () => {
     expect(getModelReasoningConfig('grok-4-5')?.efforts).toContain('high')
   })
 
+  it('resolves dotted Claude 5.5 aliases', () => {
+    expect(findModelByIdOrAlias('claude-opus-5.5')?.id).toBe('claude-opus-5-5')
+    expect(findModelByIdOrAlias('claude-sonnet-5.5')?.id).toBe(
+      'claude-sonnet-5-5'
+    )
+    expect(findModelByIdOrAlias('claude-haiku-5.5')?.id).toBe(
+      'claude-haiku-5-5'
+    )
+    expect(getEffortEncoding('claude-opus-5.5', 'anthropic', 'xhigh')).toEqual({
+      thinking: { type: 'adaptive' },
+      output_config: { effort: 'xhigh' },
+    })
+  })
+
   it('resolves gpt-5.6-luna-pro alias', () => {
     const entry = findModelByIdOrAlias('gpt-5.6-luna-pro')
     expect(entry?.id).toBe('gpt-5.6-luna')
@@ -388,7 +452,7 @@ describe('aliases resolve reasoning config', () => {
       reasoning: true,
       input: ['text', 'image'],
       contextWindow: 1000000,
-      maxOutputTokens: 384000,
+      maxOutputTokens: 393216,
     })
   })
 })
