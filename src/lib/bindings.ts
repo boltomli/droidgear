@@ -392,12 +392,15 @@ export const commands = {
 	getActiveOmpProfileId: () => typedError<string | null, string>(__TAURI_INVOKE("get_active_omp_profile_id")),
 	/**  Set active profile ID */
 	setActiveOmpProfileId: (id: string) => typedError<null, string>(__TAURI_INVOKE("set_active_omp_profile_id", { id })),
-	/**  Apply a profile to `~/.omp/agent/models.yml` */
+	/**  Apply model roles to `~/.omp/agent/config.yml` */
 	applyOmpProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("apply_omp_profile", { id })),
 	/**  Get OMP config status */
 	getOmpConfigStatus: () => typedError<OmpConfigStatus, string>(__TAURI_INVOKE("get_omp_config_status")),
 	/**  Read current OMP configuration from config files */
 	readOmpCurrentConfig: () => typedError<OmpCurrentConfig, string>(__TAURI_INVOKE("read_omp_current_config")),
+	readOmpCustomProviders: () => typedError<OmpCustomProviders, string>(__TAURI_INVOKE("read_omp_custom_providers")),
+	saveOmpCustomProvider: (providerId: string, provider: OmpCustomProvider) => typedError<null, string>(__TAURI_INVOKE("save_omp_custom_provider", { providerId, provider })),
+	deleteOmpCustomProvider: (providerId: string) => typedError<null, string>(__TAURI_INVOKE("delete_omp_custom_provider", { providerId })),
 	/**  Test an OMP provider connection via HTTP */
 	testOmpProviderConnection: (providerId: string) => typedError<OmpProviderTestResult, string>(__TAURI_INVOKE("test_omp_provider_connection", { providerId })),
 	/**  Test a Pi provider using an isolated temporary models.json and Pi CLI run. */
@@ -2066,6 +2069,114 @@ export type OmpCurrentConfig_Serialize = {
 	credentials: OmpCredentialStatus[],
 };
 
+/**  A model declared in `models.yml`. */
+export type OmpCustomModel = OmpCustomModel_Serialize | OmpCustomModel_Deserialize;
+
+/**  A model declared in `models.yml`. */
+export type OmpCustomModel_Deserialize = {
+	id: string,
+	name: string | null,
+	api: string | null,
+	baseUrl: string | null,
+	reasoning: boolean | null,
+	thinking: OmpThinkingConfig_Deserialize | null,
+	input: string[] | null,
+	cost: OmpModelCost_Deserialize | null,
+	contextWindow: number | null,
+	maxTokens: number | null,
+	headers: { [key in string]: string } | null,
+	compat: Value | null,
+	remoteCompaction: Value | null,
+};
+
+/**  A model declared in `models.yml`. */
+export type OmpCustomModel_Serialize = {
+	id: string,
+	name?: string,
+	api?: string,
+	baseUrl?: string,
+	reasoning?: boolean,
+	thinking?: OmpThinkingConfig_Serialize,
+	input?: string[],
+	cost?: OmpModelCost_Serialize,
+	contextWindow?: number,
+	maxTokens?: number,
+	headers?: { [key in string]: string },
+	compat?: Value,
+	remoteCompaction?: Value,
+};
+
+/**  A provider declared in `~/.omp/agent/models.yml`. */
+export type OmpCustomProvider = OmpCustomProvider_Serialize | OmpCustomProvider_Deserialize;
+
+/**  A provider entry with its YAML map key included for frontend/TUI use. */
+export type OmpCustomProviderEntry = OmpCustomProviderEntry_Serialize | OmpCustomProviderEntry_Deserialize;
+
+/**  A provider entry with its YAML map key included for frontend/TUI use. */
+export type OmpCustomProviderEntry_Deserialize = {
+	providerId: string,
+	config: OmpCustomProvider_Deserialize,
+};
+
+/**  A provider entry with its YAML map key included for frontend/TUI use. */
+export type OmpCustomProviderEntry_Serialize = {
+	providerId: string,
+	config: OmpCustomProvider_Serialize,
+};
+
+/**  A provider declared in `~/.omp/agent/models.yml`. */
+export type OmpCustomProvider_Deserialize = {
+	baseUrl: string | null,
+	api: string | null,
+	apiKey: string | null,
+	auth: string | null,
+	headers: { [key in string]: string } | null,
+	authHeader: boolean | null,
+	models?: OmpCustomModel_Deserialize[],
+	discovery: Value | null,
+	modelOverrides: { [key in string]: Value } | null,
+	compat: Value | null,
+	disableStrictTools: boolean | null,
+	remoteCompaction: Value | null,
+	guardrailIdentifier: string | null,
+	guardrailVersion: string | null,
+	guardrailTrace: string | null,
+	transport: string | null,
+};
+
+/**  A provider declared in `~/.omp/agent/models.yml`. */
+export type OmpCustomProvider_Serialize = {
+	baseUrl?: string,
+	api?: string,
+	apiKey?: string,
+	auth?: string,
+	headers?: { [key in string]: string },
+	authHeader?: boolean,
+	models?: OmpCustomModel_Serialize[],
+	discovery?: Value,
+	modelOverrides?: { [key in string]: Value },
+	compat?: Value,
+	disableStrictTools?: boolean,
+	remoteCompaction?: Value,
+	guardrailIdentifier?: string,
+	guardrailVersion?: string,
+	guardrailTrace?: string,
+	transport?: string,
+};
+
+/**  Current custom providers loaded from `models.yml`. */
+export type OmpCustomProviders = OmpCustomProviders_Serialize | OmpCustomProviders_Deserialize;
+
+/**  Current custom providers loaded from `models.yml`. */
+export type OmpCustomProviders_Deserialize = {
+	providers: OmpCustomProviderEntry_Deserialize[],
+};
+
+/**  Current custom providers loaded from `models.yml`. */
+export type OmpCustomProviders_Serialize = {
+	providers: OmpCustomProviderEntry_Serialize[],
+};
+
 /**  OMP model cost information. */
 export type OmpModelCost = OmpModelCost_Serialize | OmpModelCost_Deserialize;
 
@@ -2191,12 +2302,14 @@ export type OmpThinkingConfig = OmpThinkingConfig_Serialize | OmpThinkingConfig_
 export type OmpThinkingConfig_Deserialize = {
 	mode: string | null,
 	efforts: string[] | null,
+	defaultLevel: string | null,
 };
 
 /**  OMP thinking/reasoning configuration. */
 export type OmpThinkingConfig_Serialize = {
 	mode?: string,
 	efforts?: string[],
+	defaultLevel?: string,
 };
 
 /**  OpenClaw config status */
