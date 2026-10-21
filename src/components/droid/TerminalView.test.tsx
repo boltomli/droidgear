@@ -162,7 +162,9 @@ describe('TerminalView PTY lifecycle', () => {
     layout.height = 0
 
     render(<TerminalView terminalId="t1" />)
-    await act(async () => {})
+    await act(async () => {
+      await Promise.resolve()
+    })
     expect(spawnMock.mock.calls.length).toBe(spawnedBefore)
 
     // The container becomes measurable (e.g. the hidden terminal page is

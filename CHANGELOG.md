@@ -9,6 +9,13 @@
 - Embedded terminal readability: rows use `lineHeight: 1.2` so CJK fallback glyphs cannot clip at the bottom, and `minimumContrastRatio: 4.5` lifts near-invisible ANSI black/brightBlack foregrounds (e.g. PSReadLine parameter colors) on the dark background / 嵌入式终端可读性：行高改为 1.2，避免中文字形底部被截断；启用 `minimumContrastRatio: 4.5`，提升暗色背景下几乎不可见的 ANSI black/brightBlack 前景（如 PSReadLine 参数色）
 - Embedded terminal IME guard: pointerdown is cancelled only while an IME composition is active, so clicks during Chinese IME input never start an accidental selection while normal selection and copy keep working. The state is read live from xterm's composition view, so a missed `compositionend` can never leave the terminal unselectable / 嵌入式终端 IME 守卫：pointerdown 仅在 IME 组合输入期间拦截，中文输入法下点击不会误触选择，同时不影响正常的选择与复制。组合状态实时读取自 xterm 的 composition view，即使漏掉 `compositionend` 也不会导致终端无法选中
 
+## v1.3.6
+
+**New Features / 新功能**
+
+- OMP custom providers now read and write the official `~/.omp/agent/models.yml` format, with GUI and TUI CRUD plus channel-based model/provider updates that preserve unrelated providers and unknown fields / OMP 自定义 Provider 现按官方 `~/.omp/agent/models.yml` 格式读写，GUI 与 TUI 支持增删改及按渠道更新模型和 Provider，并保留其他 Provider 与未知字段
+- Optional Baizhi MCP preset (GUI + TUI): Quick Add or `b` saves a disabled HTTP server at `https://agent-toolkit.app.baizhi.cloud/mcp` with the literal header `Authorization: Bearer ${BAIZHI_API_KEY}` and `oauth: false`. The flow does not accept or expand a key; set `BAIZHI_API_KEY` in the environment that launches Factory, then enable the server / 可选百智 MCP 预设（GUI + TUI）：「快速添加」或按 `b` 会保存一条默认停用的 HTTP 服务器，URL 固定为 `https://agent-toolkit.app.baizhi.cloud/mcp`，Header 为字面量 `Authorization: Bearer ${BAIZHI_API_KEY}`，并写入 `oauth: false`。该流程不接收、不展开 Key；请在启动 Factory 的环境中设置 `BAIZHI_API_KEY` 后再启用
+
 ## v1.3.5
 
 **New Features / 新功能**

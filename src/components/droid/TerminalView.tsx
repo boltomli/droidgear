@@ -217,6 +217,30 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       // Skip if already initialized
       if (isInitializedRef.current) return
       if (!containerRef.current) return
+      const mountContainer = containerRef.current
+
+      // Wait until the container is measurable so the PTY gets real
+      // dimensions. While hidden (display:none) FitAddon parses the
+      // wrapper's `100%` dimensions as 100px and would spawn the PTY at a
+      // bogus ~10x5 size; the shell output then wraps at 10 columns and
+      // stays broken forever, because ConPTY emits real line breaks that
+      // xterm.js cannot unwrap on resize.
+      if (
+        mountContainer.clientWidth === 0 ||
+        mountContainer.clientHeight === 0
+      ) {
+        const observer = new ResizeObserver(() => {
+          if (
+            mountContainer.clientWidth > 0 &&
+            mountContainer.clientHeight > 0
+          ) {
+            setLayoutReady(true)
+          }
+        })
+        observer.observe(mountContainer)
+        return () => observer.disconnect()
+      }
+
       isInitializedRef.current = true
 
       // Build font family string: user preference first, then fallbacks

@@ -214,6 +214,8 @@ export const commands = {
 	loadMcpServers: () => typedError<McpServer[], string>(__TAURI_INVOKE("load_mcp_servers")),
 	/**  Saves an MCP server (creates or updates) */
 	saveMcpServer: (server: McpServer) => typedError<null, string>(__TAURI_INVOKE("save_mcp_server", { server })),
+	/**  Saves the fixed, disabled Baizhi preset without accepting a key or replacing a name. */
+	saveBaizhiPreset: () => typedError<null, string>(__TAURI_INVOKE("save_baizhi_preset")),
 	/**  Deletes an MCP server by name */
 	deleteMcpServer: (name: string) => typedError<null, string>(__TAURI_INVOKE("delete_mcp_server", { name })),
 	/**  Toggles an MCP server's disabled state */

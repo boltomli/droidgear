@@ -244,8 +244,12 @@ pub fn list_dsh_profiles_for_home(home_dir: &Path) -> Result<Vec<DshProfile>, St
         if is_profile {
             profiles.push(DshProfile {
                 name: name.to_string(),
-                dir: profile_dir.to_string_lossy().to_string(),
-                patch_path: patch_path.to_string_lossy().to_string(),
+                dir: profile_dir
+                    .to_string_lossy()
+                    .replace('/', std::path::MAIN_SEPARATOR_STR),
+                patch_path: patch_path
+                    .to_string_lossy()
+                    .replace('/', std::path::MAIN_SEPARATOR_STR),
             });
         }
     }
