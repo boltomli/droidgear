@@ -8,7 +8,9 @@ import { cn } from '@/lib/utils'
 
 // react-resizable-panels v4 interprets numeric sizes as pixels; v3 treated
 // them as percentages. Keep the v3 semantics by converting numbers to
-// percentage strings at the wrapper boundary.
+// percentage strings at the wrapper boundary. Covers every size prop that
+// v4 measures in `SizeUnit` (defaultSize, minSize, maxSize, collapsedSize,
+// collapsedThreshold).
 function toPercentSize(value: number | string | undefined) {
   return typeof value === 'number' ? `${value}%` : value
 }
@@ -17,13 +19,13 @@ function ResizablePanelGroup({
   className,
   ...props
 }: React.ComponentProps<typeof ResizablePrimitive.Group>) {
+  // Note: since v4.5.5 the Group root no longer renders aria-orientation,
+  // so orientation-specific selectors never match here. The library sets
+  // flex-direction inline based on the orientation prop.
   return (
     <ResizablePrimitive.Group
       data-slot="resizable-panel-group"
-      className={cn(
-        'flex h-full w-full [aria-orientation=vertical]:flex-col',
-        className
-      )}
+      className={cn('flex h-full w-full', className)}
       {...props}
     />
   )
@@ -33,6 +35,8 @@ function ResizablePanel({
   defaultSize,
   minSize,
   maxSize,
+  collapsedSize,
+  collapsedThreshold,
   ...props
 }: React.ComponentProps<typeof ResizablePrimitive.Panel>) {
   return (
@@ -41,6 +45,8 @@ function ResizablePanel({
       defaultSize={toPercentSize(defaultSize)}
       minSize={toPercentSize(minSize)}
       maxSize={toPercentSize(maxSize)}
+      collapsedSize={toPercentSize(collapsedSize)}
+      collapsedThreshold={toPercentSize(collapsedThreshold)}
       {...props}
     />
   )
