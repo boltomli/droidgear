@@ -188,7 +188,7 @@ fn theme() -> &'static Theme {
     })
 }
 
-fn block<'a>(title: impl Into<ratatui::widgets::block::Title<'a>>) -> Block<'a> {
+fn block<'a>(title: impl Into<ratatui::text::Line<'a>>) -> Block<'a> {
     let t = theme();
     Block::default()
         .borders(Borders::ALL)
@@ -198,10 +198,7 @@ fn block<'a>(title: impl Into<ratatui::widgets::block::Title<'a>>) -> Block<'a> 
         .title_style(t.title_style())
 }
 
-fn block_focus<'a>(
-    title: impl Into<ratatui::widgets::block::Title<'a>>,
-    focused: bool,
-) -> Block<'a> {
+fn block_focus<'a>(title: impl Into<ratatui::text::Line<'a>>, focused: bool) -> Block<'a> {
     let t = theme();
     if focused {
         block(title)

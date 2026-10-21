@@ -67,7 +67,7 @@ export function MainWindow() {
           <LeftSideBar />
         </div>
 
-        <ResizablePanelGroup direction="horizontal">
+        <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel
             defaultSize={MAIN_CONTENT_DEFAULT}
             minSize={LAYOUT.main.min}

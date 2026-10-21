@@ -491,7 +491,7 @@ export function SessionsPage() {
         </div>
       </div>
 
-      <ResizablePanelGroup direction="horizontal">
+      <ResizablePanelGroup orientation="horizontal">
         {/* Sessions List */}
         <ResizablePanel defaultSize={25} minSize={15}>
           <div className="flex flex-col h-full">

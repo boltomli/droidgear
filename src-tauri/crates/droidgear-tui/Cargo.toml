@@ -7,14 +7,14 @@ rust-version = "1.95"
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
-crossterm = "0.28.1"
-dirs = "5"
+crossterm = "0.29"
+dirs = "7"
 droidgear-core = { path = "../droidgear-core" }
 libc = "0.2"
-ratatui = "0.29"
+ratatui = "0.30"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-similar = "2"
+similar = "3"
 tempfile = "3"
 uuid = { version = "1", features = ["v4"] }

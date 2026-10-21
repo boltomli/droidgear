@@ -19,37 +19,37 @@ name = "droidgear_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "3.0.0-alpha.3", features = [] }
+tauri-build = { version = "3.0.0-alpha.4", features = [] }
 
 [dependencies]
 droidgear-core = { path = "crates/droidgear-core" }
-tauri = { version = "3.0.0-alpha.4", features = [] }
-tauri-runtime-wry = "3.0.0-alpha.4"
-tauri-plugin-opener = "3.0.0-alpha.2"
+tauri = { version = "3.0.0-alpha.5", features = [] }
+tauri-runtime-wry = "3.0.0-alpha.5"
+tauri-plugin-opener = "3.0.0-alpha.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-base64 = "0.22"
-tauri-plugin-clipboard-manager = "3.0.0-alpha.2"
-tauri-plugin-dialog = "3.0.0-alpha.3"
-tauri-plugin-fs = "3.0.0-alpha.2"
-tauri-plugin-log = "3.0.0-alpha.2"
-tauri-plugin-notification = "3.0.0-alpha.2"
-tauri-plugin-persisted-scope = "3.0.0-alpha.2"
-tauri-plugin-process = "3.0.0-alpha.2"
-tauri-plugin-os = "3.0.0-alpha.2"
-tauri-plugin-global-shortcut = "3.0.0-alpha.2"
+base64 = "0.23"
+tauri-plugin-clipboard-manager = "3.0.0-alpha.3"
+tauri-plugin-dialog = "3.0.0-alpha.4"
+tauri-plugin-fs = "3.0.0-alpha.3"
+tauri-plugin-log = "3.0.0-alpha.3"
+tauri-plugin-notification = "3.0.0-alpha.3"
+tauri-plugin-persisted-scope = "3.0.0-alpha.3"
+tauri-plugin-process = "3.0.0-alpha.3"
+tauri-plugin-os = "3.0.0-alpha.3"
+tauri-plugin-global-shortcut = "3.0.0-alpha.3"
 log = "0.4"
 regex = "1"
-reqwest = { version = "0.12", features = ["json", "cookies"] }
-minisign-verify = "0.2"
-dirs = "5"
-notify = { version = "6", default-features = false, features = ["macos_fsevent"] }
+reqwest = { version = "0.13", features = ["json", "cookies", "query"] }
+minisign-verify = "0.3"
+dirs = "7"
+notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 chrono = "0.4"
 json_comments = "0.2"
 tauri-plugin-pty = { path = "../../tauri-plugin-pty" }
-toml = "0.8"
+toml = "1"
 semver = "1"
-sha2 = "0.10"
+sha2 = "0.11"
 
 # Type-safe Tauri command bindings
 specta = { version = "=2.0.0-rc.26", features = ["derive", "serde_json"] }
@@ -58,8 +58,8 @@ specta-typescript = "=0.0.13"
 tauri-plugin-system-fonts = { path = "../../tauri-plugin-system-fonts" }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-single-instance = "3.0.0-alpha.2"
-tauri-plugin-updater = "3.0.0-alpha.2"
+tauri-plugin-single-instance = "3.0.0-alpha.3"
+tauri-plugin-updater = "3.0.0-alpha.3"
 tauri-plugin-window-state = "3.0.0-alpha.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]

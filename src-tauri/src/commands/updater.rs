@@ -215,7 +215,8 @@ async fn download_update_bytes(url: &str) -> Result<Vec<u8>, String> {
 
 #[cfg(target_os = "windows")]
 fn verify_update_hash(bytes: &[u8], expected_sha256: &str) -> Result<(), String> {
-    let actual_sha256 = format!("{:x}", Sha256::digest(bytes));
+    let digest = Sha256::digest(bytes);
+    let actual_sha256: String = digest.iter().map(|byte| format!("{byte:02x}")).collect();
 
     if !actual_sha256.eq_ignore_ascii_case(expected_sha256.trim()) {
         return Err("Portable update hash verification failed".to_string());

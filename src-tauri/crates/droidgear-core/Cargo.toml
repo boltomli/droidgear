@@ -6,17 +6,17 @@ rust-version = "1.95"
 
 [dependencies]
 chrono = "0.4"
-dirs = "5"
+dirs = "7"
 json_comments = "0.2"
 libc = "0.2"
-reqwest = { version = "0.12", features = ["json", "cookies"] }
-rusqlite = { version = "0.31", features = ["bundled"] }
+reqwest = { version = "0.13", features = ["json", "cookies", "query"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 serde_yaml = "0.9"
 specta = { version = "=2.0.0-rc.26", features = ["derive", "serde_json"] }
 tempfile = "3"
-toml = "0.8"
+toml = "1"
 uuid = { version = "1", features = ["v4"] }
 tokio = { version = "1", features = ["time", "rt"] }
 log = "0.4"

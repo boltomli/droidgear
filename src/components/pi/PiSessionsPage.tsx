@@ -442,7 +442,7 @@ export function PiSessionsPage() {
         </div>
       </div>
 
-      <ResizablePanelGroup direction="horizontal">
+      <ResizablePanelGroup orientation="horizontal">
         <ResizablePanel defaultSize={25} minSize={15}>
           <ScrollArea className="h-full">
             {loading && sessions.length === 0 ? (

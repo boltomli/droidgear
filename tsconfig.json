@@ -24,7 +24,10 @@
     "noUncheckedSideEffectImports": true,
     "types": ["node"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@testing-library/jest-dom/types/*": [
+        "./node_modules/@testing-library/jest-dom/types/*"
+      ]
     }
   },
   "include": ["src"],

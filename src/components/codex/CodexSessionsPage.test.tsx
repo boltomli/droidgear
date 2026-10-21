@@ -244,8 +244,14 @@ describe('CodexSessionsPage', () => {
     render(<CodexSessionsPage />)
 
     await user.click(await screen.findByText('Fix the bug'))
-    // Radix menus open on pointerdown (userEvent.click does not trigger it in jsdom)
-    fireEvent.pointerDown(await screen.findByRole('button', { name: /OpenAI/ }))
+    const providerTrigger = await screen.findByRole('button', {
+      name: /OpenAI/,
+    })
+    // Radix stacks a Tooltip on the DropdownMenuTrigger; a plain click loses
+    // the race against the tooltip's delayed close in jsdom, so arm the
+    // trigger with a pointerdown first.
+    fireEvent.pointerDown(providerTrigger)
+    await user.click(providerTrigger)
 
     // Pick DeepSeek from the dropdown menu
     const deepseekItem = await screen.findByRole('menuitem', {
@@ -269,7 +275,11 @@ describe('CodexSessionsPage', () => {
     render(<CodexSessionsPage />)
 
     await user.click(await screen.findByText('Fix the bug'))
-    fireEvent.pointerDown(await screen.findByRole('button', { name: /OpenAI/ }))
+    const providerTrigger = await screen.findByRole('button', {
+      name: /OpenAI/,
+    })
+    fireEvent.pointerDown(providerTrigger)
+    await user.click(providerTrigger)
     const openaiItem = await screen.findByRole('menuitem', { name: /OpenAI/ })
     await user.click(openaiItem)
 
