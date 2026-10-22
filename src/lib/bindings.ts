@@ -500,6 +500,11 @@ export const commands = {
 	 *  contextWindow, maxTokens, name).
 	 */
 	fetchDshModels: (baseUrl: string, apiKey: string, api: string | null) => typedError<DshModel[], string>(__TAURI_INVOKE("fetch_dsh_models", { baseUrl, apiKey, api })),
+	listDshSessions: () => typedError<DshSessionSummary[], string>(__TAURI_INVOKE("list_dsh_sessions")),
+	getDshSessionDetail: (sessionPath: string) => typedError<DshSessionDetail, string>(__TAURI_INVOKE("get_dsh_session_detail", { sessionPath })),
+	deleteDshSession: (sessionPath: string) => typedError<null, string>(__TAURI_INVOKE("delete_dsh_session", { sessionPath })),
+	startDshSessionsWatcher: () => typedError<null, string>(__TAURI_INVOKE("start_dsh_sessions_watcher")),
+	stopDshSessionsWatcher: () => typedError<null, string>(__TAURI_INVOKE("stop_dsh_sessions_watcher")),
 	/**  Lists all session projects from ~/.factory/sessions directory. */
 	listSessionProjects: () => typedError<SessionProject[], string>(__TAURI_INVOKE("list_session_projects")),
 	/**  Lists all sessions, optionally filtered by project. */
@@ -1621,6 +1626,54 @@ export type DshProviderConfig_Serialize = {
 	api?: string,
 	compat?: DshCompatConfig_Serialize,
 	models?: DshModel_Serialize[],
+};
+
+export type DshSessionDetail = DshSessionDetail_Serialize | DshSessionDetail_Deserialize;
+
+export type DshSessionDetail_Deserialize = {
+	summary: DshSessionSummary,
+	messages: DshSessionMessage_Deserialize[],
+};
+
+export type DshSessionDetail_Serialize = {
+	summary: DshSessionSummary,
+	messages: DshSessionMessage_Serialize[],
+};
+
+export type DshSessionMessage = DshSessionMessage_Serialize | DshSessionMessage_Deserialize;
+
+export type DshSessionMessage_Deserialize = {
+	id: string,
+	role: string,
+	content: ContentBlock_Deserialize[],
+	timestamp: string,
+};
+
+export type DshSessionMessage_Serialize = {
+	id: string,
+	role: string,
+	content: ContentBlock_Serialize[],
+	timestamp: string,
+};
+
+export type DshSessionSummary = {
+	id: string,
+	title: string,
+	/**  The header's cwd, not the lossy directory encoding. */
+	project: string,
+	model: string,
+	modelProvider: string,
+	modifiedAt: number | null,
+	tokenUsage: DshTokenUsage,
+	path: string,
+};
+
+export type DshTokenUsage = {
+	inputTokens: number | null,
+	outputTokens: number | null,
+	cacheReadTokens: number | null,
+	cacheCreationTokens: number | null,
+	totalTokens: number | null,
 };
 
 /**  Effective path info with default indicator */

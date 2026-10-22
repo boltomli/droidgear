@@ -1,13 +1,17 @@
 # Changelog
 
-## Unreleased
+## v1.3.7
+
+**New Features / 新功能**
+
+- Dsh session history (GUI + TUI): browse `~/.dsh/sessions` logs in list or project-grouped views, render the newest canonical generation (including concatenated Zstandard frames) with thinking blocks, follow live sessions, hide empty sessions and delete sessions. Consecutive reasoning-only steps collapse into one expandable "Thinking process (N)" block / 新增 Dsh 会话历史（GUI + TUI）：浏览 `~/.dsh/sessions` 会话日志，支持列表/按项目分组视图、读取最新一代规范日志（含拼接的 Zstandard 帧）并渲染思考内容、实时追踪、隐藏空会话与删除。连续的纯思考步骤合并为一个可展开的「思考过程 (N)」块
+- Register Gemini 4 Argon (`gemini-4-argon`): 1M context, 64K output, image input, and reasoning efforts none / low / medium / high / 注册 Gemini 4 Argon（`gemini-4-argon`）：1M 上下文、64K 输出、图片输入，推理力度为 none / low / medium / high
 
 **Bug Fixes / 问题修复**
 
-- Embedded terminal styles (font, theme, selection colors) now actually load: Tauri v3 injects a `nonce` into `style-src`, which makes CSP ignore `unsafe-inline` for style elements and silently blocked xterm.js's runtime-injected `<style>` (glyph bottoms clipped at 16px sans-serif in 14px cells, black text on black background in dark mode, invisible mouse-selection highlight). An explicit `style-src-elem` directive restores them / 嵌入式终端样式（字体、主题、选区颜色）恢复生效：Tauri v3 会向 `style-src` 注入 `nonce`，导致 CSP 对样式元素忽略 `unsafe-inline`，xterm.js 运行时注入的 `<style>` 被静默拦截（16px sans-serif 字形塞进 14px 单元格导致字的下半部分被截断、暗色模式黑底黑字、鼠标选中高亮不可见）。显式声明 `style-src-elem` 恢复样式生效
-- Embedded terminal no longer loses or chops its top lines on first open: terminal creation now waits until the container has a real layout. Previously a terminal that mounted hidden spawned its PTY at a bogus ~10x5 size (FitAddon parses the wrapper's `100%` dimensions as 100px while `display:none`), and the shell output stayed wrapped at 10 columns forever since ConPTY sends real line breaks. xterm.js is also told the Windows PTY is ConPTY (`windowsPty`) so later resizes cannot let ConPTY's screen reprint replace buffer rows / 嵌入式终端首次打开不再丢失或截断顶部若干行：终端改为在容器具备真实布局后才创建。此前隐藏状态挂载的终端会以约 10x5 的错误尺寸启动 PTY（display:none 下 FitAddon 把容器的 `100%` 尺寸解析为 100px），输出被永久折行在 10 列（ConPTY 发送的是真实换行，无法再合并）。同时通过 `windowsPty` 告知 xterm.js Windows PTY 为 ConPTY，避免后续尺寸调整让 ConPTY 重绘替换缓冲区行
-- Embedded terminal readability: rows use `lineHeight: 1.2` so CJK fallback glyphs cannot clip at the bottom, and `minimumContrastRatio: 4.5` lifts near-invisible ANSI black/brightBlack foregrounds (e.g. PSReadLine parameter colors) on the dark background / 嵌入式终端可读性：行高改为 1.2，避免中文字形底部被截断；启用 `minimumContrastRatio: 4.5`，提升暗色背景下几乎不可见的 ANSI black/brightBlack 前景（如 PSReadLine 参数色）
-- Embedded terminal IME guard: pointerdown is cancelled only while an IME composition is active, so clicks during Chinese IME input never start an accidental selection while normal selection and copy keep working. The state is read live from xterm's composition view, so a missed `compositionend` can never leave the terminal unselectable / 嵌入式终端 IME 守卫：pointerdown 仅在 IME 组合输入期间拦截，中文输入法下点击不会误触选择，同时不影响正常的选择与复制。组合状态实时读取自 xterm 的 composition view，即使漏掉 `compositionend` 也不会导致终端无法选中
+- Embedded terminal: spawn the PTY only after the container has a real layout (a hidden mount no longer locks wrapping at a bogus ~10-column size), mark the Windows PTY as ConPTY so a resize cannot drop top lines, stop CJK glyphs and near-black ANSI colors from clipping or disappearing, and cancel pointer selection only during an active IME composition so Chinese input clicks no longer start accidental selections / 嵌入式终端：容器完成真实布局后再启动 PTY（隐藏挂载不再把折行锁死在错误的约 10 列宽度），将 Windows PTY 标记为 ConPTY 以免调整大小时丢失顶部行，修复 CJK 字形被裁切与近黑色 ANSI 前景不可见，并仅在 IME 组字期间取消指针选择，中文输入点击不再误触发选区
+- Normalize returned session and config paths with the platform separator in droidgear-core (Codex, Dsh, and Pi sessions), including the newer dir and patch_path fields / droidgear-core 返回的会话与配置路径按平台分隔符规范化（Codex、Dsh 与 Pi 会话），覆盖新增的 dir 与 patch_path 字段
+- Fix stale closures and redundant effect re-runs: macOS window-control key handlers see the current shortcut key, the Codex official-auth scan no longer re-runs on profile changes, and the terminal focus effect no longer depends on the selected derived id / 修复过期闭包与多余的 effect 重跑：macOS 窗口控制按键处理读取当前快捷键，Codex 官方认证扫描不再随 Profile 变化重跑，终端聚焦 effect 不再依赖选中的 derived id
 
 ## v1.3.6
 
