@@ -31,12 +31,12 @@ export const commands = {
 	 *  Saves emergency data to a JSON file for later recovery.
 	 *  Validates filename and enforces a 10MB size limit.
 	 */
-	saveEmergencyData: (filename: string, data: Value) => typedError<null, RecoveryError>(__TAURI_INVOKE("save_emergency_data", { filename, data })),
+	saveEmergencyData: (filename: string, data: JsonValue) => typedError<null, RecoveryError>(__TAURI_INVOKE("save_emergency_data", { filename, data })),
 	/**
 	 *  Loads emergency data from a previously saved JSON file.
 	 *  Returns FileNotFound if the file doesn't exist.
 	 */
-	loadEmergencyData: (filename: string) => typedError<Value, RecoveryError>(__TAURI_INVOKE("load_emergency_data", { filename })),
+	loadEmergencyData: (filename: string) => typedError<JsonValue, RecoveryError>(__TAURI_INVOKE("load_emergency_data", { filename })),
 	/**
 	 *  Removes recovery files older than 7 days.
 	 *  Returns the count of removed files.
@@ -257,9 +257,9 @@ export const commands = {
 	/**  Deletes a custom settings file. The Global file cannot be deleted. */
 	deleteClaudeSettingsFile: (name: string) => typedError<null, string>(__TAURI_INVOKE("delete_claude_settings_file", { name })),
 	/**  Reads the raw JSON object stored in a settings file (by display name). */
-	readClaudeSettingsFile: (name: string) => typedError<Value, string>(__TAURI_INVOKE("read_claude_settings_file", { name })),
+	readClaudeSettingsFile: (name: string) => typedError<JsonValue, string>(__TAURI_INVOKE("read_claude_settings_file", { name })),
 	/**  Persists the given JSON object as the named settings file (by display name). */
-	saveClaudeSettingsFile: (name: string, contents: Value) => typedError<null, string>(__TAURI_INVOKE("save_claude_settings_file", { name, contents })),
+	saveClaudeSettingsFile: (name: string, contents: JsonValue) => typedError<null, string>(__TAURI_INVOKE("save_claude_settings_file", { name, contents })),
 	/**  Duplicates a settings file to a new name and activates it. */
 	duplicateClaudeSettingsFile: (name: string, newName: string) => typedError<ClaudeSettingsFileInfo, string>(__TAURI_INVOKE("duplicate_claude_settings_file", { name, newName })),
 	/**  Merges the contents of a settings file into the global settings.json. */
@@ -405,6 +405,11 @@ export const commands = {
 	deleteOmpCustomProvider: (providerId: string) => typedError<null, string>(__TAURI_INVOKE("delete_omp_custom_provider", { providerId })),
 	/**  Test an OMP provider connection via HTTP */
 	testOmpProviderConnection: (providerId: string) => typedError<OmpProviderTestResult, string>(__TAURI_INVOKE("test_omp_provider_connection", { providerId })),
+	listOmpSessions: () => typedError<OmpSessionSummary[], string>(__TAURI_INVOKE("list_omp_sessions")),
+	getOmpSessionDetail: (sessionPath: string) => typedError<OmpSessionDetail, string>(__TAURI_INVOKE("get_omp_session_detail", { sessionPath })),
+	deleteOmpSession: (sessionPath: string) => typedError<null, string>(__TAURI_INVOKE("delete_omp_session", { sessionPath })),
+	startOmpSessionsWatcher: () => typedError<null, string>(__TAURI_INVOKE("start_omp_sessions_watcher")),
+	stopOmpSessionsWatcher: () => typedError<null, string>(__TAURI_INVOKE("stop_omp_sessions_watcher")),
 	/**  Test a Pi provider using an isolated temporary models.json and Pi CLI run. */
 	testPiProviderConnection: (providerId: string, config: PiProviderConfig) => typedError<PiProviderTestResult, string>(__TAURI_INVOKE("test_pi_provider_connection", { providerId, config })),
 	listPiSessions: () => typedError<PiSessionSummary[], string>(__TAURI_INVOKE("list_pi_sessions")),
@@ -500,6 +505,23 @@ export const commands = {
 	 *  contextWindow, maxTokens, name).
 	 */
 	fetchDshModels: (baseUrl: string, apiKey: string, api: string | null) => typedError<DshModel[], string>(__TAURI_INVOKE("fetch_dsh_models", { baseUrl, apiKey, api })),
+	/**
+	 *  Read the composed DSH configuration snapshot for a profile.
+	 * 
+	 *  `profile` selects an official runtime profile (`desktop` / `web`); when
+	 *  omitted the default resolution is used (`desktop`, then `web`).
+	 */
+	readDshConfigSnapshot: (profile: string | null) => typedError<DshConfigSnapshot, string>(__TAURI_INVOKE("read_dsh_config_snapshot", { profile })),
+	/**
+	 *  Replace one entry's complete `config` in the profile patch.
+	 * 
+	 *  `config: null` removes the override so the bundle layer applies again.
+	 *  `expectedHash` is the `patchHash` from the last snapshot; a mismatch is
+	 *  refused with a `DSH_CONFIG_CONFLICT` error.
+	 */
+	saveDshConfigEntry: (profile: string | null, entryId: string, config: JsonValue | null, expectedHash: string | null) => typedError<DshConfigWriteResult, string>(__TAURI_INVOKE("save_dsh_config_entry", { profile, entryId, config, expectedHash })),
+	/**  Enable or disable one entry in the profile patch layer. */
+	setDshConfigEntryDisabled: (profile: string | null, entryId: string, disabled: boolean, expectedHash: string | null) => typedError<DshConfigWriteResult, string>(__TAURI_INVOKE("set_dsh_config_entry_disabled", { profile, entryId, disabled, expectedHash })),
 	listDshSessions: () => typedError<DshSessionSummary[], string>(__TAURI_INVOKE("list_dsh_sessions")),
 	getDshSessionDetail: (sessionPath: string) => typedError<DshSessionDetail, string>(__TAURI_INVOKE("get_dsh_session_detail", { sessionPath })),
 	deleteDshSession: (sessionPath: string) => typedError<null, string>(__TAURI_INVOKE("delete_dsh_session", { sessionPath })),
@@ -1461,7 +1483,7 @@ export type CustomModel_Deserialize = {
 	/**  Whether to disable image support for this model (default: images supported) */
 	noImageSupport: boolean | null,
 	/**  Additional provider-specific arguments */
-	extraArgs: { [key in string]: Value } | null,
+	extraArgs: { [key in string]: JsonValue } | null,
 	/**  Additional HTTP headers */
 	extraHeaders: { [key in string]: string } | null,
 };
@@ -1487,7 +1509,7 @@ export type CustomModel_Serialize = {
 	/**  Whether to disable image support for this model (default: images supported) */
 	noImageSupport?: boolean,
 	/**  Additional provider-specific arguments */
-	extraArgs?: { [key in string]: Value },
+	extraArgs?: { [key in string]: JsonValue },
 	/**  Additional HTTP headers */
 	extraHeaders?: { [key in string]: string },
 };
@@ -1517,6 +1539,66 @@ export type DshCompatConfig_Serialize = {
 	supportsDeveloperRole?: boolean,
 };
 
+/**  One composed plugin entry. */
+export type DshConfigEntryView = {
+	id: string,
+	packageName: string,
+	/**  `bundle:<package>` | `profile` | `home`. */
+	layer: string,
+	tier: string,
+	description: string,
+	disabled: boolean,
+	/**  Effective config contains at least one `!!js` expression. */
+	hasJs: boolean,
+	/**  Effective config; secret fields are replaced by `{"$secret": true}`. */
+	config: JsonValue | null,
+	/**  The profile patch carries a config override for this entry. */
+	overridden: boolean,
+	/**  The home overlay carries a config override for this entry. */
+	shadowedByHome: boolean,
+	fields: DshConfigFieldView[],
+};
+
+/**  One top-level configuration field with its effective value. */
+export type DshConfigFieldView = {
+	name: string,
+	/**  `string` | `number` | `boolean` | `enum` | `json`. */
+	kind: string,
+	value: JsonValue | null,
+	default: JsonValue | null,
+	enumValues: string[],
+	volatile: boolean,
+	secret: boolean,
+	description: string,
+	overridden: boolean,
+	tier: string,
+};
+
+/**  Everything the Dsh configuration page needs for one profile. */
+export type DshConfigSnapshot = {
+	/**  DSH version the generated schema describes. */
+	schemaVersion: string,
+	/**  Version of the installed desktop app, when it can be detected. */
+	installedVersion: string | null,
+	/**  Resolved profile name (`desktop`, `web`, ...). */
+	profile: string | null,
+	/**  Effective profile patch file (`cordis.patch.yml`). */
+	profilePatchPath: string,
+	/**  Home overlay patch (`~/.dsh/cordis.patch.yml`), read-only. */
+	homePatchPath: string,
+	homePatchExists: boolean,
+	/**  Legacy pre-0.2 settings document. */
+	legacySettingsPath: string,
+	/**  Whether the legacy document (or its `.imported` rename) exists. */
+	legacySettingsExists: boolean,
+	/**  Content hash of the profile patch (`"absent"` when missing). */
+	patchHash: string,
+	/**  Composed entries, lowest layer first. */
+	entries: DshConfigEntryView[],
+	/**  Migration / safety warnings for the UI. */
+	warnings: DshMigrationWarning[],
+};
+
 /**  Dsh configuration file status. */
 export type DshConfigStatus = {
 	/**
@@ -1538,6 +1620,12 @@ export type DshConfigStatus = {
 	legacyPath: string,
 	credentialsExists: boolean,
 	credentialsPath: string,
+};
+
+/**  Result of one successful patch write. */
+export type DshConfigWriteResult = {
+	patchHash: string,
+	changed: boolean,
 };
 
 /**  Credentials read from `~/.dsh/.credentials.yaml` (version + env refs). */
@@ -1570,6 +1658,16 @@ export type DshCurrentConfig_Serialize = {
 	providers: { [key in string]: DshProviderConfig_Serialize },
 };
 
+/**  One migration or safety warning. */
+export type DshMigrationWarning = {
+	code: string,
+	/**  `info` | `warning` | `error`. */
+	severity: string,
+	entryId: string | null,
+	message: string,
+	hint: string,
+};
+
 /**  Dsh model definition inside a provider. */
 export type DshModel = DshModel_Serialize | DshModel_Deserialize;
 
@@ -1581,6 +1679,14 @@ export type DshModel_Deserialize = {
 	maxTokens: number | null,
 	/**  Reasoning effort mapping, e.g. `{"off": null, "high": "high"}`. */
 	reasoningEfforts: { [key in string]: string | null } | null,
+	/**
+	 *  Request modalities this model accepts (`text`, `image`).
+	 * 
+	 *  DSH falls back to the installed pi-ai catalog, then to the route's
+	 *  `defaultInput` (`text`), and a custom route has no installed entry, so
+	 *  omitting this makes images unsupported even for a vision model.
+	 */
+	input: string[] | null,
 };
 
 /**  Dsh model definition inside a provider. */
@@ -1591,6 +1697,14 @@ export type DshModel_Serialize = {
 	maxTokens?: number,
 	/**  Reasoning effort mapping, e.g. `{"off": null, "high": "high"}`. */
 	reasoningEfforts?: { [key in string]: string | null },
+	/**
+	 *  Request modalities this model accepts (`text`, `image`).
+	 * 
+	 *  DSH falls back to the installed pi-ai catalog, then to the route's
+	 *  `defaultInput` (`text`), and a custom route has no installed entry, so
+	 *  omitting this makes images unsupported even for a vision model.
+	 */
+	input?: string[],
 };
 
 /**  One Dsh profile directory under `~/.dsh/profiles/`. */
@@ -1613,6 +1727,13 @@ export type DshProviderConfig_Deserialize = {
 	baseURL: string | null,
 	apiKeyEnv: string | null,
 	api: string | null,
+	/**
+	 *  Route default thinking level applied when a session selects no effort.
+	 * 
+	 *  DSH resolves a pi-ai model's `defaultEffort` from this route field only,
+	 *  so a BYOK route without it shows "Default" in the model picker.
+	 */
+	reasoning: string | null,
 	compat: DshCompatConfig_Deserialize | null,
 	models?: DshModel_Deserialize[],
 };
@@ -1624,6 +1745,13 @@ export type DshProviderConfig_Serialize = {
 	baseURL?: string,
 	apiKeyEnv?: string,
 	api?: string,
+	/**
+	 *  Route default thinking level applied when a session selects no effort.
+	 * 
+	 *  DSH resolves a pi-ai model's `defaultEffort` from this route field only,
+	 *  so a BYOK route without it shows "Default" in the model picker.
+	 */
+	reasoning?: string,
 	compat?: DshCompatConfig_Serialize,
 	models?: DshModel_Serialize[],
 };
@@ -2140,8 +2268,8 @@ export type OmpCustomModel_Deserialize = {
 	contextWindow: number | null,
 	maxTokens: number | null,
 	headers: { [key in string]: string } | null,
-	compat: Value | null,
-	remoteCompaction: Value | null,
+	compat: JsonValue | null,
+	remoteCompaction: JsonValue | null,
 };
 
 /**  A model declared in `models.yml`. */
@@ -2157,8 +2285,8 @@ export type OmpCustomModel_Serialize = {
 	contextWindow?: number,
 	maxTokens?: number,
 	headers?: { [key in string]: string },
-	compat?: Value,
-	remoteCompaction?: Value,
+	compat?: JsonValue,
+	remoteCompaction?: JsonValue,
 };
 
 /**  A provider declared in `~/.omp/agent/models.yml`. */
@@ -2188,11 +2316,11 @@ export type OmpCustomProvider_Deserialize = {
 	headers: { [key in string]: string } | null,
 	authHeader: boolean | null,
 	models?: OmpCustomModel_Deserialize[],
-	discovery: Value | null,
-	modelOverrides: { [key in string]: Value } | null,
-	compat: Value | null,
+	discovery: JsonValue | null,
+	modelOverrides: { [key in string]: JsonValue } | null,
+	compat: JsonValue | null,
 	disableStrictTools: boolean | null,
-	remoteCompaction: Value | null,
+	remoteCompaction: JsonValue | null,
 	guardrailIdentifier: string | null,
 	guardrailVersion: string | null,
 	guardrailTrace: string | null,
@@ -2208,11 +2336,11 @@ export type OmpCustomProvider_Serialize = {
 	headers?: { [key in string]: string },
 	authHeader?: boolean,
 	models?: OmpCustomModel_Serialize[],
-	discovery?: Value,
-	modelOverrides?: { [key in string]: Value },
-	compat?: Value,
+	discovery?: JsonValue,
+	modelOverrides?: { [key in string]: JsonValue },
+	compat?: JsonValue,
 	disableStrictTools?: boolean,
-	remoteCompaction?: Value,
+	remoteCompaction?: JsonValue,
 	guardrailIdentifier?: string,
 	guardrailVersion?: string,
 	guardrailTrace?: string,
@@ -2335,6 +2463,48 @@ export type OmpProviderTestResult_Serialize = {
 	error?: string,
 };
 
+export type OmpSessionDetail = OmpSessionDetail_Serialize | OmpSessionDetail_Deserialize;
+
+export type OmpSessionDetail_Deserialize = {
+	summary: OmpSessionSummary,
+	messages: OmpSessionMessage_Deserialize[],
+};
+
+export type OmpSessionDetail_Serialize = {
+	summary: OmpSessionSummary,
+	messages: OmpSessionMessage_Serialize[],
+};
+
+export type OmpSessionMessage = OmpSessionMessage_Serialize | OmpSessionMessage_Deserialize;
+
+export type OmpSessionMessage_Deserialize = {
+	id: string,
+	role: string,
+	content: ContentBlock_Deserialize[],
+	timestamp: string,
+	isActiveBranch: boolean,
+};
+
+export type OmpSessionMessage_Serialize = {
+	id: string,
+	role: string,
+	content: ContentBlock_Serialize[],
+	timestamp: string,
+	isActiveBranch: boolean,
+};
+
+export type OmpSessionSummary = {
+	id: string,
+	title: string,
+	project: string,
+	model: string,
+	modelProvider: string,
+	modifiedAt: number | null,
+	messageCount: number,
+	tokenUsage: OmpTokenUsage,
+	path: string,
+};
+
 /**  OMP theme configuration. */
 export type OmpTheme = OmpTheme_Serialize | OmpTheme_Deserialize;
 
@@ -2365,6 +2535,16 @@ export type OmpThinkingConfig_Serialize = {
 	mode?: string,
 	efforts?: string[],
 	defaultLevel?: string,
+};
+
+export type OmpTokenUsage = {
+	inputTokens: number | null,
+	outputTokens: number | null,
+	cacheReadTokens: number | null,
+	cacheCreationTokens: number | null,
+	reasoningTokens: number | null,
+	totalTokens: number | null,
+	cost: number | null,
 };
 
 /**  OpenClaw config status */
@@ -2556,13 +2736,13 @@ export type OpenCodeCurrentConfig = OpenCodeCurrentConfig_Serialize | OpenCodeCu
 /**  Current OpenCode configuration (providers and auth from config files) */
 export type OpenCodeCurrentConfig_Deserialize = {
 	providers: { [key in string]: OpenCodeProviderConfig_Deserialize },
-	auth: { [key in string]: Value },
+	auth: { [key in string]: JsonValue },
 };
 
 /**  Current OpenCode configuration (providers and auth from config files) */
 export type OpenCodeCurrentConfig_Serialize = {
 	providers: { [key in string]: OpenCodeProviderConfig_Serialize },
-	auth: { [key in string]: Value },
+	auth: { [key in string]: JsonValue },
 };
 
 /**  OpenCode Model configuration */
@@ -2606,7 +2786,7 @@ export type OpenCodeProfile_Deserialize = {
 	createdAt: string,
 	updatedAt: string,
 	providers: { [key in string]: OpenCodeProviderConfig_Deserialize },
-	auth: { [key in string]: Value },
+	auth: { [key in string]: JsonValue },
 };
 
 /**  OpenCode Profile */
@@ -2617,7 +2797,7 @@ export type OpenCodeProfile_Serialize = {
 	createdAt: string,
 	updatedAt: string,
 	providers: { [key in string]: OpenCodeProviderConfig_Serialize },
-	auth: { [key in string]: Value },
+	auth: { [key in string]: JsonValue },
 };
 
 /**  OpenCode Provider configuration */
@@ -2671,7 +2851,7 @@ export type PiCompatConfig_Deserialize = {
 	supportsStore: boolean | null,
 	supportsDeveloperRole: boolean | null,
 	supportsReasoningEffort: boolean | null,
-	reasoningEffortMap: { [key in string]: Value } | null,
+	reasoningEffortMap: { [key in string]: JsonValue } | null,
 	supportsUsageInStreaming: boolean | null,
 	maxTokensField: string | null,
 	requiresToolResultName: boolean | null,
@@ -2683,8 +2863,14 @@ export type PiCompatConfig_Deserialize = {
 	supportsStrictMode: boolean | null,
 	supportsLongCacheRetention: boolean | null,
 	supportsEagerToolInputStreaming: boolean | null,
-	openRouterRouting: Value | null,
-	vercelGatewayRouting: Value | null,
+	/**
+	 *  Force adaptive thinking (thinking.type: adaptive + output_config.effort)
+	 *  regardless of model ID. Required by Anthropic-compatible upstreams for
+	 *  models like claude-opus-5-5.
+	 */
+	forceAdaptiveThinking: boolean | null,
+	openRouterRouting: JsonValue | null,
+	vercelGatewayRouting: JsonValue | null,
 };
 
 /**  Pi compatibility configuration. Unknown fields are retained for newer pi versions. */
@@ -2692,7 +2878,7 @@ export type PiCompatConfig_Serialize = {
 	supportsStore?: boolean,
 	supportsDeveloperRole?: boolean,
 	supportsReasoningEffort?: boolean,
-	reasoningEffortMap?: { [key in string]: Value },
+	reasoningEffortMap?: { [key in string]: JsonValue },
 	supportsUsageInStreaming?: boolean,
 	maxTokensField?: string,
 	requiresToolResultName?: boolean,
@@ -2704,8 +2890,14 @@ export type PiCompatConfig_Serialize = {
 	supportsStrictMode?: boolean,
 	supportsLongCacheRetention?: boolean,
 	supportsEagerToolInputStreaming?: boolean,
-	openRouterRouting?: Value,
-	vercelGatewayRouting?: Value,
+	/**
+	 *  Force adaptive thinking (thinking.type: adaptive + output_config.effort)
+	 *  regardless of model ID. Required by Anthropic-compatible upstreams for
+	 *  models like claude-opus-5-5.
+	 */
+	forceAdaptiveThinking?: boolean,
+	openRouterRouting?: JsonValue,
+	vercelGatewayRouting?: JsonValue,
 };
 
 /**  Pi config status */

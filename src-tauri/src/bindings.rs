@@ -3,9 +3,10 @@ use tauri_specta::{collect_commands, Builder};
 pub fn generate_bindings() -> Builder<tauri::DynRuntime> {
     use crate::commands::{
         channel, channel_export, claude, claude_settings, codex, codex_auth_profiles,
-        codex_sessions, config, connectivity, copilot, droid_settings, dsh, dsh_sessions, env,
-        factory_auth_profiles, hermes, mcp, notifications, omp, openclaw, opencode, paths, pi,
-        pi_sessions, preferences, recovery, sessions, specs, updater, window,
+        codex_sessions, config, connectivity, copilot, droid_settings, dsh, dsh_config,
+        dsh_sessions, env, factory_auth_profiles, hermes, mcp, notifications, omp, omp_sessions,
+        openclaw, opencode, paths, pi, pi_sessions, preferences, recovery, sessions, specs,
+        updater, window,
     };
 
     Builder::new()
@@ -170,6 +171,11 @@ pub fn generate_bindings() -> Builder<tauri::DynRuntime> {
             omp::save_omp_custom_provider,
             omp::delete_omp_custom_provider,
             omp::test_omp_provider_connection,
+            omp_sessions::list_omp_sessions,
+            omp_sessions::get_omp_session_detail,
+            omp_sessions::delete_omp_session,
+            omp_sessions::start_omp_sessions_watcher,
+            omp_sessions::stop_omp_sessions_watcher,
             pi::test_pi_provider_connection,
             pi_sessions::list_pi_sessions,
             pi_sessions::get_pi_session_detail,
@@ -209,6 +215,9 @@ pub fn generate_bindings() -> Builder<tauri::DynRuntime> {
             dsh::save_dsh_credential_ref,
             dsh::delete_dsh_credential_ref,
             dsh::fetch_dsh_models,
+            dsh_config::read_dsh_config_snapshot,
+            dsh_config::save_dsh_config_entry,
+            dsh_config::set_dsh_config_entry_disabled,
             dsh_sessions::list_dsh_sessions,
             dsh_sessions::get_dsh_session_detail,
             dsh_sessions::delete_dsh_session,
@@ -307,8 +316,10 @@ pub fn export_ts_bindings() {
             in_commands = false;
         }
 
+        let mut modified = String::from(*line);
+
         if in_commands && (line.contains("_Serialize") || line.contains("_Deserialize")) {
-            let modified = line
+            modified = line
                 .replace("_Serialize[]", "[]")
                 .replace("_Deserialize[]", "[]")
                 .replace("_Serialize,", ",")
@@ -322,7 +333,16 @@ pub fn export_ts_bindings() {
             output.push_str(&modified);
             output.push('\n');
         } else {
-            output.push_str(line);
+            // specta v3 maps serde_json::Value to an enum-tagged `Value` union,
+            // but Tauri passes plain JSON at runtime, so rewrite references to
+            // the plain `JsonValue` alias appended below. Keep the generated
+            // `export type Value = ...` definition and doc comments untouched.
+            let trimmed = line.trim_start();
+            let is_comment = trimmed.starts_with("/*") || trimmed.starts_with('*');
+            if !is_comment && !line.contains("export type Value =") {
+                modified = replace_value_refs(line);
+            }
+            output.push_str(&modified);
             output.push('\n');
         }
     }
@@ -339,6 +359,26 @@ export type Result<T, E> =\n\
     );
 
     fs::write(path, output).expect("write bindings.ts");
+}
+
+/// Replace whole-word `Value` identifiers with `JsonValue`, skipping
+/// occurrences glued to other identifier characters (e.g. `JsonValue`,
+/// `SelectValue`).
+fn replace_value_refs(line: &str) -> String {
+    let mut result = String::with_capacity(line.len());
+    let mut rest = line;
+    while let Some(pos) = rest.find("Value") {
+        let head = &rest[..pos];
+        rest = &rest[pos + "Value".len()..];
+        let before = head.chars().next_back();
+        let after = rest.chars().next();
+        let glued = before.is_some_and(|c| c.is_alphanumeric() || c == '_')
+            || after.is_some_and(|c| c.is_alphanumeric() || c == '_');
+        result.push_str(head);
+        result.push_str(if glued { "Value" } else { "JsonValue" });
+    }
+    result.push_str(rest);
+    result
 }
 
 #[cfg(all(test, debug_assertions))]

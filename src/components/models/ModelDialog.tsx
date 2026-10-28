@@ -29,7 +29,6 @@ import {
   type Provider,
   type ModelInfo,
   type JsonValue,
-  type Value,
 } from '@/lib/bindings'
 import {
   containsRegexSpecialChars,
@@ -632,7 +631,7 @@ function ModelForm({
       maxOutputTokens: maxTokens ? parseInt(maxTokens) : undefined,
       noImageSupport: noImageSupport || false,
       extraArgs: buildExtraArgs() as unknown as
-        Record<string, Value> | undefined,
+        Record<string, JsonValue> | undefined,
       extraHeaders: (() => {
         const parsed = parseJsonSafe(extraHeaders) as
           Record<string, string> | null | undefined

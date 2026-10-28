@@ -5,7 +5,6 @@ import {
   type ClaudeSettingsFileInfo,
   type ClaudeTemporaryRunDebugPreview,
   type JsonValue,
-  type Value,
 } from '@/lib/bindings'
 
 export type ClaudeSettingsDoc = Record<string, JsonValue>
@@ -248,7 +247,7 @@ export const useClaudeSettingsStore = create<ClaudeSettingsState>()(
         if (!activeFile || !currentJson) return
         const result = await commands.saveClaudeSettingsFile(
           activeFile.name,
-          currentJson as unknown as Value
+          currentJson
         )
         if (result.status !== 'ok') {
           set(

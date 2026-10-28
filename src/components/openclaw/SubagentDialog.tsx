@@ -85,6 +85,10 @@ export function SubagentDialog({
     buildFormState(editingAgent)
   )
 
+  // Draft values for the "add chip" inputs (fallbacks / allowAgents)
+  const [fallbackDraft, setFallbackDraft] = useState('')
+  const [allowAgentsDraft, setAllowAgentsDraft] = useState('')
+
   // Update a single form field
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -107,6 +111,8 @@ export function SubagentDialog({
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       setForm(buildFormState(editingAgent))
+      setFallbackDraft('')
+      setAllowAgentsDraft('')
     }
     onOpenChange(nextOpen)
   }
@@ -242,13 +248,15 @@ export function SubagentDialog({
             <Label>{t('openclaw.subagents.fallbacks')}</Label>
             <div className="flex gap-2">
               <Input
+                value={fallbackDraft}
+                onChange={e => setFallbackDraft(e.target.value)}
                 placeholder={t('openclaw.subagents.fallbackPlaceholder')}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    const val = (e.target as HTMLInputElement).value.trim()
+                    const val = fallbackDraft.trim()
                     if (val && !form.fallbacks.includes(val)) {
                       setField('fallbacks', [...form.fallbacks, val])
-                      ;(e.target as HTMLInputElement).value = ''
+                      setFallbackDraft('')
                     }
                   }
                 }}
@@ -347,13 +355,15 @@ export function SubagentDialog({
             <div className="space-y-2">
               <Label>{t('openclaw.subagents.allowAgents')}</Label>
               <Input
+                value={allowAgentsDraft}
+                onChange={e => setAllowAgentsDraft(e.target.value)}
                 placeholder={t('openclaw.subagents.allowAgentsPlaceholder')}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    const val = (e.target as HTMLInputElement).value.trim()
+                    const val = allowAgentsDraft.trim()
                     if (val && !form.allowAgents.includes(val)) {
                       setField('allowAgents', [...form.allowAgents, val])
-                      ;(e.target as HTMLInputElement).value = ''
+                      setAllowAgentsDraft('')
                     }
                   }
                 }}

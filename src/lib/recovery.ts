@@ -4,7 +4,6 @@ import {
   type JsonValue,
   type RecoveryError,
 } from '@/lib/tauri-bindings'
-import { type Value } from '@/lib/bindings'
 
 /** Convert RecoveryError to a human-readable message */
 function formatRecoveryError(error: RecoveryError): string {
@@ -59,7 +58,7 @@ export async function saveEmergencyData(
 
   const result = await commands.saveEmergencyData(
     filename,
-    data as unknown as Value
+    data as unknown as JsonValue
   )
 
   if (result.status === 'error') {

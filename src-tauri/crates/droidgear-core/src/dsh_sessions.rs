@@ -782,6 +782,7 @@ mod tests {
     use super::{
         delete_dsh_session_for_home, get_dsh_session_detail_for_home, list_dsh_sessions_for_home,
     };
+    use crate::test_support::slashes;
     use std::fs;
     use std::io::Write;
     use std::path::PathBuf;
@@ -841,15 +842,20 @@ mod tests {
         }
 
         fn log_path(&self) -> String {
-            self.session_dir
+            let path = self
+                .session_dir
                 .read_dir()
                 .unwrap()
                 .flatten()
                 .next()
                 .unwrap()
-                .path()
-                .to_string_lossy()
-                .to_string()
+                .path();
+            // The fixture builds directories with literal "/" segments in
+            // `join(".dsh/sessions/...")`, while the parser stores paths with
+            // native separators. Normalize so the comparison is stable on
+            // every platform.
+            path.to_string_lossy()
+                .replace('/', &std::path::MAIN_SEPARATOR.to_string())
         }
 
         fn write_projcache(&self, id: &str, title: Option<&str>, first_prompt: &str) {
@@ -900,7 +906,7 @@ mod tests {
         assert_eq!(session.model, "deepseek-flash");
         assert_eq!(session.model_provider, "deepseek-official");
         assert_eq!(session.token_usage.input_tokens, 0.0);
-        assert_eq!(session.path, fixture.log_path());
+        assert_eq!(slashes(&session.path), slashes(&fixture.log_path()));
         assert!(session.modified_at > 0.0);
     }
 

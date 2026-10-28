@@ -7,7 +7,6 @@ import {
   type OpenCodeConfigStatus,
   type ProviderTemplate,
   type JsonValue,
-  type Value,
 } from '@/lib/bindings'
 
 interface OpenCodeState {
@@ -364,7 +363,7 @@ export const useOpenCodeStore = create<OpenCodeState>()(
           if (authValue === undefined) continue
           const exists = id in currentProfile.auth
           if (exists && strategy === 'skip') continue
-          newAuth[id] = authValue as unknown as Value
+          newAuth[id] = authValue as unknown as JsonValue
         }
 
         const updated = {
