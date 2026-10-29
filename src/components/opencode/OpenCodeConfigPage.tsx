@@ -398,7 +398,8 @@ export function OpenCodeConfigPage() {
                   config={config}
                   auth={
                     currentProfile?.auth[providerId] as unknown as
-                      JsonValue | undefined
+                      | JsonValue
+                      | undefined
                   }
                   onEdit={() => handleEditProvider(providerId)}
                   onDelete={() => setDeleteProviderId(providerId)}
