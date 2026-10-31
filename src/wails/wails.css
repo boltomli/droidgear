@@ -1,0 +1,17 @@
+/* Wails-specific layout overrides.
+ *
+ * The shared App.css styles the whole app for the Tauri shell. In the Wails
+ * webview the window is created at its final size before the page loads, so
+ * a percentage height chain (html → body → #root → app shell) is more
+ * reliable than viewport units for filling the client area.
+ */
+html,
+body {
+  height: 100%;
+  min-height: 100%;
+}
+
+#root {
+  height: 100%;
+  min-height: 100%;
+}

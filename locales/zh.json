@@ -1,4 +1,5 @@
 {
+  "wailsNav.tools": "工具",
   "app.name": "DroidGear",
 
   "menu.about": "关于 {{appName}}",

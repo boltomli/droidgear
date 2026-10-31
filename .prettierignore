@@ -26,3 +26,7 @@ src/lib/bindings.ts
 *.log
 # Vendor data — keep byte-identical to the official DeepSeek setup script
 src-tauri/crates/droidgear-core/res/
+
+# Wails spike: generated bindings and vendored registry data
+wails/frontend/
+wails/internal/core/registrydata/
