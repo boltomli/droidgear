@@ -4,6 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"droidgear-wails/internal/core"
+	"gopkg.in/yaml.v3"
 )
 
 // writeHermesTestConfig drops a config.yaml into the isolated ~/.hermes so
@@ -118,6 +121,10 @@ model:
 	if got.Default == nil || *got.Default != "gpt-ghost" {
 		t.Fatalf("apply lost model.default: %+v", got)
 	}
+	root := mustParseConfig(t, configPath)
+	if core.MappingGetMap(core.MappingGetMap(root, "providers"), "ghost") == nil {
+		t.Fatalf("ghost should be upserted into the providers dict: %s", mustRead(t, configPath))
+	}
 }
 
 // TestHermesReadCommandsDoNotCreateConfigDir pins the no-side-effect
@@ -152,4 +159,188 @@ func mustRead(t *testing.T, path string) string {
 		t.Fatalf("read %s: %v", path, err)
 	}
 	return string(data)
+}
+
+func mustParseConfig(t *testing.T, path string) *yaml.Node {
+	t.Helper()
+	root, err := core.ParseYAML(mustRead(t, path))
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	return root
+}
+
+// TestHermesReadCurrentConfigFromProvidersDict pins the v12 load path: the
+// providers dictionary is primary, endpoint-less catalog overrides are
+// skipped, and a bare-name model.provider matches a dict key.
+func TestHermesReadCurrentConfigFromProvidersDict(t *testing.T) {
+	isolatedHome(t)
+	a := &App{}
+
+	writeHermesTestConfig(t, `
+model:
+  default: mimo-v2.6-flash
+  provider: token-plan
+providers:
+  deepseek:
+    models:
+      deepseek-vision:
+        supports_vision: true
+  sensenova:
+    api: https://token.sensenova.cn/v1
+    api_key: sk-sn
+    default_model: sensenova-6.8-flash-lite
+  token-plan:
+    api: https://token.example.com/v1
+    api_key: sk-tp
+    default_model: mimo-v2.6-flash
+`)
+
+	current, err := a.ReadHermesCurrentConfig()
+	if err != nil {
+		t.Fatalf("ReadHermesCurrentConfig: %v", err)
+	}
+	if len(current.Models) != 2 {
+		t.Fatalf("endpoint-less override entries must be skipped, got %+v", current.Models)
+	}
+	var active, sensenova *HermesModelConfig
+	for i := range current.Models {
+		switch {
+		case current.Models[i].IsDefault:
+			active = &current.Models[i]
+		case current.Models[i].Name != nil && *current.Models[i].Name == "sensenova":
+			sensenova = &current.Models[i]
+		}
+	}
+	if active == nil || active.Name == nil || *active.Name != "token-plan" {
+		t.Fatalf("bare-name provider should match the dict key: %+v", current.Models)
+	}
+	if active.Default == nil || *active.Default != "mimo-v2.6-flash" {
+		t.Fatalf("active default wrong: %+v", active)
+	}
+	if active.APIKey == nil || *active.APIKey != "sk-tp" {
+		t.Fatalf("active api_key wrong: %+v", active)
+	}
+	if sensenova == nil || sensenova.BaseURL == nil || *sensenova.BaseURL != "https://token.sensenova.cn/v1" {
+		t.Fatalf("sensenova entry wrong: %+v", sensenova)
+	}
+}
+
+// TestHermesApplyUpsertsProvidersDictPreservingFields: apply updates only
+// api/api_key/default_model and keeps discover_models/models intact.
+func TestHermesApplyUpsertsProvidersDictPreservingFields(t *testing.T) {
+	isolatedHome(t)
+	a := &App{}
+
+	configPath := writeHermesTestConfig(t, `
+providers:
+  mine:
+    api: https://old.example.com/v1
+    default_model: old-model
+    discover_models: true
+    models:
+      old-model: {}
+`)
+
+	profile := HermesProfile{
+		ID: "p1", Name: "Profile 1", CreatedAt: nowRFC3339(), UpdatedAt: nowRFC3339(),
+		Models: []HermesModelConfig{{
+			Name: strPtr("mine"), Default: strPtr("gpt-4"),
+			BaseURL: strPtr("https://new.example.com/v1"), APIKey: strPtr("sk-new"),
+			IsDefault: true,
+		}},
+	}
+	if err := a.SaveHermesProfile(profile); err != nil {
+		t.Fatalf("SaveHermesProfile: %v", err)
+	}
+	if err := a.ApplyHermesProfile("p1"); err != nil {
+		t.Fatalf("ApplyHermesProfile: %v", err)
+	}
+
+	root := mustParseConfig(t, configPath)
+	mine := core.MappingGetMap(core.MappingGetMap(root, "providers"), "mine")
+	if mine == nil {
+		t.Fatalf("providers.mine missing: %s", mustRead(t, configPath))
+	}
+	if got := core.MappingGetString(mine, "api"); got != "https://new.example.com/v1" {
+		t.Fatalf("api not updated: %q", got)
+	}
+	if got := core.MappingGetString(mine, "api_key"); got != "sk-new" {
+		t.Fatalf("api_key not updated: %q", got)
+	}
+	if got := core.MappingGetString(mine, "default_model"); got != "gpt-4" {
+		t.Fatalf("default_model not updated: %q", got)
+	}
+	if core.MappingGet(mine, "discover_models") == nil {
+		t.Fatalf("discover_models must be preserved")
+	}
+	if core.MappingGet(mine, "models") == nil {
+		t.Fatalf("models must be preserved")
+	}
+	model := core.MappingGetMap(root, "model")
+	if got := core.MappingGetString(model, "provider"); got != "custom:mine" {
+		t.Fatalf("model.provider wrong: %q", got)
+	}
+}
+
+// TestHermesApplyMigratesLegacyCustomProvidersEntry: same-name legacy
+// custom_providers entries move into the providers dict and the (emptied)
+// key disappears.
+func TestHermesApplyMigratesLegacyCustomProvidersEntry(t *testing.T) {
+	isolatedHome(t)
+	a := &App{}
+
+	configPath := writeHermesTestConfig(t, `
+model:
+  default: old-model
+  provider: custom:wududu
+custom_providers:
+- name: wududu
+  base_url: https://old.example.com/v1
+  model: old-model
+  api_key: sk-old
+`)
+
+	profile := HermesProfile{
+		ID: "p1", Name: "Profile 1", CreatedAt: nowRFC3339(), UpdatedAt: nowRFC3339(),
+		Models: []HermesModelConfig{{
+			Name: strPtr("wududu"), Default: strPtr("gpt-new"),
+			BaseURL: strPtr("https://new.example.com/v1"), APIKey: strPtr("sk-new"),
+			IsDefault: true,
+		}},
+	}
+	if err := a.SaveHermesProfile(profile); err != nil {
+		t.Fatalf("SaveHermesProfile: %v", err)
+	}
+	if err := a.ApplyHermesProfile("p1"); err != nil {
+		t.Fatalf("ApplyHermesProfile: %v", err)
+	}
+
+	root := mustParseConfig(t, configPath)
+	if core.MappingGet(root, "custom_providers") != nil {
+		t.Fatalf("legacy custom_providers should be removed: %s", mustRead(t, configPath))
+	}
+	wududu := core.MappingGetMap(core.MappingGetMap(root, "providers"), "wududu")
+	if wududu == nil {
+		t.Fatalf("providers.wududu missing: %s", mustRead(t, configPath))
+	}
+	if got := core.MappingGetString(wududu, "api"); got != "https://new.example.com/v1" {
+		t.Fatalf("api wrong: %q", got)
+	}
+	if got := core.MappingGetString(wududu, "api_key"); got != "sk-new" {
+		t.Fatalf("api_key wrong: %q", got)
+	}
+	if got := core.MappingGetString(wududu, "default_model"); got != "gpt-new" {
+		t.Fatalf("default_model wrong: %q", got)
+	}
+	model := core.MappingGetMap(root, "model")
+	if got := core.MappingGetString(model, "provider"); got != "custom:wududu" {
+		t.Fatalf("model.provider wrong: %q", got)
+	}
+	if got := core.MappingGetString(model, "default"); got != "gpt-new" {
+		t.Fatalf("model.default wrong: %q", got)
+	}
+	if core.MappingGet(model, "base_url") != nil || core.MappingGet(model, "api_key") != nil {
+		t.Fatalf("model section should not keep base_url/api_key for named providers")
+	}
 }

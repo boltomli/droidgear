@@ -353,51 +353,69 @@ func (a *App) GetActiveHermesProfileId() (*string, error) {
 // Apply / status / read current
 // ---------------------------------------------------------------------------
 
-// upsertCustomProvider inserts or updates one named custom provider entry in
-// the `custom_providers` sequence.
-func upsertCustomProvider(list *yaml.Node, entry HermesModelConfig) {
-	name := nonEmpty(entry.Name)
-	baseURL := nonEmpty(entry.BaseURL)
-	apiKey := nonEmpty(entry.APIKey)
-	model := nonEmpty(entry.Default)
-
-	existing := -1
-	for i := 0; i < len(list.Content); i++ {
-		item := list.Content[i]
-		if !core.IsMapping(item) {
-			continue
-		}
-		if core.MappingGetString(item, "name") == name {
-			existing = i
-			break
-		}
-		if baseURL != "" && core.MappingGetString(item, "base_url") == baseURL {
-			existing = i
-			break
+// hermesProviderEntryBaseURL returns the endpoint of a providers-dict entry:
+// `api` is the official v12 field name; `base_url` / `url` are accepted
+// aliases.
+func hermesProviderEntryBaseURL(item *yaml.Node) string {
+	for _, key := range []string{"api", "base_url", "url"} {
+		if value := core.MappingGetString(item, key); value != "" {
+			return value
 		}
 	}
+	return ""
+}
 
-	target := &yaml.Node{Kind: yaml.MappingNode}
-	if existing >= 0 {
-		target = list.Content[existing]
-		if !core.IsMapping(target) {
-			target = &yaml.Node{Kind: yaml.MappingNode}
-			list.Content[existing] = target
+// upsertHermesProviderEntry inserts or updates one named custom provider in
+// the v12 `providers` dictionary. Only api / api_key / default_model are
+// written; every other field (models, discover_models, transport, key_env,
+// enabled, ...) keeps its existing value. Same-name entries in the legacy
+// `custom_providers` list are migrated away — the same direction as
+// `hermes update`'s v11→v12 migration — and the key itself is dropped once
+// the list empties.
+func upsertHermesProviderEntry(root *yaml.Node, name string, entry HermesModelConfig) error {
+	providers := core.MappingGetMap(root, "providers")
+	if providers == nil {
+		if existing := core.MappingGet(root, "providers"); existing != nil {
+			return errors.New("providers must be a YAML mapping")
 		}
-	} else {
-		list.Content = append(list.Content, target)
+		providers = &yaml.Node{Kind: yaml.MappingNode}
+		core.MappingSet(root, "providers", providers)
 	}
 
-	core.MappingSet(target, "name", core.StringScalar(name))
-	if baseURL != "" {
-		core.MappingSet(target, "base_url", core.StringScalar(baseURL))
+	target := core.MappingGetMap(providers, name)
+	if target == nil {
+		if existing := core.MappingGet(providers, name); existing != nil {
+			return errors.New("providers entry must be a YAML mapping")
+		}
+		target = &yaml.Node{Kind: yaml.MappingNode}
+		core.MappingSet(providers, name, target)
 	}
-	if apiKey != "" {
+
+	if baseURL := nonEmpty(entry.BaseURL); baseURL != "" {
+		core.MappingSet(target, "api", core.StringScalar(baseURL))
+	}
+	if apiKey := nonEmpty(entry.APIKey); apiKey != "" {
 		core.MappingSet(target, "api_key", core.StringScalar(apiKey))
 	}
-	if model != "" {
-		core.MappingSet(target, "model", core.StringScalar(model))
+	if model := nonEmpty(entry.Default); model != "" {
+		core.MappingSet(target, "default_model", core.StringScalar(model))
 	}
+
+	if list := core.MappingGetSeq(root, "custom_providers"); list != nil {
+		kept := list.Content[:0]
+		for _, item := range list.Content {
+			if core.MappingGetString(item, "name") == name {
+				continue
+			}
+			kept = append(kept, item)
+		}
+		if len(kept) == 0 {
+			core.MappingRemove(root, "custom_providers")
+		} else {
+			list.Content = kept
+		}
+	}
+	return nil
 }
 
 // applyHermesProfileToConfig applies a profile to config.yaml using a
@@ -421,7 +439,9 @@ func applyHermesProfileToConfig(profile HermesProfile, configPath string) error 
 		return fmt.Errorf("Failed to read config.yaml: %w", err)
 	}
 
-	// 1. Named custom providers (custom:<name> with a base_url).
+	// 1. Named custom providers (custom:<name> with a base_url) → v12
+	// providers dictionary; same-name legacy custom_providers entries are
+	// migrated inside the upsert.
 	for _, entry := range profile.Models {
 		resolved := resolveHermesProvider(entry)
 		if resolved == nil {
@@ -431,15 +451,9 @@ func applyHermesProfileToConfig(profile HermesProfile, configPath string) error 
 		if !ok || name == "" || nonEmpty(entry.BaseURL) == "" {
 			continue
 		}
-		list := core.MappingGetSeq(root, "custom_providers")
-		if list == nil {
-			if existing := core.MappingGet(root, "custom_providers"); existing != nil {
-				return errors.New("custom_providers must be a YAML sequence")
-			}
-			list = &yaml.Node{Kind: yaml.SequenceNode}
-			core.MappingSet(root, "custom_providers", list)
+		if err := upsertHermesProviderEntry(root, name, entry); err != nil {
+			return err
 		}
-		upsertCustomProvider(list, entry)
 	}
 
 	// 2. The model section (default entry drives model.default / model.provider).
@@ -559,20 +573,58 @@ func (a *App) ReadHermesCurrentConfig() (HermesCurrentConfig, error) {
 		return HermesCurrentConfig{}, fmt.Errorf("Failed to parse config.yaml: %w", err)
 	}
 
+	// v12 providers dictionary (primary): only entries carrying an endpoint
+	// (api/base_url/url) are custom providers; endpoint-less entries (e.g.
+	// catalog overrides for first-party providers) are skipped.
 	models := []HermesModelConfig{}
+	seen := map[string]bool{}
+	if registry := core.MappingGetMap(root, "providers"); registry != nil {
+		for i := 0; i+1 < len(registry.Content); i += 2 {
+			keyNode, item := registry.Content[i], registry.Content[i+1]
+			if keyNode.Kind != yaml.ScalarNode {
+				continue
+			}
+			name := strings.TrimSpace(keyNode.Value)
+			if name == "" || !core.IsMapping(item) {
+				continue
+			}
+			baseURL := hermesProviderEntryBaseURL(item)
+			if baseURL == "" {
+				continue
+			}
+			def := core.MappingGetString(item, "default_model")
+			if def == "" {
+				def = core.MappingGetString(item, "model") // legacy field name
+			}
+			models = append(models, HermesModelConfig{
+				Name:      ptrIfSet(name),
+				Default:   ptrIfSet(def),
+				BaseURL:   ptrIfSet(baseURL),
+				APIKey:    ptrIfSet(core.MappingGetString(item, "api_key")),
+				IsDefault: false,
+			})
+			seen[name] = true
+		}
+	}
+
+	// Legacy custom_providers list (v11): still read; dict entries win on a
+	// name collision.
 	if list := core.MappingGetSeq(root, "custom_providers"); list != nil {
 		for _, item := range list.Content {
 			if !core.IsMapping(item) {
 				continue
 			}
-			entry := HermesModelConfig{
-				Name:      ptrIfSet(core.MappingGetString(item, "name")),
+			name := core.MappingGetString(item, "name")
+			if name != "" && seen[name] {
+				continue
+			}
+			models = append(models, HermesModelConfig{
+				Name:      ptrIfSet(name),
 				Default:   ptrIfSet(core.MappingGetString(item, "model")),
 				BaseURL:   ptrIfSet(core.MappingGetString(item, "base_url")),
 				APIKey:    ptrIfSet(core.MappingGetString(item, "api_key")),
 				IsDefault: false,
-			}
-			models = append(models, entry)
+			})
 		}
 	}
 
@@ -631,10 +683,26 @@ func (a *App) ReadHermesCurrentConfig() (HermesCurrentConfig, error) {
 			BaseURL: ptrIfSet(liveBaseURL), APIKey: ptrIfSet(liveAPIKey), IsDefault: true,
 		})
 	case liveProvider != "":
-		models = append(models, HermesModelConfig{
-			Default: ptrIfSet(liveDefault), Provider: &liveProvider,
-			BaseURL: ptrIfSet(liveBaseURL), APIKey: ptrIfSet(liveAPIKey), IsDefault: true,
-		})
+		// Bare-name reference (what `hermes model` writes): match a
+		// providers-dict key first; otherwise treat as a first-party
+		// provider (openrouter / deepseek / ...).
+		matched := false
+		for i := range models {
+			if nonEmpty(models[i].Name) == liveProvider {
+				models[i].IsDefault = true
+				if models[i].Default == nil && liveDefault != "" {
+					models[i].Default = &liveDefault
+				}
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			models = append(models, HermesModelConfig{
+				Default: ptrIfSet(liveDefault), Provider: &liveProvider,
+				BaseURL: ptrIfSet(liveBaseURL), APIKey: ptrIfSet(liveAPIKey), IsDefault: true,
+			})
+		}
 	default:
 		if liveDefault != "" || liveBaseURL != "" || liveAPIKey != "" {
 			models = append(models, HermesModelConfig{
