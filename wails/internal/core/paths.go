@@ -122,13 +122,12 @@ func OmpHome() string {
 
 // HermesHome resolves the Hermes config directory.
 //
-// Windows priority (mirrors the Rust core):
+// Windows priority (mirrors the Rust core's
+// default_hermes_home_with_priority):
 //  1. %LOCALAPPDATA%/hermes when it contains config.yaml
 //  2. ~/.hermes when it contains config.yaml
-//  3. ~/.hermes (default)
-//
-// WSL path resolution from the Rust core is intentionally not ported in this
-// minimal build.
+//  3. the default WSL distribution's \\wsl$ home
+//  4. ~/.hermes (default)
 func HermesHome() string {
 	if custom := overrideForKey("hermes"); custom != "" {
 		return custom
@@ -137,16 +136,10 @@ func HermesHome() string {
 	if err != nil {
 		return ""
 	}
-	main := filepath.Join(home, ".hermes")
 	if runtime.GOOS == "windows" {
-		if local := os.Getenv("LOCALAPPDATA"); local != "" {
-			userPath := filepath.Join(local, "hermes")
-			if fileExists(filepath.Join(userPath, "config.yaml")) {
-				return userPath
-			}
-		}
+		return defaultHermesHomeWSL(home)
 	}
-	return main
+	return filepath.Join(home, ".hermes")
 }
 
 // DshHome returns ~/.dsh.

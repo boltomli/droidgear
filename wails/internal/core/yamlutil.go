@@ -293,14 +293,18 @@ func SplitPatchDocument(raw string) (string, []string) {
 }
 
 // SerializePatchEntry renders a mapping node as a sequence item: the first
-// line prefixed with "- ", continuation lines indented two spaces.
+// line prefixed with "- ", continuation lines indented two spaces. Node
+// comments are stripped first — the raw text block keeps them, and
+// re-emitting them here would duplicate the header.
 func SerializePatchEntry(entry *yaml.Node) (string, error) {
+	stripYAMLComments(entry)
 	body, err := MarshalYAML(entry)
 	if err != nil {
 		return "", err
 	}
 	body = strings.TrimRight(body, "\n")
 	var out strings.Builder
+	out.WriteString("- ")
 	for i, line := range strings.Split(body, "\n") {
 		if i > 0 {
 			out.WriteByte('\n')
@@ -310,6 +314,19 @@ func SerializePatchEntry(entry *yaml.Node) (string, error) {
 	}
 	out.WriteByte('\n')
 	return out.String(), nil
+}
+
+// stripYAMLComments recursively clears comment fields on a node tree.
+func stripYAMLComments(node *yaml.Node) {
+	if node == nil {
+		return
+	}
+	node.HeadComment = ""
+	node.LineComment = ""
+	node.FootComment = ""
+	for _, child := range node.Content {
+		stripYAMLComments(child)
+	}
 }
 
 // TrailingNewline ensures text ends with exactly one newline.

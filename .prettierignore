@@ -30,3 +30,4 @@ src-tauri/crates/droidgear-core/res/
 # Wails spike: generated bindings and vendored registry data
 wails/frontend/
 wails/internal/core/registrydata/
+wails/internal/app/schema/

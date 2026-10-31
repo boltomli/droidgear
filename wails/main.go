@@ -31,11 +31,14 @@ func main() {
 	})
 
 	appInstance.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            "DroidGear Minimal",
+		Title: "DroidGear Minimal",
+		// The window is centred by default (WindowCentered is the zero
+		// value); on mount the frontend shrinks it to fit smaller work
+		// areas (see src/wails/AppShell.tsx).
 		Width:            1280,
 		Height:           840,
-		MinWidth:         960,
-		MinHeight:        640,
+		MinWidth:         800,
+		MinHeight:        600,
 		BackgroundColour: application.NewRGB(6, 7, 15),
 		URL:              "/",
 	})

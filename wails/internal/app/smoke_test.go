@@ -1,6 +1,9 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -160,4 +163,60 @@ func TestHermesAndOmpMountSequenceSmoke(t *testing.T) {
 	if _, err := a.LoadPreferences(); err != nil {
 		t.Fatalf("LoadPreferences: %v", err)
 	}
+}
+
+// TestDshProviderSaveToPatchProfile exercises the provider write path that
+// rewrites a profile cordis.patch.yml (the Dsh Models tab): the llm-pi-ai
+// entry is inserted while other entries and header comments survive.
+func TestDshProviderSaveToPatchProfile(t *testing.T) {
+	dshTestHome(t)
+	a := &App{}
+	profile := "desktop"
+
+	// Pre-existing unrelated entry + header comment must survive the rewrite.
+	patchPath := filepath.Join(HomeDirForTest(t), ".dsh", "profiles", "desktop", "cordis.patch.yml")
+	if err := os.WriteFile(patchPath, []byte("# template header\n- id: locale\n  config:\n    preference: zh\n"), 0o600); err != nil {
+		t.Fatalf("seed patch: %v", err)
+	}
+
+	provider := DshProviderConfig{
+		DisplayName: strPtr("wududu"),
+		BaseURL:     strPtr("https://sub.example.com/v1"),
+		APIKeyEnv:   strPtr("WUDUDU_API_KEY"),
+		API:         strPtr("openai-completions"),
+		Models:      []DshModel{{ID: "deepseek-v4-pro"}},
+	}
+	if err := a.SaveDshProvider(&profile, "wududu", provider); err != nil {
+		t.Fatalf("SaveDshProvider: %v", err)
+	}
+
+	current, err := a.ReadDshCurrentConfig(&profile)
+	if err != nil {
+		t.Fatalf("ReadDshCurrentConfig: %v", err)
+	}
+	if _, ok := current.Providers["wududu"]; !ok {
+		t.Fatalf("provider not round-tripped: %#v", current.Providers)
+	}
+
+	raw, _ := os.ReadFile(patchPath)
+	text := string(raw)
+	if !strings.HasPrefix(text, "# template header\n") {
+		t.Errorf("header comment lost: %q", text)
+	}
+	if !strings.Contains(text, "- id: locale") || !strings.Contains(text, "- id: llm-pi-ai") {
+		t.Errorf("entry blocks malformed (missing sequence markers): %s", text)
+	}
+	if err := a.DeleteDshProvider(&profile, "wududu"); err != nil {
+		t.Fatalf("DeleteDshProvider: %v", err)
+	}
+}
+
+// HomeDirForTest exposes the isolated home directory of the current test.
+func HomeDirForTest(t *testing.T) string {
+	t.Helper()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("home: %v", err)
+	}
+	return home
 }

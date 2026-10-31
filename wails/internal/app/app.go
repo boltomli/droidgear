@@ -42,6 +42,15 @@ type AppPreferences struct {
 	DroidRun             *DroidRunPreferences `json:"droid_run"`
 }
 
+// appVersion is shown in the minimal shell's sidebar footer.
+const appVersion = "0.2.0"
+
+// GetAppVersion returns the spike's version string (mirrors the Tauri
+// `get_app_version` command, which also returns a bare string).
+func (a *App) GetAppVersion() string {
+	return appVersion
+}
+
 func defaultPreferences() AppPreferences {
 	return AppPreferences{Theme: "system"}
 }

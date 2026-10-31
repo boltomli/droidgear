@@ -1,24 +1,38 @@
 #!/usr/bin/env node
 /**
- * Syncs the DroidGear model registry into the Wails spike module.
+ * Syncs vendored data files into the Wails spike module.
  *
- * The Rust core embeds src/lib/model-registry-data.json via include_str!; the
- * Go port cannot reach outside its module for //go:embed, so the file is
- * vendored into wails/internal/core/registrydata/. Run this script after
- * editing the registry:
+ * The Go module cannot `//go:embed` files outside its directory, so two
+ * assets are vendored. Run this script after editing either source:
  *
  *   node wails/scripts/sync-registry.mjs
+ *
+ * - src/lib/model-registry-data.json        → internal/core/registrydata/
+ * - src-tauri/crates/droidgear-core/res/
+ *     dsh-config-schema.json                → internal/app/schema/
+ *
+ * Both copies must stay byte-identical to their sources (the schema is also
+ * checked by Go unit tests; .prettierignore excludes the vendored copies).
  */
 import { copyFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const source = resolve(here, '../../src/lib/model-registry-data.json')
-const target = resolve(
-  here,
-  '../internal/core/registrydata/model-registry-data.json'
-)
+const repoRoot = resolve(here, '../..')
 
-copyFileSync(source, target)
-console.log(`Synced registry: ${source} -> ${target}`)
+const copies = [
+  [
+    'src/lib/model-registry-data.json',
+    'wails/internal/core/registrydata/model-registry-data.json',
+  ],
+  [
+    'src-tauri/crates/droidgear-core/res/dsh-config-schema.json',
+    'wails/internal/app/schema/dsh-config-schema.json',
+  ],
+]
+
+for (const [source, target] of copies) {
+  copyFileSync(resolve(repoRoot, source), resolve(repoRoot, target))
+  console.log(`Synced ${source} -> ${target}`)
+}

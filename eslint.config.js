@@ -61,7 +61,11 @@ export default tseslint.config(
   },
   prettierConfig,
   {
-    files: ['src/components/ui/**/*.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
+    files: [
+      'src/components/ui/**/*.{ts,tsx}',
+      'src/test/**/*.{ts,tsx}',
+      'src/wails/sections.tsx', // section registry: data exports + small page wrappers
+    ],
     rules: {
       'react-refresh/only-export-components': 'off',
       // Disable React Compiler rules for UI components (from shadcn) and

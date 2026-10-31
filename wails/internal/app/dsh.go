@@ -1060,22 +1060,5 @@ func (a *App) DeleteDshCredentialRef(name string) error {
 }
 
 // ---------------------------------------------------------------------------
-// Advanced snapshot commands (not ported in this minimal build)
+// Advanced snapshot commands live in dsh_config_read.go / dsh_config_write.go
 // ---------------------------------------------------------------------------
-
-// ReadDshConfigSnapshot is part of the advanced config editor whose schema
-// engine (droidgear-core::dsh_config) is not ported to Go yet. The UI
-// degrades gracefully: the Advanced tab renders an empty state.
-func (a *App) ReadDshConfigSnapshot(profile *string) (map[string]any, error) {
-	return nil, errors.New("Dsh config snapshot is not supported in this minimal Wails build")
-}
-
-// SaveDshConfigEntry is not supported in this minimal build.
-func (a *App) SaveDshConfigEntry(profile *string, entryID string, config any, expectedHash *string) (map[string]any, error) {
-	return nil, errors.New("Dsh config snapshot is not supported in this minimal Wails build")
-}
-
-// SetDshConfigEntryDisabled is not supported in this minimal build.
-func (a *App) SetDshConfigEntryDisabled(profile *string, entryID string, disabled bool, expectedHash *string) (map[string]any, error) {
-	return nil, errors.New("Dsh config snapshot is not supported in this minimal Wails build")
-}

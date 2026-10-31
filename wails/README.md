@@ -43,26 +43,27 @@ React stores (unchanged)          Go service (new)
 
 ## What is implemented
 
-| Area   | Support                                                                                                                                                                                                               |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dsh    | Profiles (desktop/web), provider CRUD in `cordis.patch.yml` / legacy `settings.yaml`, credentials (`~/.dsh/.credentials.yaml`), model fetching with registry enrichment                                               |
-| Pi     | Profile CRUD, apply → `~/.pi/agent/models.json`, active profile, connection test via the `pi` CLI                                                                                                                     |
-| Hermes | Profile CRUD (incl. legacy single-model migration), apply → `~/.hermes/config.yaml` (read-modify-write), current-config merge                                                                                         |
-| OMP    | Profile CRUD, apply → `~/.omp/agent/config.yml`, custom providers in `models.yml`, read-only `models.db`/`agent.db` (pure-Go SQLite), HTTP connection test                                                            |
-| Shared | Preferences (shared with the Tauri app via the same `preferences.json`), model registry enrichment, BYOK custom models/favorites in `~/.factory/settings.json`, channels CRUD + New API token import + model fetching |
+| Area   | Support                                                                                                                                                                                                                                                                                                           |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dsh    | Profiles (desktop/web), provider CRUD in `cordis.patch.yml` / legacy `settings.yaml`, credentials (`~/.dsh/.credentials.yaml`), model fetching with registry enrichment, **advanced config editor** (schema composition, `$js`/`!js` round-trip, secret redaction, DSH profile lock, optimistic-concurrency hash) |
+| Pi     | Profile CRUD, apply → `~/.pi/agent/models.json`, active profile, connection test via the `pi` CLI                                                                                                                                                                                                                 |
+| Hermes | Profile CRUD (incl. legacy single-model migration), apply → `~/.hermes/config.yaml` (read-modify-write), current-config merge                                                                                                                                                                                     |
+| OMP    | Profile CRUD, apply → `~/.omp/agent/config.yml`, custom providers in `models.yml`, read-only `models.db`/`agent.db` (pure-Go SQLite), HTTP connection test                                                                                                                                                        |
+| Shared | Preferences (shared with the Tauri app via the same `preferences.json`), model registry enrichment, BYOK custom models/favorites in `~/.factory/settings.json`, channels CRUD + New API token import + model fetching, Hermes WSL path fallback, localised backend errors (en/zh)                                 |
 
 ## What is not implemented (degrades gracefully)
 
-- **Dsh advanced config editor** (`read_dsh_config_snapshot` and friends):
-  the schema engine in `droidgear-core::dsh_config` (79 KB) is not ported;
-  the Advanced tab shows the empty state and save attempts return a clear
-  error toast.
 - **Sessions** pages (PTY, event streams) — out of scope for the spike.
-- **WSL path resolution** for Hermes on Windows (LOCALAPPDATA → `~/.hermes`
-  priority is ported; the `\\wsl$` fallback is not).
 - **Sub2API token import**, native file dialogs and direct filesystem access
   (channel _list_ page only).
 - macOS/Linux build assets (Windows only).
+
+## Backend error localisation
+
+`src/wails/error-i18n.ts` translates the common Go error strings to en/zh
+(`errors.*` locale keys) inside the invoke shim; unmatched messages pass
+through unchanged. The `DSH_CONFIG_CONFLICT` / `DSH_CONFIG_SHADOWED`
+prefixes are preserved verbatim because the store matches them.
 
 ## Building
 

@@ -17,6 +17,7 @@
  */
 
 import * as AppBindingsModule from '@wails-bindings'
+import { localizeWailsError } from '../error-i18n'
 
 type BindingFn = (...args: unknown[]) => Promise<unknown>
 
@@ -33,6 +34,7 @@ interface CommandSpec {
 
 const COMMANDS: Record<string, CommandSpec> = {
   // Preferences & Factory settings
+  get_app_version: { fn: 'GetAppVersion', args: [] },
   load_preferences: { fn: 'LoadPreferences', args: [] },
   save_preferences: { fn: 'SavePreferences', args: ['preferences'] },
   get_config_path: { fn: 'GetConfigPath', args: [] },
@@ -188,9 +190,9 @@ export async function invoke<T>(
     // formatted message so callers always receive a plain string.
     if (error && typeof error === 'object' && 'cause' in error) {
       const cause = (error as { cause?: unknown }).cause
-      if (typeof cause === 'string') throw cause
+      if (typeof cause === 'string') throw localizeWailsError(cause)
     }
-    if (error instanceof Error) throw error.message
+    if (error instanceof Error) throw localizeWailsError(error.message)
     throw String(error)
   }
 }
