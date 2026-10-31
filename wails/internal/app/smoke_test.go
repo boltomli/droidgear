@@ -9,11 +9,22 @@ import (
 
 // isolatedHome points the app's path resolution at a throwaway home
 // directory so smoke tests never touch the real ~/.droidgear, ~/.pi, etc.
+//
+// LOCALAPPDATA and PATH are isolated as well: HermesHome's Windows
+// priority chain reads %LOCALAPPDATA% directly (bypassing USERPROFILE),
+// and the final fallback probes the default WSL distro via `wsl.exe`.
+// Without these two, TestHermesAndOmpMountSequenceSmoke's ApplyHermesProfile
+// rewrote the developer's REAL %LOCALAPPDATA%\hermes\config.yaml — or
+// created \\wsl$\...\.hermes inside the real distro — on every `go test`.
 func isolatedHome(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("HOME", home)
+	t.Setenv("LOCALAPPDATA", filepath.Join(home, "AppData", "Local"))
+	// Empty PATH: `wsl.exe` can't be resolved, so defaultHermesHomeWSL
+	// skips the WSL branch and falls back to the (isolated) ~/.hermes.
+	t.Setenv("PATH", filepath.Join(home, "empty-bin"))
 	return home
 }
 

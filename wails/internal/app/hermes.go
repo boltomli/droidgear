@@ -93,12 +93,14 @@ func hermesActiveProfilePath() (string, error) {
 	return filepath.Join(dir, "active-profile.txt"), nil
 }
 
+// hermesConfigPath resolves config.yaml WITHOUT side effects. Read-only
+// commands (GetHermesConfigStatus / ReadHermesCurrentConfig) must never
+// create the directory: on the Windows priority chain a freshly created
+// dir at a fallback location (or under \\wsl$\) silently changes what the
+// next resolution picks, and nothing should touch disk before Apply.
+// ApplyHermesProfile creates the parent directory via core.AtomicWrite.
 func hermesConfigPath() (string, error) {
-	dir := core.HermesHome()
-	if err := core.EnsureDir(dir); err != nil {
-		return "", fmt.Errorf("Failed to create hermes config directory: %w", err)
-	}
-	return filepath.Join(dir, "config.yaml"), nil
+	return filepath.Join(core.HermesHome(), "config.yaml"), nil
 }
 
 func hermesProfilePath(id string) (string, error) {
@@ -608,8 +610,19 @@ func (a *App) ReadHermesCurrentConfig() (HermesCurrentConfig, error) {
 			}
 		}
 		if !matched {
+			// The named provider is missing from custom_providers (e.g. a
+			// hand-written config, or an older droidgear that only wrote the
+			// model section). Carry the model section's base_url/api_key over
+			// so a later Apply upserts them into custom_providers instead of
+			// hitting the "custom:<name>" branch that strips both keys from
+			// the model section — that combination used to destroy the live
+			// endpoint/key.
 			models = append(models, HermesModelConfig{
-				Name: &name, Default: ptrIfSet(liveDefault), IsDefault: true,
+				Name:      &name,
+				Default:   ptrIfSet(liveDefault),
+				BaseURL:   ptrIfSet(liveBaseURL),
+				APIKey:    ptrIfSet(liveAPIKey),
+				IsDefault: true,
 			})
 		}
 	case liveProvider == "custom":
