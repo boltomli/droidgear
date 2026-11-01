@@ -234,3 +234,17 @@ func (a *App) PtyResize(id int, cols int, rows int) error {
 func (a *App) PtyKill(id int) error {
 	return ptys.Kill(id)
 }
+
+// killAll terminates every live session; used by the shutdown cleanup so
+// no child shell outlives the GUI process.
+func (m *ptyManager) killAll() {
+	m.mu.Lock()
+	ids := make([]int, 0, len(m.sessions))
+	for id := range m.sessions {
+		ids = append(ids, id)
+	}
+	m.mu.Unlock()
+	for _, id := range ids {
+		_ = m.Kill(id)
+	}
+}

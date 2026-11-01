@@ -28,9 +28,31 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
+		// Single instance: a second launch focuses the existing window
+		// instead of writing the same ~/.droidgear config files from two
+		// processes (parity with tauri-plugin-single-instance; the shells
+		// use different lock identities so both can still run side by side).
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "com.droidgear.wailsminimal", // matches build/config.yml productIdentifier
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
+				if running := application.Get(); running != nil {
+					if win, ok := running.Window.Get("main"); ok {
+						win.Show()
+						win.Focus()
+					}
+				}
+			},
+		},
+		// Stop watchers / kill PTY child trees / flush window geometry
+		// before the process exits (internal/app/shutdown.go).
+		OnShutdown: app.CleanupOnShutdown,
 	})
 
-	appInstance.Window.NewWithOptions(application.WebviewWindowOptions{
+	// Restore the previous geometry (~/.droidgear/window-state.json) when
+	// available; otherwise the defaults below apply (centred 1280×840, and
+	// the frontend shrinks it to fit small work areas on mount).
+	state := app.LoadWindowState()
+	windowOptions := application.WebviewWindowOptions{
 		Title: "DroidGear Minimal",
 		// "main" lets Go commands (ResetWindowState) address this window by
 		// name through the WindowManager.
@@ -52,7 +74,16 @@ func main() {
 		UseApplicationMenu: true,
 		BackgroundColour:   application.NewRGB(6, 7, 15),
 		URL:                "/",
-	})
+	}
+	if state != nil {
+		windowOptions.X = state.X
+		windowOptions.Y = state.Y
+		windowOptions.Width = state.Width
+		windowOptions.Height = state.Height
+		windowOptions.InitialPosition = application.WindowXY
+	}
+	mainWindow := appInstance.Window.NewWithOptions(windowOptions)
+	app.AttachWindowState(mainWindow, state)
 
 	if err := appInstance.Run(); err != nil {
 		log.Fatal(err)
