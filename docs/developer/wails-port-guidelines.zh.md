@@ -436,22 +436,22 @@ jobs:
 
 ## 9. 修复路线图（建议）
 
-| 期   | 内容                                                                                         | 验收                                                                          | 状态    |
-| ---- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------- |
-| P0-1 | 版本号统一（ldflags + config.yml 生成）；`GetAppVersion` 正确                                | About/General 显示 1.3.9，安装器元数据一致                                    | ✅ 完成 |
-| P0-2 | 挂 `LegacyConfigDialog`；`opener` shim（openUrl/openPath/revealItemInDir）；更新检查入口屏蔽 | 三个入口可用/不报错；命令面板无 unsupported 报错                              | ✅ 完成 |
-| P0-3 | Codex `wire_api` 弃用 `chat`（GUI/TUI/Go 三端 + 迁移警告）                                   | 新导入渠道不再产生 `chat`；旧 profile 有提示                                  | ✅ 完成 |
-| P0-4 | OpenClaw JSON5 解析（两端）                                                                  | 带注释/尾逗号的 `openclaw.json` 可读可写，往返不丢键                          | ✅ 完成 |
-| P0-5 | 原生菜单（Wails menu API，含 macOS Edit/App 菜单，i18n 联动）                                | macOS ⌘C/⌘V 生效；菜单项与 Tauri 对齐                                         | ✅ 完成 |
-| P1-1 | 单实例 + 窗口状态持久化 + `OnShutdown` 清理（PTY/watcher）                                   | 二次启动聚焦主窗口；重启位置记忆；退出无残留 shell                            | ✅ 完成 |
-| P1-2 | PTY：输出合并（16ms）、shim 句柄回收、flow control 或显式禁用                                | `npm i` 期间主线程不掉帧；反复开关标签内存不增长                              | ✅ 完成 |
-| P1-3 | 会话 watcher 改 fsnotify + 兜底轮询                                                          | 空转 CPU ≈ 0；大目录变更事件 < 1s 到达                                        | ✅ 完成 |
-| P1-4 | Wails 通知改用 `pkg/services/notifications`                                                  | Windows/macOS/Linux 均能弹出；点击回调可用                                    | ✅ 完成 |
-| P1-5 | CI + 对账脚本 + registry 同步校验                                                            | PR 红灯能挡住漂移                                                             | ✅ 完成 |
+| 期   | 内容                                                                                         | 验收                                                                          | 状态                                       |
+| ---- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ |
+| P0-1 | 版本号统一（ldflags + config.yml 生成）；`GetAppVersion` 正确                                | About/General 显示 1.3.9，安装器元数据一致                                    | ✅ 完成                                    |
+| P0-2 | 挂 `LegacyConfigDialog`；`opener` shim（openUrl/openPath/revealItemInDir）；更新检查入口屏蔽 | 三个入口可用/不报错；命令面板无 unsupported 报错                              | ✅ 完成                                    |
+| P0-3 | Codex `wire_api` 弃用 `chat`（GUI/TUI/Go 三端 + 迁移警告）                                   | 新导入渠道不再产生 `chat`；旧 profile 有提示                                  | ✅ 完成                                    |
+| P0-4 | OpenClaw JSON5 解析（两端）                                                                  | 带注释/尾逗号的 `openclaw.json` 可读可写，往返不丢键                          | ✅ 完成                                    |
+| P0-5 | 原生菜单（Wails menu API，含 macOS Edit/App 菜单，i18n 联动）                                | macOS ⌘C/⌘V 生效；菜单项与 Tauri 对齐                                         | ✅ 完成                                    |
+| P1-1 | 单实例 + 窗口状态持久化 + `OnShutdown` 清理（PTY/watcher）                                   | 二次启动聚焦主窗口；重启位置记忆；退出无残留 shell                            | ✅ 完成                                    |
+| P1-2 | PTY：输出合并（16ms）、shim 句柄回收、flow control 或显式禁用                                | `npm i` 期间主线程不掉帧；反复开关标签内存不增长                              | ✅ 完成                                    |
+| P1-3 | 会话 watcher 改 fsnotify + 兜底轮询                                                          | 空转 CPU ≈ 0；大目录变更事件 < 1s 到达                                        | ✅ 完成                                    |
+| P1-4 | Wails 通知改用 `pkg/services/notifications`                                                  | Windows/macOS/Linux 均能弹出；点击回调可用                                    | ✅ 完成                                    |
+| P1-5 | CI + 对账脚本 + registry 同步校验                                                            | PR 红灯能挡住漂移                                                             | ✅ 完成                                    |
 | P2-1 | `internal/service` 下沉 + `cmd/dg` CLI（`--json`）                                           | GUI 行为不变；`dg` 覆盖 channels/dsh/pi/hermes/omp/codex 的 list/apply/export |
 | P2-2 | 上游文档核对制度化（`docs/agents/tool-config-sources.md`）+ Copilot/OMP/Dsh/Hermes 补齐      | 表格每行有 URL 与核对日期                                                     |
 | P2-3 | TUI 决策（保留冻结 / Go 重写）+ 规则 9 改写                                                  | 文档与 AGENTS.md 落地                                                         |
-| P3   | 死命令清理（40 条）、陈旧错误规则清理、macOS/Linux 打包与平台 shim                           | 命令面清单收敛；三平台可运行                                                  |
+| P3   | 死命令清理（40 条）、陈旧错误规则清理、macOS/Linux 打包与平台 shim                           | 命令面清单收敛；三平台可运行                                                  | ✅ 死命令/死规则已清；macOS/Linux 打包未做 |
 
 ---
 
@@ -467,6 +467,10 @@ jobs:
 ---
 
 ## 附录 A：前端未使用的 40 条命令
+
+> ✅ P3 清理（2026-11-01）已将下列命令从 Rust 命令、Go 服务、shim 映射与
+> bindings 四处全部删除（含审计未列出的 `greet`）；本清单仅作历史记录。
+> 其中 `get_active_codex_profile_id` 属于在用命令，予以保留。
 
 ```
 apply_claude_profile              get_claude_profile                 prepare_codex_in_app_run

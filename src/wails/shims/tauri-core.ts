@@ -78,7 +78,6 @@ const COMMANDS: Record<string, CommandSpec> = {
   fetch_models: { fn: 'FetchModels', args: ['provider', 'baseUrl', 'apiKey'] },
 
   // Dsh
-  list_dsh_profiles: { fn: 'ListDshProfiles', args: [] },
   read_dsh_current_config: { fn: 'ReadDshCurrentConfig', args: ['profile'] },
   save_dsh_provider: {
     fn: 'SaveDshProvider',
@@ -111,13 +110,11 @@ const COMMANDS: Record<string, CommandSpec> = {
 
   // Pi
   list_pi_profiles: { fn: 'ListPiProfiles', args: [] },
-  get_pi_profile: { fn: 'GetPiProfile', args: ['id'] },
   save_pi_profile: { fn: 'SavePiProfile', args: ['profile'] },
   delete_pi_profile: { fn: 'DeletePiProfile', args: ['id'] },
   duplicate_pi_profile: { fn: 'DuplicatePiProfile', args: ['id', 'newName'] },
   create_default_pi_profile: { fn: 'CreateDefaultPiProfile', args: [] },
   get_active_pi_profile_id: { fn: 'GetActivePiProfileId', args: [] },
-  set_active_pi_profile_id: { fn: 'SetActivePiProfileId', args: ['id'] },
   apply_pi_profile: { fn: 'ApplyPiProfile', args: ['id'] },
   get_pi_config_status: { fn: 'GetPiConfigStatus', args: [] },
   read_pi_current_config: { fn: 'ReadPiCurrentConfig', args: [] },
@@ -128,7 +125,6 @@ const COMMANDS: Record<string, CommandSpec> = {
 
   // Hermes
   list_hermes_profiles: { fn: 'ListHermesProfiles', args: [] },
-  get_hermes_profile: { fn: 'GetHermesProfile', args: ['id'] },
   save_hermes_profile: { fn: 'SaveHermesProfile', args: ['profile'] },
   delete_hermes_profile: { fn: 'DeleteHermesProfile', args: ['id'] },
   duplicate_hermes_profile: {
@@ -143,13 +139,10 @@ const COMMANDS: Record<string, CommandSpec> = {
 
   // OMP
   list_omp_profiles: { fn: 'ListOmpProfiles', args: [] },
-  get_omp_profile: { fn: 'GetOmpProfile', args: ['id'] },
   save_omp_profile: { fn: 'SaveOmpProfile', args: ['profile'] },
   delete_omp_profile: { fn: 'DeleteOmpProfile', args: ['id'] },
   duplicate_omp_profile: { fn: 'DuplicateOmpProfile', args: ['id', 'newName'] },
-  create_default_omp_profile: { fn: 'CreateDefaultOmpProfile', args: [] },
   get_active_omp_profile_id: { fn: 'GetActiveOmpProfileId', args: [] },
-  set_active_omp_profile_id: { fn: 'SetActiveOmpProfileId', args: ['id'] },
   apply_omp_profile: { fn: 'ApplyOmpProfile', args: ['id'] },
   get_omp_config_status: { fn: 'GetOmpConfigStatus', args: [] },
   read_omp_current_config: { fn: 'ReadOmpCurrentConfig', args: [] },
@@ -177,10 +170,6 @@ const COMMANDS: Record<string, CommandSpec> = {
     fn: 'DeleteDroidSettingsFile',
     args: ['name'],
   },
-  get_active_droid_settings_file: {
-    fn: 'GetActiveDroidSettingsFile',
-    args: [],
-  },
   set_active_droid_settings_file: {
     fn: 'SetActiveDroidSettingsFile',
     args: ['name'],
@@ -206,7 +195,6 @@ const COMMANDS: Record<string, CommandSpec> = {
     args: ['paths'],
   },
   list_specs: { fn: 'ListSpecs', args: [] },
-  read_spec: { fn: 'ReadSpec', args: ['path'] },
   rename_spec: { fn: 'RenameSpec', args: ['oldPath', 'newName'] },
   update_spec: { fn: 'UpdateSpec', args: ['path', 'content'] },
   delete_spec: { fn: 'DeleteSpec', args: ['path'] },
@@ -218,10 +206,6 @@ const COMMANDS: Record<string, CommandSpec> = {
   delete_mcp_server: { fn: 'DeleteMcpServer', args: ['name'] },
   toggle_mcp_server: { fn: 'ToggleMcpServer', args: ['name', 'disabled'] },
   list_factory_auth_profiles: { fn: 'ListFactoryAuthProfiles', args: [] },
-  get_active_factory_auth_profile: {
-    fn: 'GetActiveFactoryAuthProfile',
-    args: [],
-  },
   switch_factory_auth_profile: {
     fn: 'SwitchFactoryAuthProfile',
     args: ['name'],
@@ -288,7 +272,6 @@ const COMMANDS: Record<string, CommandSpec> = {
 
   // OpenCode
   list_opencode_profiles: { fn: 'ListOpencodeProfiles', args: [] },
-  get_opencode_profile: { fn: 'GetOpencodeProfile', args: ['id'] },
   save_opencode_profile: { fn: 'SaveOpencodeProfile', args: ['profile'] },
   delete_opencode_profile: { fn: 'DeleteOpencodeProfile', args: ['id'] },
   duplicate_opencode_profile: {
@@ -317,7 +300,6 @@ const COMMANDS: Record<string, CommandSpec> = {
 
   // Copilot
   list_copilot_profiles: { fn: 'ListCopilotProfiles', args: [] },
-  get_copilot_profile: { fn: 'GetCopilotProfile', args: ['id'] },
   save_copilot_profile: { fn: 'SaveCopilotProfile', args: ['profile'] },
   delete_copilot_profile: { fn: 'DeleteCopilotProfile', args: ['id'] },
   duplicate_copilot_profile: {
@@ -343,7 +325,6 @@ const COMMANDS: Record<string, CommandSpec> = {
 
   // Codex
   list_codex_profiles: { fn: 'ListCodexProfiles', args: [] },
-  get_codex_profile: { fn: 'GetCodexProfile', args: ['id'] },
   save_codex_profile: { fn: 'SaveCodexProfile', args: ['profile'] },
   delete_codex_profile: { fn: 'DeleteCodexProfile', args: ['id'] },
   duplicate_codex_profile: {
@@ -358,10 +339,8 @@ const COMMANDS: Record<string, CommandSpec> = {
   apply_codex_profile: { fn: 'ApplyCodexProfile', args: ['id'] },
   get_codex_config_status: { fn: 'GetCodexConfigStatus', args: [] },
   read_codex_current_config: { fn: 'ReadCodexCurrentConfig', args: [] },
-  get_codex_cli_capability: { fn: 'GetCodexCliCapability', args: [] },
   launch_codex: { fn: 'LaunchCodex', args: ['id', 'cwd'] },
   list_codex_auth_profiles: { fn: 'ListCodexAuthProfiles', args: [] },
-  is_codex_official_auth: { fn: 'IsCodexOfficialAuth', args: [] },
   save_current_codex_auth_profile: {
     fn: 'SaveCurrentCodexAuthProfile',
     args: ['name', 'label'],
@@ -404,25 +383,6 @@ const COMMANDS: Record<string, CommandSpec> = {
   stop_codex_sessions_watcher: { fn: 'StopCodexSessionsWatcher', args: [] },
 
   // Claude
-  list_claude_profiles: { fn: 'ListClaudeProfiles', args: [] },
-  get_claude_profile: { fn: 'GetClaudeProfile', args: ['id'] },
-  save_claude_profile: { fn: 'SaveClaudeProfile', args: ['profile'] },
-  delete_claude_profile: { fn: 'DeleteClaudeProfile', args: ['id'] },
-  duplicate_claude_profile: {
-    fn: 'DuplicateClaudeProfile',
-    args: ['id', 'newName'],
-  },
-  create_default_claude_profile: {
-    fn: 'CreateDefaultClaudeProfile',
-    args: [],
-  },
-  get_active_claude_profile_id: {
-    fn: 'GetActiveClaudeProfileId',
-    args: [],
-  },
-  apply_claude_profile: { fn: 'ApplyClaudeProfile', args: ['id'] },
-  get_claude_config_status: { fn: 'GetClaudeConfigStatus', args: [] },
-  read_claude_current_config: { fn: 'ReadClaudeCurrentConfig', args: [] },
   list_claude_settings_files: { fn: 'ListClaudeSettingsFiles', args: [] },
   get_active_claude_settings_file: {
     fn: 'GetActiveClaudeSettingsFile',
@@ -475,7 +435,6 @@ const COMMANDS: Record<string, CommandSpec> = {
 
   // OpenClaw
   list_openclaw_profiles: { fn: 'ListOpenclawProfiles', args: [] },
-  get_openclaw_profile: { fn: 'GetOpenclawProfile', args: ['id'] },
   save_openclaw_profile: {
     fn: 'SaveOpenclawProfile',
     args: ['profile'],
@@ -598,7 +557,6 @@ const COMMANDS: Record<string, CommandSpec> = {
     fn: 'TestProviderConnection',
     args: ['provider', 'baseUrl', 'apiKey', 'modelId'],
   },
-  get_connectivity_summary: { fn: 'GetConnectivitySummary', args: ['results'] },
 
   // Plain-text file IO (channel import/export)
   read_text_file: { fn: 'ReadTextFile', args: ['path'] },

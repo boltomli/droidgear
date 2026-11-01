@@ -11,13 +11,6 @@ pub async fn list_hermes_profiles() -> Result<Vec<HermesProfile>, String> {
     droidgear_core::hermes::list_hermes_profiles()
 }
 
-/// Get a profile by ID
-#[tauri::command]
-#[specta::specta]
-pub async fn get_hermes_profile(id: String) -> Result<HermesProfile, String> {
-    droidgear_core::hermes::get_hermes_profile(&id)
-}
-
 /// Save a profile (create or update)
 #[tauri::command]
 #[specta::specta]

@@ -1618,15 +1618,6 @@ func (a *App) ListDroidSettingsFiles() ([]SettingsFileInfo, error) {
 	return files, nil
 }
 
-// GetActiveDroidSettingsFile returns the currently active settings file.
-func (a *App) GetActiveDroidSettingsFile() (SettingsFileInfo, error) {
-	home, err := droidHomeDir()
-	if err != nil {
-		return SettingsFileInfo{}, err
-	}
-	return droidGetActiveSettingsFile(home)
-}
-
 // SetActiveDroidSettingsFile selects the active file; nil/empty switches to
 // Global, an absolute path must be a linked external file.
 func (a *App) SetActiveDroidSettingsFile(name *string) (SettingsFileInfo, error) {

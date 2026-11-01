@@ -11,13 +11,6 @@ pub async fn list_codex_auth_profiles() -> Result<CodexAuthProfileState, String>
     droidgear_core::codex_auth_profiles::list_profiles()
 }
 
-/// Check if current auth is official
-#[tauri::command]
-#[specta::specta]
-pub async fn is_codex_official_auth() -> Result<bool, String> {
-    droidgear_core::codex_auth_profiles::is_official_auth()
-}
-
 /// Save current auth.json as a named profile
 #[tauri::command]
 #[specta::specta]

@@ -25,13 +25,6 @@ pub async fn list_claude_settings_files() -> Result<Vec<ClaudeSettingsFileInfo>,
     claude_settings_files::list_settings_files()
 }
 
-/// Gets the currently active settings file info.
-#[tauri::command]
-#[specta::specta]
-pub async fn get_active_claude_settings_file() -> Result<ClaudeSettingsFileInfo, String> {
-    claude_settings_files::get_active_settings_file()
-}
-
 /// Sets the active settings file. Pass null or empty string to switch to Global.
 #[tauri::command]
 #[specta::specta]
@@ -113,16 +106,6 @@ pub async fn get_claude_settings_launch_command(
         command.push_str(" --dangerously-skip-permissions");
     }
     Ok((command, path))
-}
-
-/// Plan a temporary run using a named settings file (instead of a profile).
-#[tauri::command]
-#[specta::specta]
-pub async fn plan_claude_temporary_run_from_file(
-    name: String,
-) -> Result<claude_runtime::ClaudeTemporaryRunPlan, String> {
-    let home_dir = dirs::home_dir().ok_or_else(|| "Failed to get home directory".to_string())?;
-    claude_runtime::build_temporary_run_plan_from_file(&home_dir, &name)
 }
 
 /// Debug-preview a temporary run from a named settings file.

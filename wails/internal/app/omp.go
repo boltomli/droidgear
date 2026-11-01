@@ -931,29 +931,6 @@ func (a *App) DuplicateOmpProfile(id string, newName string) (OmpProfile, error)
 	return profile, nil
 }
 
-// CreateDefaultOmpProfile seeds the first profile when none exist.
-func (a *App) CreateDefaultOmpProfile() (OmpProfile, error) {
-	profiles, err := listOmpProfiles()
-	if err != nil {
-		return OmpProfile{}, err
-	}
-	if len(profiles) > 0 {
-		return OmpProfile{}, errors.New("Profiles already exist")
-	}
-	now := nowRFC3339()
-	profile := OmpProfile{
-		ID:         newUUID(),
-		Name:       "Default",
-		CreatedAt:  now,
-		UpdatedAt:  now,
-		ModelRoles: OmpModelRoles{},
-	}
-	if err := writeOmpProfileFile(profile); err != nil {
-		return OmpProfile{}, err
-	}
-	return profile, nil
-}
-
 // GetActiveOmpProfileId returns the active profile id (null when unset).
 func (a *App) GetActiveOmpProfileId() (*string, error) {
 	path, err := ompActiveProfilePath()

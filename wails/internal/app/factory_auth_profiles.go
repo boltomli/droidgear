@@ -276,17 +276,6 @@ func (a *App) ListFactoryAuthProfiles() (AuthProfileState, error) {
 	return droidListAuthProfiles(home), nil
 }
 
-// GetActiveFactoryAuthProfile returns the active profile name (null when no
-// profile has been activated yet).
-func (a *App) GetActiveFactoryAuthProfile() (*string, error) {
-	home, err := droidHomeDir()
-	if err != nil {
-		return nil, err
-	}
-	manifest := droidReadAuthManifest(home)
-	return manifest.Active, nil
-}
-
 // SwitchFactoryAuthProfile copies the target profile's auth files into the
 // Factory home (backing up the current ones first).
 func (a *App) SwitchFactoryAuthProfile(name string) error {

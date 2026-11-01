@@ -1066,15 +1066,6 @@ func (a *App) ListOpenclawProfiles() ([]OpenClawProfile, error) {
 	return profiles, nil
 }
 
-// GetOpenclawProfile returns one profile by id.
-func (a *App) GetOpenclawProfile(id string) (OpenClawProfile, error) {
-	path, err := openclawProfilePath(id)
-	if err != nil {
-		return OpenClawProfile{}, err
-	}
-	return openclawReadProfileFile(path)
-}
-
 // SaveOpenclawProfile creates or updates a profile.
 func (a *App) SaveOpenclawProfile(profile OpenClawProfile) error {
 	if strings.TrimSpace(profile.ID) == "" {

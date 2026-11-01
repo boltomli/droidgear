@@ -43,30 +43,22 @@ const DIRECT_GO_METHODS = new Set([
   'PtyWrite',
 ])
 
-/** Dead Go methods kept only because Rust still exposes them (appendix A). */
-const DEAD_GO_METHODS = new Set(['GetEnvVar', 'RemoveEnvVar', 'SetEnvVar'])
-
-/** Appendix A: Rust binding commands the frontend never calls. */
-const UNUSED_RUST_COMMANDS = new Set(
-  `
-greet
-apply_claude_profile get_claude_profile prepare_codex_in_app_run
-create_default_claude_profile get_claude_temporary_run_plan read_claude_current_config
-create_default_omp_profile get_codex_cli_capability read_spec
-delete_claude_profile get_codex_profile remove_env_var
-duplicate_claude_profile get_codex_temporary_run_plan save_claude_profile
-get_active_claude_profile_id get_config_paths save_default_model
-get_active_claude_settings_file get_connectivity_summary set_active_claude_profile_id
-get_active_droid_settings_file get_copilot_profile set_active_omp_profile_id
-get_active_factory_auth_profile get_default_model set_active_pi_profile_id
-get_claude_config_status get_hermes_profile get_env_var set_env_var
-get_openclaw_profile get_opencode_profile get_pi_profile
-get_omp_profile is_codex_official_auth launch_claude
-list_claude_profiles list_dsh_profiles plan_claude_temporary_run_from_file
-  `
-    .split(/\s+/)
-    .filter(Boolean)
-)
+// The P3 cleanup removed every dead command (appendix A) from Rust, the Go
+// service and the shim. These Go methods survive without a shim entry
+// because other (still live) Go commands call them internally — their Rust
+// command wrappers are gone; new internal-only helpers should be
+// unexported instead.
+const INTERNAL_GO_METHODS = new Set([
+  'GetHermesProfile',
+  'GetOmpProfile',
+  'GetOpencodeProfile',
+  'GetPiProfile',
+  'ListDshProfiles',
+  'SetActiveOmpProfileId',
+  'SetActivePiProfileId',
+])
+const DEAD_GO_METHODS = new Set()
+const UNUSED_RUST_COMMANDS = new Set()
 
 // --- load sources ---------------------------------------------------------
 
@@ -185,6 +177,7 @@ for (const [cmd, spec] of Object.entries(specs)) {
 const accounted = new Set([
   ...Object.values(specs).map(s => s.fn),
   ...DIRECT_GO_METHODS,
+  ...INTERNAL_GO_METHODS,
   ...DEAD_GO_METHODS,
 ])
 for (const fn of goMethods) {

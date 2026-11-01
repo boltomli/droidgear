@@ -1775,11 +1775,6 @@ func (a *App) ListCodexProfiles() ([]CodexProfile, error) {
 	return codexListProfiles()
 }
 
-// GetCodexProfile returns one profile by id.
-func (a *App) GetCodexProfile(id string) (CodexProfile, error) {
-	return codexGetProfile(id)
-}
-
 // SaveCodexProfile creates or updates a profile.
 func (a *App) SaveCodexProfile(profile CodexProfile) error {
 	return codexSaveProfile(profile)
@@ -1818,32 +1813,6 @@ func (a *App) GetCodexConfigStatus() (CodexConfigStatus, error) {
 // ReadCodexCurrentConfig reads the live Codex configuration.
 func (a *App) ReadCodexCurrentConfig() (CodexCurrentConfig, error) {
 	return codexReadCurrentConfig()
-}
-
-// GetCodexCliCapability inspects the installed Codex CLI for --config
-// override support (temporary runs need >= 0.128.0).
-func (a *App) GetCodexCliCapability() (CodexCliCapability, error) {
-	versionOut, code, err := codexRunCommand("codex", "--version")
-	if err != nil {
-		return CodexCliCapability{}, err
-	}
-	if code == 127 {
-		return CodexCliCapability{}, errString("Failed to execute codex --version: No such file or directory")
-	}
-	if code != 0 {
-		return CodexCliCapability{}, errString("Failed to read Codex CLI version")
-	}
-	helpOut, code, err := codexRunCommand("codex", "--help")
-	if err != nil {
-		return CodexCliCapability{}, err
-	}
-	if code == 127 {
-		return CodexCliCapability{}, errString("Failed to execute codex --help: No such file or directory")
-	}
-	if code != 0 {
-		return CodexCliCapability{}, errString("Failed to read Codex CLI help")
-	}
-	return codexParseCliCapability(helpOut, versionOut), nil
 }
 
 // LaunchCodex launches Codex with a runtime CODEX_HOME snapshot instead of

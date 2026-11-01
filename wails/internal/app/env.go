@@ -11,27 +11,6 @@ import (
 	"strings"
 )
 
-// GetEnvVar returns a process environment variable.
-func (a *App) GetEnvVar(name string) *string {
-	value := os.Getenv(name)
-	if value == "" {
-		if _, ok := os.LookupEnv(name); !ok {
-			return nil
-		}
-	}
-	return &value
-}
-
-// SetEnvVar sets a process environment variable.
-func (a *App) SetEnvVar(name string, value string) {
-	os.Setenv(name, value) // #nosec G104 -- mirror of the Tauri command's best-effort semantics
-}
-
-// RemoveEnvVar removes a process environment variable.
-func (a *App) RemoveEnvVar(name string) {
-	os.Unsetenv(name) // #nosec G104 -- best-effort
-}
-
 // GetShellEnv returns the environment as seen by a login shell (on Windows:
 // the current process environment).
 func (a *App) GetShellEnv() (map[string]string, error) {

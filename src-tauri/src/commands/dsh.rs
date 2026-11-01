@@ -3,15 +3,8 @@
 //! Core logic lives in `droidgear-core`.
 
 pub use droidgear_core::dsh::{
-    DshConfigStatus, DshCredentials, DshCurrentConfig, DshModel, DshProfile, DshProviderConfig,
+    DshConfigStatus, DshCredentials, DshCurrentConfig, DshModel, DshProviderConfig,
 };
-
-/// List the Dsh profiles under `~/.dsh/profiles/`.
-#[tauri::command]
-#[specta::specta]
-pub async fn list_dsh_profiles() -> Result<Vec<DshProfile>, String> {
-    droidgear_core::dsh::list_dsh_profiles()
-}
 
 /// Read the effective Dsh providers. Without a profile the default
 /// resolution is used (official `desktop` > `web` > legacy

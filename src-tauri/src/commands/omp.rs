@@ -13,13 +13,6 @@ pub async fn list_omp_profiles() -> Result<Vec<OmpProfile>, String> {
     droidgear_core::omp::list_omp_profiles()
 }
 
-/// Get a profile by ID
-#[tauri::command]
-#[specta::specta]
-pub async fn get_omp_profile(id: String) -> Result<OmpProfile, String> {
-    droidgear_core::omp::get_omp_profile(&id)
-}
-
 /// Save a profile (create or update)
 #[tauri::command]
 #[specta::specta]
@@ -41,25 +34,11 @@ pub async fn duplicate_omp_profile(id: String, new_name: String) -> Result<OmpPr
     droidgear_core::omp::duplicate_omp_profile(&id, &new_name)
 }
 
-/// Create default profile (when no profiles exist)
-#[tauri::command]
-#[specta::specta]
-pub async fn create_default_omp_profile() -> Result<OmpProfile, String> {
-    droidgear_core::omp::create_default_omp_profile()
-}
-
 /// Get active profile ID
 #[tauri::command]
 #[specta::specta]
 pub async fn get_active_omp_profile_id() -> Result<Option<String>, String> {
     droidgear_core::omp::get_active_omp_profile_id()
-}
-
-/// Set active profile ID
-#[tauri::command]
-#[specta::specta]
-pub async fn set_active_omp_profile_id(id: String) -> Result<(), String> {
-    droidgear_core::omp::set_active_omp_profile_id(&id)
 }
 
 /// Apply model roles to `~/.omp/agent/config.yml`

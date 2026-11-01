@@ -907,3 +907,52 @@ func TestClaudeWindowsProgramCandidatesPreferExecutables(t *testing.T) {
 		t.Fatalf("known extension should pass through: %v", single)
 	}
 }
+
+// claudeTestHome returns the isolated home created by isolatedHome(t).
+func claudeTestHome(t *testing.T) string {
+	t.Helper()
+	return isolatedHome(t)
+}
+
+func claudeTestWrite(t *testing.T, path string, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func claudeTestRead(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path) // #nosec G304 -- test fixture
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	return string(data)
+}
+
+func claudeTestReadJSON(t *testing.T, path string) map[string]any {
+	t.Helper()
+	var out map[string]any
+	if err := json.Unmarshal([]byte(claudeTestRead(t, path)), &out); err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+	return out
+}
+
+func claudeTestProfile(id string, name string) ClaudeCodeProfile {
+	return ClaudeCodeProfile{
+		ID:              id,
+		Name:            name,
+		Description:     strPtr("A test profile"),
+		BaseURL:         strPtr("https://example.com/v1"),
+		BearerToken:     strPtr("secret-token"),
+		Model:           strPtr("claude-sonnet-4-5"),
+		ReasoningEffort: func() *ClaudeReasoningEffort { e := ClaudeReasoningEffortHigh; return &e }(),
+		ThinkingMode:    ClaudeThinkingModeOn,
+		CreatedAt:       "2026-01-01T00:00:00Z",
+		UpdatedAt:       "2026-01-01T00:00:00Z",
+	}
+}

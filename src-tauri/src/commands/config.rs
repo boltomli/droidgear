@@ -76,20 +76,6 @@ pub async fn fetch_models(
     droidgear_core::factory_settings::fetch_models(provider, &base_url, &api_key).await
 }
 
-/// Gets the default model ID from sessionDefaultSettings.model
-#[tauri::command]
-#[specta::specta]
-pub async fn get_default_model() -> Result<Option<String>, String> {
-    droidgear_core::factory_settings::get_default_model()
-}
-
-/// Saves the default model ID to sessionDefaultSettings.model
-#[tauri::command]
-#[specta::specta]
-pub async fn save_default_model(model_id: String) -> Result<(), String> {
-    droidgear_core::factory_settings::save_default_model(&model_id)
-}
-
 /// Gets the cloudSessionSync setting from settings.json
 /// Returns true by default if not set
 #[tauri::command]

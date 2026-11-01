@@ -20,13 +20,6 @@ pub async fn list_specs() -> Result<Vec<SpecFile>, String> {
     droidgear_core::specs::list_specs()
 }
 
-/// Reads a single spec file by path.
-#[tauri::command]
-#[specta::specta]
-pub async fn read_spec(path: String) -> Result<SpecFile, String> {
-    droidgear_core::specs::read_spec(&path)
-}
-
 /// Renames a spec file.
 #[tauri::command]
 #[specta::specta]

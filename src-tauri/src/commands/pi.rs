@@ -13,13 +13,6 @@ pub async fn list_pi_profiles() -> Result<Vec<PiProfile>, String> {
     droidgear_core::pi::list_pi_profiles()
 }
 
-/// Get a profile by ID
-#[tauri::command]
-#[specta::specta]
-pub async fn get_pi_profile(id: String) -> Result<PiProfile, String> {
-    droidgear_core::pi::get_pi_profile(&id)
-}
-
 /// Save a profile (create or update)
 #[tauri::command]
 #[specta::specta]
@@ -53,13 +46,6 @@ pub async fn create_default_pi_profile() -> Result<PiProfile, String> {
 #[specta::specta]
 pub async fn get_active_pi_profile_id() -> Result<Option<String>, String> {
     droidgear_core::pi::get_active_pi_profile_id()
-}
-
-/// Set active profile ID
-#[tauri::command]
-#[specta::specta]
-pub async fn set_active_pi_profile_id(id: String) -> Result<(), String> {
-    droidgear_core::pi::set_active_pi_profile_id(&id)
 }
 
 /// Apply a profile to `~/.pi/agent/models.json`

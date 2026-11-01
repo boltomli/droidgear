@@ -143,9 +143,17 @@ func TestHermesAndOmpMountSequenceSmoke(t *testing.T) {
 	if _, err := a.ReadOmpCurrentConfig(); err != nil {
 		t.Fatalf("ReadOmpCurrentConfig: %v", err)
 	}
-	ompProfile, err := a.CreateDefaultOmpProfile()
-	if err != nil {
-		t.Fatalf("CreateDefaultOmpProfile: %v", err)
+	// The default-profile command was removed with the dead Claude/OMP
+	// command surface; build the equivalent default inline.
+	ompProfile := OmpProfile{
+		ID:         newUUID(),
+		Name:       "Default",
+		CreatedAt:  nowRFC3339(),
+		UpdatedAt:  nowRFC3339(),
+		ModelRoles: OmpModelRoles{},
+	}
+	if err := writeOmpProfileFile(ompProfile); err != nil {
+		t.Fatalf("writeOmpProfileFile: %v", err)
 	}
 	ompProfile.ModelRoles = OmpModelRoles{Default: strPtr("anthropic/claude-sonnet-4-5")}
 	if err := a.SaveOmpProfile(ompProfile); err != nil {

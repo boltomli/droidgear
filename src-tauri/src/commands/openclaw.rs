@@ -13,13 +13,6 @@ pub async fn list_openclaw_profiles() -> Result<Vec<OpenClawProfile>, String> {
     droidgear_core::openclaw::list_openclaw_profiles()
 }
 
-/// Get a profile by ID
-#[tauri::command]
-#[specta::specta]
-pub async fn get_openclaw_profile(id: String) -> Result<OpenClawProfile, String> {
-    droidgear_core::openclaw::get_openclaw_profile(&id)
-}
-
 /// Save a profile (create or update)
 #[tauri::command]
 #[specta::specta]

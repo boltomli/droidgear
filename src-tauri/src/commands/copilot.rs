@@ -20,12 +20,6 @@ pub async fn list_copilot_profiles() -> Result<Vec<CopilotProfile>, String> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn get_copilot_profile(id: String) -> Result<CopilotProfile, String> {
-    droidgear_core::copilot::get_copilot_profile(&id)
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn save_copilot_profile(profile: CopilotProfile) -> Result<(), String> {
     droidgear_core::copilot::save_copilot_profile(profile)
 }

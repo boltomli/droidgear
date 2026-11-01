@@ -4,26 +4,15 @@
 
 pub use droidgear_core::codex::{CodexConfigStatus, CodexCurrentConfig, CodexProfile};
 
-use droidgear_core::codex_runtime::{
-    self, CodexCliCapability, CodexInAppRunPlan, CodexTemporaryLaunchPlan, CodexTemporaryRunPlan,
-};
-
-use crate::utils::login_shell::run_command_in_login_shell;
 use crate::utils::preferences::load_preferences;
 use crate::utils::terminal_launch::{launch_in_terminal, LaunchSpec};
+use droidgear_core::codex_runtime::{self, CodexTemporaryLaunchPlan};
 
 /// List all Codex profiles
 #[tauri::command]
 #[specta::specta]
 pub async fn list_codex_profiles() -> Result<Vec<CodexProfile>, String> {
     droidgear_core::codex::list_codex_profiles()
-}
-
-/// Get a profile by ID
-#[tauri::command]
-#[specta::specta]
-pub async fn get_codex_profile(id: String) -> Result<CodexProfile, String> {
-    droidgear_core::codex::get_codex_profile(&id)
 }
 
 /// Save a profile (create or update)
@@ -80,59 +69,6 @@ pub async fn get_codex_config_status() -> Result<CodexConfigStatus, String> {
 #[specta::specta]
 pub async fn read_codex_current_config() -> Result<CodexCurrentConfig, String> {
     droidgear_core::codex::read_codex_current_config()
-}
-
-/// Inspect the installed Codex CLI and report whether temporary-run launch-time
-/// overrides are supported.
-#[tauri::command]
-#[specta::specta]
-pub async fn get_codex_cli_capability() -> Result<CodexCliCapability, String> {
-    let version_output = run_command_in_login_shell("codex", &["--version"])?;
-    if version_output.status.code() == Some(127) {
-        return Err("Failed to execute codex --version: No such file or directory".to_string());
-    }
-    if !version_output.status.success() {
-        return Err("Failed to read Codex CLI version".to_string());
-    }
-
-    let help_output = run_command_in_login_shell("codex", &["--help"])?;
-    if help_output.status.code() == Some(127) {
-        return Err("Failed to execute codex --help: No such file or directory".to_string());
-    }
-    if !help_output.status.success() {
-        return Err("Failed to read Codex CLI help".to_string());
-    }
-
-    Ok(codex_runtime::parse_codex_cli_capability(
-        &String::from_utf8_lossy(&help_output.stdout),
-        &String::from_utf8_lossy(&version_output.stdout),
-    ))
-}
-
-/// Build the zero-write temporary-run launch plan preview for a Codex profile.
-#[tauri::command]
-#[specta::specta]
-pub async fn get_codex_temporary_run_plan(id: String) -> Result<CodexTemporaryRunPlan, String> {
-    let profile = droidgear_core::codex::get_codex_profile(&id)?;
-    let plan = codex_runtime::build_temporary_run_plan(&profile)?;
-    Ok((&plan).into())
-}
-
-/// Prepare a one-shot in-app terminal run (runtime CODEX_HOME + env, including secrets).
-///
-/// Does not open an external terminal. The frontend injects env into the PTY and
-/// auto-executes the command. Secret values must not be persisted client-side.
-#[tauri::command]
-#[specta::specta]
-pub async fn prepare_codex_in_app_run(id: String) -> Result<CodexInAppRunPlan, String> {
-    let home_dir = dirs::home_dir().ok_or_else(|| "Failed to get home directory".to_string())?;
-    if let Err(error) = codex_runtime::cleanup_stale_runtime_homes_for_home(&home_dir) {
-        log::warn!("Failed to clean up stale Codex runtime homes: {error}");
-    }
-
-    let profile = droidgear_core::codex::get_codex_profile(&id)?;
-    let plan = codex_runtime::build_temporary_run_plan(&profile)?;
-    Ok((&plan).into())
 }
 
 /// Launch Codex using a runtime `CODEX_HOME` snapshot instead of mutating live config.

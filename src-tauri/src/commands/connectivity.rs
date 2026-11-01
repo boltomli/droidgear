@@ -1,8 +1,6 @@
 //! Model connectivity testing commands.
 
-use droidgear_core::connectivity::{
-    self, ConnectionDiagnostics, ConnectivitySummary, ModelTestResult, TestMode,
-};
+use droidgear_core::connectivity::{self, ConnectionDiagnostics, ModelTestResult, TestMode};
 use tauri::command;
 
 #[command]
@@ -15,14 +13,6 @@ pub async fn test_model_connection(model_id: String) -> Result<ModelTestResult, 
 #[specta::specta]
 pub async fn test_all_model_connections_command() -> Result<Vec<ModelTestResult>, String> {
     connectivity::test_all_model_connections().await
-}
-
-#[command]
-#[specta::specta]
-pub fn get_connectivity_summary(
-    results: Vec<ModelTestResult>,
-) -> Result<ConnectivitySummary, String> {
-    Ok(connectivity::get_connectivity_summary(&results))
 }
 
 #[command]

@@ -34,53 +34,9 @@ const codexTestOfficialAuth = `{
 
 // TestCodexAuthListEmptyInitially covers the first-run state: no profiles,
 // no active marker, live auth missing → not official.
-func TestCodexAuthListEmptyInitially(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
-
-	state, err := a.ListCodexAuthProfiles()
-	if err != nil {
-		t.Fatalf("ListCodexAuthProfiles: %v", err)
-	}
-	if len(state.Profiles) != 0 || state.Active != nil || state.IsCurrentOfficial {
-		t.Fatalf("state: %+v", state)
-	}
-	official, err := a.IsCodexOfficialAuth()
-	if err != nil || official {
-		t.Fatalf("IsCodexOfficialAuth: %v %v", err, official)
-	}
-}
 
 // TestCodexAuthOfficialDetection: auth_mode present → official; BYOK-only →
 // not official; missing file → not official (no error).
-func TestCodexAuthOfficialDetection(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
-
-	codexTestWriteLiveAuth(t, `{"OPENAI_API_KEY":"sk-byok"}`)
-	official, err := a.IsCodexOfficialAuth()
-	if err != nil || official {
-		t.Fatalf("byok must not be official: %v %v", err, official)
-	}
-
-	codexTestWriteLiveAuth(t, codexTestOfficialAuth)
-	official, err = a.IsCodexOfficialAuth()
-	if err != nil || !official {
-		t.Fatalf("auth_mode must be official: %v %v", err, official)
-	}
-
-	authPath, err := codexAuthPath()
-	if err != nil {
-		t.Fatalf("codexAuthPath: %v", err)
-	}
-	if err := os.Remove(authPath); err != nil {
-		t.Fatalf("remove auth: %v", err)
-	}
-	official, err = a.IsCodexOfficialAuth()
-	if err != nil || official {
-		t.Fatalf("missing auth must not be official: %v %v", err, official)
-	}
-}
 
 // TestCodexAuthSaveRejectsBYOK: only official login credentials can be saved.
 func TestCodexAuthSaveRejectsBYOK(t *testing.T) {

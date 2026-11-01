@@ -452,11 +452,6 @@ func (a *App) TestProviderConnection(provider string, baseUrl string, apiKey str
 	return tester.testModelDirect(provider, baseUrl, apiKey, modelID), nil
 }
 
-// GetConnectivitySummary mirrors `get_connectivity_summary`.
-func (a *App) GetConnectivitySummary(results []ModelTestResult) (ConnectivitySummary, error) {
-	return connectivitySummary(results), nil
-}
-
 // connectivityTestSpecificModel mirrors test_specific_model_connection[_with_mode].
 // The model is looked up by its explicit `id` field only, and a missing id
 // yields `Model {model_id} not found`.

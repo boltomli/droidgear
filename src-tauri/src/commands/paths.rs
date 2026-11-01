@@ -2,14 +2,7 @@
 //!
 //! Core logic lives in `droidgear-core`.
 
-pub use droidgear_core::paths::{ConfigPaths, EffectivePaths, WslInfo};
-
-/// Gets the current configuration paths (custom values only)
-#[tauri::command]
-#[specta::specta]
-pub async fn get_config_paths() -> Result<ConfigPaths, String> {
-    Ok(droidgear_core::paths::load_config_paths())
-}
+pub use droidgear_core::paths::{EffectivePaths, WslInfo};
 
 /// Gets all effective paths with default indicators
 #[tauri::command]

@@ -365,11 +365,6 @@ func (a *App) ListCodexAuthProfiles() (CodexAuthProfileState, error) {
 	}, nil
 }
 
-// IsCodexOfficialAuth reports whether the live auth.json is official login.
-func (a *App) IsCodexOfficialAuth() (bool, error) {
-	return codexCurrentAuthIsOfficial()
-}
-
 // SaveCurrentCodexAuthProfile copies the live auth.json into a named profile
 // and snapshots the active CodexProfile id + model for later restore.
 func (a *App) SaveCurrentCodexAuthProfile(name string, label string) error {

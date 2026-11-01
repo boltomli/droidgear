@@ -17,13 +17,6 @@ pub async fn list_droid_settings_files() -> Result<Vec<SettingsFileInfo>, String
     droid_settings_files::list_settings_files()
 }
 
-/// Gets the currently active settings file info
-#[tauri::command]
-#[specta::specta]
-pub async fn get_active_droid_settings_file() -> Result<SettingsFileInfo, String> {
-    droid_settings_files::get_active_settings_file()
-}
-
 /// Sets the active settings file. Pass null or empty to switch to Global.
 #[tauri::command]
 #[specta::specta]

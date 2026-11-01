@@ -450,11 +450,6 @@ func (a *App) ListCopilotProfiles() ([]CopilotProfile, error) {
 	return copilotListProfiles()
 }
 
-// GetCopilotProfile returns one profile by id.
-func (a *App) GetCopilotProfile(id string) (CopilotProfile, error) {
-	return copilotLoadProfile(id)
-}
-
 // SaveCopilotProfile normalises and creates or updates a profile, rewriting
 // its sibling env file. The live config.env is never touched here.
 func (a *App) SaveCopilotProfile(profile CopilotProfile) error {

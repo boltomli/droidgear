@@ -170,20 +170,6 @@ const RULES: ErrorRule[] = [
   { prefix: 'Dsh credentials file', key: 'errors.dshCredentialsLayout' },
   { prefix: "Dsh credentials ref '", key: 'errors.dshCredentialsLayout' },
 
-  // Not-supported surfaces in this minimal build
-  {
-    exact: 'Native file dialogs are not available in this minimal build',
-    key: 'errors.dialogsUnsupported',
-  },
-  {
-    exact: 'Filesystem access is not available in this minimal build',
-    key: 'errors.fsUnsupported',
-  },
-  {
-    exact: 'Channels are not supported in this minimal Wails build',
-    key: 'errors.channelsUnsupported',
-  },
-
   // Channel detection / import
   { exact: 'Unable to auto-detect channel type', key: 'errors.detectFailed' },
   { exact: 'No tokens found', key: 'errors.noTokens' },

@@ -13,13 +13,6 @@ pub async fn list_opencode_profiles() -> Result<Vec<OpenCodeProfile>, String> {
     droidgear_core::opencode::list_opencode_profiles()
 }
 
-/// Get a profile by ID
-#[tauri::command]
-#[specta::specta]
-pub async fn get_opencode_profile(id: String) -> Result<OpenCodeProfile, String> {
-    droidgear_core::opencode::get_opencode_profile(&id)
-}
-
 /// Save a profile (create or update)
 #[tauri::command]
 #[specta::specta]

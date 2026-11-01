@@ -463,11 +463,6 @@ func (a *App) ListSpecs() ([]SpecFile, error) {
 	return listSpecsForHome(home)
 }
 
-// ReadSpec reads a single spec file by path.
-func (a *App) ReadSpec(path string) (SpecFile, error) {
-	return readSpecFile(path)
-}
-
 // RenameSpec renames a spec file inside the specs directory.
 func (a *App) RenameSpec(oldPath string, newName string) (SpecFile, error) {
 	home, err := droidHomeDir()

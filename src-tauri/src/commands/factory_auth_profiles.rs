@@ -12,12 +12,6 @@ pub async fn list_factory_auth_profiles() -> Result<AuthProfileState, String> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn get_active_factory_auth_profile() -> Result<Option<String>, String> {
-    droidgear_core::factory_auth_profiles::get_active_profile()
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn switch_factory_auth_profile(name: String) -> Result<(), String> {
     droidgear_core::factory_auth_profiles::switch_profile(&name)
 }

@@ -9,17 +9,6 @@
 
 export const commands = {
 /**
- * Simple greeting command for demonstration purposes.
- */
-async greet(name: string) : Promise<Result<string, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("greet", { name }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Loads user preferences from disk.
  * Returns default preferences if the file doesn't exist.
  */
@@ -191,28 +180,6 @@ async deleteLegacyConfig() : Promise<Result<null, string>> {
 async fetchModels(provider: Provider, baseUrl: string, apiKey: string) : Promise<Result<ModelInfo[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("fetch_models", { provider, baseUrl, apiKey }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Gets the default model ID from sessionDefaultSettings.model
- */
-async getDefaultModel() : Promise<Result<string | null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_default_model") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Saves the default model ID to sessionDefaultSettings.model
- */
-async saveDefaultModel(modelId: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("save_default_model", { modelId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -628,27 +595,6 @@ async runExportTemplate(name: string) : Promise<Result<ExportResult, string>> {
 }
 },
 /**
- * Gets the value of an environment variable.
- * Returns None if the variable is not set.
- */
-async getEnvVar(name: string) : Promise<string | null> {
-    return await TAURI_INVOKE("get_env_var", { name });
-},
-/**
- * Sets an environment variable for the current process.
- * Note: This only affects the current process, not the system or shell.
- */
-async setEnvVar(name: string, value: string) : Promise<void> {
-    await TAURI_INVOKE("set_env_var", { name, value });
-},
-/**
- * Removes an environment variable from the current process.
- * Note: This only affects the current process, not the system or shell.
- */
-async removeEnvVar(name: string) : Promise<void> {
-    await TAURI_INVOKE("remove_env_var", { name });
-},
-/**
  * Gets environment variables from a login shell.
  * This is useful for GUI apps that don't inherit shell environment.
  * Uses non-interactive mode for faster execution.
@@ -667,17 +613,6 @@ async getShellEnv() : Promise<Result<Partial<{ [key in string]: string }>, strin
 async listSpecs() : Promise<Result<SpecFile[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_specs") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Reads a single spec file by path.
- */
-async readSpec(path: string) : Promise<Result<SpecFile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("read_spec", { path }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -794,165 +729,11 @@ async toggleMcpServer(name: string, disabled: boolean) : Promise<Result<null, st
 }
 },
 /**
- * List all Claude Code profiles
- */
-async listClaudeProfiles() : Promise<Result<ClaudeCodeProfile[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("list_claude_profiles") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Get a profile by ID
- */
-async getClaudeProfile(id: string) : Promise<Result<ClaudeCodeProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_claude_profile", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Save a profile (create or update)
- */
-async saveClaudeProfile(profile: ClaudeCodeProfile) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("save_claude_profile", { profile }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Delete a profile
- */
-async deleteClaudeProfile(id: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_claude_profile", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Duplicate a profile
- */
-async duplicateClaudeProfile(id: string, newName: string) : Promise<Result<ClaudeCodeProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("duplicate_claude_profile", { id, newName }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Create default profile (when no profiles exist)
- */
-async createDefaultClaudeProfile() : Promise<Result<ClaudeCodeProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("create_default_claude_profile") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Get active profile ID
- */
-async getActiveClaudeProfileId() : Promise<Result<string | null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_active_claude_profile_id") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Set active profile ID
- */
-async setActiveClaudeProfileId(id: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_active_claude_profile_id", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Apply a profile to `~/.claude/settings.json`
- */
-async applyClaudeProfile(id: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("apply_claude_profile", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Get Claude Code config status
- */
-async getClaudeConfigStatus() : Promise<Result<ClaudeConfigStatus, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_claude_config_status") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Read current Claude Code configuration from settings.json
- */
-async readClaudeCurrentConfig() : Promise<Result<ClaudeCurrentConfig, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("read_claude_current_config") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Build the temporary-run launch plan preview for a Claude Code profile.
- */
-async getClaudeTemporaryRunPlan(id: string) : Promise<Result<ClaudeTemporaryRunPlan, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_claude_temporary_run_plan", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Launch Claude Code using a runtime settings overlay instead of mutating live config.
- */
-async launchClaude(id: string, cwd: string | null) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("launch_claude", { id, cwd }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Lists every Claude settings file (global + custom).
  */
 async listClaudeSettingsFiles() : Promise<Result<ClaudeSettingsFileInfo[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_claude_settings_files") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Gets the currently active settings file info.
- */
-async getActiveClaudeSettingsFile() : Promise<Result<ClaudeSettingsFileInfo, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_active_claude_settings_file") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1059,17 +840,6 @@ async getClaudeSettingsLaunchCommand(skipDangerous: boolean) : Promise<Result<[s
 }
 },
 /**
- * Plan a temporary run using a named settings file (instead of a profile).
- */
-async planClaudeTemporaryRunFromFile(name: string) : Promise<Result<ClaudeTemporaryRunPlan, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("plan_claude_temporary_run_from_file", { name }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Debug-preview a temporary run from a named settings file.
  */
 async previewClaudeTemporaryRunFromFile(name: string) : Promise<Result<ClaudeTemporaryRunDebugPreview, string>> {
@@ -1100,17 +870,6 @@ async launchClaudeWithSettings(cwd: string | null, skipDangerous: boolean) : Pro
 async listCodexProfiles() : Promise<Result<CodexProfile[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_codex_profiles") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Get a profile by ID
- */
-async getCodexProfile(id: string) : Promise<Result<CodexProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_codex_profile", { id }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1205,43 +964,6 @@ async readCodexCurrentConfig() : Promise<Result<CodexCurrentConfig, string>> {
 }
 },
 /**
- * Inspect the installed Codex CLI and report whether temporary-run launch-time
- * overrides are supported.
- */
-async getCodexCliCapability() : Promise<Result<CodexCliCapability, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_codex_cli_capability") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Build the zero-write temporary-run launch plan preview for a Codex profile.
- */
-async getCodexTemporaryRunPlan(id: string) : Promise<Result<CodexTemporaryRunPlan, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_codex_temporary_run_plan", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Prepare a one-shot in-app terminal run (runtime CODEX_HOME + env, including secrets).
- * 
- * Does not open an external terminal. The frontend injects env into the PTY and
- * auto-executes the command. Secret values must not be persisted client-side.
- */
-async prepareCodexInAppRun(id: string) : Promise<Result<CodexInAppRunPlan, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("prepare_codex_in_app_run", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Launch Codex using a runtime `CODEX_HOME` snapshot instead of mutating live config.
  */
 async launchCodex(id: string, cwd: string | null) : Promise<Result<null, string>> {
@@ -1255,14 +977,6 @@ async launchCodex(id: string, cwd: string | null) : Promise<Result<null, string>
 async listCopilotProfiles() : Promise<Result<CopilotProfile[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_copilot_profiles") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async getCopilotProfile(id: string) : Promise<Result<CopilotProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_copilot_profile", { id }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1360,17 +1074,6 @@ async launchCopilot(id: string, cwd: string | null) : Promise<Result<null, strin
 async listHermesProfiles() : Promise<Result<HermesProfile[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_hermes_profiles") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Get a profile by ID
- */
-async getHermesProfile(id: string) : Promise<Result<HermesProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_hermes_profile", { id }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1476,17 +1179,6 @@ async listPiProfiles() : Promise<Result<PiProfile[], string>> {
 }
 },
 /**
- * Get a profile by ID
- */
-async getPiProfile(id: string) : Promise<Result<PiProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_pi_profile", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Save a profile (create or update)
  */
 async savePiProfile(profile: PiProfile) : Promise<Result<null, string>> {
@@ -1542,17 +1234,6 @@ async getActivePiProfileId() : Promise<Result<string | null, string>> {
 }
 },
 /**
- * Set active profile ID
- */
-async setActivePiProfileId(id: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_active_pi_profile_id", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Apply a profile to `~/.pi/agent/models.json`
  */
 async applyPiProfile(id: string) : Promise<Result<null, string>> {
@@ -1597,17 +1278,6 @@ async listOmpProfiles() : Promise<Result<OmpProfile[], string>> {
 }
 },
 /**
- * Get a profile by ID
- */
-async getOmpProfile(id: string) : Promise<Result<OmpProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_omp_profile", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Save a profile (create or update)
  */
 async saveOmpProfile(profile: OmpProfile) : Promise<Result<null, string>> {
@@ -1641,33 +1311,11 @@ async duplicateOmpProfile(id: string, newName: string) : Promise<Result<OmpProfi
 }
 },
 /**
- * Create default profile (when no profiles exist)
- */
-async createDefaultOmpProfile() : Promise<Result<OmpProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("create_default_omp_profile") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Get active profile ID
  */
 async getActiveOmpProfileId() : Promise<Result<string | null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_active_omp_profile_id") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Set active profile ID
- */
-async setActiveOmpProfileId(id: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_active_omp_profile_id", { id }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1844,17 +1492,6 @@ async listOpencodeProfiles() : Promise<Result<OpenCodeProfile[], string>> {
 }
 },
 /**
- * Get a profile by ID
- */
-async getOpencodeProfile(id: string) : Promise<Result<OpenCodeProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_opencode_profile", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Save a profile (create or update)
  */
 async saveOpencodeProfile(profile: OpenCodeProfile) : Promise<Result<null, string>> {
@@ -1976,17 +1613,6 @@ async listOpenclawProfiles() : Promise<Result<OpenClawProfile[], string>> {
 }
 },
 /**
- * Get a profile by ID
- */
-async getOpenclawProfile(id: string) : Promise<Result<OpenClawProfile, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_openclaw_profile", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Save a profile (create or update)
  */
 async saveOpenclawProfile(profile: OpenClawProfile) : Promise<Result<null, string>> {
@@ -2091,17 +1717,6 @@ async readOpenclawSubagents() : Promise<Result<OpenClawSubAgent[], string>> {
 async saveOpenclawSubagents(subagents: OpenClawSubAgent[]) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("save_openclaw_subagents", { subagents }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * List the Dsh profiles under `~/.dsh/profiles/`.
- */
-async listDshProfiles() : Promise<Result<DshProfile[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("list_dsh_profiles") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2367,14 +1982,6 @@ async testAllModelConnectionsCommand() : Promise<Result<ModelTestResult[], strin
     else return { status: "error", error: e  as any };
 }
 },
-async getConnectivitySummary(results: ModelTestResult[]) : Promise<Result<ConnectivitySummary, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_connectivity_summary", { results }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async testProviderConnection(provider: string, baseUrl: string, apiKey: string, modelId: string) : Promise<Result<ConnectionDiagnostics, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("test_provider_connection", { provider, baseUrl, apiKey, modelId }) };
@@ -2394,17 +2001,6 @@ async testModelConnectionWithMode(modelId: string, mode: TestMode, prompt: strin
 async testAllModelConnectionsWithMode(mode: TestMode, prompt: string | null) : Promise<Result<ModelTestResult[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("test_all_model_connections_with_mode", { mode, prompt }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Gets the current configuration paths (custom values only)
- */
-async getConfigPaths() : Promise<Result<ConfigPaths, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_config_paths") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2517,17 +2113,6 @@ async installPortableUpdate(update: PortableUpdateInfo) : Promise<Result<null, s
 async listDroidSettingsFiles() : Promise<Result<SettingsFileInfo[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_droid_settings_files") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Gets the currently active settings file info
- */
-async getActiveDroidSettingsFile() : Promise<Result<SettingsFileInfo, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_active_droid_settings_file") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2668,14 +2253,6 @@ async listFactoryAuthProfiles() : Promise<Result<AuthProfileState, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async getActiveFactoryAuthProfile() : Promise<Result<string | null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_active_factory_auth_profile") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async switchFactoryAuthProfile(name: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("switch_factory_auth_profile", { name }) };
@@ -2714,17 +2291,6 @@ async renameFactoryAuthProfile(name: string, label: string) : Promise<Result<nul
 async listCodexAuthProfiles() : Promise<Result<CodexAuthProfileState, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_codex_auth_profiles") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Check if current auth is official
- */
-async isCodexOfficialAuth() : Promise<Result<boolean, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("is_codex_official_auth") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -3039,19 +2605,6 @@ groupName: string | null }
  */
 export type ChannelType = "new-api" | "sub-2-api" | "cli-proxy-api" | "ollama" | "general" | "deep-seek"
 /**
- * Claude Code profile stored in DroidGear.
- */
-export type ClaudeCodeProfile = { id: string; name: string; description?: string | null; baseUrl?: string | null; bearerToken?: string | null; model?: string | null; smallModelUsesMainModel?: boolean; smallModel?: string | null; reasoningEffort?: ClaudeReasoningEffort | null; thinkingMode?: ClaudeThinkingMode; createdAt: string; updatedAt: string }
-/**
- * Claude Code live config status.
- */
-export type ClaudeConfigStatus = { settingsExists: boolean; settingsPath: string; configDir: string; parseError?: string | null }
-/**
- * Current Claude Code configuration read back from live settings.
- */
-export type ClaudeCurrentConfig = { baseUrl?: string | null; bearerToken?: string | null; model?: string | null; smallModelUsesMainModel?: boolean; smallModel?: string | null; reasoningEffort?: ClaudeReasoningEffort | null; thinkingMode?: ClaudeThinkingMode }
-export type ClaudeReasoningEffort = "low" | "medium" | "high" | "max"
-/**
  * Information about a single Claude settings file.
  */
 export type ClaudeSettingsFileInfo = { 
@@ -3076,8 +2629,6 @@ isActive: boolean;
  */
 exists: boolean }
 export type ClaudeTemporaryRunDebugPreview = { profileId: string; profileName: string; program: string; args: string[]; childProgram: string; childArgs: string[]; liveConfigDir: string; inheritedEnvFileSource?: string | null; env: ([string, string])[]; unsetEnv: string[]; secretEnvKeys: string[]; warnings: string[]; settingsOverlayJson: string }
-export type ClaudeTemporaryRunPlan = { program: string; args: string[]; env: ([string, string])[]; unsetEnv: string[]; secretEnvKeys: string[]; warnings: string[] }
-export type ClaudeThinkingMode = "inherit" | "on" | "off"
 export type CodexAuthConflictInfo = { hasConflict: boolean; currentIsOfficial: boolean; targetIsOfficial: boolean }
 export type CodexAuthProfile = { name: string; label: string; createdAt: string; 
 /**
@@ -3098,7 +2649,6 @@ model?: string | null;
  */
 modelReasoningEffort?: string | null }
 export type CodexAuthProfileState = { active: string | null; profiles: CodexAuthProfile[]; isCurrentOfficial: boolean }
-export type CodexCliCapability = { version: string; supportsConfigOverride: boolean }
 /**
  * Codex Live 配置状态
  */
@@ -3111,18 +2661,6 @@ export type CodexContentBlock = { type: string; text?: string | null; thinking?:
  * 当前 Codex Live 配置（从 `~/.codex/*` 读取）
  */
 export type CodexCurrentConfig = { providers?: Partial<{ [key in string]: CodexProviderConfig }>; modelProvider: string; model: string; modelReasoningEffort?: string | null; apiKeyModelDiscovery?: boolean; apiKey?: string | null }
-/**
- * One-shot plan for launching Codex inside the app PTY terminal.
- * 
- * Unlike [`CodexTemporaryRunPlan`], secret env values are included so the
- * frontend can inject them into the PTY process environment. They must not be
- * persisted on the client.
- */
-export type CodexInAppRunPlan = { program: string; args: string[]; 
-/**
- * Public env (e.g. CODEX_HOME) plus secret API keys for PTY injection.
- */
-env: ([string, string])[]; unsetEnv: string[]; warnings: string[] }
 /**
  * Codex Profile（用于在 DroidGear 内部保存并切换）
  */
@@ -3205,15 +2743,10 @@ tokenUsage: CodexTokenUsage;
  * Full path to the session .jsonl file
  */
 path: string }
-export type CodexTemporaryRunPlan = { program: string; args: string[]; env: ([string, string])[]; unsetEnv: string[]; secretEnvKeys: string[]; warnings: string[] }
 /**
  * Token usage statistics (from the last `event_msg/token_count` event).
  */
 export type CodexTokenUsage = { inputTokens: number; outputTokens: number; cacheCreationTokens: number; cacheReadTokens: number; reasoningTokens: number; totalTokens: number }
-/**
- * User-defined configuration paths (only stores explicitly set paths)
- */
-export type ConfigPaths = { factory?: string | null; opencode?: string | null; opencodeAuth?: string | null; codex?: string | null; claude?: string | null; openclaw?: string | null; hermes?: string | null; pi?: string | null; omp?: string | null }
 export type ConnectionDiagnostics = { success: boolean; provider: string; modelId: string; latencyMs: number; error?: string | null; timestamp: string; testMode: TestMode; 
 /**
  * Actual model response text (inference mode only).
@@ -3223,7 +2756,6 @@ responseText?: string | null;
  * The prompt that was sent (inference mode only).
  */
 promptUsed?: string | null }
-export type ConnectivitySummary = { totalModels: number; availableModels: number; unavailableModels: number; avgLatencyMs: number; lastUpdated: string }
 /**
  * Message content block
  */
@@ -3420,22 +2952,6 @@ reasoningEfforts?: Partial<{ [key in string]: string | null }> | null;
  * omitting this makes images unsupported even for a vision model.
  */
 input?: string[] | null }
-/**
- * One Dsh profile directory under `~/.dsh/profiles/`.
- */
-export type DshProfile = { 
-/**
- * Profile name (directory name under `~/.dsh/profiles/`).
- */
-name: string; 
-/**
- * Absolute profile directory.
- */
-dir: string; 
-/**
- * Absolute path of the profile's user patch layer (`cordis.patch.yml`).
- */
-patchPath: string }
 /**
  * Dsh provider configuration (one entry of `llm-pi-ai.providers`).
  */
@@ -3809,7 +3325,13 @@ export type OutputStructure = "flat" |
 /**
  * Pi compatibility configuration. Unknown fields are retained for newer pi versions.
  */
-export type PiCompatConfig = { supportsStore?: boolean | null; supportsDeveloperRole?: boolean | null; supportsReasoningEffort?: boolean | null; reasoningEffortMap?: Partial<{ [key in string]: JsonValue }> | null; supportsUsageInStreaming?: boolean | null; maxTokensField?: string | null; requiresToolResultName?: boolean | null; requiresAssistantAfterToolResult?: boolean | null; requiresThinkingAsText?: boolean | null; requiresReasoningContentOnAssistantMessages?: boolean | null; thinkingFormat?: string | null; cacheControlFormat?: string | null; supportsStrictMode?: boolean | null; supportsLongCacheRetention?: boolean | null; supportsEagerToolInputStreaming?: boolean | null; forceAdaptiveThinking?: boolean | null; openRouterRouting?: JsonValue | null; vercelGatewayRouting?: JsonValue | null }
+export type PiCompatConfig = { supportsStore?: boolean | null; supportsDeveloperRole?: boolean | null; supportsReasoningEffort?: boolean | null; reasoningEffortMap?: Partial<{ [key in string]: JsonValue }> | null; supportsUsageInStreaming?: boolean | null; maxTokensField?: string | null; requiresToolResultName?: boolean | null; requiresAssistantAfterToolResult?: boolean | null; requiresThinkingAsText?: boolean | null; requiresReasoningContentOnAssistantMessages?: boolean | null; thinkingFormat?: string | null; cacheControlFormat?: string | null; supportsStrictMode?: boolean | null; supportsLongCacheRetention?: boolean | null; supportsEagerToolInputStreaming?: boolean | null; 
+/**
+ * Force adaptive thinking (thinking.type: adaptive + output_config.effort)
+ * regardless of model ID. Required by Anthropic-compatible upstreams for
+ * models like claude-opus-5-5.
+ */
+forceAdaptiveThinking?: boolean | null; openRouterRouting?: JsonValue | null; vercelGatewayRouting?: JsonValue | null }
 /**
  * Pi config status
  */

@@ -205,36 +205,6 @@ func dshCredentialsPath() (string, error) {
 // Profile discovery / resolution
 // ---------------------------------------------------------------------------
 
-// ListDshProfiles lists the official Dsh runtime profiles (desktop, web)
-// under ~/.dsh/profiles/, in that order.
-func (a *App) ListDshProfiles() ([]DshProfile, error) {
-	dir, err := dshProfilesDir()
-	if err != nil {
-		return nil, err
-	}
-	if !core.DirExists(dir) {
-		return []DshProfile{}, nil
-	}
-	var profiles []DshProfile
-	for _, name := range dshOfficialProfiles {
-		profileDir := filepath.Join(dir, name)
-		patchPath := filepath.Join(profileDir, dshPatchFilename)
-		isProfile := core.DirExists(profileDir) &&
-			(fileExists(filepath.Join(profileDir, "package.json")) || fileExists(patchPath))
-		if isProfile {
-			profiles = append(profiles, DshProfile{
-				Name:      name,
-				Dir:       profileDir,
-				PatchPath: patchPath,
-			})
-		}
-	}
-	if profiles == nil {
-		profiles = []DshProfile{}
-	}
-	return profiles, nil
-}
-
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.Mode().IsRegular()
@@ -517,6 +487,36 @@ func readProvidersFromLegacy() (map[string]DshProviderConfig, error) {
 // ---------------------------------------------------------------------------
 // Commands
 // ---------------------------------------------------------------------------
+
+// ListDshProfiles lists the official Dsh runtime profiles (desktop, web)
+// under ~/.dsh/profiles/, in that order.
+func (a *App) ListDshProfiles() ([]DshProfile, error) {
+	dir, err := dshProfilesDir()
+	if err != nil {
+		return nil, err
+	}
+	if !core.DirExists(dir) {
+		return []DshProfile{}, nil
+	}
+	var profiles []DshProfile
+	for _, name := range dshOfficialProfiles {
+		profileDir := filepath.Join(dir, name)
+		patchPath := filepath.Join(profileDir, dshPatchFilename)
+		isProfile := core.DirExists(profileDir) &&
+			(fileExists(filepath.Join(profileDir, "package.json")) || fileExists(patchPath))
+		if isProfile {
+			profiles = append(profiles, DshProfile{
+				Name:      name,
+				Dir:       profileDir,
+				PatchPath: patchPath,
+			})
+		}
+	}
+	if profiles == nil {
+		profiles = []DshProfile{}
+	}
+	return profiles, nil
+}
 
 // ReadDshCurrentConfig reads the effective merged provider map.
 func (a *App) ReadDshCurrentConfig(profile *string) (DshCurrentConfig, error) {
