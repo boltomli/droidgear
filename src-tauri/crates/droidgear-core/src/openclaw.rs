@@ -413,6 +413,135 @@ fn parse_openclaw_config(
     (default_model, failover_models, providers)
 }
 
+/// Normalises OpenClaw's documented JSON5 config (comments, trailing
+/// commas, single-quoted strings are explicitly allowed upstream) into
+/// strict JSON so `serde_json` can decode it. Strict input passes through
+/// byte-identical; writes always emit strict JSON, which JSON5 accepts.
+/// Scanning is byte-wise: JSON structural bytes are ASCII, so UTF-8
+/// multibyte sequences are always copied verbatim.
+fn normalize_json5(src: &str) -> String {
+    // Two passes: strip comments/quotes first, so a comment sitting between
+    // a trailing comma and its closer cannot hide the comma.
+    strip_json5_trailing_commas(&strip_json5_comments_and_quotes(src))
+}
+
+/// Pass 1: removes line/block comments (newlines preserved for error
+/// positions) and rewrites single-quoted strings to double quotes.
+fn strip_json5_comments_and_quotes(src: &str) -> String {
+    let bytes = src.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut quote: Option<u8> = None;
+    let mut i = 0;
+    while i < bytes.len() {
+        let c = bytes[i];
+        if let Some(q) = quote {
+            if c == b'\\' && i + 1 < bytes.len() {
+                let next = bytes[i + 1];
+                if q == b'\'' && next == b'\'' {
+                    out.push(b'\''); // JSON5 \' inside '…'
+                } else if q == b'\'' && next == b'"' {
+                    out.extend_from_slice(b"\\\""); // keep " escaped
+                } else {
+                    out.push(c);
+                    out.push(next);
+                }
+                i += 2;
+                continue;
+            }
+            if c == q {
+                quote = None;
+                out.push(b'"'); // '…' → "…"
+                i += 1;
+                continue;
+            }
+            if q == b'\'' && c == b'"' {
+                out.extend_from_slice(b"\\\"");
+                i += 1;
+                continue;
+            }
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        match c {
+            b'"' | b'\'' => {
+                quote = Some(c);
+                out.push(if c == b'\'' { b'"' } else { c });
+                i += 1;
+            }
+            b'/' if i + 1 < bytes.len() && bytes[i + 1] == b'/' => {
+                while i < bytes.len() && bytes[i] != b'\n' {
+                    i += 1;
+                }
+                if i < bytes.len() {
+                    out.push(b'\n'); // keep line numbers stable
+                    i += 1;
+                }
+            }
+            b'/' if i + 1 < bytes.len() && bytes[i + 1] == b'*' => {
+                i += 2;
+                while i + 1 < bytes.len() && !(bytes[i] == b'*' && bytes[i + 1] == b'/') {
+                    if bytes[i] == b'\n' {
+                        out.push(b'\n');
+                    }
+                    i += 1;
+                }
+                i += 2; // skip '*/' (clamps past EOF on unterminated input)
+            }
+            _ => {
+                out.push(c);
+                i += 1;
+            }
+        }
+    }
+    // Only ASCII edits on valid UTF-8 bytes, so the result stays UTF-8.
+    String::from_utf8(out).expect("normalised JSON5 remains valid UTF-8")
+}
+
+/// Pass 2: drops commas whose next non-space byte is a value closer.
+fn strip_json5_trailing_commas(src: &str) -> String {
+    let bytes = src.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut in_string = false;
+    let mut i = 0;
+    while i < bytes.len() {
+        let c = bytes[i];
+        if in_string {
+            if c == b'\\' && i + 1 < bytes.len() {
+                out.push(c);
+                out.push(bytes[i + 1]);
+                i += 2;
+                continue;
+            }
+            if c == b'"' {
+                in_string = false;
+            }
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        if c == b'"' {
+            in_string = true;
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        if c == b',' {
+            let mut j = i + 1;
+            while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r') {
+                j += 1;
+            }
+            if j < bytes.len() && matches!(bytes[j], b']' | b'}') {
+                i += 1;
+                continue;
+            }
+        }
+        out.push(c);
+        i += 1;
+    }
+    String::from_utf8(out).expect("normalised JSON5 remains valid UTF-8")
+}
+
 fn read_openclaw_config_raw_for_home(home_dir: &Path) -> Result<Value, String> {
     let config_path = openclaw_config_path_for_home(home_dir)?;
     if !config_path.exists() {
@@ -420,7 +549,7 @@ fn read_openclaw_config_raw_for_home(home_dir: &Path) -> Result<Value, String> {
     }
     let s = std::fs::read_to_string(&config_path)
         .map_err(|e| format!("Failed to read config file: {e}"))?;
-    serde_json::from_str(&s).map_err(|e| format!("Invalid config JSON: {e}"))
+    serde_json::from_str(&normalize_json5(&s)).map_err(|e| format!("Invalid config JSON: {e}"))
 }
 
 fn write_openclaw_config_for_home(
@@ -974,8 +1103,8 @@ pub fn create_default_openclaw_profile_for_home(
     let (default_model, failover_models, providers) = if config_path.exists() {
         let s = std::fs::read_to_string(&config_path)
             .map_err(|e| format!("Failed to read config file: {e}"))?;
-        let config: Value =
-            serde_json::from_str(&s).map_err(|e| format!("Invalid config JSON: {e}"))?;
+        let config: Value = serde_json::from_str(&normalize_json5(&s))
+            .map_err(|e| format!("Invalid config JSON: {e}"))?;
         parse_openclaw_config(&config)
     } else {
         (
@@ -1057,8 +1186,8 @@ pub fn read_openclaw_current_config_for_home(
 
     let s = std::fs::read_to_string(&config_path)
         .map_err(|e| format!("Failed to read config file: {e}"))?;
-    let config: Value =
-        serde_json::from_str(&s).map_err(|e| format!("Invalid config JSON: {e}"))?;
+    let config: Value = serde_json::from_str(&normalize_json5(&s))
+        .map_err(|e| format!("Invalid config JSON: {e}"))?;
     let (default_model, _failover_models, providers) = parse_openclaw_config(&config);
 
     Ok(OpenClawCurrentConfig {
@@ -1272,6 +1401,49 @@ mod tests {
     ) {
         let config = build_full_config(profile);
         parse_openclaw_config(&config)
+    }
+
+    // ------------------------------------------------------------------
+    // JSON5 tolerance (upstream allows comments/trailing commas/quotes)
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_normalize_json5() {
+        // Strict input must pass through byte-identical.
+        assert_eq!(normalize_json5(r#"{"a":1}"#), r#"{"a":1}"#);
+
+        let src = "{\n  // comment\n  'a': [1, 2,], /* block */\n}";
+        let out = normalize_json5(src);
+        let v: Value = serde_json::from_str(&out).expect("normalised output must be strict JSON");
+        assert_eq!(v["a"], serde_json::json!([1, 2]));
+    }
+
+    #[test]
+    fn test_read_openclaw_config_accepts_json5() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let home = temp.path();
+        std::fs::create_dir_all(home.join(".openclaw")).unwrap();
+        std::fs::write(
+            home.join(".openclaw").join("openclaw.json"),
+            r#"{
+  // OpenClaw documents openclaw.json as JSON5
+  "models": { "providers": { "deepseek": { "baseUrl": "https://api.deepseek.com", }, }, },
+  "agents": { "defaults": { "model": { "primary": "deepseek-chat", }, }, },
+  "unknownFutureKey": [1, 2,],
+}"#,
+        )
+        .unwrap();
+
+        let config = read_openclaw_config_raw_for_home(home).expect("JSON5 config must parse");
+        assert_eq!(
+            config["models"]["providers"]["deepseek"]["baseUrl"],
+            "https://api.deepseek.com"
+        );
+        assert_eq!(
+            config["agents"]["defaults"]["model"]["primary"],
+            "deepseek-chat"
+        );
+        assert!(config.get("unknownFutureKey").is_some());
     }
 
     // ------------------------------------------------------------------

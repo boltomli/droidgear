@@ -192,9 +192,12 @@ func (o *openclawObject) entryObjectReplacing(key string) *openclawObject {
 
 // openclawParseDocument decodes a JSON document into the ordered tree,
 // keeping object key order and number literals (mirrors
-// serde_json::from_str with preserve_order). Trailing content after the
+// serde_json::from_str with preserve_order). Upstream OpenClaw allows JSON5
+// (comments / trailing commas / single quotes), so the input is normalised
+// to strict JSON first — see openclaw_json5.go. Trailing content after the
 // root value is rejected like serde_json does.
 func openclawParseDocument(data []byte) (any, error) {
+	data = openclawNormalizeJSON5(data)
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
 	value, err := openclawDecodeValue(decoder)
