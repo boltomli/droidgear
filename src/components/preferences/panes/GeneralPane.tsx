@@ -23,6 +23,7 @@ import {
 } from '@/services/updater'
 import { usePreferences, useSavePreferences } from '@/services/preferences'
 import { useIsWindows, useIsMacOS } from '@/hooks/use-platform'
+import { isUpdaterSupported } from '@/lib/capabilities'
 
 export function GeneralPane() {
   const { t } = useTranslation()
@@ -152,16 +153,20 @@ export function GeneralPane() {
         >
           {/* Always available so a previously displayed release never blocks a
               fresh check (e.g. one that was published after it) */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCheckForUpdates}
-            disabled={updateStatus !== 'idle'}
-          >
-            {updateStatus === 'checking'
-              ? t('preferences.general.checking')
-              : t('preferences.general.checkForUpdates')}
-          </Button>
+          {/* Wails build: no update feed, so the check entry is hidden
+              (capabilities.isUpdaterSupported) instead of erroring at runtime */}
+          {isUpdaterSupported() && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCheckForUpdates}
+              disabled={updateStatus !== 'idle'}
+            >
+              {updateStatus === 'checking'
+                ? t('preferences.general.checking')
+                : t('preferences.general.checkForUpdates')}
+            </Button>
+          )}
         </SettingsField>
 
         {/* Update status display - show when update is available */}
@@ -186,7 +191,8 @@ export function GeneralPane() {
         {updateStatus === 'idle' &&
           !hasUpdate &&
           !pendingUpdate &&
-          !updateError && (
+          !updateError &&
+          isUpdaterSupported() && (
             <p className="text-sm text-muted-foreground">
               {t('preferences.general.upToDate')}
             </p>
@@ -205,25 +211,29 @@ export function GeneralPane() {
           </div>
         )}
 
-        {/* Auto-update toggle */}
-        <SettingsField
-          label={t('preferences.general.autoUpdate')}
-          description={t('preferences.general.autoUpdateDescription')}
-        >
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="auto-update-toggle"
-              checked={!disableAutoUpdate}
-              onCheckedChange={checked =>
-                handleDisableAutoUpdateChange(!checked)
-              }
-              disabled={savePreferences.isPending}
-            />
-            <Label htmlFor="auto-update-toggle" className="text-sm">
-              {!disableAutoUpdate ? t('common.enabled') : t('common.disabled')}
-            </Label>
-          </div>
-        </SettingsField>
+        {/* Auto-update toggle — only meaningful where an updater exists */}
+        {isUpdaterSupported() && (
+          <SettingsField
+            label={t('preferences.general.autoUpdate')}
+            description={t('preferences.general.autoUpdateDescription')}
+          >
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="auto-update-toggle"
+                checked={!disableAutoUpdate}
+                onCheckedChange={checked =>
+                  handleDisableAutoUpdateChange(!checked)
+                }
+                disabled={savePreferences.isPending}
+              />
+              <Label htmlFor="auto-update-toggle" className="text-sm">
+                {!disableAutoUpdate
+                  ? t('common.enabled')
+                  : t('common.disabled')}
+              </Label>
+            </div>
+          </SettingsField>
+        )}
       </SettingsSection>
 
       <SettingsSection title={t('preferences.general.terminal')}>

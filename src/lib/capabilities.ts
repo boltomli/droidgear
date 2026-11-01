@@ -45,6 +45,18 @@ export function isToolSupported(view: NavigationView): boolean {
 }
 
 /**
+ * Whether the auto-updater is wired up in this build.
+ *
+ * The updater is Tauri-only by design (no update feed ships with the Wails
+ * build — see wails/README.md and guidelines §3.7), so update-related
+ * entries (Preferences → General check button, the debug update toast) are
+ * hidden rather than left to fail with "unsupported command" at runtime.
+ */
+export function isUpdaterSupported(): boolean {
+  return !IS_WAILS_BACKEND
+}
+
+/**
  * Whether the sessions viewer sub-pages are available. The Go service
  * implements read-only session scanning for every tool (Dsh, Pi, OMP,
  * Codex, Droid), so they are on in both builds.

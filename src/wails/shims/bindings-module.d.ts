@@ -8,8 +8,9 @@
  * re-declared here; `tauri-core.ts` casts the namespace to a method
  * registry and selects Go service methods by name.
  *
- * The PTY shim (`tauri-pty.ts`) imports its four commands directly, so
- * those are declared with the generated signatures.
+ * The PTY shim (`tauri-pty.ts`) and the opener shim
+ * (`tauri-opener.ts`) import their commands directly, so those are declared
+ * with the generated signatures.
  */
 declare module '@wails-bindings' {
   export interface PtyStartOptions {
@@ -30,4 +31,9 @@ declare module '@wails-bindings' {
     rows: number
   ): Promise<void>
   export function PtyKill(id: number): Promise<void>
+
+  // Opener service (`tauri-opener.ts` → internal/app/opener.go).
+  export function OpenUrl(url: string): Promise<void>
+  export function OpenPath(path: string): Promise<void>
+  export function RevealItemInDir(item: string): Promise<void>
 }

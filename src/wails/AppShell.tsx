@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { MainWindow } from '@/components/layout/MainWindow'
+import { LegacyConfigDialog } from '@/components/LegacyConfigDialog'
 import { initializeCommandSystem } from '@/lib/commands'
 import { initializeLanguage } from '@/i18n/language-init'
 import { preloadShellEnv } from '@/services/shell-env'
@@ -77,7 +78,15 @@ function AppShell() {
     })
   }, [])
 
-  return <MainWindow />
+  return (
+    <>
+      <MainWindow />
+      {/* Legacy ~/.droidgear/config.json migration prompt — the Go backend
+          (CheckLegacyConfig / DeleteLegacyConfig) and its shim mapping have
+          always existed; only the mount was missing (guidelines §3.1). */}
+      <LegacyConfigDialog />
+    </>
+  )
 }
 
 export default function WailsApp() {

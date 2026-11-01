@@ -1,6 +1,7 @@
 import type { AppCommand } from './types'
 import { notifications } from '@/lib/notifications'
 import { buildReleaseUrl, showUpdateNotification } from '@/services/updater'
+import { isUpdaterSupported } from '@/lib/capabilities'
 
 export const notificationCommands: AppCommand[] = [
   {
@@ -28,7 +29,7 @@ export const notificationCommands: AppCommand[] = [
       '升级',
       '更新',
     ],
-    isAvailable: () => import.meta.env.DEV,
+    isAvailable: () => import.meta.env.DEV && isUpdaterSupported(),
     execute() {
       showUpdateNotification(
         {
