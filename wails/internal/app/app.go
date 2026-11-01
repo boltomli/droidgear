@@ -42,10 +42,16 @@ type AppPreferences struct {
 	DroidRun             *DroidRunPreferences `json:"droid_run"`
 }
 
-// appVersion is shown in the minimal shell's sidebar footer.
-const appVersion = "0.2.0"
+// appVersion is shown in the About/General panes. The value is injected at
+// link time via
+// `-ldflags "-X droidgear-wails/internal/app.appVersion=<version>"` in the
+// Taskfiles; the version itself comes from the repo-root package.json through
+// scripts/sync-version.mjs (single source of truth shared with the Tauri
+// build). The "dev" fallback covers `wails3 dev` / `go test`, which build
+// without the ldflags.
+var appVersion = "dev"
 
-// GetAppVersion returns the spike's version string (mirrors the Tauri
+// GetAppVersion returns the application version string (mirrors the Tauri
 // `get_app_version` command, which also returns a bare string).
 func (a *App) GetAppVersion() string {
 	return appVersion

@@ -115,6 +115,14 @@ The build pipeline (`build/Taskfile.yml`):
    repo root, output to `wails/frontend/dist`
 3. `go build -tags production` with `//go:embed all:frontend/dist`
 
+**Version**: the single source of truth is the repo-root `package.json`
+(same value the Tauri build embeds). `scripts/sync-version.mjs` syncs it into
+`build/config.yml`, `build/windows/info.json` and the NSIS/MSIX installer
+assets, and prints it for the `-ldflags "-X
+droidgear-wails/internal/app.appVersion=…"` injection, so `GetAppVersion`
+(About / General panes) reports the same version everywhere. Drift check (CI):
+`node wails/scripts/sync-version.mjs --check`.
+
 ## Files added by the spike
 
 ```
@@ -124,6 +132,7 @@ wails/
 ├── Taskfile.yml / build/       # customized Wails build pipeline (Windows)
 ├── vite.config.ts / index.html # frontend build reusing the repo toolchain
 ├── scripts/sync-registry.mjs   # refresh the vendored model registry
+├── scripts/sync-version.mjs    # sync package.json version → build assets + ldflags
 └── internal/
     ├── app/                    # Go service methods (266, mirroring the Tauri command surface)
     │   ├── app.go channels.go factory.go …
