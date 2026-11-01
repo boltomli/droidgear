@@ -113,3 +113,28 @@ COMMAND_MAPPING
 plus: any commands deliberately skipped (and why), any error strings that
 should be added to `src/wails/error-i18n.ts`, any new Go dependencies you
 would have needed, and any behavioural divergences from Rust.
+
+## System integration checklist (guidelines §7)
+
+Porting a command surface is not only about 参数/JSON/错误串 — for every new
+surface also answer these explicitly:
+
+1. **Frontend plugins**: does it depend on a `@tauri-apps/*` plugin that needs
+   a Wails equivalent (`opener`, `system-fonts`, notifications, menu,
+   updater, `process`, …)? Either implement the shim (see
+   `src/wails/shims/tauri-opener.ts`) or hide the entry via
+   `src/lib/capabilities.ts`. **No no-op shims**: a `listen()` with the wrong
+   event name or an `emit()` that silently drops is a defect. The one
+   documented exception is `emit('theme-changed', …)` in the event shim —
+   nothing listens to it in the single-window Wails shell.
+2. **File formats**: does the config allow comments / trailing commas /
+   unknown keys (JSON5/JSONC)? Are upstream deprecations in play (e.g. Codex
+   `wire_api = "chat"`)? Normalise on read (see `openclaw_json5.go`), write
+   back strict JSON, and preserve unknown keys through the
+   `UnmarshalJSONWithExtra` round-trip — with a round-trip test.
+3. **Lifecycle**: how do the resources this command touches behave on exit /
+   restart / second instance? PTY children die in `CleanupOnShutdown`,
+   watchers get stop hooks, window geometry is flushed on close and quit.
+4. **Command surface**: after adding or renaming Go methods, run
+   `wails3 generate bindings -clean=true -ts -i` and
+   `node scripts/check-command-surface.mjs` (CI runs both).

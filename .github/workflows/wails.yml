@@ -1,0 +1,74 @@
+name: wails
+
+# Guards the Wails port against the drift classes found in
+# docs/developer/wails-port-guidelines.zh.md (§8.1): command-surface
+# divergence, version-source drift and shared registry data drift.
+# Windows-only on purpose: internal/app uses Windows syscall fields
+# (SysProcAttr.HideWindow), so the Go service does not cross-compile.
+
+on:
+  pull_request:
+    paths:
+      - 'wails/**'
+      - 'src/**'
+      - 'scripts/check-command-surface.mjs'
+      - 'locales/**'
+      - '.github/workflows/wails.yml'
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wails/go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier
+        run: npm run format:check
+
+      - name: Frontend tests
+        run: npm run test:run
+
+      - name: Go static checks and tests
+        working-directory: wails
+        shell: bash
+        run: |
+          fmt="$(gofmt -l .)"
+          if [ -n "$fmt" ]; then
+            echo "gofmt needed on:"; echo "$fmt"; exit 1
+          fi
+          go vet ./...
+          go test ./...
+
+      - name: Install wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+
+      - name: Generate bindings
+        working-directory: wails
+        run: wails3 generate bindings -clean=true -ts -i
+
+      - name: Command surface drift
+        run: node scripts/check-command-surface.mjs
+
+      - name: Version source drift
+        run: node wails/scripts/sync-version.mjs --check
+
+      - name: Shared registry data drift
+        shell: bash
+        run: cmp src/lib/model-registry-data.json wails/internal/core/registrydata/model-registry-data.json

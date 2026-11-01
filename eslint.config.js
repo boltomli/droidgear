@@ -89,7 +89,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.js'],
+    files: ['scripts/**/*.js', 'scripts/check-command-surface.mjs'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
