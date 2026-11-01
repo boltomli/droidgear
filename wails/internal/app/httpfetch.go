@@ -413,7 +413,7 @@ func (a *App) FetchChannelTokens(channelType string, baseUrl string, username st
 	case "new-api":
 		return fetchNewAPITokens(base, username, password)
 	case "sub-2-api":
-		return nil, errString("Sub2API token import is not supported in this minimal Wails build")
+		return fetchSub2APITokens(base, username, password)
 	default:
 		return []ChannelToken{{
 			ID:             0,
@@ -423,6 +423,170 @@ func (a *App) FetchChannelTokens(channelType string, baseUrl string, username st
 			UnlimitedQuota: true,
 		}}, nil
 	}
+}
+
+// fetchSub2APITokens logs in to a Sub2API gateway (email/password), lists
+// the account's API keys with pagination and merges per-key usage. Mirrors
+// channel::fetch_sub2api_tokens in the Rust core, including error strings.
+func fetchSub2APITokens(base, email, password string) ([]ChannelToken, error) {
+	client := &http.Client{Timeout: 15 * time.Second}
+
+	// Login (v1 API).
+	loginBody, _ := json.Marshal(map[string]string{"email": email, "password": password})
+	loginResponse, err := client.Post(base+"/api/v1/auth/login", "application/json", bytes.NewReader(loginBody)) // #nosec G107 -- user-provided URL
+	if err != nil {
+		return nil, fmt.Errorf("Failed to login: %w", err)
+	}
+	defer func() { _ = loginResponse.Body.Close() }()
+	loginData, err := io.ReadAll(io.LimitReader(loginResponse.Body, 1<<20))
+	if err != nil {
+		return nil, fmt.Errorf("Failed to read login response body: %w", err)
+	}
+	if loginResponse.StatusCode < 200 || loginResponse.StatusCode >= 300 {
+		return nil, errString(fmt.Sprintf("Login failed %d %s: %s", loginResponse.StatusCode, http.StatusText(loginResponse.StatusCode), string(loginData)))
+	}
+	var loginResult map[string]any
+	if err := json.Unmarshal(loginData, &loginResult); err != nil {
+		return nil, fmt.Errorf("Failed to parse login response: %w", err)
+	}
+	code, hasCode := loginResult["code"].(float64)
+	if !hasCode || int64(code) != 0 {
+		message, _ := loginResult["message"].(string)
+		if message == "" {
+			message = "Unknown error"
+		}
+		return nil, errString("Login failed: " + message)
+	}
+	data, _ := loginResult["data"].(map[string]any)
+	accessToken, _ := data["access_token"].(string)
+	if accessToken == "" {
+		return nil, errString("Could not get access_token from login response")
+	}
+	authHeader := "Bearer " + accessToken
+
+	// Group info is optional; failures degrade to (nil, nil) lookups.
+	groupInfo := map[int64][2]string{}
+	groupsRequest, _ := http.NewRequest(http.MethodGet, base+"/api/v1/groups/available", nil) // #nosec G107 -- user-provided URL
+	groupsRequest.Header.Set("Authorization", authHeader)
+	if groupsResponse, err := client.Do(groupsRequest); err == nil {
+		if groupsResponse.StatusCode >= 200 && groupsResponse.StatusCode < 300 {
+			if body, err := io.ReadAll(io.LimitReader(groupsResponse.Body, 4<<20)); err == nil {
+				var groupsData map[string]any
+				if json.Unmarshal(body, &groupsData) == nil {
+					items, _ := groupsData["data"].([]any)
+					for _, item := range items {
+						group, _ := item.(map[string]any)
+						id, okID := group["id"].(float64)
+						platform, okPlatform := group["platform"].(string)
+						name, okName := group["name"].(string)
+						if okID && okPlatform && okName {
+							groupInfo[int64(id)] = [2]string{platform, name}
+						}
+					}
+				}
+			}
+		}
+		_ = groupsResponse.Body.Close()
+	}
+
+	// Keys list (paginated).
+	const pageSize = 100
+	var allItems []any
+	for page := 1; ; page++ {
+		keysURL := fmt.Sprintf("%s/api/v1/keys?page=%d&page_size=%d", base, page, pageSize)
+		keysRequest, _ := http.NewRequest(http.MethodGet, keysURL, nil) // #nosec G107 -- user-provided URL
+		keysRequest.Header.Set("Authorization", authHeader)
+		keysResponse, err := client.Do(keysRequest)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to fetch keys: %w", err)
+		}
+		body, readErr := io.ReadAll(io.LimitReader(keysResponse.Body, 8<<20))
+		_ = keysResponse.Body.Close()
+		if readErr != nil {
+			return nil, fmt.Errorf("Failed to read keys response body: %w", readErr)
+		}
+		if keysResponse.StatusCode < 200 || keysResponse.StatusCode >= 300 {
+			return nil, errString(fmt.Sprintf("API error %d %s: %s", keysResponse.StatusCode, http.StatusText(keysResponse.StatusCode), string(body)))
+		}
+		var keysData map[string]any
+		if err := json.Unmarshal(body, &keysData); err != nil {
+			return nil, fmt.Errorf("Failed to parse keys response: %w", err)
+		}
+		payload, _ := keysData["data"].(map[string]any)
+		items, _ := payload["items"].([]any)
+		allItems = append(allItems, items...)
+		if len(items) < pageSize {
+			break
+		}
+	}
+
+	// Usage is optional.
+	usageMap := map[int64]map[string]any{}
+	usageRequest, _ := http.NewRequest(http.MethodGet, base+"/api/v1/keys/usage", nil) // #nosec G107 -- user-provided URL
+	usageRequest.Header.Set("Authorization", authHeader)
+	if usageResponse, err := client.Do(usageRequest); err == nil {
+		if usageResponse.StatusCode >= 200 && usageResponse.StatusCode < 300 {
+			if body, err := io.ReadAll(io.LimitReader(usageResponse.Body, 8<<20)); err == nil {
+				var usageData map[string]any
+				if json.Unmarshal(body, &usageData) == nil {
+					entries, _ := usageData["data"].([]any)
+					for _, entry := range entries {
+						usage, _ := entry.(map[string]any)
+						if keyID, ok := usage["key_id"].(float64); ok {
+							usageMap[int64(keyID)] = usage
+						}
+					}
+				}
+			}
+		}
+		_ = usageResponse.Body.Close()
+	}
+
+	tokens := []ChannelToken{}
+	for _, item := range allItems {
+		key, _ := item.(map[string]any)
+		id, okID := key["id"].(float64)
+		name, okName := key["name"].(string)
+		keyValue, okKey := key["key"].(string)
+		if !okID || !okName || !okKey {
+			continue
+		}
+		status := int32(1)
+		if rawStatus, ok := key["status"].(float64); ok {
+			status = int32(rawStatus)
+		}
+		var usedQuota float64
+		if usage, ok := usageMap[int64(id)]; ok {
+			if cost, ok := usage["total_actual_cost"].(float64); ok {
+				usedQuota = cost
+			}
+		}
+		var platform, groupName *string
+		if group, ok := key["group"].(map[string]any); ok {
+			if p, ok := group["platform"].(string); ok {
+				platform = &p
+			}
+			if n, ok := group["name"].(string); ok {
+				groupName = &n
+			}
+		} else if groupID, ok := key["group_id"].(float64); ok {
+			if info, ok := groupInfo[int64(groupID)]; ok {
+				platform = &info[0]
+				groupName = &info[1]
+			}
+		}
+		tokens = append(tokens, ChannelToken{
+			ID:             id,
+			Name:           name,
+			Key:            keyValue,
+			Status:         status,
+			UnlimitedQuota: true,
+			Platform:       platform,
+			GroupName:      groupName,
+			UsedQuota:      usedQuota,
+		})
+	}
+	return tokens, nil
 }
 
 func fetchNewAPITokens(base, username, password string) ([]ChannelToken, error) {

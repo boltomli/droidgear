@@ -75,6 +75,7 @@ const COMMANDS: Record<string, CommandSpec> = {
     fn: 'FetchModelsByApiKey',
     args: ['baseUrl', 'apiKey', 'platform'],
   },
+  fetch_models: { fn: 'FetchModels', args: ['provider', 'baseUrl', 'apiKey'] },
 
   // Dsh
   list_dsh_profiles: { fn: 'ListDshProfiles', args: [] },
@@ -166,6 +167,380 @@ const COMMANDS: Record<string, CommandSpec> = {
     args: ['providerId'],
   },
 
+  // Droid (Factory Droid settings, specs, MCP, trusted folders, auth)
+  list_droid_settings_files: { fn: 'ListDroidSettingsFiles', args: [] },
+  create_droid_settings_file: {
+    fn: 'CreateDroidSettingsFile',
+    args: ['name', 'copyFromActive'],
+  },
+  delete_droid_settings_file: {
+    fn: 'DeleteDroidSettingsFile',
+    args: ['name'],
+  },
+  get_active_droid_settings_file: {
+    fn: 'GetActiveDroidSettingsFile',
+    args: [],
+  },
+  set_active_droid_settings_file: {
+    fn: 'SetActiveDroidSettingsFile',
+    args: ['name'],
+  },
+  link_droid_settings_file: { fn: 'LinkDroidSettingsFile', args: ['path'] },
+  unlink_droid_settings_file: {
+    fn: 'UnlinkDroidSettingsFile',
+    args: ['path'],
+  },
+  get_droid_launch_command: { fn: 'GetDroidLaunchCommand', args: [] },
+  launch_droid: { fn: 'LaunchDroid', args: ['cwd'] },
+  list_droid_trusted_folders: { fn: 'ListDroidTrustedFolders', args: [] },
+  add_droid_trusted_folder: {
+    fn: 'AddDroidTrustedFolder',
+    args: ['path'],
+  },
+  remove_droid_trusted_folder: {
+    fn: 'RemoveDroidTrustedFolder',
+    args: ['path'],
+  },
+  remove_droid_trusted_folders: {
+    fn: 'RemoveDroidTrustedFolders',
+    args: ['paths'],
+  },
+  list_specs: { fn: 'ListSpecs', args: [] },
+  read_spec: { fn: 'ReadSpec', args: ['path'] },
+  rename_spec: { fn: 'RenameSpec', args: ['oldPath', 'newName'] },
+  update_spec: { fn: 'UpdateSpec', args: ['path', 'content'] },
+  delete_spec: { fn: 'DeleteSpec', args: ['path'] },
+  start_specs_watcher: { fn: 'StartSpecsWatcher', args: [] },
+  stop_specs_watcher: { fn: 'StopSpecsWatcher', args: [] },
+  load_mcp_servers: { fn: 'LoadMcpServers', args: [] },
+  save_mcp_server: { fn: 'SaveMcpServer', args: ['server'] },
+  save_baizhi_preset: { fn: 'SaveBaizhiPreset', args: [] },
+  delete_mcp_server: { fn: 'DeleteMcpServer', args: ['name'] },
+  toggle_mcp_server: { fn: 'ToggleMcpServer', args: ['name', 'disabled'] },
+  list_factory_auth_profiles: { fn: 'ListFactoryAuthProfiles', args: [] },
+  get_active_factory_auth_profile: {
+    fn: 'GetActiveFactoryAuthProfile',
+    args: [],
+  },
+  switch_factory_auth_profile: {
+    fn: 'SwitchFactoryAuthProfile',
+    args: ['name'],
+  },
+  save_current_factory_auth_profile: {
+    fn: 'SaveCurrentFactoryAuthProfile',
+    args: ['name', 'label'],
+  },
+  delete_factory_auth_profile: {
+    fn: 'DeleteFactoryAuthProfile',
+    args: ['name'],
+  },
+  rename_factory_auth_profile: {
+    fn: 'RenameFactoryAuthProfile',
+    args: ['name', 'label'],
+  },
+  get_diff_mode: { fn: 'GetDiffMode', args: [] },
+  save_diff_mode: { fn: 'SaveDiffMode', args: ['value'] },
+  get_cloud_session_sync: { fn: 'GetCloudSessionSync', args: [] },
+  save_cloud_session_sync: { fn: 'SaveCloudSessionSync', args: ['enabled'] },
+  get_reasoning_effort: { fn: 'GetReasoningEffort', args: [] },
+  save_reasoning_effort: { fn: 'SaveReasoningEffort', args: ['value'] },
+  get_compaction_model_mode: { fn: 'GetCompactionModelMode', args: [] },
+  save_compaction_model_mode: {
+    fn: 'SaveCompactionModelMode',
+    args: ['value'],
+  },
+  get_compaction_token_limit: { fn: 'GetCompactionTokenLimit', args: [] },
+  save_compaction_token_limit: {
+    fn: 'SaveCompactionTokenLimit',
+    args: ['value'],
+  },
+  get_compaction_token_limit_per_model: {
+    fn: 'GetCompactionTokenLimitPerModel',
+    args: [],
+  },
+  save_compaction_token_limit_per_model: {
+    fn: 'SaveCompactionTokenLimitPerModel',
+    args: ['overrides'],
+  },
+  get_todo_display_mode: { fn: 'GetTodoDisplayMode', args: [] },
+  save_todo_display_mode: { fn: 'SaveTodoDisplayMode', args: ['value'] },
+  get_show_thinking_in_main_view: {
+    fn: 'GetShowThinkingInMainView',
+    args: [],
+  },
+  save_show_thinking_in_main_view: {
+    fn: 'SaveShowThinkingInMainView',
+    args: ['enabled'],
+  },
+  get_include_co_authored_by_droid: {
+    fn: 'GetIncludeCoAuthoredByDroid',
+    args: [],
+  },
+  save_include_co_authored_by_droid: {
+    fn: 'SaveIncludeCoAuthoredByDroid',
+    args: ['enabled'],
+  },
+  get_mission_model_settings: { fn: 'GetMissionModelSettings', args: [] },
+  save_mission_model_settings: {
+    fn: 'SaveMissionModelSettings',
+    args: ['settings'],
+  },
+
+  // OpenCode
+  list_opencode_profiles: { fn: 'ListOpencodeProfiles', args: [] },
+  get_opencode_profile: { fn: 'GetOpencodeProfile', args: ['id'] },
+  save_opencode_profile: { fn: 'SaveOpencodeProfile', args: ['profile'] },
+  delete_opencode_profile: { fn: 'DeleteOpencodeProfile', args: ['id'] },
+  duplicate_opencode_profile: {
+    fn: 'DuplicateOpencodeProfile',
+    args: ['id', 'newName'],
+  },
+  create_default_profile: { fn: 'CreateDefaultProfile', args: [] },
+  get_active_opencode_profile_id: {
+    fn: 'GetActiveOpencodeProfileId',
+    args: [],
+  },
+  apply_opencode_profile: { fn: 'ApplyOpencodeProfile', args: ['id'] },
+  get_opencode_config_status: { fn: 'GetOpencodeConfigStatus', args: [] },
+  get_opencode_provider_templates: {
+    fn: 'GetOpencodeProviderTemplates',
+    args: [],
+  },
+  test_opencode_provider_connection: {
+    fn: 'TestOpencodeProviderConnection',
+    args: ['providerId', 'baseUrl', 'apiKey'],
+  },
+  read_opencode_current_config: {
+    fn: 'ReadOpencodeCurrentConfig',
+    args: [],
+  },
+
+  // Copilot
+  list_copilot_profiles: { fn: 'ListCopilotProfiles', args: [] },
+  get_copilot_profile: { fn: 'GetCopilotProfile', args: ['id'] },
+  save_copilot_profile: { fn: 'SaveCopilotProfile', args: ['profile'] },
+  delete_copilot_profile: { fn: 'DeleteCopilotProfile', args: ['id'] },
+  duplicate_copilot_profile: {
+    fn: 'DuplicateCopilotProfile',
+    args: ['id', 'newName'],
+  },
+  create_default_copilot_profile: {
+    fn: 'CreateDefaultCopilotProfile',
+    args: [],
+  },
+  get_active_copilot_profile_id: {
+    fn: 'GetActiveCopilotProfileId',
+    args: [],
+  },
+  apply_copilot_profile: { fn: 'ApplyCopilotProfile', args: ['id'] },
+  get_copilot_config_status: { fn: 'GetCopilotConfigStatus', args: [] },
+  read_copilot_current_config: { fn: 'ReadCopilotCurrentConfig', args: [] },
+  prepare_copilot_channel_import: {
+    fn: 'PrepareCopilotChannelImport',
+    args: ['profile', 'selection'],
+  },
+  launch_copilot: { fn: 'LaunchCopilot', args: ['id', 'cwd'] },
+
+  // Codex
+  list_codex_profiles: { fn: 'ListCodexProfiles', args: [] },
+  get_codex_profile: { fn: 'GetCodexProfile', args: ['id'] },
+  save_codex_profile: { fn: 'SaveCodexProfile', args: ['profile'] },
+  delete_codex_profile: { fn: 'DeleteCodexProfile', args: ['id'] },
+  duplicate_codex_profile: {
+    fn: 'DuplicateCodexProfile',
+    args: ['id', 'newName'],
+  },
+  create_default_codex_profile: {
+    fn: 'CreateDefaultCodexProfile',
+    args: [],
+  },
+  get_active_codex_profile_id: { fn: 'GetActiveCodexProfileId', args: [] },
+  apply_codex_profile: { fn: 'ApplyCodexProfile', args: ['id'] },
+  get_codex_config_status: { fn: 'GetCodexConfigStatus', args: [] },
+  read_codex_current_config: { fn: 'ReadCodexCurrentConfig', args: [] },
+  get_codex_cli_capability: { fn: 'GetCodexCliCapability', args: [] },
+  launch_codex: { fn: 'LaunchCodex', args: ['id', 'cwd'] },
+  list_codex_auth_profiles: { fn: 'ListCodexAuthProfiles', args: [] },
+  is_codex_official_auth: { fn: 'IsCodexOfficialAuth', args: [] },
+  save_current_codex_auth_profile: {
+    fn: 'SaveCurrentCodexAuthProfile',
+    args: ['name', 'label'],
+  },
+  switch_codex_auth_profile: {
+    fn: 'SwitchCodexAuthProfile',
+    args: ['name'],
+  },
+  delete_codex_auth_profile: { fn: 'DeleteCodexAuthProfile', args: ['name'] },
+  rename_codex_auth_profile: {
+    fn: 'RenameCodexAuthProfile',
+    args: ['name', 'label'],
+  },
+  detect_codex_auth_conflict: {
+    fn: 'DetectCodexAuthConflict',
+    args: ['profileName'],
+  },
+  detect_codex_apply_auth_conflict: {
+    fn: 'DetectCodexApplyAuthConflict',
+    args: ['codexProfileId'],
+  },
+  list_codex_sessions: { fn: 'ListCodexSessions', args: [] },
+  list_codex_session_providers: {
+    fn: 'ListCodexSessionProviders',
+    args: [],
+  },
+  get_codex_session_detail: {
+    fn: 'GetCodexSessionDetail',
+    args: ['sessionPath'],
+  },
+  delete_codex_session: { fn: 'DeleteCodexSession', args: ['sessionPath'] },
+  set_codex_session_provider: {
+    fn: 'SetCodexSessionProvider',
+    args: ['sessionPath', 'providerId'],
+  },
+  start_codex_sessions_watcher: {
+    fn: 'StartCodexSessionsWatcher',
+    args: [],
+  },
+  stop_codex_sessions_watcher: { fn: 'StopCodexSessionsWatcher', args: [] },
+
+  // Claude
+  list_claude_profiles: { fn: 'ListClaudeProfiles', args: [] },
+  get_claude_profile: { fn: 'GetClaudeProfile', args: ['id'] },
+  save_claude_profile: { fn: 'SaveClaudeProfile', args: ['profile'] },
+  delete_claude_profile: { fn: 'DeleteClaudeProfile', args: ['id'] },
+  duplicate_claude_profile: {
+    fn: 'DuplicateClaudeProfile',
+    args: ['id', 'newName'],
+  },
+  create_default_claude_profile: {
+    fn: 'CreateDefaultClaudeProfile',
+    args: [],
+  },
+  get_active_claude_profile_id: {
+    fn: 'GetActiveClaudeProfileId',
+    args: [],
+  },
+  apply_claude_profile: { fn: 'ApplyClaudeProfile', args: ['id'] },
+  get_claude_config_status: { fn: 'GetClaudeConfigStatus', args: [] },
+  read_claude_current_config: { fn: 'ReadClaudeCurrentConfig', args: [] },
+  list_claude_settings_files: { fn: 'ListClaudeSettingsFiles', args: [] },
+  get_active_claude_settings_file: {
+    fn: 'GetActiveClaudeSettingsFile',
+    args: [],
+  },
+  set_active_claude_settings_file: {
+    fn: 'SetActiveClaudeSettingsFile',
+    args: ['name'],
+  },
+  create_claude_settings_file: {
+    fn: 'CreateClaudeSettingsFile',
+    args: ['name', 'copyFromActive'],
+  },
+  delete_claude_settings_file: {
+    fn: 'DeleteClaudeSettingsFile',
+    args: ['name'],
+  },
+  read_claude_settings_file: {
+    fn: 'ReadClaudeSettingsFile',
+    args: ['name'],
+  },
+  save_claude_settings_file: {
+    fn: 'SaveClaudeSettingsFile',
+    args: ['name', 'contents'],
+  },
+  duplicate_claude_settings_file: {
+    fn: 'DuplicateClaudeSettingsFile',
+    args: ['name', 'newName'],
+  },
+  merge_claude_settings_to_global: {
+    fn: 'MergeClaudeSettingsToGlobal',
+    args: ['name'],
+  },
+  load_claude_settings_from_live: {
+    fn: 'LoadClaudeSettingsFromLive',
+    args: ['name'],
+  },
+  launch_claude_with_settings: {
+    fn: 'LaunchClaudeWithSettings',
+    args: ['cwd', 'skipDangerous'],
+  },
+  get_claude_settings_launch_command: {
+    fn: 'GetClaudeSettingsLaunchCommand',
+    args: ['skipDangerous'],
+  },
+  preview_claude_temporary_run_from_file: {
+    fn: 'PreviewClaudeTemporaryRunFromFile',
+    args: ['name'],
+  },
+
+  // OpenClaw
+  list_openclaw_profiles: { fn: 'ListOpenclawProfiles', args: [] },
+  get_openclaw_profile: { fn: 'GetOpenclawProfile', args: ['id'] },
+  save_openclaw_profile: {
+    fn: 'SaveOpenclawProfile',
+    args: ['profile'],
+  },
+  delete_openclaw_profile: { fn: 'DeleteOpenclawProfile', args: ['id'] },
+  duplicate_openclaw_profile: {
+    fn: 'DuplicateOpenclawProfile',
+    args: ['id', 'newName'],
+  },
+  create_default_openclaw_profile: {
+    fn: 'CreateDefaultOpenclawProfile',
+    args: [],
+  },
+  get_active_openclaw_profile_id: {
+    fn: 'GetActiveOpenclawProfileId',
+    args: [],
+  },
+  apply_openclaw_profile: {
+    fn: 'ApplyOpenclawProfile',
+    args: ['profile'],
+  },
+  get_openclaw_config_status: {
+    fn: 'GetOpenclawConfigStatus',
+    args: [],
+  },
+  read_openclaw_current_config: {
+    fn: 'ReadOpenclawCurrentConfig',
+    args: [],
+  },
+  read_openclaw_subagents: { fn: 'ReadOpenclawSubagents', args: [] },
+  save_openclaw_subagents: {
+    fn: 'SaveOpenclawSubagents',
+    args: ['subagents'],
+  },
+
+  // Sessions viewers (generic/Droid + per-tool)
+  list_session_projects: { fn: 'ListSessionProjects', args: [] },
+  list_sessions: { fn: 'ListSessions', args: ['project'] },
+  get_session_detail: { fn: 'GetSessionDetail', args: ['sessionPath'] },
+  delete_session: { fn: 'DeleteSession', args: ['sessionPath'] },
+  start_sessions_watcher: { fn: 'StartSessionsWatcher', args: [] },
+  stop_sessions_watcher: { fn: 'StopSessionsWatcher', args: [] },
+  list_dsh_sessions: { fn: 'ListDshSessions', args: [] },
+  get_dsh_session_detail: {
+    fn: 'GetDshSessionDetail',
+    args: ['sessionPath'],
+  },
+  delete_dsh_session: { fn: 'DeleteDshSession', args: ['sessionPath'] },
+  start_dsh_sessions_watcher: { fn: 'StartDshSessionsWatcher', args: [] },
+  stop_dsh_sessions_watcher: { fn: 'StopDshSessionsWatcher', args: [] },
+  list_pi_sessions: { fn: 'ListPiSessions', args: [] },
+  get_pi_session_detail: { fn: 'GetPiSessionDetail', args: ['sessionPath'] },
+  delete_pi_session: { fn: 'DeletePiSession', args: ['sessionPath'] },
+  start_pi_sessions_watcher: { fn: 'StartPiSessionsWatcher', args: [] },
+  stop_pi_sessions_watcher: { fn: 'StopPiSessionsWatcher', args: [] },
+  list_omp_sessions: { fn: 'ListOmpSessions', args: [] },
+  get_omp_session_detail: { fn: 'GetOmpSessionDetail', args: ['sessionPath'] },
+  delete_omp_session: { fn: 'DeleteOmpSession', args: ['sessionPath'] },
+  start_omp_sessions_watcher: { fn: 'StartOmpSessionsWatcher', args: [] },
+  stop_omp_sessions_watcher: { fn: 'StopOmpSessionsWatcher', args: [] },
+
+  // Dsh legacy config dialog
+  check_legacy_config: { fn: 'CheckLegacyConfig', args: [] },
+  delete_legacy_config: { fn: 'DeleteLegacyConfig', args: [] },
+
   // Paths (Preferences pane)
   get_effective_paths: { fn: 'GetEffectivePaths', args: [] },
   get_default_paths: { fn: 'GetDefaultPaths', args: [] },
@@ -198,6 +573,29 @@ const COMMANDS: Record<string, CommandSpec> = {
   save_export_template: { fn: 'SaveExportTemplate', args: ['template'] },
   delete_export_template: { fn: 'DeleteExportTemplate', args: ['name'] },
   run_export_template: { fn: 'RunExportTemplate', args: ['name'] },
+
+  // Model connectivity tests (Preferences → model registry)
+  test_model_connection: {
+    fn: 'TestModelConnection',
+    args: ['modelId'],
+  },
+  test_model_connection_with_mode: {
+    fn: 'TestModelConnectionWithMode',
+    args: ['modelId', 'mode', 'prompt'],
+  },
+  test_all_model_connections_command: {
+    fn: 'TestAllModelConnectionsCommand',
+    args: [],
+  },
+  test_all_model_connections_with_mode: {
+    fn: 'TestAllModelConnectionsWithMode',
+    args: ['mode', 'prompt'],
+  },
+  test_provider_connection: {
+    fn: 'TestProviderConnection',
+    args: ['provider', 'baseUrl', 'apiKey', 'modelId'],
+  },
+  get_connectivity_summary: { fn: 'GetConnectivitySummary', args: ['results'] },
 
   // Plain-text file IO (channel import/export)
   read_text_file: { fn: 'ReadTextFile', args: ['path'] },

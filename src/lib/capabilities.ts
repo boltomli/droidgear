@@ -1,12 +1,12 @@
 /**
  * Backend capability gating.
  *
- * The Tauri build exposes every tool and sub-view; the Wails build only has
- * Go implementations for a subset (channels, Dsh, Pi, Hermes, OMP — no
- * sessions viewers, no Codex/OpenCode/Claude/OpenClaw/Copilot/Droid yet).
- * Shared components consult this module so the two shells differ only in
- * what is *enabled*, never in layout: unsupported tools render as disabled
- * placeholders.
+ * Both builds expose every tool and sub-view: the Go service behind the
+ * Wails build now mirrors the full Tauri command surface (channels, Dsh, Pi,
+ * Hermes, OMP, Codex, OpenCode, Claude, OpenClaw, Copilot, Droid + sessions
+ * viewers). Shared components consult this module so the two shells stay
+ * identical in layout; the gating hooks remain for future Tauri-only
+ * surfaces (e.g. the auto-updater).
  */
 
 import type { NavigationView, ToolView } from '@/store/ui-store'
@@ -18,17 +18,26 @@ declare const __WAILS_BACKEND__: boolean | undefined
 export const IS_WAILS_BACKEND =
   typeof __WAILS_BACKEND__ !== 'undefined' && __WAILS_BACKEND__ === true
 
-/** Tools whose Go backend is complete enough to enable in the Wails build. */
+/** Tools whose Go backend is complete (all ten shipped since the parity push). */
 const WAILS_TOOLS = new Set<NavigationView>([
   'channels',
   'dsh',
   'pi',
   'hermes',
   'omp',
+  'codex',
+  'opencode',
+  'claude',
+  'openclaw',
+  'copilot',
+  'droid',
 ])
 
 /** First tool shown when a persisted view is unsupported (Wails only). */
 export const WAILS_FALLBACK_TOOL: ToolView = 'dsh'
+
+// Every NavigationView has a Go backend now; keep the function for future
+// capability gating (e.g. updater) without touching call sites.
 
 /** Whether a top-level tool/view can be opened in this build. */
 export function isToolSupported(view: NavigationView): boolean {
@@ -36,9 +45,10 @@ export function isToolSupported(view: NavigationView): boolean {
 }
 
 /**
- * Whether the sessions viewer sub-pages are available. They need read access
- * to per-tool session stores that the Go service does not implement yet.
+ * Whether the sessions viewer sub-pages are available. The Go service
+ * implements read-only session scanning for every tool (Dsh, Pi, OMP,
+ * Codex, Droid), so they are on in both builds.
  */
 export function isSessionsSupported(tool: NavigationView): boolean {
-  return !IS_WAILS_BACKEND && tool !== 'channels'
+  return tool !== 'channels'
 }

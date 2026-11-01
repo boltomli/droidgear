@@ -31,7 +31,7 @@ type ChannelFilter struct {
 
 // TokenFilter mirrors channel_export::TokenFilter.
 type TokenFilter struct {
-	Status    *int    `json:"status" yaml:"status,omitempty"`
+	Status    *int     `json:"status" yaml:"status,omitempty"`
 	Platforms []string `json:"platforms,omitempty" yaml:"platforms,omitempty"`
 }
 
@@ -51,13 +51,13 @@ type ExportTemplate struct {
 
 // ExportResult mirrors channel_export::ExportResult.
 type ExportResult struct {
-	Template       string   `json:"template"`
-	ChannelsCount  int      `json:"channelsCount"`
-	TokensCount    int      `json:"tokensCount"`
-	ModelsCount    int      `json:"modelsCount"`
-	OutputPath     string   `json:"outputPath"`
-	RecordCount    int      `json:"recordCount"`
-	Warnings       []string `json:"warnings"`
+	Template      string   `json:"template"`
+	ChannelsCount int      `json:"channelsCount"`
+	TokensCount   int      `json:"tokensCount"`
+	ModelsCount   int      `json:"modelsCount"`
+	OutputPath    string   `json:"outputPath"`
+	RecordCount   int      `json:"recordCount"`
+	Warnings      []string `json:"warnings"`
 }
 
 type exportConfig struct {
@@ -255,18 +255,18 @@ func resolveProtocol(modelID string, overrides map[string]string) string {
 // well-known fields (no selector) or a source→rename mapping.
 func buildFlatRecord(channel Channel, token ChannelToken, model *ModelInfo, protocol string, fields map[string]string) map[string]any {
 	all := map[string]any{
-		"channel.id":        channel.ID,
-		"channel.name":      channel.Name,
-		"channel.type":      channelTypeDebug(channel.Type),
-		"channel.baseUrl":   channel.BaseURL,
-		"channel.enabled":   channel.Enabled,
-		"token.name":        token.Name,
-		"token.key":         token.Key,
-		"token.status":      token.Status,
-		"token.platform":    token.Platform,
-		"token.groupName":   token.GroupName,
-		"token.remainQuota": token.RemainQuota,
-		"token.usedQuota":   token.UsedQuota,
+		"channel.id":           channel.ID,
+		"channel.name":         channel.Name,
+		"channel.type":         channelTypeDebug(channel.Type),
+		"channel.baseUrl":      channel.BaseURL,
+		"channel.enabled":      channel.Enabled,
+		"token.name":           token.Name,
+		"token.key":            token.Key,
+		"token.status":         token.Status,
+		"token.platform":       token.Platform,
+		"token.groupName":      token.GroupName,
+		"token.remainQuota":    token.RemainQuota,
+		"token.usedQuota":      token.UsedQuota,
 		"token.unlimitedQuota": token.UnlimitedQuota,
 	}
 	if model != nil {
@@ -420,7 +420,7 @@ func (a *App) RunExportTemplate(name string) (ExportResult, error) {
 		}
 	}
 
- outputPath, err := resolveOutputPath(template.OutputPath)
+	outputPath, err := resolveOutputPath(template.OutputPath)
 	if err != nil {
 		return ExportResult{}, err
 	}

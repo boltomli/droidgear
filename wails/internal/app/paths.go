@@ -28,8 +28,8 @@ type EffectivePaths struct {
 
 // WslInfo mirrors paths::WslInfo.
 type WslInfo struct {
-	Available bool                `json:"available"`
-	Distros   []core.WslDistro    `json:"distros"`
+	Available bool             `json:"available"`
+	Distros   []core.WslDistro `json:"distros"`
 }
 
 func buildEffectivePaths() (EffectivePaths, error) {

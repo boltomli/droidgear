@@ -59,6 +59,7 @@ const RULES: ErrorRule[] = [
   { prefix: 'No credentials found for provider', key: 'errors.noCredentials' },
 
   // Model fetching / connectivity
+  { prefix: 'Request failed', key: 'errors.requestFailed' },
   {
     exact: 'Base URL is required to fetch models',
     key: 'errors.baseUrlRequired',
@@ -72,6 +73,92 @@ const RULES: ErrorRule[] = [
   { prefix: 'HTTP ', key: 'errors.httpError' },
   { prefix: 'Network error', key: 'errors.networkError' },
   { prefix: 'Inference HTTP', key: 'errors.apiError' },
+  { exact: 'Request timed out', key: 'errors.testTimeout' },
+  { exact: 'Inference request timed out', key: 'errors.testTimeout' },
+  { prefix: 'Inference network error', key: 'errors.networkError' },
+
+  // OpenCode / Copilot
+  { exact: 'Profile name is required', key: 'errors.profileNameRequired' },
+  {
+    exact: 'Copilot supports OpenAI and Anthropic provider types',
+    key: 'errors.copilotProviderType',
+  },
+  {
+    exact: 'Base URL must be an absolute HTTP(S) URL',
+    key: 'errors.baseUrlAbsolute',
+  },
+  {
+    exact: 'Token limits must be positive integers',
+    key: 'errors.tokenLimitsPositive',
+  },
+  {
+    exact:
+      'This channel platform does not expose a supported OpenAI or Anthropic API',
+    key: 'errors.channelPlatformUnsupported',
+  },
+  {
+    exact: 'Profile id does not match its file name',
+    key: 'errors.profileIdMismatch',
+  },
+  {
+    prefix: 'Complete the Copilot BYOK profile before launching:',
+    key: 'errors.copilotIncomplete',
+  },
+  { prefix: 'Connection failed:', key: 'errors.connectionFailed' },
+
+  // Codex
+  {
+    exact: 'Cannot delete the currently active profile',
+    key: 'errors.cannotDeleteActiveProfile',
+  },
+  { prefix: "Profile '", key: 'errors.profileNotFound' },
+  {
+    prefix: "Auth file missing for profile '",
+    key: 'errors.authFileMissing',
+  },
+  {
+    exact: "Provider name 'OpenAI' is reserved",
+    key: 'errors.openaiReserved',
+  },
+  { prefix: 'Failed to read Codex CLI', key: 'errors.codexCliRead' },
+  {
+    prefix: 'Codex temporary run could not snapshot',
+    key: 'errors.codexAuthSnapshot',
+  },
+  {
+    exact:
+      'Current auth is not an official login configuration. Only official login (codex login) credentials can be saved as auth profiles.',
+    key: 'errors.codexOfficialAuthOnly',
+  },
+
+  // Claude settings files
+  { exact: 'File name cannot be empty', key: 'errors.fileNameEmpty' },
+  {
+    exact: "Cannot use 'Global' as a custom file name",
+    key: 'errors.fileNameGlobal',
+  },
+  {
+    exact: 'File name too long (max 100 characters)',
+    key: 'errors.fileNameTooLong',
+  },
+  {
+    exact: "File name cannot start with '.' or contain '..'",
+    key: 'errors.fileNameInvalid',
+  },
+  { prefix: 'Invalid file name', key: 'errors.fileNameInvalid' },
+  {
+    exact: 'Cannot delete the global settings file',
+    key: 'errors.cannotDeleteGlobalSettings',
+  },
+  {
+    exact: 'No active Claude settings file found',
+    key: 'errors.noActiveClaudeSettings',
+  },
+  {
+    exact: 'Settings file root must be a JSON object',
+    key: 'errors.settingsRootObject',
+  },
+  { prefix: "Settings file '", key: 'errors.settingsFileProblem' },
 
   // Dsh
   { prefix: 'Invalid Dsh model', key: 'errors.dshInvalidInput' },
@@ -84,10 +171,6 @@ const RULES: ErrorRule[] = [
   { prefix: "Dsh credentials ref '", key: 'errors.dshCredentialsLayout' },
 
   // Not-supported surfaces in this minimal build
-  {
-    exact: 'Sub2API token import is not supported in this minimal Wails build',
-    key: 'errors.sub2apiUnsupported',
-  },
   {
     exact: 'Native file dialogs are not available in this minimal build',
     key: 'errors.dialogsUnsupported',

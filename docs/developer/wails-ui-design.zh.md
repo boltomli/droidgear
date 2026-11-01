@@ -1,6 +1,11 @@
 # Wails 版完整 UI 设计方案（GUI/TUI/CLI 一并考虑）
 
-> 状态：设计稿（未实施）。目标是把 `wails/` spike 的「最小外壳」升级为与 Tauri 版**像素级一致**的完整界面（参考 `无标题.png`：TitleBar + 左侧「渠道/工具切换」+ 子功能列表 + 主内容区 + 终端），并为将来的 **CLI / TUI** 预留同一套 Go 核心。
+> 状态：**P0–P4 已实施**（2026-11）——Wails 版已达到与 Tauri 版的 feature parity：
+> TitleBar/LeftSideBar/MainWindowContent 全量复用，10 个工具后端（Droid/OpenCode/
+> Codex/Claude/OpenClaw/Copilot/Hermes/Pi/OMP/Dsh）+ Channels + 会话查看器 + Specs/
+> MCP + 模型连接测试均已移植至 Go（`wails/internal/app/`，266 个方法，264 项 Go 测试），
+> `src/lib/capabilities.ts` 已全量开启。新增命令面的移植约定见 `wails/PORTING.md`。
+> 仅 P5（service 层下沉 + `dg` CLI + TUI 评估）与 macOS/Linux 打包资产待做。
 
 ## 1. 现状盘点
 

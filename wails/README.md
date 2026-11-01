@@ -1,12 +1,15 @@
-# DroidGear Minimal (Wails v3 spike)
+# DroidGear Minimal (Wails v3)
 
-A minimal, **GUI-only** configurator for **Dsh / Pi / Hermes / OMP**, built with
-[Wails v3](https://v3.wails.io) (Go backend + embedded webview frontend).
+A **GUI-only** configurator for the full DroidGear tool set — **Droid /
+OpenCode / Codex / Claude / OpenClaw / Copilot / Hermes / Pi / OMP / Dsh**
+plus **Channels** — built with [Wails v3](https://v3.wails.io) (Go backend +
+embedded webview frontend).
 
-The spike answers one question: _can we reuse DroidGear's entire React UI on
-top of a Go backend with Wails v3?_ The answer is yes — the frontend is the
-**unmodified** `src/` component tree (shadcn/ui, zustand stores, TanStack
-Query, react-i18next), and only the `invoke` transport is swapped out.
+The frontend is the **unmodified** `src/` component tree (shadcn/ui, zustand
+stores, TanStack Query, react-i18next); only the `invoke` transport is swapped
+out. Since the parity push, the Go service mirrors the full Tauri command
+surface, so the two shells are feature- and layout-identical (the only
+intentional exception is the Tauri-only auto-updater).
 
 ## How the reuse works
 
@@ -55,23 +58,30 @@ React stores (unchanged)          Go service (new)
 
 ## What is implemented
 
-| Area   | Support                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dsh    | Profiles (desktop/web), provider CRUD in `cordis.patch.yml` / legacy `settings.yaml`, credentials (`~/.dsh/.credentials.yaml`), model fetching with registry enrichment, **advanced config editor** (schema composition, `$js`/`!js` round-trip, secret redaction, DSH profile lock, optimistic-concurrency hash)                                                                                                                                                                                                                                                                                                                                                                                    |
-| Pi     | Profile CRUD, apply → `~/.pi/agent/models.json`, active profile, connection test via the `pi` CLI                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| Hermes | Profile CRUD (incl. legacy single-model migration), apply → `~/.hermes/config.yaml` (read-modify-write), current-config merge                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| OMP    | Profile CRUD, apply → `~/.omp/agent/config.yml`, custom providers in `models.yml`, read-only `models.db`/`agent.db` (pure-Go SQLite), HTTP connection test                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Shared | Preferences (shared with the Tauri app via the same `preferences.json`), model registry enrichment, BYOK custom models/favorites in `~/.factory/settings.json`, channels CRUD + New API token import + model fetching, channel JSON import/export, **channel export templates** (`~/.droidgear/export-templates.yaml`, JSON/YAML/TOML output), Hermes WSL path fallback, **Preferences → Paths pane** (per-tool overrides + WSL distro picker), **in-app terminal** (Go PTY: ConPTY on Windows via `aymanbagabas/go-pty`, streamed over `pty:data`/`pty:exit` Wails events), **crash-recovery data**, native notifications (PowerShell toast), shell env detection, localised backend errors (en/zh) |
+| Area     | Support                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dsh      | Profiles (desktop/web), provider CRUD in `cordis.patch.yml` / legacy `settings.yaml`, credentials (`~/.dsh/.credentials.yaml`), model fetching with registry enrichment, **advanced config editor** (schema composition, `$js`/`!js` round-trip, secret redaction, DSH profile lock, optimistic-concurrency hash), **sessions viewer** (zstd-compressed concatenated-frame `.jsonl.zst` decoding, poll watcher)                                                                                                                                                                                                                                                                                                                                                                                    |
+| Pi       | Profile CRUD, apply → `~/.pi/agent/models.json`, active profile, connection test via the `pi` CLI, **sessions viewer**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Hermes   | Profile CRUD (incl. legacy single-model migration), apply → `~/.hermes/config.yaml` (read-modify-write), current-config merge                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| OMP      | Profile CRUD, apply → `~/.omp/agent/config.yml`, custom providers in `models.yml`, read-only `models.db`/`agent.db` (pure-Go SQLite), HTTP connection test, **sessions viewer**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Codex    | Profile CRUD, apply → `~/.codex/config.toml` (go-toml round-trip preserving unknown keys), auth.json handling (official vs BYOK), DeepSeek/MiMo model catalogs, CLI capability probe, **auth profiles** (manifest-based save/switch/rename/delete with backup + conflict detection), **sessions viewer** (rollout `.jsonl` head/tail windows, `session_index.jsonl` titles, sqlite thread-index sync), terminal launch                                                                                                                                                                                                                                                                                                                                                                             |
+| OpenCode | Profile CRUD, apply-to-config (read-modify-write preserving unknown fields), JSONC comment stripping, `baseUrl`→`baseURL` normalisation, provider templates, `/v1/models` connection probe, terminal launch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Claude   | Profile CRUD, apply → `~/.claude/settings.json`, **settings-file manager** (Global + custom files, active pointer, legacy-profile migration, merge-to-global, load-from-live), temporary-run preview, settings launch (in-process runtime materialisation + terminal spawn)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| OpenClaw | Profile CRUD, apply → `~/.openclaw/openclaw.json` (order-preserving document merge that keeps unknown fields, key order, and number formatting byte-for-byte), **subagents** read/save (deep-merge, `main`+`allowAgents` synthesis)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Copilot  | Profile CRUD + sibling `.env` files, validation (single-line fields, positive token limits, provider types, WHATWG endpoint normalisation), channel-import preview, live `config.env` parse with `is_byok` detection, run-plan with secret-env separation, terminal launch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Droid    | **Settings files** (Global + custom, link/unlink external, active pointer), **trusted folders**, **Specs** (CRUD + poll watcher), **MCP servers** (load/save/delete/toggle + 百知 preset), **factory auth profiles**, run-settings values (diff mode, cloud session sync, reasoning effort, compaction limits, todo display, show-thinking, co-authored-by, mission models), launch                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Shared   | Preferences (shared with the Tauri app via the same `preferences.json`), model registry enrichment, **model connectivity tests** (ping + inference, single/all, diagnostics summary), BYOK custom models/favorites in `~/.factory/settings.json`, channels CRUD + New API/**Sub2API** token import + model fetching, channel JSON import/export, **channel export templates** (`~/.droidgear/export-templates.yaml`, JSON/YAML/TOML output), Hermes WSL path fallback, **Preferences → Paths pane** (per-tool overrides + WSL distro picker), **in-app terminal** (Go PTY: ConPTY on Windows via `aymanbagabas/go-pty`, streamed over `pty:data`/`pty:exit` Wails events), **crash-recovery data**, native notifications (PowerShell toast), shell env detection, localised backend errors (en/zh) |
 
-## What is not implemented (degrades gracefully)
+## What is not implemented
 
-- **Sessions viewer** pages (per-tool session history) — the Go service has
-  no session-store readers yet; the sidebar entries are hidden by
-  `src/lib/capabilities.ts`.
-- **Tools without a Go backend** (Droid, OpenCode, Codex, Claude, OpenClaw,
-  Copilot) render as disabled placeholders in the tool switcher.
-- **Sub2API token import**.
-- macOS/Linux build assets (Windows only).
+- **Auto-updater** — Tauri-only by design (see
+  `src/wails/shims/tauri-core.ts` `Resource` stub); the Wails build ships
+  without an update feed.
+- **macOS/Linux build assets** (Windows-first; the Go service itself is
+  portable and the terminal/launch code has POSIX fallbacks).
+
+Porting conventions for adding further command surfaces live in
+[`PORTING.md`](./PORTING.md).
 
 ## Backend error localisation
 
@@ -104,20 +114,31 @@ The build pipeline (`build/Taskfile.yml`):
 ```
 wails/
 ├── main.go                     # Wails app bootstrap (frameless window, embedded assets)
+├── PORTING.md                  # contract for porting more Tauri commands → Go service
 ├── Taskfile.yml / build/       # customized Wails build pipeline (Windows)
 ├── vite.config.ts / index.html # frontend build reusing the repo toolchain
 ├── scripts/sync-registry.mjs   # refresh the vendored model registry
 └── internal/
-    ├── app/                    # Go service methods (96, mirroring Tauri commands)
-    │   ├── app.go dsh.go pi.go hermes.go omp.go channels.go factory.go …
-    │   ├── pty.go              # in-app terminal (ConPTY, event streaming)
-    │   ├── export.go           # channel export templates + engine
+    ├── app/                    # Go service methods (266, mirroring the Tauri command surface)
+    │   ├── app.go channels.go factory.go …
+    │   ├── dsh.go dsh_config*.go               # Dsh (incl. advanced config editor)
+    │   ├── pi.go hermes.go omp.go              # Pi / Hermes / OMP
+    │   ├── codex.go codex_auth_profiles.go codex_sessions.go
+    │   ├── opencode.go copilot.go claude.go claude_settings.go
+    │   ├── openclaw.go openclaw_subagents.go
+    │   ├── droid_settings.go droid_trusted.go specs.go mcp.go factory_auth_profiles.go
+    │   ├── sessions.go dsh_sessions.go pi_sessions.go omp_sessions.go legacy_config.go
+    │   ├── connectivity.go fetch_models.go    # model connectivity tests + model discovery
+    │   ├── pty.go           # in-app terminal (ConPTY, event streaming)
+    │   ├── export.go        # channel export templates + engine
+    │   ├── httpfetch.go     # channel token import (New API + Sub2API) + model fetch
     │   └── paths.go recovery.go notifications.go env.go fsio.go window.go
     └── core/                   # paths / atomic writes / YAML+JSON helpers / registry
 
 src/wails/                      # frontend glue (typechecked + linted with the repo)
 ├── main.tsx / AppShell.tsx     # renders the shared MainWindow + startup init
 ├── wails.css                   # height-chain + frameless drag-region overrides
+├── error-i18n.ts               # Go error → en/zh localisation rules
 └── shims/                      # @tauri-apps/* + tauri-pty replacements routing to Wails
 
 src/lib/capabilities.ts         # backend capability gating (shared with the Tauri build)

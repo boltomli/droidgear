@@ -38,8 +38,8 @@ func main() {
 		// The window is centred by default (WindowCentered is the zero
 		// value); on mount the frontend shrinks it to fit smaller work
 		// areas (see src/wails/AppShell.tsx).
-		Width:  1280,
-		Height: 840,
+		Width:     1280,
+		Height:    840,
 		MinWidth:  800,
 		MinHeight: 600,
 		// Frameless: the shared TitleBar renders the window controls. Drag
