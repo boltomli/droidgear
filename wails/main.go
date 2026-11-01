@@ -44,10 +44,14 @@ func main() {
 		MinHeight: 600,
 		// Frameless: the shared TitleBar renders the window controls. Drag
 		// and edge-resize come from the Wails runtime's `--wails-draggable:
-		// drag` CSS hook (see src/wails/wails.css).
-		Frameless:        true,
-		BackgroundColour: application.NewRGB(6, 7, 15),
-		URL:              "/",
+		// drag` CSS hook (see src/wails/wails.css). UseApplicationMenu makes
+		// Windows/Linux inherit the native menu built by BuildAppMenu
+		// (internal/app/menu.go); the frontend installs it once the language
+		// is known (src/wails/menu-bridge.ts).
+		Frameless:          true,
+		UseApplicationMenu: true,
+		BackgroundColour:   application.NewRGB(6, 7, 15),
+		URL:                "/",
 	})
 
 	if err := appInstance.Run(); err != nil {

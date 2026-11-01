@@ -10,6 +10,7 @@ import { initializeLanguage } from '@/i18n/language-init'
 import { preloadShellEnv } from '@/services/shell-env'
 import { cleanupOldFiles } from '@/lib/recovery'
 import { commands } from '@/lib/tauri-bindings'
+import { initWailsMenu } from '@/wails/menu-bridge'
 import { useUIStore } from '@/store/ui-store'
 import { isToolSupported, WAILS_FALLBACK_TOOL } from '@/lib/capabilities'
 import { logger } from '@/lib/logger'
@@ -76,6 +77,10 @@ function AppShell() {
     void cleanupOldFiles().catch(error => {
       logger.warn('Recovery cleanup failed', { error })
     })
+
+    // Native menu: install after language initialisation so labels match
+    // the detected locale, and re-emit on every language change.
+    return initWailsMenu()
   }, [])
 
   return (

@@ -563,6 +563,9 @@ const COMMANDS: Record<string, CommandSpec> = {
   },
   reset_window_state: { fn: 'ResetWindowState', args: [] },
 
+  // Native application menu (Wails-only; src/wails/menu-bridge.ts)
+  build_app_menu: { fn: 'BuildAppMenu', args: ['lang'] },
+
   // Emergency (crash recovery) data
   save_emergency_data: { fn: 'SaveEmergencyData', args: ['filename', 'data'] },
   load_emergency_data: { fn: 'LoadEmergencyData', args: ['filename'] },
