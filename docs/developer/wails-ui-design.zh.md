@@ -1,5 +1,10 @@
 # Wails 版完整 UI 设计方案（GUI/TUI/CLI 一并考虑）
 
+> ⚠️ **本文的完成度结论已被取代**：2026-11-01 的审计发现「命令面 parity」成立，
+> 但 GUI 外壳系统集成、TUI/CLI 覆盖与若干上游/格式缺陷仍未解决。
+> 现状、缺陷总表与新版指导见 **[Wails v3 Port Guidelines](./wails-port-guidelines.zh.md)**；
+> 本文仅保留为设计历史（外壳方案、分层设想、PTY 方案、风险表仍有效）。
+
 > 状态：**P0–P4 已实施**（2026-11）——Wails 版已达到与 Tauri 版的 feature parity：
 > TitleBar/LeftSideBar/MainWindowContent 全量复用，10 个工具后端（Droid/OpenCode/
 > Codex/Claude/OpenClaw/Copilot/Hermes/Pi/OMP/Dsh）+ Channels + 会话查看器 + Specs/

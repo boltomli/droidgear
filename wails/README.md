@@ -11,6 +11,12 @@ out. Since the parity push, the Go service mirrors the full Tauri command
 surface, so the two shells are feature- and layout-identical (the only
 intentional exception is the Tauri-only auto-updater).
 
+> ⚠️ **Known gaps:** command-surface parity holds, but shell-level integrations
+> (native menu, window-state persistence, single instance, opener/system-font
+> shims, notifications, updater gating) and the TUI/CLI layer are not done.
+> Audit, evidence and the fix roadmap live in
+> [`docs/developer/wails-port-guidelines.zh.md`](../docs/developer/wails-port-guidelines.zh.md).
+
 ## How the reuse works
 
 ```
