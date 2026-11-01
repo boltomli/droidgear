@@ -440,7 +440,7 @@ jobs:
 | ---- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------- |
 | P0-1 | 版本号统一（ldflags + config.yml 生成）；`GetAppVersion` 正确                                | About/General 显示 1.3.9，安装器元数据一致                                    | ✅ 完成 |
 | P0-2 | 挂 `LegacyConfigDialog`；`opener` shim（openUrl/openPath/revealItemInDir）；更新检查入口屏蔽 | 三个入口可用/不报错；命令面板无 unsupported 报错                              | ✅ 完成 |
-| P0-3 | Codex `wire_api` 弃用 `chat`（GUI/TUI/Go 三端 + 迁移警告）                                   | 新导入渠道不再产生 `chat`；旧 profile 有提示                                  |
+| P0-3 | Codex `wire_api` 弃用 `chat`（GUI/TUI/Go 三端 + 迁移警告）                                   | 新导入渠道不再产生 `chat`；旧 profile 有提示                                  | ✅ 完成 |
 | P0-4 | OpenClaw JSON5 解析（两端）                                                                  | 带注释/尾逗号的 `openclaw.json` 可读可写，往返不丢键                          |
 | P0-5 | 原生菜单（Wails menu API，含 macOS Edit/App 菜单，i18n 联动）                                | macOS ⌘C/⌘V 生效；菜单项与 Tauri 对齐                                         |
 | P1-1 | 单实例 + 窗口状态持久化 + `OnShutdown` 清理（PTY/watcher）                                   | 二次启动聚焦主窗口；重启位置记忆；退出无残留 shell                            |

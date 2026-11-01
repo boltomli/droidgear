@@ -2494,7 +2494,12 @@ fn draw_codex_provider(frame: &mut Frame, app: &app::App, area: Rect) {
         .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
         .split(area);
 
-    let wire_api = config.wire_api.as_deref().unwrap_or("responses");
+    let wire_api = match config.wire_api.as_deref() {
+        // Codex hard-fails on the chat wire API it removed in 2026-02.
+        Some("chat") => "chat (removed in Codex 2026)",
+        Some(other) => other,
+        None => "responses",
+    };
     let effort = config.model_reasoning_effort.as_deref().unwrap_or("(none)");
     let api_key_set = config
         .api_key

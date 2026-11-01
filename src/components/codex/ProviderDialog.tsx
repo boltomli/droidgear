@@ -41,8 +41,15 @@ import {
   getSupportedEfforts,
 } from '@/lib/model-registry'
 
-const WIRE_API_OPTIONS = [
-  { value: 'chat', label: 'Chat Completions' },
+const WIRE_API_OPTIONS: {
+  value: string
+  label: string
+  disabled?: boolean
+}[] = [
+  // Codex removed the chat/completions wire format in Feb 2026 —
+  // `wire_api = "chat"` now fails at config load — so the option stays
+  // visible (disabled) only to surface it on profiles that still use it.
+  { value: 'chat', label: 'Chat Completions (removed)', disabled: true },
   { value: 'responses', label: 'Responses API' },
 ]
 
@@ -237,16 +244,16 @@ function ProviderForm({
         context.baseUrl
       )
 
-      // Anthropic uses Chat Completions wire format; others use Responses API.
-      // For explicitly picked protocols (multi-protocol platforms) only the
-      // OpenAI option means the Responses API.
-      const inferredWireApi = context.provider
-        ? context.provider === 'openai'
-          ? 'responses'
-          : 'chat'
-        : protocol === 'anthropic'
-          ? 'chat'
-          : 'responses'
+      // Codex removed the Chat Completions wire format (wire_api = "chat")
+      // in Feb 2026 and hard-fails on it, so imports always select the
+      // Responses API. The endpoint shape (/v1 suffix) still follows the
+      // chat-completions intent of the channel: for explicitly picked
+      // protocols (multi-protocol platforms) only the OpenAI option means
+      // the Responses API.
+      const usesChatCompletions =
+        context.provider != null
+          ? context.provider !== 'openai'
+          : protocol === 'anthropic'
 
       setProviderId(sanitizedId)
       setName(context.channelName)
@@ -255,13 +262,13 @@ function ProviderForm({
         needsOpenAICompatibleV1(
           context.channelType,
           context.provider,
-          inferredWireApi === 'chat'
+          usesChatCompletions
         )
           ? ensureOpenAICompatibleV1(context.baseUrl)
           : context.baseUrl
       )
       setApiKey(context.apiKey)
-      setWireApi(inferredWireApi)
+      setWireApi('responses')
 
       // Pre-fill model from selected model
       const selectedModel = models[0]
@@ -391,12 +398,21 @@ function ProviderForm({
               </SelectTrigger>
               <SelectContent>
                 {WIRE_API_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    disabled={option.disabled === true}
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {wireApi === 'chat' && (
+              <p className="text-sm text-destructive">
+                {t('codex.provider.wireApiChatDeprecated')}
+              </p>
+            )}
           </div>
 
           {/* Model */}

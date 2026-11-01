@@ -437,12 +437,17 @@ pub(super) fn handle_codex_provider_key(app: &mut app::App, code: KeyCode) -> Op
                 });
             }
             2 => {
-                let options = vec!["responses".to_string(), "chat".to_string()];
-                let index = config
-                    .wire_api
-                    .as_deref()
-                    .and_then(|v| options.iter().position(|o| o == v))
-                    .unwrap_or(0);
+                // "chat" was removed by Codex (2026-02, hard error at
+                // config load); the annotated label only stays selectable so
+                // profiles created before the removal can be migrated.
+                let options = vec![
+                    "responses".to_string(),
+                    "chat (removed in Codex 2026)".to_string(),
+                ];
+                let index = match config.wire_api.as_deref() {
+                    Some("chat") => 1,
+                    _ => 0,
+                };
                 app.modal = Some(app::Modal::Select {
                     title: "Wire API".to_string(),
                     options,

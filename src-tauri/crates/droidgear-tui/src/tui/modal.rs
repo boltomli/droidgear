@@ -771,7 +771,14 @@ pub(super) fn run_select_action(
                 droidgear_core::codex::get_codex_profile_for_home(&app.home_dir, &profile_id)
                     .map_err(anyhow::Error::msg)?;
             if let Some(provider) = profile.providers.get_mut(&provider_id) {
-                provider.wire_api = Some(selected);
+                // The select carries an annotated label for the removed
+                // chat wire API; normalise back to the TOML value.
+                let value = if selected.starts_with("chat") {
+                    "chat"
+                } else {
+                    "responses"
+                };
+                provider.wire_api = Some(value.to_string());
             } else {
                 return Err(anyhow::Error::msg("Provider not found"));
             }
@@ -2095,6 +2102,24 @@ fn resolve_channel_api_key(
     }
 }
 
+/// Returns the profile's providers that still use `wire_api = "chat"`,
+/// which Codex hard-rejects since 2026-02 (joined for a toast), or `None`
+/// when the profile is clean.
+fn codex_chat_wire_api_providers(home_dir: &std::path::Path, profile_id: &str) -> Option<String> {
+    let profile = droidgear_core::codex::get_codex_profile_for_home(home_dir, profile_id).ok()?;
+    let stale: Vec<&str> = profile
+        .providers
+        .iter()
+        .filter(|(_, p)| p.wire_api.as_deref() == Some("chat"))
+        .map(|(id, _)| id.as_str())
+        .collect();
+    if stale.is_empty() {
+        None
+    } else {
+        Some(stale.join(", "))
+    }
+}
+
 pub(super) fn run_confirm_action(
     app: &mut app::App,
     action: app::ConfirmAction,
@@ -2154,6 +2179,15 @@ pub(super) fn run_confirm_action(
         app::ConfirmAction::CodexApply { id } => {
             droidgear_core::codex::apply_codex_profile_for_home(&app.home_dir, &id)
                 .map_err(anyhow::Error::msg)?;
+            if let Some(providers) = codex_chat_wire_api_providers(&app.home_dir, &id) {
+                app.set_toast(
+                    format!(
+                        "Applied, but {providers} still use removed wire_api=\"chat\" — edit to \"responses\" or Codex will not start"
+                    ),
+                    true,
+                );
+                return Ok(());
+            }
             app.set_toast("Applied", false);
             Ok(())
         }
@@ -2171,6 +2205,15 @@ pub(super) fn run_confirm_action(
             );
             droidgear_core::codex::apply_codex_profile_for_home(&app.home_dir, &id)
                 .map_err(anyhow::Error::msg)?;
+            if let Some(providers) = codex_chat_wire_api_providers(&app.home_dir, &id) {
+                app.set_toast(
+                        format!(
+                            "Applied (auth backed up), but {providers} still use removed wire_api=\"chat\" — edit to \"responses\" or Codex will not start"
+                        ),
+                        true,
+                    );
+                return Ok(());
+            }
             app.set_toast("Applied (auth backed up)", false);
             Ok(())
         }
