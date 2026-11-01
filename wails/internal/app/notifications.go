@@ -1,43 +1,52 @@
-// Native notifications. Wails v3 has no cross-platform notification API, so
-// Windows uses a PowerShell toast (hidden console); other platforms return an
-// error which the frontend's notify() falls back to a toast for.
+// Native notifications via the Wails v3 notifications service
+// (pkg/services/notifications): Windows toast, macOS UNUserNotificationCenter
+// and the Linux freedesktop daemon behind one API. This replaces the
+// earlier PowerShell toast with an unregistered AUMID, which could fail
+// silently and offered no permission handling (guidelines §3.5 / P1-4).
+// main.go installs the shared service instance via SetNotificationService;
+// on platforms that require it (macOS), permission is requested lazily on
+// first send.
 package app
 
 import (
 	"fmt"
-	"os/exec"
 	"runtime"
-	"strings"
+
+	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 )
+
+// notificationService is the shared Wails notifications service.
+var notificationService *notifications.NotificationService
+
+// SetNotificationService injects the notifications service registered by
+// main.go (Wails services are plain structs; the notification service is
+// created once so its scheduled toasts and categories stay consistent).
+func SetNotificationService(service *notifications.NotificationService) {
+	notificationService = service
+}
 
 // SendNativeNotification shows a system notification (mirrors
 // notifications::send_native_notification).
 func (a *App) SendNativeNotification(title string, body *string) error {
-	if runtime.GOOS != "windows" {
-		return errString("Native notifications are only supported on Windows in this build")
+	if notificationService == nil {
+		return errString("Native notifications are not available in this build")
 	}
-
-	var sb strings.Builder
-	// Escape single quotes for the PowerShell single-quoted literal.
-	esc := func(s string) string { return strings.ReplaceAll(s, "'", "''") }
-	sb.WriteString("[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null;")
-	sb.WriteString("[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null;")
-	sb.WriteString(fmt.Sprintf("$t = '<toast><visual><binding template=\"ToastGeneric\"><text>%s</text>%s</binding></visual></toast>';",
-		esc(title),
-		func() string {
-			if body == nil || *body == "" {
-				return ""
+	if runtime.GOOS != "windows" {
+		// macOS requires user permission; the prompt is shown at most once
+		// per install. A failed check is ignored — sending then surfaces
+		// the concrete platform error instead.
+		if granted, err := notificationService.CheckNotificationAuthorization(); err == nil && !granted {
+			if _, err := notificationService.RequestNotificationAuthorization(); err != nil {
+				return fmt.Errorf("Failed to request notification permission: %w", err)
 			}
-			return fmt.Sprintf("<text>%s</text>", esc(*body))
-		}()))
-	sb.WriteString("$x = New-Object Windows.Data.Xml.Dom.XmlDocument; $x.LoadXml($t);")
-	sb.WriteString("[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('DroidGear').Show([Windows.UI.Notifications.ToastNotification]::new($x))")
-
-	cmd := exec.Command("powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", sb.String()) // #nosec G204 -- static command, user data only interpolated as escaped literals
-	if err := cmd.Start(); err != nil {
+		}
+	}
+	options := notifications.NotificationOptions{Title: title}
+	if body != nil {
+		options.Body = *body
+	}
+	if err := notificationService.SendNotification(options); err != nil {
 		return fmt.Errorf("Failed to send notification: %w", err)
 	}
-	// Fire and forget — the toast host outlives this call.
-	go func() { _ = cmd.Wait() }()
 	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"droidgear-wails/internal/app"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 )
 
 // The frontend bundle (produced by `wails3 task build:frontend`) is embedded
@@ -16,11 +17,16 @@ import (
 var assets embed.FS
 
 func main() {
+	// Cross-platform notifications (SendNativeNotification forwards here).
+	notificationService := notifications.New()
+	app.SetNotificationService(notificationService)
+
 	appInstance := application.New(application.Options{
 		Name:        "DroidGear Minimal",
 		Description: "Minimal GUI-only Dsh / Pi / Hermes / OMP configurator (Wails v3 spike)",
 		Services: []application.Service{
 			application.NewService(&app.App{}),
+			application.NewService(notificationService),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
