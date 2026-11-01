@@ -14,9 +14,19 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	ptylib "github.com/aymanbagabas/go-pty"
 	"github.com/wailsapp/wails/v3/pkg/application"
+)
+
+const (
+	// ptyFlushInterval bounds output latency while coalescing reads; the
+	// design doc for the terminal called for ~16ms aggregation (§3.9).
+	ptyFlushInterval = 16 * time.Millisecond
+	// ptyFlushThreshold forces an immediate flush for large bursts so the
+	// flush interval can never grow into visible stutter.
+	ptyFlushThreshold = 32 * 1024
 )
 
 type ptySession struct {
@@ -25,6 +35,9 @@ type ptySession struct {
 	exitOnce sync.Once
 	exitCode atomic.Int32
 	done     chan struct{}
+	// readDone is closed by readLoop once its final output batch has been
+	// emitted, so waitLoop never races `pty:exit` ahead of trailing data.
+	readDone chan struct{}
 }
 
 type ptyManager struct {
@@ -110,7 +123,12 @@ func (m *ptyManager) Start(opts PtyStartOptions) (int, error) {
 	}
 
 	id := int(m.nextID.Add(1)) // #nosec G115 -- monotonically increasing within a session
-	session := &ptySession{pty: handle, cmd: cmd, done: make(chan struct{})}
+	session := &ptySession{
+		pty:      handle,
+		cmd:      cmd,
+		done:     make(chan struct{}),
+		readDone: make(chan struct{}),
+	}
 	m.mu.Lock()
 	m.sessions[id] = session
 	m.mu.Unlock()
@@ -123,23 +141,80 @@ func (m *ptyManager) Start(opts PtyStartOptions) (int, error) {
 // readLoop pumps PTY output to the frontend as base64-encoded chunks; the JS
 // shim reassembles them with a streaming TextDecoder, so multibyte sequences
 // split across reads need no server-side handling.
+//
+// Reads are coalesced before emitting: bursts (npm install, cargo build)
+// batch for up to ptyFlushInterval or ptyFlushThreshold bytes, so heavy
+// output cannot turn into an IPC event storm against the webview
+// (guidelines §3.9). Latency for interactive output stays ≤ 16ms.
 func (m *ptyManager) readLoop(id int, session *ptySession) {
 	defer func() {
+		close(session.readDone)
 		m.mu.Lock()
 		delete(m.sessions, id)
 		m.mu.Unlock()
 	}()
-	buf := make([]byte, 8192)
-	for {
-		n, err := session.pty.Read(buf)
-		if n > 0 {
-			emitPtyEvent("pty:data", map[string]any{
-				"id":   id,
-				"data": base64.StdEncoding.EncodeToString(buf[:n]),
-			})
+
+	// Reader goroutine: turns the blocking PTY Read into a channel so the
+	// main loop can select between output and the flush timer.
+	chunks := make(chan []byte)
+	go func() {
+		defer close(chunks)
+		buf := make([]byte, 8192)
+		for {
+			n, err := session.pty.Read(buf)
+			if n > 0 {
+				chunk := make([]byte, n)
+				copy(chunk, buf[:n])
+				chunks <- chunk
+			}
+			if err != nil {
+				return
+			}
 		}
-		if err != nil {
+	}()
+
+	flushTimer := time.NewTimer(time.Hour)
+	if !flushTimer.Stop() {
+		<-flushTimer.C
+	}
+	timerArmed := false
+	pending := make([]byte, 0, ptyFlushThreshold)
+	flush := func() {
+		if len(pending) == 0 {
 			return
+		}
+		emitPtyEvent("pty:data", map[string]any{
+			"id":   id,
+			"data": base64.StdEncoding.EncodeToString(pending),
+		})
+		pending = pending[:0]
+	}
+
+	for {
+		var timerC <-chan time.Time
+		if timerArmed {
+			timerC = flushTimer.C
+		}
+		select {
+		case chunk, ok := <-chunks:
+			if !ok {
+				flush() // trailing batch must land before pty:exit
+				return
+			}
+			pending = append(pending, chunk...)
+			if len(pending) >= ptyFlushThreshold {
+				if timerArmed {
+					flushTimer.Stop()
+					timerArmed = false
+				}
+				flush()
+			} else if !timerArmed {
+				flushTimer.Reset(ptyFlushInterval)
+				timerArmed = true
+			}
+		case <-timerC:
+			timerArmed = false
+			flush()
 		}
 	}
 }
@@ -154,6 +229,13 @@ func (m *ptyManager) waitLoop(id int, session *ptySession) {
 			// plugin's convention of reporting an unknown (-1) status.
 			exitCode = -1
 		}
+	}
+	// Drain trailing output first: `pty:exit` must never overtake the last
+	// `pty:data` batch (the shim stops decoding after exit). Bounded so a
+	// stuck PTY cannot block shutdown forever.
+	select {
+	case <-session.readDone:
+	case <-time.After(2 * time.Second):
 	}
 	session.exitOnce.Do(func() {
 		session.exitCode.Store(exitCode)

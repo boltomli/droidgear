@@ -89,14 +89,29 @@ interface PtyEventPayload {
   exitCode?: number
 }
 
+/** Upper bound for data buffered while paused (decoded characters). */
+const MAX_PAUSED_CHARS = 4 * 1024 * 1024
+
 // Global bus subscriptions, created lazily and shared by all sessions.
-// Events that arrive before a session's start() resolves are buffered by id.
+// Events that arrive before a session's start() resolves are buffered by id
+// (bounded: pty events are only emitted for live sessions, so a failed
+// start must not accumulate forever — the cap drops the oldest chunks).
 let dataSubscription: (() => void) | null = null
 let exitSubscription: (() => void) | null = null
 const dataHandlers = new Map<number, (data: string) => void>()
 const exitHandlers = new Map<number, (exitCode: number) => void>()
 const pendingData = new Map<number, string[]>()
 const pendingExit = new Map<number, number>()
+const MAX_PENDING_CHUNKS = 500
+
+function bufferPendingData(id: number, chunk: string): void {
+  const buffer = pendingData.get(id) ?? []
+  buffer.push(chunk)
+  if (buffer.length > MAX_PENDING_CHUNKS) {
+    buffer.splice(0, buffer.length - MAX_PENDING_CHUNKS)
+  }
+  pendingData.set(id, buffer)
+}
 
 function ensureSubscriptions(): void {
   if (!dataSubscription) {
@@ -106,9 +121,7 @@ function ensureSubscriptions(): void {
       if (handler && payload.data !== undefined) {
         handler(payload.data)
       } else if (payload.data !== undefined) {
-        const buffer = pendingData.get(payload.id) ?? []
-        buffer.push(payload.data)
-        pendingData.set(payload.id, buffer)
+        bufferPendingData(payload.id, payload.data)
       }
     })
   }
@@ -140,6 +153,13 @@ class WailsPty implements IPty {
   }>()
   private readonly decoder = new TextDecoder()
   private exited = false
+
+  // Local flow control: while paused, decoded output queues here and is
+  // flushed on resume. Bounded — once the queue exceeds the cap the shim
+  // streams anyway (degrading to "no pause" rather than growing forever).
+  private paused = false
+  private pausedBuffer: string[] = []
+  private pausedChars = 0
 
   private readonly init: Promise<void>
 
@@ -208,6 +228,17 @@ class WailsPty implements IPty {
       // stream: true keeps incomplete multibyte sequences for the next chunk.
       const text = this.decoder.decode(bytes, { stream: true })
       if (text) {
+        if (this.paused) {
+          this.pausedBuffer.push(text)
+          this.pausedChars += text.length
+          if (this.pausedChars > MAX_PAUSED_CHARS) {
+            console.warn(
+              'Wails PTY shim: pause() buffer overflow, resuming stream'
+            )
+            this.resume()
+          }
+          return
+        }
         this._onData.fire(text)
       }
     } catch {
@@ -220,6 +251,15 @@ class WailsPty implements IPty {
       return
     }
     this.exited = true
+    // Release the global handler slots and any straggler buffers so
+    // repeated open/close cycles do not leak closures per session
+    // (guidelines §3.9).
+    if (this.pid >= 0) {
+      dataHandlers.delete(this.pid)
+      exitHandlers.delete(this.pid)
+      pendingData.delete(this.pid)
+      pendingExit.delete(this.pid)
+    }
     this._onExit.fire({ exitCode })
   }
 
@@ -234,7 +274,9 @@ class WailsPty implements IPty {
   }
 
   clear(): void {
-    console.warn('clear is un implemented!')
+    // Explicit no-op: the terminal buffer lives in xterm.js on the frontend,
+    // which clears itself — there is nothing server-side to flush.
+    console.warn('Wails PTY shim: clear() is a no-op')
   }
 
   write(data: string): void {
@@ -254,11 +296,20 @@ class WailsPty implements IPty {
   }
 
   pause(): void {
-    throw new Error('Method not implemented.')
+    this.paused = true
   }
 
   resume(): void {
-    throw new Error('Method not implemented.')
+    if (!this.paused) {
+      return
+    }
+    this.paused = false
+    this.pausedChars = 0
+    const buffered = this.pausedBuffer
+    this.pausedBuffer = []
+    for (const text of buffered) {
+      this._onData.fire(text)
+    }
   }
 }
 
