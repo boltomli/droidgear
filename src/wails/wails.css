@@ -15,3 +15,26 @@ body {
   height: 100%;
   min-height: 100%;
 }
+
+/* Frameless-window drag & double-click-maximize.
+ *
+ * The Wails runtime's drag handler (drag.js) arms a native window drag when
+ * the mousedown target's computed `--wails-draggable` is "drag"; the shared
+ * TitleBar marks itself with `data-tauri-drag-region` for Tauri, so map that
+ * attribute to the Wails hook here. Children (buttons, selects) inherit the
+ * custom property but still receive clicks — drag only engages after the
+ * pointer moves with the button held.
+ */
+[data-tauri-drag-region] {
+  --wails-draggable: drag;
+}
+
+/* Interactive children opt out so clicks never start a native drag. */
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] [role='button'],
+[data-tauri-drag-region] a,
+[data-tauri-drag-region] input,
+[data-tauri-drag-region] select,
+[data-tauri-drag-region] [data-dropdown-menu-trigger] {
+  --wails-draggable: none;
+}

@@ -32,13 +32,20 @@ func main() {
 
 	appInstance.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title: "DroidGear Minimal",
+		// "main" lets Go commands (ResetWindowState) address this window by
+		// name through the WindowManager.
+		Name: "main",
 		// The window is centred by default (WindowCentered is the zero
 		// value); on mount the frontend shrinks it to fit smaller work
 		// areas (see src/wails/AppShell.tsx).
-		Width:            1280,
-		Height:           840,
-		MinWidth:         800,
-		MinHeight:        600,
+		Width:  1280,
+		Height: 840,
+		MinWidth:  800,
+		MinHeight: 600,
+		// Frameless: the shared TitleBar renders the window controls. Drag
+		// and edge-resize come from the Wails runtime's `--wails-draggable:
+		// drag` CSS hook (see src/wails/wails.css).
+		Frameless:        true,
 		BackgroundColour: application.NewRGB(6, 7, 15),
 		URL:              "/",
 	})

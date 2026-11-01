@@ -1,28 +1,31 @@
 /**
  * Wails bridge for `@tauri-apps/plugin-os`.
  *
- * Only `locale()` is used by the frontend (language auto-detection); the
- * browser's navigator.language is a faithful substitute inside the webview.
+ * Mirrors the Tauri plugin's sync API: `platform()` / `family()` / `version()`
+ * / `arch()` are synchronous (TerminalView and use-platform call them
+ * synchronously), `locale()` stays async. The spike is Windows-only, so the
+ * platform answers are static; the language auto-detect uses the browser's
+ * navigator.language as a faithful substitute inside the webview.
  */
 
-export async function locale(): Promise<string | null> {
-  return navigator.language ?? null
-}
-
-export async function platform(): Promise<string> {
+export function platform(): 'windows' {
   return 'windows'
 }
 
-export async function arch(): Promise<string> {
-  return navigator.userAgent.includes('ARM') ? 'aarch64' : 'x86_64'
+export function family(): 'windows' {
+  return 'windows'
 }
 
-export async function version(): Promise<string> {
+export function version(): string {
   return navigator.userAgent
 }
 
-export function family(): string {
-  return 'windows'
+export function arch(): 'x86_64' | 'aarch64' {
+  return navigator.userAgent.includes('ARM') ? 'aarch64' : 'x86_64'
+}
+
+export async function locale(): Promise<string | null> {
+  return navigator.language ?? null
 }
 
 export function hostname(): string {

@@ -50,6 +50,7 @@ import { DshFeatureList } from '@/components/dsh/DshFeatureList'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
+import { isToolSupported } from '@/lib/capabilities'
 import type { Channel } from '@/lib/bindings'
 import { saveChannelAuth } from '@/lib/channel-utils'
 
@@ -150,6 +151,8 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
 
   const handleViewChange = (view: NavigationView) => {
     if (view === currentView) return
+    // Tools without a Go backend (Wails build) are disabled placeholders.
+    if (!isToolSupported(view)) return
 
     // Check if current view has unsaved changes
     const hasUnsavedChanges =
@@ -237,13 +240,14 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           {t('sidebar.channels')}
         </ActionButton>
 
-        {/* Droid/OpenCode Switcher - conditional rendering based on current view */}
+        {/* Simple button when in Channels - direct switch to lastToolView */}
         {currentView === 'channels' ? (
           // Simple button when in Channels - direct switch to lastToolView
           <ActionButton
             variant="ghost"
             size="sm"
             className="flex-1"
+            disabled={!isToolSupported(lastToolView)}
             onClick={() => handleViewChange(lastToolView)}
           >
             {toolButtonContent}
@@ -258,6 +262,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <ActionDropdownMenuItem
+                disabled={!isToolSupported('droid')}
                 onClick={() => {
                   handleViewChange('droid')
                   setDropdownOpen(false)
@@ -270,6 +275,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                 )}
               </ActionDropdownMenuItem>
               <ActionDropdownMenuItem
+                disabled={!isToolSupported('opencode')}
                 onClick={() => {
                   handleViewChange('opencode')
                   setDropdownOpen(false)
@@ -282,6 +288,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                 )}
               </ActionDropdownMenuItem>
               <ActionDropdownMenuItem
+                disabled={!isToolSupported('codex')}
                 onClick={() => {
                   handleViewChange('codex')
                   setDropdownOpen(false)
@@ -294,6 +301,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                 )}
               </ActionDropdownMenuItem>
               <ActionDropdownMenuItem
+                disabled={!isToolSupported('claude')}
                 onClick={() => {
                   handleViewChange('claude')
                   setDropdownOpen(false)
@@ -306,6 +314,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                 )}
               </ActionDropdownMenuItem>
               <ActionDropdownMenuItem
+                disabled={!isToolSupported('openclaw')}
                 onClick={() => {
                   handleViewChange('openclaw')
                   setDropdownOpen(false)
@@ -352,6 +361,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                 )}
               </ActionDropdownMenuItem>
               <ActionDropdownMenuItem
+                disabled={!isToolSupported('copilot')}
                 onClick={() => {
                   handleViewChange('copilot')
                   setDropdownOpen(false)

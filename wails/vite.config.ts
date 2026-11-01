@@ -23,6 +23,9 @@ export default defineConfig(async () => {
     publicDir: resolve(repoRoot, 'public'),
     define: {
       __APP_VERSION__: JSON.stringify(packageJson.version),
+      // Gates src/lib/capabilities.ts: the shared components render tools
+      // whose Go backend does not exist yet as disabled placeholders.
+      __WAILS_BACKEND__: 'true',
     },
     plugins: [react(), babelPlugin, tailwindcss()],
     resolve: {
@@ -39,10 +42,12 @@ export default defineConfig(async () => {
         '@tauri-apps/plugin-os': shim('tauri-os.ts'),
         '@tauri-apps/plugin-dialog': shim('tauri-dialog.ts'),
         '@tauri-apps/plugin-fs': shim('tauri-fs.ts'),
-        'tauri-pty': resolve(
-          repoRoot,
-          'node_modules/tauri-pty/dist/index.es.js'
+        '@tauri-apps/plugin-clipboard-manager': shim(
+          'tauri-clipboard-manager.ts'
         ),
+        // Go PTY service behind the tauri-pty API (see shims/tauri-pty.ts);
+        // the npm package's Rust plugin does not exist in the Wails build.
+        'tauri-pty': shim('tauri-pty.ts'),
       },
     },
     server: {

@@ -39,23 +39,38 @@ React stores (unchanged)          Go service (new)
    read/modify/write cycle.
 4. **Single Vite config.** `wails/vite.config.ts` reuses the repo-root
    toolchain (React 19 + React Compiler, Tailwind v4, lightningcss) and only
-   overrides entry HTML, aliases and output dir.
+   overrides entry HTML, aliases (`@tauri-apps/*`, `tauri-pty`) and output dir.
+5. **Same shell, gated capabilities.** `src/wails/AppShell.tsx` renders the
+   _shared_ `MainWindow` (TitleBar, LeftSideBar, MainWindowContent, command
+   palette, preferences) unchanged. Tools and sub-views whose Go backend does
+   not exist yet are gated through `src/lib/capabilities.ts` (the Wails
+   build sets `__WAILS_BACKEND__`): unsupported tools render as disabled
+   placeholders in the switcher and the sessions entries are hidden, so the
+   two shells differ only in what is _enabled_, never in layout.
+6. **Terminal without Rust.** The `tauri-pty` npm API is re-implemented in
+   `src/wails/shims/tauri-pty.ts` on top of the Go PTY service
+   (`internal/app/pty.go`, ConPTY via `aymanbagabas/go-pty`); output and exit
+   stream over `pty:data` / `pty:exit` Wails events as base64 chunks, decoded
+   with a streaming `TextDecoder` in the shim.
 
 ## What is implemented
 
-| Area   | Support                                                                                                                                                                                                                                                                                                           |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dsh    | Profiles (desktop/web), provider CRUD in `cordis.patch.yml` / legacy `settings.yaml`, credentials (`~/.dsh/.credentials.yaml`), model fetching with registry enrichment, **advanced config editor** (schema composition, `$js`/`!js` round-trip, secret redaction, DSH profile lock, optimistic-concurrency hash) |
-| Pi     | Profile CRUD, apply → `~/.pi/agent/models.json`, active profile, connection test via the `pi` CLI                                                                                                                                                                                                                 |
-| Hermes | Profile CRUD (incl. legacy single-model migration), apply → `~/.hermes/config.yaml` (read-modify-write), current-config merge                                                                                                                                                                                     |
-| OMP    | Profile CRUD, apply → `~/.omp/agent/config.yml`, custom providers in `models.yml`, read-only `models.db`/`agent.db` (pure-Go SQLite), HTTP connection test                                                                                                                                                        |
-| Shared | Preferences (shared with the Tauri app via the same `preferences.json`), model registry enrichment, BYOK custom models/favorites in `~/.factory/settings.json`, channels CRUD + New API token import + model fetching, Hermes WSL path fallback, localised backend errors (en/zh)                                 |
+| Area   | Support                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dsh    | Profiles (desktop/web), provider CRUD in `cordis.patch.yml` / legacy `settings.yaml`, credentials (`~/.dsh/.credentials.yaml`), model fetching with registry enrichment, **advanced config editor** (schema composition, `$js`/`!js` round-trip, secret redaction, DSH profile lock, optimistic-concurrency hash)                                                                                                                                                                                                                                                                                                                                                                                    |
+| Pi     | Profile CRUD, apply → `~/.pi/agent/models.json`, active profile, connection test via the `pi` CLI                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Hermes | Profile CRUD (incl. legacy single-model migration), apply → `~/.hermes/config.yaml` (read-modify-write), current-config merge                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| OMP    | Profile CRUD, apply → `~/.omp/agent/config.yml`, custom providers in `models.yml`, read-only `models.db`/`agent.db` (pure-Go SQLite), HTTP connection test                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Shared | Preferences (shared with the Tauri app via the same `preferences.json`), model registry enrichment, BYOK custom models/favorites in `~/.factory/settings.json`, channels CRUD + New API token import + model fetching, channel JSON import/export, **channel export templates** (`~/.droidgear/export-templates.yaml`, JSON/YAML/TOML output), Hermes WSL path fallback, **Preferences → Paths pane** (per-tool overrides + WSL distro picker), **in-app terminal** (Go PTY: ConPTY on Windows via `aymanbagabas/go-pty`, streamed over `pty:data`/`pty:exit` Wails events), **crash-recovery data**, native notifications (PowerShell toast), shell env detection, localised backend errors (en/zh) |
 
 ## What is not implemented (degrades gracefully)
 
-- **Sessions** pages (PTY, event streams) — out of scope for the spike.
-- **Sub2API token import**, native file dialogs and direct filesystem access
-  (channel _list_ page only).
+- **Sessions viewer** pages (per-tool session history) — the Go service has
+  no session-store readers yet; the sidebar entries are hidden by
+  `src/lib/capabilities.ts`.
+- **Tools without a Go backend** (Droid, OpenCode, Codex, Claude, OpenClaw,
+  Copilot) render as disabled placeholders in the tool switcher.
+- **Sub2API token import**.
 - macOS/Linux build assets (Windows only).
 
 ## Backend error localisation
@@ -88,19 +103,24 @@ The build pipeline (`build/Taskfile.yml`):
 
 ```
 wails/
-├── main.go                     # Wails app bootstrap (window, embedded assets)
+├── main.go                     # Wails app bootstrap (frameless window, embedded assets)
 ├── Taskfile.yml / build/       # customized Wails build pipeline (Windows)
 ├── vite.config.ts / index.html # frontend build reusing the repo toolchain
 ├── scripts/sync-registry.mjs   # refresh the vendored model registry
 └── internal/
-    ├── app/                    # Go service methods (69, mirroring Tauri commands)
+    ├── app/                    # Go service methods (96, mirroring Tauri commands)
     │   ├── app.go dsh.go pi.go hermes.go omp.go channels.go factory.go …
+    │   ├── pty.go              # in-app terminal (ConPTY, event streaming)
+    │   ├── export.go           # channel export templates + engine
+    │   └── paths.go recovery.go notifications.go env.go fsio.go window.go
     └── core/                   # paths / atomic writes / YAML+JSON helpers / registry
 
 src/wails/                      # frontend glue (typechecked + linted with the repo)
-├── main.tsx / AppShell.tsx     # minimal shell: sidebar + the four config pages
-├── wails.css                   # height-chain layout override
-└── shims/                      # @tauri-apps/* replacements routing to Wails
+├── main.tsx / AppShell.tsx     # renders the shared MainWindow + startup init
+├── wails.css                   # height-chain + frameless drag-region overrides
+└── shims/                      # @tauri-apps/* + tauri-pty replacements routing to Wails
+
+src/lib/capabilities.ts         # backend capability gating (shared with the Tauri build)
 ```
 
 `src/lib/model-registry-data.json` is vendored into

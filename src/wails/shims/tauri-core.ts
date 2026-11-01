@@ -165,6 +165,43 @@ const COMMANDS: Record<string, CommandSpec> = {
     fn: 'TestOmpProviderConnection',
     args: ['providerId'],
   },
+
+  // Paths (Preferences pane)
+  get_effective_paths: { fn: 'GetEffectivePaths', args: [] },
+  get_default_paths: { fn: 'GetDefaultPaths', args: [] },
+  save_config_path: { fn: 'SaveConfigPath', args: ['key', 'path'] },
+  reset_config_path: { fn: 'ResetConfigPath', args: ['key'] },
+  get_wsl_info: { fn: 'GetWslInfo', args: [] },
+  get_wsl_username: { fn: 'GetWslUsername', args: ['distro'] },
+  build_wsl_path: {
+    fn: 'BuildWslPath',
+    args: ['distro', 'username', 'configKey'],
+  },
+
+  // Environment / shell
+  get_shell_env: { fn: 'GetShellEnv', args: [] },
+
+  // Notifications & window state
+  send_native_notification: {
+    fn: 'SendNativeNotification',
+    args: ['title', 'body'],
+  },
+  reset_window_state: { fn: 'ResetWindowState', args: [] },
+
+  // Emergency (crash recovery) data
+  save_emergency_data: { fn: 'SaveEmergencyData', args: ['filename', 'data'] },
+  load_emergency_data: { fn: 'LoadEmergencyData', args: ['filename'] },
+  cleanup_old_recovery_files: { fn: 'CleanupOldRecoveryFiles', args: [] },
+
+  // Channel export templates
+  load_export_templates: { fn: 'LoadExportTemplates', args: [] },
+  save_export_template: { fn: 'SaveExportTemplate', args: ['template'] },
+  delete_export_template: { fn: 'DeleteExportTemplate', args: ['name'] },
+  run_export_template: { fn: 'RunExportTemplate', args: ['name'] },
+
+  // Plain-text file IO (channel import/export)
+  read_text_file: { fn: 'ReadTextFile', args: ['path'] },
+  write_text_file: { fn: 'WriteTextFile', args: ['path', 'contents'] },
 }
 
 /**
@@ -188,21 +225,77 @@ export async function invoke<T>(
   } catch (error) {
     // Prefer the raw Go error value (RuntimeError.cause), fall back to the
     // formatted message so callers always receive a plain string.
-    if (error && typeof error === 'object' && 'cause' in error) {
-      const cause = (error as { cause?: unknown }).cause
-      if (typeof cause === 'string') throw localizeWailsError(cause)
+    //
+    // Structured errors (e.g. RecoveryError) are returned by Go as JSON
+    // object strings; parse them so `result.error.type` matching in the
+    // frontend keeps working exactly like the Tauri build.
+    const raw = extractCause(error)
+    if (raw !== undefined) {
+      throw normalizeError(raw)
     }
-    if (error instanceof Error) throw localizeWailsError(error.message)
     throw String(error)
   }
 }
 
+function extractCause(error: unknown): unknown {
+  if (error && typeof error === 'object' && 'cause' in error) {
+    return (error as { cause?: unknown }).cause
+  }
+  if (error instanceof Error) {
+    return error.message
+  }
+  return error
+}
+
+function normalizeError(raw: unknown): unknown {
+  if (typeof raw === 'string') {
+    // Structured (JSON) error contract — keep the object intact.
+    const trimmed = raw.trim()
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        const parsed: unknown = JSON.parse(trimmed)
+        if (parsed && typeof parsed === 'object' && 'type' in parsed) {
+          return parsed
+        }
+      } catch {
+        // Not JSON after all — fall through to the string path.
+      }
+    }
+    return localizeWailsError(raw)
+  }
+  return raw
+}
+
 /**
  * Stub for `@tauri-apps/api/core`'s Channel. The tauri-specta output imports
- * it (dead import) but the minimal build has no PTY channels.
+ * it (dead import); PTY data flows over Wails events instead (see
+ * shims/tauri-pty.ts).
  */
 export class Channel<T = unknown> {
   send(_message: T): void {
-    throw new Error('Channels are not supported in this minimal Wails build')
+    throw new Error('Channels are not supported in this Wails build')
+  }
+}
+
+/**
+ * Stub for `@tauri-apps/api/core`'s Resource, imported (unused) by
+ * `@tauri-apps/plugin-updater`. Auto-update is Tauri-only; the Wails build
+ * checks for new versions through its own release feed in a later phase.
+ */
+/**
+ * Stub for `@tauri-apps/api/core`'s Resource, subclassed (but never
+ * instantiated against the Go service) by `@tauri-apps/plugin-updater`.
+ * Auto-update is Tauri-only; the Wails build checks for new versions through
+ * its own release feed in a later phase.
+ */
+export class Resource {
+  readonly rid: number
+
+  constructor(rid: number) {
+    this.rid = rid
+  }
+
+  async close(): Promise<void> {
+    // no-op
   }
 }

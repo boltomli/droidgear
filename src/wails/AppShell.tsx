@@ -1,24 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Window as CurrentWindow } from '@wailsio/runtime'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { commands } from '@/lib/tauri-bindings'
+import { MainWindow } from '@/components/layout/MainWindow'
+import { initializeCommandSystem } from '@/lib/commands'
 import { initializeLanguage } from '@/i18n/language-init'
-import { SideNav } from './components/SideNav'
-import { DEFAULT_SECTION, SECTIONS, type SectionID } from './sections'
+import { preloadShellEnv } from '@/services/shell-env'
+import { cleanupOldFiles } from '@/lib/recovery'
+import { commands } from '@/lib/tauri-bindings'
+import { useUIStore } from '@/store/ui-store'
+import { isToolSupported, WAILS_FALLBACK_TOOL } from '@/lib/capabilities'
+import { logger } from '@/lib/logger'
 
 /**
- * Minimal shell layout: sidebar navigation (see components/SideNav) plus the
- * active tool page. Cross-cutting startup behaviour lives here: language
- * initialisation, window fit and the version footer data.
+ * Wails shell: renders the shared MainWindow (TitleBar + LeftSideBar +
+ * MainWindowContent + command palette + preferences) unchanged. Cross-cutting
+ * startup behaviour lives here: command system registration, language
+ * initialisation, shell-env preload, recovery cleanup, window fit, and
+ * redirecting away from persisted views whose Go backend does not exist yet
+ * (see src/lib/capabilities.ts).
  */
 function AppShell() {
-  const [section, setSection] = useState<SectionID>(DEFAULT_SECTION)
-  const [appVersion, setAppVersion] = useState<string | null>(null)
-
   useEffect(() => {
+    initializeCommandSystem()
+
+    // Redirect persisted views (zustand/localStorage) that the Wails backend
+    // does not support to the fallback tool, keeping the sidebar consistent.
+    const state = useUIStore.getState()
+    if (!isToolSupported(state.currentView)) {
+      useUIStore.setState({
+        currentView: WAILS_FALLBACK_TOOL,
+        lastToolView: WAILS_FALLBACK_TOOL,
+      })
+    } else if (!isToolSupported(state.lastToolView)) {
+      useUIStore.setState({ lastToolView: WAILS_FALLBACK_TOOL })
+    }
+
     // Shrink the window when the default 1280×840 does not fit the current
     // work area (small screens / large display scale), then re-centre.
     // Both the runtime SetSize API and screen.avail* are in CSS pixels
@@ -51,27 +69,18 @@ function AppShell() {
     }
     void init()
 
-    // Version string for the sidebar footer (bare command, not Result-wrapped).
-    void commands
-      .getAppVersion()
-      .then(version => setAppVersion(version))
-      .catch(() => setAppVersion(null))
+    // Warm the shell env cache (used by the terminal) and clean up old crash
+    // recovery files, matching the Tauri app's startup sequence.
+    void preloadShellEnv()
+    void cleanupOldFiles().catch(error => {
+      logger.warn('Recovery cleanup failed', { error })
+    })
   }, [])
 
-  const ActivePage = SECTIONS.find(entry => entry.id === section)?.page
-
-  return (
-    <div className="flex h-full w-full overflow-hidden bg-background text-foreground">
-      <SideNav active={section} onSelect={setSection} version={appVersion} />
-      <main className="flex-1 overflow-y-auto">
-        {ActivePage && <ActivePage />}
-      </main>
-      <Toaster position="bottom-right" expand={false} />
-    </div>
-  )
+  return <MainWindow />
 }
 
-export default function MinimalApp() {
+export default function WailsApp() {
   return (
     <ErrorBoundary>
       <ThemeProvider>

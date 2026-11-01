@@ -2,7 +2,7 @@ import ReactDOM from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
 import '../i18n'
 import { queryClient } from '@/lib/query-client'
-import MinimalApp from './AppShell'
+import WailsApp from './AppShell'
 import '../App.css'
 import './wails.css'
 
@@ -28,7 +28,7 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <QueryClientProvider client={queryClient}>
-    <MinimalApp />
+    <WailsApp />
   </QueryClientProvider>
 )
 

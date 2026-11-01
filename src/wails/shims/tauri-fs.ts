@@ -1,17 +1,21 @@
 /**
  * Wails bridge for `@tauri-apps/plugin-fs`.
  *
- * Direct filesystem access is not exposed in this minimal build. The only
- * consumer (the channels list page) is not part of the minimal shell.
+ * Only the surface used by the channels list page (JSON import/export) is
+ * implemented, routed through the Go `read_text_file` / `write_text_file`
+ * commands. The Go side rejects relative paths, keeping the exposure as
+ * narrow as the Tauri fs plugin's scope.
  */
 
-export async function readTextFile(_path: string): Promise<string> {
-  throw new Error('Filesystem access is not available in this minimal build')
+import { invoke } from './tauri-core'
+
+export async function readTextFile(path: string): Promise<string> {
+  return invoke<string>('read_text_file', { path })
 }
 
 export async function writeTextFile(
-  _path: string,
-  _contents: string
+  path: string,
+  contents: string
 ): Promise<void> {
-  throw new Error('Filesystem access is not available in this minimal build')
+  await invoke<null>('write_text_file', { path, contents })
 }

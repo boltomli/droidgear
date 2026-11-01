@@ -7,7 +7,27 @@
  * project (tsconfig includes only `src/`), so its exact shape is not
  * re-declared here; `tauri-core.ts` casts the namespace to a method
  * registry and selects Go service methods by name.
+ *
+ * The PTY shim (`tauri-pty.ts`) imports its four commands directly, so
+ * those are declared with the generated signatures.
  */
 declare module '@wails-bindings' {
-  export {}
+  export interface PtyStartOptions {
+    file: string
+    args: string[] | null
+    name: string | null
+    cols: number | null
+    rows: number | null
+    cwd: string | null
+    env: Record<string, string | undefined> | null
+  }
+
+  export function PtyStart(opts: PtyStartOptions): Promise<number>
+  export function PtyWrite(id: number, data: string): Promise<void>
+  export function PtyResize(
+    id: number,
+    cols: number,
+    rows: number
+  ): Promise<void>
+  export function PtyKill(id: number): Promise<void>
 }

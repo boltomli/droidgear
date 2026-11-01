@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 
-type NavigationView =
+export type NavigationView =
   | 'droid'
   | 'channels'
   | 'opencode'
@@ -13,7 +13,7 @@ type NavigationView =
   | 'omp'
   | 'copilot'
   | 'dsh'
-type ToolView =
+export type ToolView =
   | 'droid'
   | 'opencode'
   | 'codex'
