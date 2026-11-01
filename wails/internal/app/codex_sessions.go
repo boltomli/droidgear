@@ -93,11 +93,11 @@ type CodexSessionDetail struct {
 // ---------------------------------------------------------------------------
 
 const (
-	codexSessionHeadBytes  = 256 * 1024
-	codexSessionTailBytes  = 128 * 1024
-	codexSessionUntitled   = "New Session"
-	codexSessionEventName  = "codex-sessions-changed"
-	codexSessionsPollEvery = 750 * time.Millisecond
+	codexSessionHeadBytes      = 256 * 1024
+	codexSessionTailBytes      = 128 * 1024
+	codexSessionUntitled       = "New Session"
+	codexSessionEventName      = "codex-sessions-changed"
+	codexSessionsFallbackEvery = 10 * time.Second
 )
 
 // ---------------------------------------------------------------------------
@@ -946,25 +946,23 @@ func codexSessionsSignature(dir string) string {
 	return fmt.Sprintf("%d:%d:%d", count, totalSize, maxMtime)
 }
 
-// codexWatchSessionsLoop polls the sessions dir and emits
-// `codex-sessions-changed` only when the tree actually changes. The baseline
-// is taken at start, matching notify (no event for the initial state).
+// codexWatchSessionsLoop emits `codex-sessions-changed` when the sessions
+// tree fingerprint changes. Event-driven via fsnotify with a low-frequency
+// fallback poll (watchtree.go); the baseline is taken at start, matching
+// notify (no event for the initial state).
 func codexWatchSessionsLoop(dir string, stop <-chan struct{}) {
 	signature := codexSessionsSignature(dir)
-	ticker := time.NewTicker(codexSessionsPollEvery)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-stop:
-			return
-		case <-ticker.C:
-			next := codexSessionsSignature(dir)
-			if next != signature {
-				signature = next
-				emitCodexEvent(codexSessionEventName)
-			}
+	changed := func() bool {
+		next := codexSessionsSignature(dir)
+		if next == signature {
+			return false
 		}
+		signature = next
+		return true
 	}
+	watchTreeUntil(dir, stop, changed, codexSessionsFallbackEvery, func() {
+		emitCodexEvent(codexSessionEventName)
+	})
 }
 
 // StartCodexSessionsWatcher starts watching the codex sessions directory for

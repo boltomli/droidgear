@@ -66,11 +66,15 @@ funnels through `TAURI_INVOKE(cmd, args)` (see `src/lib/bindings.ts`), which
   same event names/payloads via the pattern in `pty.go`
   (`application.Get().Event.Emit(name, payload)`), wrapped in a small
   `emit<Tool>Event` helper + optional `…EventSink` var for tests.
-- **Watchers** (sessions/specs): Rust uses notify-style file watchers. A
-  cheap poll loop (fs.Stat mtime + interval, e.g. 500ms–1s, started
-  lazily on `start…Watcher`, stopped on `stop…Watcher`, refcounted) is an
-  acceptable mirror; emit the change event only on actual change. Keep
-  state in a package-level tool-prefixed struct guarded by `sync.Mutex`.
+- **Watchers** (sessions/specs): Rust uses notify-style file watchers. For
+  sessions viewers, use the shared event-driven loop in
+  `internal/app/watchtree.go` (fsnotify + debounced fingerprint compare +
+  ~10s fallback poll; started lazily on `start…Watcher`, stopped on
+  `stop…Watcher`) instead of adding another poll loop — the old 500ms
+  full-tree stat poll is what guidelines §4.5 flags as a regression.
+  Cheaper surfaces (specs) may still use a fingerprint poll, but only emit
+  the change event on actual change. Keep state in a package-level
+  tool-prefixed struct guarded by `sync.Mutex`.
 - **Platform**: Windows is the primary target (same as existing code); use
   `core.GetEffectivePaths`-style path resolution so the Preferences → Paths
   overrides and WSL handling keep working.

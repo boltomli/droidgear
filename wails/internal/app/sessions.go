@@ -554,12 +554,13 @@ func (a *App) DeleteSession(sessionPath string) error {
 }
 
 // ---------------------------------------------------------------------------
-// Shared poll-based watcher plumbing (all four sessions viewers)
+// Shared change watcher plumbing (all four sessions viewers)
 // ---------------------------------------------------------------------------
 
-// sessionsPollInterval is the stat-poll period; PORTING.md accepts a
-// 500ms–1s poll loop in place of the Rust notify watchers.
-const sessionsPollInterval = 500 * time.Millisecond
+// sessionsFallbackInterval is the safety-net fingerprint poll behind the
+// event-driven watcher (watchtree.go); fsnotify carries the normal path so
+// idle cost is ~0 and change latency stays sub-second (guidelines §4.5).
+const sessionsFallbackInterval = 10 * time.Second
 
 // sessionsPollRun is one running watcher for a single event name.
 type sessionsPollRun struct {
@@ -632,7 +633,7 @@ func sessionsPollEqual(a, b map[string]string) bool {
 	return true
 }
 
-// startSessionsPollWatcher starts polling dir and emits event only when the
+// startSessionsPollWatcher starts watching dir and emits event only when the
 // tree actually changes. A missing directory is not an error — the Rust
 // command returns without watching (mirrors start_*_sessions_watcher).
 func startSessionsPollWatcher(event string, dir string) error {
@@ -643,7 +644,7 @@ func startSessionsPollWatcher(event string, dir string) error {
 	defer sessionsPollRegistry.mu.Unlock()
 	if current, ok := sessionsPollRegistry.watchers[event]; ok {
 		if current.dir == dir {
-			return nil // already polling this directory
+			return nil // already watching this directory
 		}
 		close(current.stop)
 		<-current.done
@@ -654,20 +655,17 @@ func startSessionsPollWatcher(event string, dir string) error {
 	previous := sessionsPollSnapshot(dir)
 	go func() {
 		defer close(run.done)
-		ticker := time.NewTicker(sessionsPollInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-run.stop:
-				return
-			case <-ticker.C:
-				current := sessionsPollSnapshot(dir)
-				if !sessionsPollEqual(previous, current) {
-					previous = current
-					emitSessionToolEvent(event)
-				}
+		changed := func() bool {
+			current := sessionsPollSnapshot(dir)
+			if sessionsPollEqual(previous, current) {
+				return false
 			}
+			previous = current
+			return true
 		}
+		watchTreeUntil(dir, run.stop, changed, sessionsFallbackInterval, func() {
+			emitSessionToolEvent(event)
+		})
 	}()
 	return nil
 }

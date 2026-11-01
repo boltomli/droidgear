@@ -4,6 +4,7 @@ go 1.27.3
 
 require (
 	github.com/aymanbagabas/go-pty v0.2.3
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/klauspost/compress v1.18.7
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/wailsapp/wails/v3 v3.0.0

@@ -445,7 +445,7 @@ jobs:
 | P0-5 | 原生菜单（Wails menu API，含 macOS Edit/App 菜单，i18n 联动）                                | macOS ⌘C/⌘V 生效；菜单项与 Tauri 对齐                                         | ✅ 完成 |
 | P1-1 | 单实例 + 窗口状态持久化 + `OnShutdown` 清理（PTY/watcher）                                   | 二次启动聚焦主窗口；重启位置记忆；退出无残留 shell                            | ✅ 完成 |
 | P1-2 | PTY：输出合并（16ms）、shim 句柄回收、flow control 或显式禁用                                | `npm i` 期间主线程不掉帧；反复开关标签内存不增长                              | ✅ 完成 |
-| P1-3 | 会话 watcher 改 fsnotify + 兜底轮询                                                          | 空转 CPU ≈ 0；大目录变更事件 < 1s 到达                                        |
+| P1-3 | 会话 watcher 改 fsnotify + 兜底轮询                                                          | 空转 CPU ≈ 0；大目录变更事件 < 1s 到达                                        | ✅ 完成 |
 | P1-4 | Wails 通知改用 `pkg/services/notifications`                                                  | Windows/macOS/Linux 均能弹出；点击回调可用                                    |
 | P1-5 | CI + 对账脚本 + registry 同步校验                                                            | PR 红灯能挡住漂移                                                             |
 | P2-1 | `internal/service` 下沉 + `cmd/dg` CLI（`--json`）                                           | GUI 行为不变；`dg` 覆盖 channels/dsh/pi/hermes/omp/codex 的 list/apply/export |
