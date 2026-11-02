@@ -3,6 +3,9 @@
 @import './theme-variables.css';
 @import 'sonner/dist/styles.css';
 
+/* Tailwind v4 的自动内容探测以 Vite root 为基准：Tauri 构建 root=仓库根（碰巧对），
+   Wails 构建 root=wails/（探测不到 src/）。显式声明后与构建入口解耦。 */
+@source './**/*.{ts,tsx}';
 @source "../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:is(.dark *));
