@@ -8,8 +8,9 @@ embedded webview frontend).
 The frontend is the **unmodified** `src/` component tree (shadcn/ui, zustand
 stores, TanStack Query, react-i18next); only the `invoke` transport is swapped
 out. Since the parity push, the Go service mirrors the full Tauri command
-surface, so the two shells are feature- and layout-identical (the only
-intentional exception is the Tauri-only auto-updater).
+surface, so the two shells expose the same features and render the same
+component tree (the only intentional exceptions are the Tauri-only
+auto-updater and the shell-level window chrome described below).
 
 > ⚠️ **Known gaps:** command-surface parity holds and the shell-level
 > integrations from the audit roadmap (native menu, window-state persistence,
@@ -19,6 +20,22 @@ intentional exception is the Tauri-only auto-updater).
 > background and the TUI/CLI layer. Audit, evidence and the fix roadmap live
 > in
 > [`docs/developer/wails-port-guidelines.zh.md`](../docs/developer/wails-port-guidelines.zh.md).
+>
+> **Build prerequisites (a clean clone will NOT build):**
+>
+> ```bash
+> npm ci                                                       # @wailsio/runtime etc.
+> cd wails && wails3 generate bindings -clean=true -ts -i && cd ..   # gitignored bindings
+> npx vite build --config wails/vite.config.ts --mode production     # go:embed needs frontend/dist
+> ```
+>
+> **Known layout blocker:** Tailwind v4 detects sources from the Vite `root`,
+> and this config sets `root: wails/`, so `src/**` classes were never
+> generated (CSS 45 kB instead of 136 kB → no `h-screen`/`w-[280px]`, broken
+> sidebar and buttons). The fix is an explicit `@source` in `src/App.css`.
+> Also note: with `Frameless: true` Wails does **not** attach the native menu
+> on Windows/Linux. See
+> [`docs/developer/wails-round2-layout-and-gaps.zh.md`](../docs/developer/wails-round2-layout-and-gaps.zh.md).
 
 ## How the reuse works
 

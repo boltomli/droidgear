@@ -4,14 +4,15 @@ Technical documentation for building and extending this app. These docs describe
 
 ## Architecture & Patterns
 
-| Document                                                  | Description                                             |
-| --------------------------------------------------------- | ------------------------------------------------------- |
-| [Architecture Guide](./architecture-guide.md)             | High-level overview, mental models, system architecture |
-| [Rust Architecture](./rust-architecture.md)               | Rust module organization and patterns                   |
-| [Wails v3 Port Guidelines](./wails-port-guidelines.zh.md) | Go/Wails port audit + GUI/TUI/CLI guidance              |
-| [TUI Design](./tui-design.md)                             | Headless TUI architecture (core extraction + tests)     |
-| [State Management](./state-management.md)                 | Three-layer state onion, Zustand, TanStack Query        |
-| [Error Handling](./error-handling.md)                     | Error propagation, user feedback, retry patterns        |
+| Document                                                  | Description                                                                           |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [Architecture Guide](./architecture-guide.md)             | High-level overview, mental models, system architecture                               |
+| [Rust Architecture](./rust-architecture.md)               | Rust module organization and patterns                                                 |
+| [Wails v3 Port Guidelines](./wails-port-guidelines.zh.md) | Go/Wails port audit + GUI/TUI/CLI guidance                                            |
+| [Wails v3 Round 2](./wails-round2-layout-and-gaps.zh.md)  | Layout regression root cause, window/menu limits, remaining gaps, agent-config review |
+| [TUI Design](./tui-design.md)                             | Headless TUI architecture (core extraction + tests)                                   |
+| [State Management](./state-management.md)                 | Three-layer state onion, Zustand, TanStack Query                                      |
+| [Error Handling](./error-handling.md)                     | Error propagation, user feedback, retry patterns                                      |
 
 ## Core Systems
 

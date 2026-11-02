@@ -4,6 +4,11 @@
 > 取代 `docs/developer/wails-ui-design.zh.md` 中「P0–P4 已实施 / 仅剩 P5」的结论；
 > 该文件保留为历史设计记录（见文首横幅）。
 >
+> **第二轮（2026-11-02）勘误与续篇**：布局崩坏（Tailwind 未扫描 `src/`）、
+> 依赖/构建漂移、以及「frameless 窗口在 Windows/Linux 拿不到原生菜单」等结论见
+> [`wails-round2-layout-and-gaps.zh.md`](./wails-round2-layout-and-gaps.zh.md)。
+> 该文同时接管 §3.2 的菜单结论、§3.8 的窗口行为表格与后续排期——**先把那边读完再改壳层**。
+>
 > 本文回答三件事：**移植得对不对**（正确性）、**移植得全不全**（完整性）、
 > **接下来怎么改**（GUI / TUI / CLI / 上游工具同步的指导规则）。
 
@@ -103,6 +108,12 @@ cd .. && npm run typecheck                                       # tsgo 通过
 - **修法**：`AppShell` 的 `MainWindow` 之后补一行，与 Tauri 完全一致。
 
 ### 3.2 原生菜单缺失（macOS 上尤其硬伤）
+
+> ⚠️ **第二轮勘误**：菜单已在 Go 侧实现（`internal/app/menu.go` + `menu-bridge.ts`），但
+> **Wails 在 `Frameless: true` 时根本不会把应用菜单挂到窗口上**
+> （`pkg/application/webview_window_windows.go:525`：`if !options.Frameless && !options.Windows.DisableMenu`）。
+> 即 macOS 可用、Windows/Linux 无效。承载方案见
+> [`wails-round2-layout-and-gaps.zh.md` §3.2](./wails-round2-layout-and-gaps.zh.md#32-frameless-的代价必须写进文档清单)。
 
 - Tauri `App.tsx` 调 `buildAppMenu()`（`src/lib/menu.ts`：About / Check Updates / Preferences /
   Hide / Quit / Edit / View / Window），Wails 外壳完全没有菜单；`src/lib/menu.ts` 依赖
