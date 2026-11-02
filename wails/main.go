@@ -55,8 +55,10 @@ func main() {
 	})
 
 	// Restore the previous geometry (~/.droidgear/window-state.json) when
-	// available; otherwise the defaults below apply (centred 1280×840, and
-	// the frontend shrinks it to fit small work areas on mount).
+	// available; otherwise the window contract applies: 1150×700 default =
+	// minimum (mirroring src-tauri/src/lib.rs), centred, created hidden and
+	// revealed by the frontend once the shell has mounted (Show + Focus in
+	// src/wails/AppShell.tsx). The contract table lives in wails/PORTING.md.
 	state := app.LoadWindowState()
 	windowOptions := application.WebviewWindowOptions{
 		Title: "DroidGear Minimal",
@@ -66,10 +68,10 @@ func main() {
 		// The window is centred by default (WindowCentered is the zero
 		// value); on mount the frontend shrinks it to fit smaller work
 		// areas (see src/wails/AppShell.tsx).
-		Width:     1280,
-		Height:    840,
-		MinWidth:  800,
-		MinHeight: 600,
+		Width:     1150,
+		Height:    700,
+		MinWidth:  1150,
+		MinHeight: 700,
 		// Frameless: the shared TitleBar renders the window controls. Drag
 		// and edge-resize come from the Wails runtime's `--wails-draggable:
 		// drag` CSS hook (see src/wails/wails.css). UseApplicationMenu makes
@@ -78,8 +80,11 @@ func main() {
 		// is known (src/wails/menu-bridge.ts).
 		Frameless:          true,
 		UseApplicationMenu: true,
-		BackgroundColour:   application.NewRGB(6, 7, 15),
-		URL:                "/",
+		// Hidden until the frontend calls Show() — no white/black flash at
+		// startup, matching Tauri's visible:false → show() sequence.
+		Hidden:           true,
+		BackgroundColour: startupBackgroundColour(),
+		URL:              "/",
 	}
 	if state != nil {
 		windowOptions.X = state.X
@@ -94,4 +99,16 @@ func main() {
 	if err := appInstance.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// startupBackgroundColour picks the native window background from the
+// persisted theme preference (light → white, dark/system → #0f0f0f, the
+// same value as the hardcoded `html` background in src/App.css) so the
+// first frame and window edges do not flash the wrong colour. The frontend
+// keeps it in sync on every theme change (src/wails/theme-window.ts).
+func startupBackgroundColour() application.RGBA {
+	if prefs, err := (&app.App{}).LoadPreferences(); err == nil && prefs.Theme == "light" {
+		return application.NewRGB(255, 255, 255)
+	}
+	return application.NewRGB(15, 15, 15)
 }

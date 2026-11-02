@@ -11,6 +11,7 @@ import { preloadShellEnv } from '@/services/shell-env'
 import { cleanupOldFiles } from '@/lib/recovery'
 import { commands } from '@/lib/tauri-bindings'
 import { initWailsMenu } from '@/wails/menu-bridge'
+import { syncWindowBackground } from '@/wails/theme-window'
 import { useUIStore } from '@/store/ui-store'
 import { isToolSupported, WAILS_FALLBACK_TOOL } from '@/lib/capabilities'
 import { logger } from '@/lib/logger'
@@ -39,18 +40,26 @@ function AppShell() {
       useUIStore.setState({ lastToolView: WAILS_FALLBACK_TOOL })
     }
 
-    // Shrink the window when the default 1280×840 does not fit the current
-    // work area (small screens / large display scale), then re-centre.
+    // The window is created hidden (Hidden: true in wails/main.go, mirroring
+    // Tauri's visible:false) — reveal it now that the shell has mounted, and
+    // keep the native background colour following the theme (round2 §B6).
+    const stopBackgroundSync = syncWindowBackground()
+    void CurrentWindow.Show().then(() => CurrentWindow.Focus())
+
+    // Shrink the window when the restored/default 1150×700 does not fit the
+    // current work area (small screens / large display scale), then re-centre.
     // Both the runtime SetSize API and screen.avail* are in CSS pixels
     // (Wails converts DIP → physical internally).
     const margin = 48
-    const targetWidth = Math.min(1280, window.screen.availWidth - margin)
-    const targetHeight = Math.min(840, window.screen.availHeight - margin)
+    const targetWidth = Math.min(1150, window.screen.availWidth - margin)
+    const targetHeight = Math.min(700, window.screen.availHeight - margin)
     if (window.innerWidth > targetWidth || window.innerHeight > targetHeight) {
       void CurrentWindow.SetSize(targetWidth, targetHeight).then(() =>
         CurrentWindow.Center()
       )
     }
+
+    return stopBackgroundSync
   }, [])
 
   useEffect(() => {

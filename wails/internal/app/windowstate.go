@@ -43,7 +43,7 @@ func windowStatePath() (string, error) {
 
 // LoadWindowState reads the persisted geometry. It returns nil when the
 // file is absent, unreadable or nonsensical — the caller then keeps the
-// default (centred 1280×840) geometry.
+// window contract default (centred 1150×700) geometry.
 func LoadWindowState() *WindowState {
 	path, err := windowStatePath()
 	if err != nil {

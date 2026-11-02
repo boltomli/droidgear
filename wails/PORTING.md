@@ -114,6 +114,26 @@ plus: any commands deliberately skipped (and why), any error strings that
 should be added to `src/wails/error-i18n.ts`, any new Go dependencies you
 would have needed, and any behavioural divergences from Rust.
 
+## Window contract (both shells)
+
+The two shells must behave identically at startup — this table is the
+contract; `wails/main.go`, `wails/internal/app/window.go` and
+`src/wails/AppShell.tsx` implement the Wails side of it:
+
+| Item          | Tauri (`src-tauri/src/lib.rs`)                      | Wails (`wails/main.go` + `AppShell.tsx`)                                                |
+| ------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Default size  | 1150 × 700                                          | 1150 × 700                                                                              |
+| Minimum size  | 1150 × 700 (= default)                              | 1150 × 700 (= default)                                                                  |
+| First visible | `visible: false` → frontend `show()` + `setFocus()` | `Hidden: true` → frontend `Show()` + `Focus()`                                          |
+| Placement     | centred on first launch (saved state otherwise)     | centred (saved `~/.droidgear/window-state.json` otherwise)                              |
+| Background    | theme/WebView decides                               | `startupBackgroundColour()` at start, `src/wails/theme-window.ts` follows theme changes |
+| Small screens | system clamps at min size                           | frontend shrinks to `screen.avail* - 48` then re-centres (never below min)              |
+| Reset         | `reset_window_state`                                | `ResetWindowState` → 1150 × 700, centre, focus                                          |
+
+Changing the contract means changing **all** of these together plus this
+table — the two shells drifting apart is exactly the class of bug this
+guide exists to prevent.
+
 ## System integration checklist (guidelines §7)
 
 Porting a command surface is not only about 参数/JSON/错误串 — for every new

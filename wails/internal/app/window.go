@@ -8,10 +8,11 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// resetWidth/resetHeight match the spike's initial window size.
+// resetWidth/resetHeight match the window contract (default = minimum,
+// 1150×700 — see wails/PORTING.md and wails/main.go).
 const (
-	resetWidth  = 1280
-	resetHeight = 840
+	resetWidth  = 1150
+	resetHeight = 700
 )
 
 // ResetWindowState restores the main window to a safe, visible state.
