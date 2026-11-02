@@ -34,6 +34,7 @@ const UPDATER_ALLOWLIST = new Set([
 
 /** Go methods imported straight from `@wails-bindings` by shim modules. */
 const DIRECT_GO_METHODS = new Set([
+  'GetSystemFonts', // src/wails/shims/tauri-system-fonts.ts
   'OpenPath',
   'OpenUrl',
   'RevealItemInDir', // src/wails/shims/tauri-opener.ts

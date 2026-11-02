@@ -36,4 +36,17 @@ declare module '@wails-bindings' {
   export function OpenUrl(url: string): Promise<void>
   export function OpenPath(path: string): Promise<void>
   export function RevealItemInDir(item: string): Promise<void>
+
+  // System fonts (`tauri-system-fonts.ts` → internal/app/fonts.go).
+  // Shape mirrors tauri-plugin-system-fonts-api's SystemFont interface.
+  export interface SystemFont {
+    id: string
+    name: string
+    fontName: string
+    path: string
+    weight: number
+    style: 'normal' | 'italic' | 'oblique'
+    monospaced: boolean
+  }
+  export function GetSystemFonts(): Promise<SystemFont[]>
 }

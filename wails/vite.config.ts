@@ -40,6 +40,7 @@ export default defineConfig(async () => {
         '@tauri-apps/api/webviewWindow': shim('tauri-webview-window.ts'),
         '@tauri-apps/api/window': shim('tauri-webview-window.ts'),
         '@tauri-apps/plugin-opener': shim('tauri-opener.ts'),
+        'tauri-plugin-system-fonts-api': shim('tauri-system-fonts.ts'),
         '@tauri-apps/plugin-os': shim('tauri-os.ts'),
         '@tauri-apps/plugin-dialog': shim('tauri-dialog.ts'),
         '@tauri-apps/plugin-fs': shim('tauri-fs.ts'),
