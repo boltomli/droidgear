@@ -59,7 +59,15 @@ description: Generate changelog from commits since last tag and release new vers
    npm run release:prepare <version>
    ```
 
-10. Execute git commands to complete release:
+10. Sync the Wails installer metadata from the new package.json version
+    (otherwise `wails.yml`'s `sync-version --check` gate fails and the
+    Windows installer metadata lags behind):
+
+    ```bash
+    node wails/scripts/sync-version.mjs
+    ```
+
+11. Execute git commands to complete release (include the synced Wails files):
 
     ```bash
     git add .
@@ -75,4 +83,6 @@ description: Generate changelog from commits since last tag and release new vers
 - Confirm version number follows vX.Y.Z pattern
 - Confirm both README files are updated if significant features were added
 - Confirm changelog is committed before running release:prepare
+- Confirm `node wails/scripts/sync-version.mjs` ran after release:prepare
+  (Wails installer metadata matches package.json)
 - Confirm git push completes successfully

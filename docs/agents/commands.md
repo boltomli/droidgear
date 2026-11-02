@@ -98,22 +98,46 @@ npm run rust:fmt         # Format Rust code
 npm run rust:fmt:check   # Check Rust formatting
 npm run rust:clippy      # Rust linter (warnings = errors)
 npm run rust:bindings    # Regenerate tauri-specta TypeScript bindings
+```
+
+## Wails (Go shell)
+
+Full verification order (bindings are gitignored — step 1 is mandatory
+before any frontend build):
+
+```bash
+npm ci                                                             # sync deps (@wailsio/runtime etc.)
+cd wails && wails3 generate bindings -clean=true -ts -i && cd ..   # gitignored, required pre-build
+npx vite build --config wails/vite.config.ts --mode production     # frontend/dist (go:embed needs it)
+cd wails && go vet ./... && go test ./...
+cd wails && wails3 task run     # run for real (embeds the built frontend)
+cd wails && wails3 dev          # rebuild + restart on Go/frontend changes (no Vite HMR)
+node scripts/check-command-surface.mjs          # command-surface drift
+node wails/scripts/sync-version.mjs --check     # version drift
+node wails/scripts/sync-registry.mjs            # shared-data vendoring (run after registry/schema edits)
+```
+
+**Known blind spot**: `npm run check:all` does NOT include the Wails frontend
+production build, the Go steps, or the drift scripts above — run them
+explicitly (CI covers them in `.github/workflows/wails.yml`).
 
 ## All Commands (Quick Reference)
 
-| Category | Command | Description |
-|----------|---------|-------------|
-| Dev | `npm run dev` | Vite frontend dev server |
-| Dev | `npm run tauri:dev` | Tauri app with hot reload |
-| Dev | `npm run tui:dev` | TUI with auto-rebuild |
-| Build | `npm run build` | TypeScript check + Vite build |
-| Build | `npm run tauri:build` | Tauri production build |
-| Build | `npm run tui:build` | TUI release build |
-| Build | `just tui-linux` | TUI static musl binary via zig |
-| Check | `npm run tui:check` | TUI compile check |
-| Run | `npm run tui` | Run TUI |
-| Quality | `npm run check:all` | Full check suite |
-| Quality | `npm run fix:all` | Auto-fix all fixable issues |
-| Test | `npm run test:run` | Vitest (single run) |
-| Test | `npm run rust:test` | Rust tests |
-```
+| Category | Command                                        | Description                     |
+| -------- | ---------------------------------------------- | ------------------------------- |
+| Dev      | `npm run dev`                                  | Vite frontend dev server        |
+| Dev      | `npm run tauri:dev`                            | Tauri app with hot reload       |
+| Dev      | `npm run tui:dev`                              | TUI with auto-rebuild           |
+| Build    | `npm run build`                                | TypeScript check + Vite build   |
+| Build    | `npm run tauri:build`                          | Tauri production build          |
+| Build    | `npm run tui:build`                            | TUI release build               |
+| Build    | `just tui-linux`                               | TUI static musl binary via zig  |
+| Check    | `npm run tui:check`                            | TUI compile check               |
+| Run      | `npm run tui`                                  | Run TUI                         |
+| Quality  | `npm run check:all`                            | Full check suite                |
+| Quality  | `npm run fix:all`                              | Auto-fix all fixable issues     |
+| Test     | `npm run test:run`                             | Vitest (single run)             |
+| Test     | `npm run rust:test`                            | Rust tests                      |
+| Wails    | `npx vite build --config wails/vite.config.ts` | Wails frontend build (go:embed) |
+| Wails    | `cd wails && go vet ./... && go test ./...`    | Go static checks + tests        |
+| Wails    | `node scripts/check-command-surface.mjs`       | Command-surface drift check     |

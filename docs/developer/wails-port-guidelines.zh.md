@@ -136,6 +136,11 @@ cd .. && npm run typecheck                                       # tsgo 通过
 
 ### 3.4 系统字体（终端字体下拉为空）
 
+> ✅ **已修复（round2 B7）**：`wails/internal/app/fonts.go` 枚举字体（Windows 注册表
+> HKLM/HKCU Fonts、Linux `fc-list`、macOS 字体目录扫描），shim 为
+> `src/wails/shims/tauri-system-fonts.ts`（别名 `tauri-plugin-system-fonts-api`）。
+> 下面保留原始审计描述作为背景。
+
 - `AppearancePane` 用 `tauri-plugin-system-fonts-api` 的 `getSystemFonts()`，Wails 无 shim。
 - 现状：异常被 `catch` 掉，只打日志 → 字体下拉为空，用户只能手输。
 - **修法**：Go 侧枚举字体（Windows 读 `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts`
@@ -207,6 +212,11 @@ cd .. && npm run typecheck                                       # tsgo 通过
 5. 剪贴板 shim（`Clipboard.SetText/Text`）与 IME 修复正常。
 
 ### 3.10 平台覆盖
+
+> ✅ **部分修复（round2 B8）**：`tauri-os.ts` 现在读 Go 注入的
+> `window._wails.environment`（`OS`/`Arch`），`version()` 由
+> `System.Environment()` 预热缓存，UA 仅作浏览器预览回退 —— 平台硬编码已移除。
+> **仍未完成**：macOS/Linux 打包资产、`MacOptions`、WebKitGTK 实机验证（本文 §10 / round2 §4 序 11）。
 
 `src/wails/shims/tauri-os.ts` 把 `platform()` / `family()` 硬编码为 `windows`，
 `version()` 返回 UA 字符串；`notifications` 非 Windows 直接报错；`build/` 下只有

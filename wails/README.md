@@ -13,13 +13,14 @@ component tree (the only intentional exceptions are the Tauri-only
 auto-updater and the shell-level window chrome described below).
 
 > ⚠️ **Known gaps:** command-surface parity holds and the shell-level
-> integrations from the audit roadmap (native menu, window-state persistence,
-> single instance, opener shim, notifications service, updater gating) are in
-> place; still missing are the system-fonts shim, cross-platform platform
-> shims (`tauri-os.ts` is Windows-first), the theme-following window
-> background and the TUI/CLI layer. Audit, evidence and the fix roadmap live
-> in
-> [`docs/developer/wails-port-guidelines.zh.md`](../docs/developer/wails-port-guidelines.zh.md).
+> integrations from the audit roadmap (window-state persistence, single
+> instance, opener shim, system-fonts shim, notifications service, updater
+> gating, theme-following window background, cross-platform platform shim)
+> are in place. Still missing: an in-window menu button for Windows/Linux
+> (frameless — see below), macOS/Linux build assets and the TUI/CLI layer.
+> Audit, evidence and the fix roadmap live in
+> [`docs/developer/wails-port-guidelines.zh.md`](../docs/developer/wails-port-guidelines.zh.md)
+> and its round2 follow-up.
 >
 > **Build prerequisites (a clean clone will NOT build):**
 >
@@ -29,13 +30,22 @@ auto-updater and the shell-level window chrome described below).
 > npx vite build --config wails/vite.config.ts --mode production     # go:embed needs frontend/dist
 > ```
 >
-> **Known layout blocker:** Tailwind v4 detects sources from the Vite `root`,
-> and this config sets `root: wails/`, so `src/**` classes were never
-> generated (CSS 45 kB instead of 136 kB → no `h-screen`/`w-[280px]`, broken
-> sidebar and buttons). The fix is an explicit `@source` in `src/App.css`.
-> Also note: with `Frameless: true` Wails does **not** attach the native menu
-> on Windows/Linux. See
-> [`docs/developer/wails-round2-layout-and-gaps.zh.md`](../docs/developer/wails-round2-layout-and-gaps.zh.md).
+> **Layout (fixed):** Tailwind v4 detects sources from the Vite `root`, and
+> this config sets `root: wails/`, so `src/**` classes were never generated
+> (CSS 45 kB instead of 136 kB → no `h-screen`/`w-[280px]`, broken sidebar
+> and buttons). Fixed by the explicit `@source './**/*.{ts,tsx}'` in
+> `src/App.css` — **keep it**; the `Tailwind utilities guard` CI step greps
+> the output for `.h-screen` / `w-\[280px\]` so this cannot regress silently.
+>
+> **Frameless menu (known, accepted):** with `Frameless: true` Wails does
+> **not** attach the application menu on Windows/Linux (source:
+> `if !options.Frameless && !options.Windows.DisableMenu`), so
+> `internal/app/menu.go` + `menu-bridge.ts` only take effect on macOS.
+> Decision (round2 B5, 2026-11-02): keep frameless — an in-window menu
+> button on the title bar is the planned replacement and is deliberately
+> **not** implemented yet. See
+> [`docs/developer/wails-round2-layout-and-gaps.zh.md`](../docs/developer/wails-round2-layout-and-gaps.zh.md)
+> §3.2.
 
 ## How the reuse works
 

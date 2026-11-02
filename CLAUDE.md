@@ -7,6 +7,8 @@ Read @AGENTS.md for all project instructions.
 - **Generate Rust bindings**: `npm run rust:bindings`
 - **Format all code**: `npm run fix:all`
 - **Check all**: `npm run check:all`
+- **Wails verification** (Go shell — not covered by check:all): see
+  `docs/agents/commands.md` → _Wails (Go shell)_ and `docs/agents/wails-port.md`
 
 ## Release Procedure
 

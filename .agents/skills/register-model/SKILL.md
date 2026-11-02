@@ -134,6 +134,10 @@ Insert into `src/lib/model-registry-data.json` in **alphabetical order** by
 suffixes (e.g., `claude-opus-4-8` → alias `claude-opus-4.8`; no dot form exists
 when the version has no separator, e.g. `claude-opus-5` → alias `claude-opus.5`).
 
+> **Then run `node wails/scripts/sync-registry.mjs`** — the Wails Go service
+> embeds a byte-identical copy (`wails/internal/core/registrydata/`), and CI
+> fails on drift (`cmp` in `.github/workflows/wails.yml`).
+
 **Standard reasoning profile** (models.dev `reasoning_options` lists effort
 values; use the profile matching the lab's native encoding):
 
@@ -197,6 +201,7 @@ provider, add `"strictSampling": true` to the entry.
 ### 6. Verify
 
 ```bash
+node wails/scripts/sync-registry.mjs   # re-vendor after registry edits (CI cmp fails otherwise)
 npm run check:all
 ```
 
@@ -205,6 +210,8 @@ Fix any lint or type errors before declaring the task complete.
 ## Verification
 
 - `npm run check:all` passes with zero errors
+- `wails/internal/core/registrydata/model-registry-data.json` matches
+  `src/lib/model-registry-data.json` (run `node wails/scripts/sync-registry.mjs`)
 - New entry is in `model-registry-data.json` in alphabetical order
 - `strictSampling` set only when models.dev shows `temperature: false`
 - `utils.ts` untouched except `DROID_OFFICIAL_MODEL_NAMES` (if applicable)

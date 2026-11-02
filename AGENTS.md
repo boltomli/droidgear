@@ -14,12 +14,43 @@ This file contains only core rules. Detailed guidelines live in `docs/agents/`.
 | Zustand / state management    | `docs/agents/state-management.md`      |
 | Architecture patterns         | `docs/agents/architecture.md`          |
 | UI components (Radix, shadcn) | `docs/agents/ui-components.md`         |
+| Wails v3 shell (Go service)   | `docs/agents/wails-port.md`            |
 
 For deep-dive topics, see `docs/developer/README.md`.
 
 ## Overview
 
 Tauri v2 + React 19 desktop app. Uses npm (NOT pnpm), TypeScript strict mode, Zustand for state, TanStack Query for persistence.
+
+## Dual Shell (Tauri + Wails v3)
+
+`src/` is a component tree shared by two shells: **Tauri** (`src/main.tsx` →
+`src-tauri/`) and **Wails v3** (`src/wails/main.tsx` → `wails/`). Outside
+`src/wails/` and `src-tauri/`, **any change under `src/` must be evaluated
+against both shells**.
+
+1. **Shared code must not depend on unbridged Tauri capabilities**: every new
+   `@tauri-apps/plugin-*` usage needs a mapping in `src/wails/shims/` (see
+   `wails/PORTING.md` — no no-op shims), or it must be gated via
+   `src/lib/capabilities.ts`.
+2. **Command surface must stay aligned in four places**: Rust command ↔ Go
+   method ↔ shim mapping ↔ generated TS bindings.
+   `node scripts/check-command-surface.mjs` enforces this (CI runs it).
+3. **Wails verification order**: `npm ci` →
+   `wails3 generate bindings -clean=true -ts -i` →
+   `npx vite build --config wails/vite.config.ts --mode production` →
+   `cd wails && go vet ./... && go test ./...` → `wails3 task run`. Skipping
+   the bindings step fails the frontend build (the bindings directory is
+   gitignored).
+4. **Style changes must check both shells' CSS output**: the Wails build sets
+   the Vite `root` to `wails/`, so Tailwind v4's automatic content detection
+   misses `src/`. `src/App.css` must keep the explicit
+   `@source './**/*.{ts,tsx}'`.
+5. **Tauri-only surface (auto-updater)**: never leave a failing entry point
+   under Wails — gate it with `isUpdaterSupported()`.
+
+Deep dive: `docs/agents/wails-port.md`; full audit:
+`docs/developer/wails-port-guidelines.zh.md` + the round2 follow-up.
 
 ## Core Rules (Always Apply)
 
@@ -28,7 +59,7 @@ Tauri v2 + React 19 desktop app. Uses npm (NOT pnpm), TypeScript strict mode, Zu
 3. **Read before editing** — Understand context first
 4. **Run `npm run check:all`** after significant changes
 5. **No manual memoization** — React Compiler handles it
-6. **Tauri v2 docs only** — v1 patterns are incompatible
+6. **Tauri v2 docs only** — v1 patterns are incompatible; for the Wails shell **Wails v3 docs only** (v2 and v3 APIs are incompatible)
 7. **No unsolicited commits** — Only when explicitly requested
 8. **Use `rm -f`** when removing files
 9. **GUI/TUI parity** — When implementing a new GUI feature, synchronously implement the corresponding TUI version
