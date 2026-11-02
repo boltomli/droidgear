@@ -3,6 +3,10 @@ name: wails
 # Guards the Wails port against the drift classes found in
 # docs/developer/wails-port-guidelines.zh.md (§8.1): command-surface
 # divergence, version-source drift and shared registry data drift.
+# Also guards docs/developer/wails-round2-layout-and-gaps.zh.md §5.2:
+# the Go steps must run AFTER the frontend bundle exists (go:embed
+# all:frontend/dist) and the Tailwind output must actually contain the
+# layout utilities (the v4 content-detection/Vite-root trap).
 # Windows-only on purpose: internal/app uses Windows syscall fields
 # (SysProcAttr.HideWindow), so the Go service does not cross-compile.
 
@@ -33,6 +37,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Dependency drift
+        run: npm ls --depth=0
+
       - name: TypeScript
         run: npm run typecheck
 
@@ -45,6 +52,28 @@ jobs:
       - name: Frontend tests
         run: npm run test:run
 
+      - name: Install wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+
+      - name: Generate bindings
+        working-directory: wails
+        run: wails3 generate bindings -clean=true -ts -i
+
+      # Creates frontend/dist for go:embed — must precede the Go steps.
+      - name: Build Wails frontend
+        run: npx vite build --config wails/vite.config.ts --mode production
+
+      # Cheapest regression sentinel for the Tailwind v4/Vite-root trap
+      # (round2 §2): if content detection drifts back to wails/ only, the
+      # CSS collapses to ~45 kB and every layout utility disappears.
+      - name: Tailwind utilities guard
+        shell: bash
+        run: |
+          css=$(ls wails/frontend/dist/assets/index-*.css)
+          grep -qF '.h-screen' "$css" || { echo "missing .h-screen → Tailwind 没扫到 src/"; exit 1; }
+          grep -qF 'w-\[280px\]' "$css" || { echo "missing w-[280px] → 侧栏宽度丢失"; exit 1; }
+          echo "css=$(basename "$css") size=$(wc -c <"$css") bytes"
+
       - name: Go static checks and tests
         working-directory: wails
         shell: bash
@@ -55,13 +84,6 @@ jobs:
           fi
           go vet ./...
           go test ./...
-
-      - name: Install wails3
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
-
-      - name: Generate bindings
-        working-directory: wails
-        run: wails3 generate bindings -clean=true -ts -i
 
       - name: Command surface drift
         run: node scripts/check-command-surface.mjs

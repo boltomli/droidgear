@@ -1,6 +1,14 @@
 .task
 bin
-frontend/dist
+# frontend/dist is produced by `vite build -c wails/vite.config.ts` and
+# embedded via //go:embed all:frontend/dist — keep the directory present in
+# a clean clone so `go vet`/`go test` compile (the real bundle is CI-built).
+# The repo-root `.gitignore` has a bare `dist` rule that excludes the
+# directory itself; re-include it here (deeper rules win) before negating
+# the contents.
+!frontend/dist/
+frontend/dist/*
+!frontend/dist/.gitkeep
 frontend/node_modules
 build/linux/appimage/build
 build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
