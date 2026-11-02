@@ -1,7 +1,8 @@
-import { defineConfig, type UserConfig } from 'vite'
+import { defineConfig, type UserConfig, type Plugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
+import fs from 'node:fs'
 import path, { resolve } from 'path'
 import { fileURLToPath } from 'url'
 import packageJson from '../package.json'
@@ -16,6 +17,21 @@ const repoRoot = resolve(dir, '..')
 
 const shim = (name: string) => resolve(dir, '../src/wails/shims', name)
 
+/**
+ * `emptyOutDir` wipes frontend/dist on every build, including the tracked
+ * `.gitkeep` that keeps `//go:embed all:frontend/dist` compiling on a clean
+ * clone (wails/.gitignore negation). Restore it after each build so
+ * `git status` stays clean.
+ */
+function restoreGitkeep(): Plugin {
+  return {
+    name: 'restore-frontend-dist-gitkeep',
+    closeBundle() {
+      fs.writeFileSync(resolve(dir, 'frontend/dist/.gitkeep'), '')
+    },
+  }
+}
+
 export default defineConfig(async () => {
   const babelPlugin = await babel({ presets: [reactCompilerPreset()] })
   return {
@@ -27,7 +43,7 @@ export default defineConfig(async () => {
       // whose Go backend does not exist yet as disabled placeholders.
       __WAILS_BACKEND__: 'true',
     },
-    plugins: [react(), babelPlugin, tailwindcss()],
+    plugins: [react(), babelPlugin, tailwindcss(), restoreGitkeep()],
     resolve: {
       alias: {
         '@': resolve(repoRoot, 'src'),
