@@ -102,7 +102,22 @@ React stores (unchanged)          Go service (new)
 
 - **Auto-updater** — Tauri-only by design (see
   `src/wails/shims/tauri-core.ts` `Resource` stub); the Wails build ships
-  without an update feed.
+  without an update feed. Audited 2026-11-02 (round2 §B10): every entry
+  point that could reach `services/updater.ts` is gated, so nothing in the
+  Wails UI can throw `unsupported command`:
+
+  | Entry                                            | Gate                                                                            |
+  | ------------------------------------------------ | ------------------------------------------------------------------------------- |
+  | `App.tsx` auto-check timers                      | Tauri entry only (`src/main.tsx`), not bundled                                  |
+  | `lib/menu.ts` “Check for Updates”                | Tauri entry only, not bundled                                                   |
+  | `GeneralPane` check button / auto-update toggle  | `isUpdaterSupported()`                                                          |
+  | `GeneralPane` download button / pending update   | unreachable: `pendingUpdate` is never persisted or set without the gated button |
+  | `notification.test-update-toast` palette command | `isAvailable: DEV && isUpdaterSupported()`                                      |
+  | `showUpdateNotification` callers                 | only the gated paths above                                                      |
+
+  Long term: either keep Tauri-only or rebuild on Wails `pkg/updater`
+  (round2 §4 序 9).
+
 - **macOS/Linux build assets** (Windows-first; the Go service itself is
   portable and the terminal/launch code has POSIX fallbacks).
 
