@@ -10,7 +10,8 @@ import { IS_WAILS_BACKEND } from '@/lib/capabilities'
 const INTERACTIVE_SELECTOR =
   'button, a, input, select, textarea, [role="button"], [role="menuitem"], ' +
   '[role="combobox"], [tabindex]:not([tabindex="-1"]), ' +
-  '[data-dropdown-menu-trigger], [data-no-drag]'
+  '[data-slot="dropdown-menu-trigger"], [data-dropdown-menu-trigger], ' +
+  '[data-no-drag]'
 
 /**
  * Double-click on the title bar toggles maximise.

@@ -29,12 +29,26 @@ body {
   --wails-draggable: drag;
 }
 
-/* Interactive children opt out so clicks never start a native drag. */
+/* Interactive children opt out so clicks never start a native drag. The
+ * runtime only inspects the deepest hit element's computed custom property,
+ * so every interactive shape must opt out explicitly (round2 §B9). Keep
+ * this list in sync with INTERACTIVE_SELECTOR in
+ * src/components/titlebar/titlebar-double-click.ts.
+ *
+ * Note: shadcn's DropdownMenuTrigger renders `data-slot="dropdown-menu-
+ * trigger"` (the bare `[data-dropdown-menu-trigger]` attribute no longer
+ * exists in ui/dropdown-menu.tsx — it is kept for older markup). */
 [data-tauri-drag-region] button,
 [data-tauri-drag-region] [role='button'],
+[data-tauri-drag-region] [role='menuitem'],
+[data-tauri-drag-region] [role='combobox'],
 [data-tauri-drag-region] a,
 [data-tauri-drag-region] input,
 [data-tauri-drag-region] select,
-[data-tauri-drag-region] [data-dropdown-menu-trigger] {
+[data-tauri-drag-region] textarea,
+[data-tauri-drag-region] [tabindex]:not([tabindex='-1']),
+[data-tauri-drag-region] [data-slot='dropdown-menu-trigger'],
+[data-tauri-drag-region] [data-dropdown-menu-trigger],
+[data-tauri-drag-region] [data-no-drag] {
   --wails-draggable: none;
 }
