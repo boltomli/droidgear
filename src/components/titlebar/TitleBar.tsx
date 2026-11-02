@@ -9,6 +9,7 @@ import {
   TitleBarTitle,
 } from './TitleBarContent'
 import { LinuxTitleBar } from './LinuxTitleBar'
+import { handleTitleBarDoubleClick } from './titlebar-double-click'
 
 interface TitleBarProps {
   className?: string
@@ -51,6 +52,7 @@ export function TitleBar({ className, title, forcePlatform }: TitleBarProps) {
     return (
       <div
         data-tauri-drag-region="deep"
+        onDoubleClick={handleTitleBarDoubleClick}
         className={cn(
           'relative flex h-8 w-full shrink-0 items-center justify-between border-b bg-background',
           className
@@ -77,6 +79,7 @@ export function TitleBar({ className, title, forcePlatform }: TitleBarProps) {
   return (
     <div
       data-tauri-drag-region="deep"
+      onDoubleClick={handleTitleBarDoubleClick}
       className={cn(
         'relative flex h-8 w-full shrink-0 items-center justify-between border-b bg-background',
         className

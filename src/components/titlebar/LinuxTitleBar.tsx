@@ -5,6 +5,7 @@ import {
   TitleBarTitle,
 } from './TitleBarContent'
 import { WindowsWindowControls } from './WindowsWindowControls'
+import { handleTitleBarDoubleClick } from './titlebar-double-click'
 
 interface LinuxTitleBarProps {
   className?: string
@@ -23,6 +24,7 @@ export function LinuxTitleBar({ className, title }: LinuxTitleBarProps) {
   return (
     <div
       data-tauri-drag-region="deep"
+      onDoubleClick={handleTitleBarDoubleClick}
       className={cn(
         'relative flex h-8 w-full shrink-0 items-center justify-between border-b bg-background',
         className
