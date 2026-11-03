@@ -33,13 +33,18 @@ function askQuestion(question) {
 async function prepareRelease() {
   const version = process.argv[2]
 
-  if (!version || !version.match(/^v?\d+\.\d+\.\d+$/)) {
+  if (!version || !version.match(/^v?\d+\.\d+\.\d+([+-][\w.]+)?$/)) {
     console.error('❌ Usage: node scripts/prepare-release.js v1.0.0')
     console.error('   or: npm run prepare-release v1.0.0')
     process.exit(1)
   }
 
   const cleanVersion = version.replace('v', '')
+  // Tauri/Cargo only accept numeric x.y.z (plus optional -prerelease); a
+  // semver build metadata suffix (`1.3.9+wails1`) is Wails-only and goes
+  // into package.json alone (wails/scripts/sync-version.mjs then strips it
+  // again for the installer metadata).
+  const tauriVersion = cleanVersion.split('+')[0]
   const tagVersion = version.startsWith('v') ? version : `v${version}`
 
   console.log(`🚀 Preparing release ${tagVersion}...\n`)
@@ -80,11 +85,11 @@ async function prepareRelease() {
     )
     const updatedCargo = cargoToml.replace(
       /(\[package\][\s\S]*?version = ")[^"]*(")/,
-      `$1${cleanVersion}$2`
+      `$1${tauriVersion}$2`
     )
     fs.writeFileSync(cargoPath, updatedCargo)
     console.log(
-      `   ${oldCargoVersion ? oldCargoVersion[1] : 'unknown'} → ${cleanVersion}`
+      `   ${oldCargoVersion ? oldCargoVersion[1] : 'unknown'} → ${tauriVersion}`
     )
 
     // Update tauri.conf.json
@@ -92,12 +97,12 @@ async function prepareRelease() {
     const tauriConfigPath = 'src-tauri/tauri.conf.json'
     const tauriConfig = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf8'))
     const oldTauriVersion = tauriConfig.version
-    tauriConfig.version = cleanVersion
+    tauriConfig.version = tauriVersion
     fs.writeFileSync(
       tauriConfigPath,
       JSON.stringify(tauriConfig, null, 2) + '\n'
     )
-    console.log(`   ${oldTauriVersion} → ${cleanVersion}`)
+    console.log(`   ${oldTauriVersion} → ${tauriVersion}`)
 
     // Run npm install to update lock files
     console.log('\n📦 Updating lock files...')

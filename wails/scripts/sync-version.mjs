@@ -8,6 +8,12 @@
 //   build/windows/nsis/wails_tools.nsh  INFO_PRODUCTVERSION (NSIS installer)
 //   build/windows/msix/*.xml          Identity/Properties Version (MSIX)
 //
+// Semver build metadata (`1.3.9+wails1`) is stripped everywhere below: NSIS
+// VIProductVersion, MSIX Version and macOS CFBundleShortVersionString all
+// require a numeric x.y.z[.w]. The full version (with suffix) is still what
+// the Go binary reports — sync-version prints it to stdout for the ldflags
+// `-X ...appVersion=` injection, which is what About/General panes display.
+//
 // The Go binary picks the version up at link time via
 // `-ldflags "-X droidgear-wails/internal/app.appVersion=<version>"` (see
 // build/windows/Taskfile.yml and build/Taskfile.yml), which invokes this
@@ -32,12 +38,16 @@ const check = process.argv.includes('--check')
 const { version } = JSON.parse(
   fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
 )
-if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
+if (!/^\d+\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/.test(version)) {
   console.error(
     `sync-version: unexpected version format in package.json: ${version}`
   )
   process.exit(1)
 }
+
+// Numeric-only form (strips `-prerelease` and `+buildmeta`) for Windows
+// installer metadata: NSIS VIProductVersion and MSIX Version must be x.y.z[.w].
+const numericVersion = version.replace(/^([0-9]+\.[0-9]+\.[0-9]+).*$/, '$1')
 
 const changes = []
 
@@ -71,15 +81,15 @@ apply('build/config.yml', text => {
     )
     process.exit(1)
   }
-  return text.replace(pattern, `  version: "${version}"`)
+  return text.replace(pattern, `  version: "${numericVersion}"`)
 })
 
 // build/windows/info.json — embedded into the Windows version resource.
 apply('build/windows/info.json', text => {
   const json = JSON.parse(text)
-  json.fixed.file_version = version
+  json.fixed.file_version = numericVersion
   for (const block of Object.values(json.info ?? {})) {
-    block.ProductVersion = version
+    block.ProductVersion = numericVersion
   }
   return `${JSON.stringify(json, null, '\t')}\n`
 })
@@ -90,7 +100,7 @@ apply('build/windows/nsis/wails_tools.nsh', text =>
     'build/windows/nsis/wails_tools.nsh',
     text,
     '(!define INFO_PRODUCTVERSION ")[^"]*(")',
-    `$1${version}$2`
+    `$1${numericVersion}$2`
   )
 )
 
@@ -105,7 +115,7 @@ for (const file of [
       file,
       text,
       '(?<!\\w)Version="\\d+\\.\\d+\\.\\d+\\.\\d+"',
-      `Version="${version}.0"`
+      `Version="${numericVersion}.0"`
     )
   )
 }
