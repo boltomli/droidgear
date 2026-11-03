@@ -224,6 +224,64 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${{ env.RELEASE_TAG }}" "${{ env.TUI_ASSET }}" --clobber
 
+  # Wails v3 GUI — Windows-only on purpose: internal/app uses Windows-only
+  # syscall fields (SysProcAttr.HideWindow), so the Go service does not
+  # cross-compile, and the macOS/Linux packaging assets are not built yet
+  # (docs/developer/wails-port-guidelines.zh.md §P3). The installer metadata
+  # stays numeric (sync-version strips `+buildmeta`); the full version with
+  # the `+wails1` suffix is reported by the app itself via ldflags.
+  publish-wails:
+    needs: create-release
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: wails/go.mod
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+
+      # windows-latest (Server 2025) no longer ships NSIS in PATH.
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+          Add-Content -Path $env:GITHUB_PATH -Value 'C:\Program Files (x86)\NSIS'
+
+      # Generates bindings, builds the frontend bundle (go:embed), syso,
+      # the Go binary and the NSIS installer (wails/bin/minimal-gui-amd64-installer.exe).
+      - name: Build Wails GUI and installer
+        working-directory: wails
+        run: wails3 task package
+
+      - name: Upload Wails assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $exe = 'wails\bin\droidgear-minimal.exe'
+          $installer = 'wails\bin\minimal-gui-amd64-installer.exe'
+          foreach ($f in @($exe, $installer)) {
+            if (-not (Test-Path $f)) { Write-Error "Missing build output: $f"; exit 1 }
+          }
+          Copy-Item $exe 'droidgear-wails_windows_x64.exe' -Force
+          Copy-Item $installer 'droidgear-wails_windows_x64-setup.exe' -Force
+          gh release upload "$env:RELEASE_TAG" 'droidgear-wails_windows_x64.exe' 'droidgear-wails_windows_x64-setup.exe' --clobber
+
   generate-updater-json:
     needs: [create-release, publish-tauri]
     permissions:

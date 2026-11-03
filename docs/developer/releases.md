@@ -168,6 +168,15 @@ Each release creates:
 - **Windows**: `.msi` installer (when configured)
 - **Linux**: `.deb` and `.AppImage` (when configured)
 - **Auto-updater**: `latest.json` manifest and `.sig` signature files
+- **Wails GUI (Windows only)**: `droidgear-wails_windows_x64.exe` (portable)
+  and `droidgear-wails_windows_x64-setup.exe` (NSIS installer), built by the
+  `publish-wails` job in `.github/workflows/release.yml`. Windows-only because
+  `wails/internal/app` uses Windows-only syscall fields and the macOS/Linux
+  packaging assets are not built yet (see
+  `docs/developer/wails-port-guidelines.zh.md` §P3). The Wails version comes
+  from `package.json` (e.g. `1.3.9+wails1`); installer metadata is stripped to
+  numeric `x.y.z` by `wails/scripts/sync-version.mjs`, and the full version
+  with suffix is reported by the app itself via ldflags.
 
 ## Security
 
