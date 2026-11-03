@@ -158,3 +158,31 @@ surface also answer these explicitly:
 4. **Command surface**: after adding or renaming Go methods, run
    `wails3 generate bindings -clean=true -ts -i` and
    `node scripts/check-command-surface.mjs` (CI runs both).
+
+## CLI contract (ADR-001)
+
+The Go TUI rewrite and the `cmd/dg` CLI both sit on `wails/internal/service`
+(see `docs/developer/adr-001-tui-fate.zh.md`). Until that layer exists, these
+rules apply to anything claiming to be a non-GUI consumer:
+
+1. **Business logic lives in `internal/service`, not in `internal/app` and not
+   in the CLI/TUI.** `internal/app` methods stay thin: marshal arguments, call
+   the service, return the same JSON the bindings already expose. A second
+   copy of write-to-disk logic outside the service is a defect.
+2. **`dg` subcommands mirror the GUI surface one-to-one**
+   (`dg channels list`, `dg dsh providers --profile desktop`,
+   `dg codex apply <id>`, `dg export run <template>`, `dg path show`).
+   A GUI operation without a `dg` counterpart (or a recorded exemption) breaks
+   AGENTS.md rule 9.
+3. **`--json` is the machine contract.** Output is a single JSON document on
+   stdout; human-readable text goes to stderr or requires omitting `--json`.
+   Field names match the bindings (camelCase, `*T` optional) so scripts can
+   consume GUI, CLI and TUI output interchangeably.
+4. **ChangeSet is shared.** Plan → Preview → Apply calculations
+   (`docs/developer/tui-design.md`) run in the service: GUI diff, CLI
+   `--dry-run` and TUI preview must all consume the same result — never
+   re-implement diffing per frontend.
+5. **The Rust TUI is frozen** (`src-tauri/crates/droidgear-tui`): bugfixes
+   only. New features go through the service and reach the CLI first; the
+   Rust TUI keeps shipping in `release.yml` until the Go TUI catches up
+   (ADR-001 phase 4).
