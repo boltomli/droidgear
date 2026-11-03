@@ -76,6 +76,21 @@ description: Generate changelog from commits since last tag and release new vers
     git push origin main --tags
     ```
 
+## Optional: single-binary preview (Wails)
+
+When the goal is just "3 个单文件给测试者"（no installers / no updater / no
+`latest.json`），do NOT run `release:prepare` + a plain `v*` tag. Use the
+separate workflow — it never touches `package.json`-driven installer metadata
+and only uploads the bare binaries:
+
+```bash
+# tag prefix `wails-v*` is required: release.yml triggers on `v*`
+git tag wails-v<version>-1 && git push origin wails-v<version>-1
+```
+
+It runs from the tagged commit (no `main` merge needed) and creates a draft
+release. See `docs/developer/releases.md` §"Single-binary release (Wails)".
+
 ## Verification
 
 - Confirm CHANGELOG.md is updated with English changelog (used for auto-updater)

@@ -178,6 +178,83 @@ Each release creates:
   numeric `x.y.z` by `wails/scripts/sync-version.mjs`, and the full version
   with suffix is reported by the app itself via ldflags.
 
+## Single-binary release (Wails)
+
+`.github/workflows/release-single.yml` is the lean alternative to the tag
+pipeline above: **one executable per platform, nothing else** — no installer,
+no `.sig`, no `latest.json`, no archives.
+
+| Platform    | Asset                             | Runtime requirement                         |
+| ----------- | --------------------------------- | ------------------------------------------- |
+| Windows x64 | `droidgear-wails-windows-x64.exe` | WebView2 runtime (preinstalled on Win10/11) |
+| macOS arm64 | `droidgear-wails-macos-arm64`     | none (system WebKit); ad-hoc signed         |
+| Linux x64   | `droidgear-wails-linux-x64`       | GTK3 + WebKitGTK 4.1                        |
+
+### Trigger 1 — tag push (works from any branch)
+
+```bash
+git push origin spike/wails-v3-minimal          # the workflow file must be committed
+git tag wails-v1.3.9-1 && git push origin wails-v1.3.9-1
+```
+
+- A tag push runs the workflow **from the tagged commit**, so no `main` merge is
+  required to build a feature branch.
+- The `wails-` prefix is mandatory, not cosmetic: `release.yml` triggers on
+  `v*`, so a plain `v1.3.9-…` tag would also start the full Tauri
+  installer/updater pipeline. The workflow rejects tags without the prefix.
+- Tag pushes create a **draft** release — inspect the three files, then publish.
+- Re-running (new tag, or same tag after deleting the assets) replaces assets
+  via `gh release upload --clobber`.
+
+### Trigger 2 — manual dispatch (needs the file on `main`)
+
+GitHub only shows "Run workflow" for a `workflow_dispatch` workflow that exists
+on the **default branch**, so this entry point is only usable after the file
+lands on `main`. Once it does:
+
+```bash
+gh workflow run release-single.yml --ref spike/wails-v3-minimal \
+  -f tag=wails-v1.3.9-1 -f draft=true
+```
+
+`tag` must be an existing `wails-v…` tag; `draft` defaults to `true`.
+
+### Why the Wails shell, not Tauri
+
+`wails/main.go` embeds the Vite bundle (`//go:embed all:frontend/dist`), so
+`go build` alone produces the complete app as a single file. The Tauri shell
+cannot do that on macOS (`.app`/`.dmg` only), so it keeps using `release.yml`.
+
+### Build steps per platform
+
+`wails3 generate bindings` → `vite build --config wails/vite.config.ts`
+(creates `wails/frontend/dist` for the embed) → `wails3 generate syso`
+(Windows icon/version resource only) → `go build -tags production -trimpath
+-ldflags "-w -s … -X droidgear-wails/internal/app.appVersion=$APP_VERSION"`.
+The version comes from `wails/scripts/sync-version.mjs`, i.e. `package.json`.
+
+### Caveats
+
+- **A single file is not a static app**: the platform webview is still a
+  runtime dependency (see table).
+- **macOS** binaries are ad-hoc signed (Go does this automatically for
+  arm64; the workflow re-signs explicitly) but **not notarized** — Gatekeeper
+  may require `xattr -d com.apple.quarantine <file>`.
+- **Windows** exe is unsigned → SmartScreen may warn.
+- **macOS/Linux are compile-complete, not port-complete**: the title bar still
+  renders the Windows control layout and the native menu is Windows-shaped
+  (`docs/developer/wails-port-guidelines.zh.md` §P3). Treat them as previews.
+- The package must stay cross-platform compilable: use
+  `hideConsoleWindow` / `useNewConsole` from `wails/internal/app/procattr.go`
+  instead of Windows-only `syscall.SysProcAttr` literals (`wails/PORTING.md`).
+
+### Future CLI / TUI
+
+Per ADR-001 new non-GUI surfaces live in the Go service layer, so they can ride
+the same workflow: add a matrix entry (or an extra `go build ./cmd/<name>` step)
+and upload the resulting binary the same way — `go build` of a CLI/TUI is
+single-file by construction.
+
 ## Security
 
 All updates are cryptographically signed:

@@ -21,7 +21,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"droidgear-wails/internal/core"
@@ -1460,7 +1459,7 @@ func codexSearchPathValue(pathValue string, candidates []string) string {
 // hidden PowerShell probe (GUI processes often miss user installs).
 func codexWindowsRegistryPath(scope string) string {
 	cmd := exec.Command("powershell", "-NoLogo", "-NoProfile", "-Command", fmt.Sprintf("[Environment]::GetEnvironmentVariable('Path','%s')", scope)) // #nosec G204 -- fixed command, scope is a constant
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	hideConsoleWindow(cmd)
 	out, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -1541,7 +1540,7 @@ func codexLaunchCmdPayload(payload string, cwd *string) error {
 	}
 	args = append(args, "cmd", "/k", payload)
 	cmd := exec.Command("cmd", args...) // #nosec G204 -- fixed command, payload is our own wrapper path
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	hideConsoleWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch cmd: %w", err)
 	}
@@ -1559,8 +1558,8 @@ func codexLaunchPowershellPayload(shell string, command string, cwd *string, noK
 		args = append(args, "-NoExit")
 	}
 	args = append(args, "-Command", command)
-	cmd := exec.Command(shell, args...)                               // #nosec G204 -- shell path resolved locally
-	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x00000010} // CREATE_NEW_CONSOLE
+	cmd := exec.Command(shell, args...) // #nosec G204 -- shell path resolved locally
+	useNewConsole(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch PowerShell: %w", err)
 	}

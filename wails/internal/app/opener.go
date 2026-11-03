@@ -11,7 +11,6 @@ import (
 	"path"
 	"runtime"
 	"strings"
-	"syscall"
 )
 
 // OpenUrl opens a URL in the user's default handler (browser / mail client).
@@ -93,7 +92,7 @@ func startDetached(name string, args ...string) error {
 	// #nosec G204 -- fixed launcher binaries; the target is passed as a
 	// single argument, never evaluated by a shell.
 	cmd := exec.Command(name, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	hideConsoleWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return err
 	}

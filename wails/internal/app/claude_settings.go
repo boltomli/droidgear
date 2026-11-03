@@ -15,11 +15,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"droidgear-wails/internal/core"
@@ -1181,40 +1179,6 @@ func (a *App) PreviewClaudeTemporaryRunFromFile(name string) (ClaudeTemporaryRun
 // Terminal launch (mirrors src-tauri/src/utils/terminal_launch.rs)
 // ---------------------------------------------------------------------------
 
-// Windows process-creation flags (CREATE_NO_WINDOW / CREATE_NEW_CONSOLE).
-const (
-	claudeCreateNoWindow   = 0x08000000
-	claudeCreateNewConsole = 0x00000010
-)
-
-// claudeSetWindowsProcessFlags attaches the Windows process-creation flags to
-// cmd. syscall.SysProcAttr only carries those fields on Windows, and this
-// package must compile everywhere, so they are set reflectively; on other
-// platforms the helper is a no-op.
-func claudeSetWindowsProcessFlags(cmd *exec.Cmd, hideWindow bool, creationFlags uint32) {
-	if !hideWindow && creationFlags == 0 {
-		return
-	}
-	attr := &syscall.SysProcAttr{}
-	value := reflect.ValueOf(attr).Elem()
-	applied := false
-	if hideWindow {
-		if field := value.FieldByName("HideWindow"); field.IsValid() && field.CanSet() && field.Kind() == reflect.Bool {
-			field.SetBool(true)
-			applied = true
-		}
-	}
-	if creationFlags != 0 {
-		if field := value.FieldByName("CreationFlags"); field.IsValid() && field.CanSet() && field.Kind() == reflect.Uint32 {
-			field.SetUint(uint64(creationFlags))
-			applied = true
-		}
-	}
-	if applied {
-		cmd.SysProcAttr = attr
-	}
-}
-
 func claudeQuotePowerShell(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
 }
@@ -1455,7 +1419,7 @@ func claudeLaunchWindowsCmdPayload(payload string, cwd *string) error {
 	args = append(args, "cmd", "/k", payload)
 
 	cmd := exec.Command("cmd", args...) // #nosec G204 -- static hop, user cwd only
-	claudeSetWindowsProcessFlags(cmd, true, claudeCreateNoWindow)
+	hideConsoleWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch cmd: %w", err)
 	}
@@ -1474,7 +1438,7 @@ func claudeLaunchWindowsPowerShellPayload(shell string, command string, cwd *str
 	args = append(args, "-Command", command)
 
 	cmd := exec.Command(shell, args...) // #nosec G204 -- resolved shell
-	claudeSetWindowsProcessFlags(cmd, false, claudeCreateNewConsole)
+	useNewConsole(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch PowerShell: %w", err)
 	}

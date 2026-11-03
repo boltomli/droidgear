@@ -19,7 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"droidgear-wails/internal/core"
@@ -1233,7 +1232,7 @@ func copilotSearchProgramInPathValue(pathValue string, candidates []string) (str
 func copilotWindowsEnvironmentPath(scope string) string {
 	cmd := exec.Command("powershell", "-NoLogo", "-NoProfile", "-Command",
 		"[Environment]::GetEnvironmentVariable('Path','"+scope+"')") // #nosec G204 -- fixed scope from a two-item list
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	hideConsoleWindow(cmd)
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -1298,8 +1297,7 @@ func copilotResolveWindowsPowershellShell() string {
 
 func copilotLaunchWindowsCmdPayload(payload string, cwd *string) error {
 	cmd := exec.Command("cmd", copilotWindowsCmdStartArgs(payload, cwd)...) // #nosec G204 -- launch payload
-	// CREATE_NO_WINDOW: hide the outer `cmd /c start` launcher hop.
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	hideConsoleWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch cmd: %w", err)
 	}
@@ -1309,8 +1307,7 @@ func copilotLaunchWindowsCmdPayload(payload string, cwd *string) error {
 
 func copilotLaunchWindowsPowershellPayload(shell string, command string, cwd *string) error {
 	cmd := exec.Command(shell, copilotWindowsPowershellArgs(command, cwd)...) // #nosec G204 -- launch payload
-	// CREATE_NEW_CONSOLE: dedicated console when the parent is a GUI app.
-	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x00000010}
+	useNewConsole(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch PowerShell: %w", err)
 	}

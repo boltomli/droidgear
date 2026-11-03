@@ -1,0 +1,262 @@
+name: 'Release single binaries'
+
+# Two entry points, no main-branch requirement for the tag one:
+#
+#  1. `push: tags: ['wails-v*']` — the working path from a feature branch.
+#     A tag push runs the workflow **from the tagged commit**, so nothing has to
+#     be merged first. The prefix is deliberately not `v*`: release.yml triggers
+#     on `v*` and would also fire for `v1.3.9`-style single-binary tags.
+#  2. `workflow_dispatch` — same pipeline with an explicit tag input. GitHub
+#     only exposes the "Run workflow" button once this file exists on the
+#     **default branch** (main), so on a feature branch use the tag trigger.
+#
+# Produces one self-contained executable per platform and nothing else. It
+# deliberately does NOT touch the tag-triggered pipeline in release.yml (Tauri
+# installers, portable updater assets, latest.json, droidgear-tui packages) —
+# it never uploads installers, signatures or manifests.
+#
+# Why the Wails shell: `go:embed all:frontend/dist` bakes the Vite bundle into
+# the Go binary, so `go build` alone yields the whole app as one file. The
+# Tauri shell cannot do that on macOS (.app/.dmg only), so it stays in
+# release.yml.
+#
+# Runtime deps are still the platform webview — a single file is not a fully
+# static app: Windows needs the WebView2 runtime (preinstalled on Win10+),
+# Linux needs GTK3 + WebKitGTK 4.1, macOS uses the system WebKit.
+#
+# Future CLI/TUI binaries (ADR-001: Go internal/service layer) slot in as extra
+# matrix entries or an extra `go build ./cmd/<name>` step — same runner matrix,
+# same single-file upload, zero packaging.
+
+on:
+  push:
+    tags: ['wails-v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag, e.g. wails-v1.3.9-1 (dispatch never creates tags; needs this file on main to appear).'
+        required: true
+        type: string
+      draft:
+        description: 'Create the release as a draft (invisible until published)'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+env:
+  # Keep in sync with release.yml / .github/workflows/wails.yml.
+  WAILS3_VERSION: v3.0.0
+  NODE_VERSION: '22'
+  # Tag pushes supply github.ref_name; dispatch supplies the input.
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+  # Tag pushes have no inputs, so they default to a draft release: inspect the
+  # three files (they are unsigned/ad-hoc signed) before publishing.
+  DRAFT_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || 'true' }}
+
+jobs:
+  release:
+    name: Create / verify release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate tag and create the release
+        id: tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          tag="${RELEASE_TAG//[[:space:]]/}"
+          # `wails-v…` is required, not just cosmetic: release.yml triggers on
+          # `v*` tags, so a plain `v1.3.9-…` tag would also fire the full Tauri
+          # installer/updater pipeline.
+          if [[ ! "$tag" =~ ^wails-v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::tag must look like wails-v1.2.3 or wails-v1.2.3-1 (got '$tag')"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists — binaries will be replaced (--clobber)."
+            exit 0
+          fi
+
+          notes="$(mktemp)"
+          # Reuse the CHANGELOG entry when there is one, then always append the
+          # runtime-deps caveat so downloaders know what the single file needs.
+          sed -n "/^## ${tag}$/,/^## v/p" CHANGELOG.md | sed '$d' > "$notes" || true
+
+          cat >> "$notes" <<'EOF'
+
+          ### Single-file builds / 单文件构建
+
+          One executable per platform — no installer, no updater manifest, no archives.
+
+          | Platform | Asset | Runtime requirement |
+          | --- | --- | --- |
+          | Windows x64 | `droidgear-wails-windows-x64.exe` | WebView2 runtime (preinstalled on Windows 10/11) |
+          | macOS arm64 | `droidgear-wails-macos-arm64` | none (system WebKit); ad-hoc signed |
+          | Linux x64 | `droidgear-wails-linux-x64` | GTK3 + WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`) |
+
+          macOS: the binary is ad-hoc signed, not notarized. After downloading,
+          run `chmod +x droidgear-wails-macos-arm64` and, if Gatekeeper blocks
+          it, `xattr -d com.apple.quarantine droidgear-wails-macos-arm64`.
+          Windows: SmartScreen may warn because the exe is unsigned.
+
+          > macOS/Linux builds compile and launch, but the in-app title bar still
+          > uses the Windows control layout and the native menu is still
+          > Windows-shaped (`docs/developer/wails-port-guidelines.zh.md` §P3).
+          > Treat those two as previews, not feature-parity releases.
+          EOF
+
+          args=(--title "DroidGear ${tag} (single binaries)" --notes-file "$notes")
+          if [ "${DRAFT_RELEASE:-true}" = "true" ]; then
+            args+=(--draft)
+          fi
+
+          # Pin a new tag to the ref this run was dispatched from (so a build on
+          # a feature branch does not tag the default branch HEAD), but reuse an
+          # existing tag instead of failing.
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            args+=(--verify-tag)
+          else
+            args+=(--target "$GITHUB_SHA")
+          fi
+
+          gh release create "$tag" "${args[@]}"
+
+  build:
+    name: Build ${{ matrix.asset }}
+    needs: release
+    permissions:
+      contents: write
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            cgo: '0'
+            asset: droidgear-wails-windows-x64.exe
+            ldflags: '-H windowsgui'
+          # macos-15 is an arm64 runner; building natively keeps cgo/WebKit
+          # framework linking honest (no cross-compile, no lipo step).
+          - os: macos-15
+            goos: darwin
+            goarch: arm64
+            cgo: '1'
+            asset: droidgear-wails-macos-arm64
+            ldflags: ''
+          - os: ubuntu-22.04
+            goos: linux
+            goarch: amd64
+            cgo: '1'
+            asset: droidgear-wails-linux-x64
+            ldflags: ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: wails/go.mod
+          cache-dependency-path: wails/go.sum
+
+      - name: Install Linux GTK/WebKit toolchain
+        if: matrix.goos == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS3_VERSION }}
+
+      # The bindings directory is gitignored and imported by the frontend, so
+      # it must be generated before the Vite build (see wails/PORTING.md).
+      - name: Generate TS bindings
+        working-directory: wails
+        run: wails3 generate bindings -clean=true -ts -i
+
+      # Creates wails/frontend/dist for `//go:embed all:frontend/dist`.
+      - name: Build frontend bundle
+        run: npx vite build --config wails/vite.config.ts --mode production
+
+      - name: Sync version metadata
+        shell: bash
+        run: echo "APP_VERSION=$(node wails/scripts/sync-version.mjs)" >> "$GITHUB_ENV"
+
+      # Icon + version resource. Only meaningful (and only buildable) for the
+      # Windows linker; other platforms have no .syso concept.
+      - name: Generate Windows .syso resources
+        if: matrix.goos == 'windows'
+        working-directory: wails/build
+        run: wails3 generate syso -arch amd64 -icon windows/icon.ico -manifest windows/wails.exe.manifest -info windows/info.json -out ../wails_windows_amd64.syso
+
+      - name: Build single binary
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: ${{ matrix.cgo }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cd wails
+          go build -tags production -trimpath -buildvcs=false \
+            -ldflags "-w -s ${{ matrix.ldflags }} -X droidgear-wails/internal/app.appVersion=${APP_VERSION}" \
+            -o "../out/${{ matrix.asset }}" .
+          cd ..
+          rm -f wails/*.syso
+          ls -l "out/${{ matrix.asset }}"
+
+      # Go already emits an ad-hoc signature for darwin/arm64, but be explicit:
+      # a stripped/copied binary must still launch on Apple Silicon.
+      - name: Ad-hoc sign (macOS)
+        if: matrix.goos == 'darwin'
+        run: |
+          codesign --force --sign - "out/${{ matrix.asset }}"
+          codesign --verify --verbose "out/${{ matrix.asset }}"
+
+      - name: Record checksum
+        shell: bash
+        run: |
+          file="out/${{ matrix.asset }}"
+          if command -v sha256sum >/dev/null 2>&1; then
+            sum="$(sha256sum "$file" | cut -d' ' -f1)"
+          else
+            sum="$(shasum -a 256 "$file" | cut -d' ' -f1)"
+          fi
+          {
+            echo "### \`${{ matrix.asset }}\`"
+            echo
+            echo "- platform: ${{ matrix.goos }}/${{ matrix.goarch }}"
+            echo "- size: $(wc -c < "$file") bytes"
+            echo "- sha256: \`$sum\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: gh release upload "$TAG" "out/${{ matrix.asset }}" --clobber

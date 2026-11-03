@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	"droidgear-wails/internal/core"
@@ -1280,7 +1279,7 @@ func droidSearchProgramInPathValue(pathValue string, candidates []string) (strin
 func droidWindowsEnvironmentPath(scope string) string {
 	cmd := exec.Command("powershell", "-NoLogo", "-NoProfile", "-Command",
 		"[Environment]::GetEnvironmentVariable('Path','"+scope+"')") // #nosec G204 -- fixed scope from a two-item list
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	hideConsoleWindow(cmd)
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -1348,8 +1347,7 @@ func droidResolveWindowsPowershellShell() string {
 
 func droidLaunchWindowsCmdPayload(payload string, cwd *string) error {
 	cmd := exec.Command("cmd", droidWindowsCmdStartArgs(payload, cwd)...) // #nosec G204 -- launch payload
-	// CREATE_NO_WINDOW: hide the outer `cmd /c start` launcher hop.
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	hideConsoleWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch cmd: %w", err)
 	}
@@ -1358,8 +1356,7 @@ func droidLaunchWindowsCmdPayload(payload string, cwd *string) error {
 
 func droidLaunchWindowsPowershellPayload(shell string, command string, cwd *string, noKeepOpen bool) error {
 	cmd := exec.Command(shell, droidWindowsPowershellArgs(command, cwd, noKeepOpen)...) // #nosec G204 -- launch payload
-	// CREATE_NEW_CONSOLE: dedicated console when the parent is a GUI app.
-	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x00000010}
+	useNewConsole(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch PowerShell: %w", err)
 	}

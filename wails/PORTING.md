@@ -77,7 +77,12 @@ funnels through `TAURI_INVOKE(cmd, args)` (see `src/lib/bindings.ts`), which
   tool-prefixed struct guarded by `sync.Mutex`.
 - **Platform**: Windows is the primary target (same as existing code); use
   `core.GetEffectivePaths`-style path resolution so the Preferences → Paths
-  overrides and WSL handling keep working.
+  overrides and WSL handling keep working. The package must also **compile** on
+  macOS/Linux (`.github/workflows/release-single.yml` builds one binary per
+  platform): never write `syscall.SysProcAttr{HideWindow: …, CreationFlags: …}`
+  in a struct literal — those fields only exist on Windows. Use
+  `hideConsoleWindow(cmd)` / `useNewConsole(cmd)` from `procattr.go`, which set
+  the flags reflectively and are a no-op elsewhere.
 - **Stateless where Rust is**: methods resolve paths on demand; no cached
   config. `App` stays an empty struct — package-level vars only for
   watcher/session registries.
@@ -96,6 +101,12 @@ gofmt -l .                      # must print nothing for your files
 go build ./...
 go vet ./...
 go test ./...
+
+# Cross-platform typecheck: the single-binary release workflow builds the same
+# package for darwin/arm64 and linux/amd64, so Windows-only constructs must not
+# sneak in (`-tags server` avoids needing cgo/WebKit on the local host).
+GOOS=linux go build -tags server ./internal/...
+GOOS=darwin go build -tags server ./internal/...
 ```
 
 Do **not** run `wails3 generate bindings` or any frontend build — bindings

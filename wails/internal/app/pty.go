@@ -13,7 +13,6 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	ptylib "github.com/aymanbagabas/go-pty"
@@ -282,7 +281,7 @@ func (m *ptyManager) Kill(id int) error {
 	_ = session.pty.Close()
 	if runtime.GOOS == "windows" && session.cmd.Process != nil {
 		taskkill := exec.Command("taskkill", "/PID", fmt.Sprint(session.cmd.Process.Pid), "/T", "/F") // #nosec G204 -- pid from our own process
-		taskkill.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+		hideConsoleWindow(taskkill)
 		if err := taskkill.Run(); err != nil && session.cmd.Process != nil {
 			_ = session.cmd.Process.Kill()
 		}
