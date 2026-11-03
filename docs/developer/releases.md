@@ -229,9 +229,17 @@ cannot do that on macOS (`.app`/`.dmg` only), so it keeps using `release.yml`.
 
 `wails3 generate bindings` → `vite build --config wails/vite.config.ts`
 (creates `wails/frontend/dist` for the embed) → `wails3 generate syso`
-(Windows icon/version resource only) → `go build -tags production -trimpath
+(Windows icon/version resource only) → `go build -tags "<tags>" -trimpath
 -ldflags "-w -s … -X droidgear-wails/internal/app.appVersion=$APP_VERSION"`.
 The version comes from `wails/scripts/sync-version.mjs`, i.e. `package.json`.
+
+Build tags per platform: `production` on Windows/macOS, `production,gtk3` on
+Linux. Wails v3 defaults to **GTK4 + webkitgtk-6.0** on Linux; `gtk3` switches
+to **GTK3 + WebKitGTK 4.1** (`linux_cgo_gtk3.go` → `pkg-config gtk+-3.0
+webkit2gtk-4.1 gdk-3.0`). That keeps the runner on ubuntu-22.04 (the gtk4
+`libwebkitgtk-6.0-dev` only exists on 24.04+) and keeps the binary runnable on
+older distros. The Linux job also sets `GOFLAGS=-tags=gtk3` so `go install
+wails3` and `wails3 generate bindings` use the same backend.
 
 ### Caveats
 
