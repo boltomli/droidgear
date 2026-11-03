@@ -107,7 +107,7 @@ func (a *App) BuildAppMenu(lang string) error {
 		app.Dialog.Info().
 			SetTitle("DroidGear").
 			SetMessage(fmt.Sprintf(
-				"DroidGear\n\nVersion: %s\n\nBuilt with Wails v3 + React",
+				"DroidGear\n\nVersion: %s\n\nBuilt with Wails v3 + React + Go",
 				appVersion,
 			)).
 			Show()

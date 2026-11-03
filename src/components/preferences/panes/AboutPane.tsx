@@ -5,6 +5,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { commands } from '@/lib/tauri-bindings'
+import { IS_WAILS_BACKEND } from '@/lib/capabilities'
 
 const PROJECT_URL = 'https://github.com/Sunshow/droidgear'
 const TEMPLATE_URL = 'https://github.com/dannysmith/tauri-template'
@@ -101,11 +102,11 @@ export function AboutPane() {
           {t('preferences.about.techStack')}
         </span>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Tauri</span>
+          <span>{IS_WAILS_BACKEND ? 'Wails v3' : 'Tauri'}</span>
           <span>·</span>
           <span>React</span>
           <span>·</span>
-          <span>Rust</span>
+          <span>{IS_WAILS_BACKEND ? 'Go' : 'Rust'}</span>
         </div>
       </div>
     </div>
