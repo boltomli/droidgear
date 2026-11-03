@@ -340,7 +340,8 @@ Go:   internal/core  ──► internal/app（Wails service）──► React GU
    - A. **保留 Rust TUI 作为过渡**，但冻结其新功能，并在 README 标注覆盖差异；
    - B. **Go + bubbletea 重写 TUI**（复用 service，约 7k 行的等量工程）；
    - C. **Rust 为唯一 core**，Go 只做 GUI 适配 —— 与当前「Go 功能先行」方向相反，需回滚大量工作。
-     建议：A + 观察 3 个月；`cmd/dg` 先把 headless 的「脚本化」需求吃掉，再评估是否值得重写交互式 TUI。
+     **已决策（2026-11）**：**B**，过渡期按 A 冻结 Rust TUI；分期见
+     [`adr-001-tui-fate.zh.md`](./adr-001-tui-fate.zh.md)（service 下沉 → `cmd/dg` → Go TUI → 移除 Rust TUI）。
 4. **ChangeSet 契约**（沿用 `docs/developer/tui-design.md` 的 Plan → Preview → Apply）：
    service 层返回「计划写哪些文件 / 前后内容 / hash」，GUI 显示 diff、CLI `--dry-run`、
    TUI 预览共用同一套计算，避免三端各自实现 diff。
