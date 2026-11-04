@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/service/omp"
 )
 
 // TestMarshalDoesNotRecurse guards against the stack-overflow panic that
@@ -88,7 +89,7 @@ func TestProviderRoundTripPreservesExtras(t *testing.T) {
 		if err := json.Unmarshal([]byte(input), &provider); err != nil {
 			t.Fatalf("unmarshal: %v", err)
 		}
-		if err := validateOmpCustomProvider(provider); err != nil {
+		if err := omp.ValidateCustomProvider(provider); err != nil {
 			t.Fatalf("validation: %v", err)
 		}
 		out, err := json.Marshal(provider)

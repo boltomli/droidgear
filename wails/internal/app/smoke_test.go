@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/service/omp"
 	"droidgear-wails/internal/testutil"
 )
 
@@ -142,7 +143,7 @@ func TestHermesAndOmpMountSequenceSmoke(t *testing.T) {
 		UpdatedAt:  core.NowRFC3339(),
 		ModelRoles: OmpModelRoles{},
 	}
-	if err := writeOmpProfileFile(ompProfile); err != nil {
+	if err := omp.WriteProfileFile(ompProfile); err != nil {
 		t.Fatalf("writeOmpProfileFile: %v", err)
 	}
 	ompProfile.ModelRoles = OmpModelRoles{Default: core.StrPtr("anthropic/claude-sonnet-4-5")}

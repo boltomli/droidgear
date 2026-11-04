@@ -1,4 +1,4 @@
-package app
+package omp
 
 import (
 	"database/sql"

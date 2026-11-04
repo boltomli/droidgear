@@ -104,6 +104,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		runErr = c.hermes(cmdArgs)
 	case "pi":
 		runErr = c.pi(cmdArgs)
+	case "omp":
+		runErr = c.omp(cmdArgs)
 	case "export":
 		runErr = c.export(cmdArgs)
 	default:
@@ -301,6 +303,9 @@ Commands:
   hermes status                 report the live config path and active profile
   pi profiles list|show|active|apply|save|delete  manage pi profiles
   pi status                     report the live config path and active profile
+  omp profiles list|show|active|apply|save|delete  manage omp profiles
+  omp providers list|save --file <json>|delete <id>  manage omp custom providers
+  omp status                    report config/DB presence and the active profile
   export list                   list export templates
   export save --file <json>     create or replace a template from a JSON document
   export delete <name>          delete a template

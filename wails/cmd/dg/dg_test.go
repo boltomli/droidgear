@@ -767,3 +767,106 @@ func TestPiProfilesLifecycle(t *testing.T) {
 		t.Errorf("show after delete: exit=%d stderr=%s", code, errOut)
 	}
 }
+
+func TestOmpProfilesAndProvidersLifecycle(t *testing.T) {
+	home := sandbox(t)
+
+	code, out, errOut := runCLI(t, "--json", "omp", "profiles", "list")
+	if code != 0 {
+		t.Fatalf("list exit = %d, stderr = %s", code, errOut)
+	}
+	if got := decodeList(t, out); len(got) != 0 {
+		t.Errorf("expected no profiles, got %v", got)
+	}
+
+	profilePath := writeFile(t, home, "omp-profile.json", `{
+	  "id": "o1",
+	  "name": "OMP One",
+	  "modelRoles": {}
+	}`)
+	code, out, errOut = runCLI(t, "--json", "omp", "profiles", "save", "--file", profilePath)
+	if code != 0 {
+		t.Fatalf("save exit = %d, stderr = %s", code, errOut)
+	}
+	if receipt := decode(t, out); receipt["applied"] != true || receipt["name"] != "OMP One" {
+		t.Errorf("save receipt = %v", receipt)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "omp", "profiles", "apply", "o1")
+	if code != 0 {
+		t.Fatalf("apply exit = %d, stderr = %s", code, errOut)
+	}
+	if applied := decode(t, out)["applied"]; applied != true {
+		t.Errorf("apply receipt = %s", out)
+	}
+	if raw, err := os.ReadFile(filepath.Join(home, ".omp", "agent", "config.yml")); err != nil {
+		t.Fatalf("read live config: %v", err)
+	} else if !strings.Contains(string(raw), "model_roles") && !strings.Contains(string(raw), "modelRoles") {
+		t.Errorf("live config missing model roles: %s", raw)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "omp", "profiles", "active")
+	if code != 0 {
+		t.Fatalf("active exit = %d, stderr = %s", code, errOut)
+	}
+	if active := strings.TrimSpace(out); active != `"o1"` {
+		t.Errorf("active = %s, want \"o1\"", active)
+	}
+
+	// Custom providers carry the apiKey that has to stay redacted.
+	providerPath := writeFile(t, home, "omp-provider.json", `{
+	  "providerId": "deepseek",
+	  "config": {
+	    "baseUrl": "https://api.deepseek.com/v1",
+	    "auth": "apiKey",
+	    "apiKey": "sk-omp-1234"
+	  }
+	}`)
+	code, out, errOut = runCLI(t, "--json", "omp", "providers", "save", "--file", providerPath)
+	if code != 0 {
+		t.Fatalf("provider save exit = %d, stderr = %s", code, errOut)
+	}
+	if receipt := decode(t, out); receipt["applied"] != true || receipt["name"] != "deepseek" {
+		t.Errorf("provider save receipt = %v", receipt)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "omp", "providers", "list")
+	if code != 0 {
+		t.Fatalf("provider list exit = %d, stderr = %s", code, errOut)
+	}
+	list, _ := decode(t, out)["providers"].([]any)
+	if len(list) != 1 {
+		t.Fatalf("providers = %v", list)
+	}
+	config, _ := list[0].(map[string]any)["config"].(map[string]any)
+	if config["apiKey"] != "****1234" {
+		t.Errorf("provider apiKey = %v, want ****1234", config["apiKey"])
+	}
+
+	code, out, errOut = runCLI(t, "--json", "--reveal", "omp", "providers", "list")
+	if code != 0 {
+		t.Fatalf("reveal exit = %d, stderr = %s", code, errOut)
+	}
+	config, _ = decode(t, out)["providers"].([]any)[0].(map[string]any)["config"].(map[string]any)
+	if config["apiKey"] != "sk-omp-1234" {
+		t.Errorf("--reveal apiKey = %v", config["apiKey"])
+	}
+
+	code, _, errOut = runCLI(t, "--json", "omp", "providers", "delete", "deepseek")
+	if code != 0 {
+		t.Fatalf("provider delete exit = %d, stderr = %s", code, errOut)
+	}
+	code, _, errOut = runCLI(t, "--json", "omp", "providers", "delete", "deepseek")
+	if code != exitRuntime || decode(t, errOut)["error"].(map[string]any)["code"] != "not_found" {
+		t.Errorf("second provider delete: exit=%d stderr=%s", code, errOut)
+	}
+
+	code, _, errOut = runCLI(t, "--json", "omp", "profiles", "delete", "o1")
+	if code != 0 {
+		t.Fatalf("profile delete exit = %d, stderr = %s", code, errOut)
+	}
+	code, _, errOut = runCLI(t, "--json", "omp", "profiles", "show", "o1")
+	if code != exitRuntime || decode(t, errOut)["error"].(map[string]any)["code"] != "not_found" {
+		t.Errorf("show after delete: exit=%d stderr=%s", code, errOut)
+	}
+}

@@ -15,6 +15,7 @@ import (
 	"droidgear-wails/internal/service/codex"
 	"droidgear-wails/internal/service/export"
 	"droidgear-wails/internal/service/hermes"
+	"droidgear-wails/internal/service/omp"
 	"droidgear-wails/internal/service/paths"
 	"droidgear-wails/internal/service/pi"
 	"droidgear-wails/internal/version"
@@ -1172,6 +1173,339 @@ func (c *cli) piStatus(args []string) error {
 			fmt.Fprintf(w, "active: %s\n", *active)
 		}
 		return nil
+	})
+}
+
+// ---------------------------------------------------------------------------
+// dg omp
+// ---------------------------------------------------------------------------
+
+func (c *cli) omp(args []string) error {
+	if len(args) == 0 {
+		return c.usage("omp needs a subcommand: profiles | providers | status")
+	}
+	switch args[0] {
+	case "profiles":
+		return c.ompProfiles(args[1:])
+	case "providers":
+		return c.ompProviders(args[1:])
+	case "status":
+		return c.ompStatus(args[1:])
+	default:
+		return c.usage("unknown omp subcommand %q (want profiles | providers | status)", args[0])
+	}
+}
+
+func (c *cli) ompProfiles(args []string) error {
+	if len(args) == 0 {
+		return c.usage("omp profiles needs a subcommand: list | show | active | apply | save | delete")
+	}
+	switch args[0] {
+	case "list":
+		return c.ompProfilesList(args[1:])
+	case "show":
+		return c.ompProfilesShow(args[1:])
+	case "active":
+		return c.ompProfilesActive(args[1:])
+	case "apply":
+		return c.ompProfilesApply(args[1:])
+	case "save":
+		return c.ompProfilesSave(args[1:])
+	case "delete":
+		return c.ompProfilesDelete(args[1:])
+	default:
+		return c.usage("unknown omp profiles subcommand %q (want list | show | active | apply | save | delete)", args[0])
+	}
+}
+
+func (c *cli) ompProviders(args []string) error {
+	if len(args) == 0 {
+		return c.usage("omp providers needs a subcommand: list | save | delete")
+	}
+	switch args[0] {
+	case "list":
+		return c.ompProvidersList(args[1:])
+	case "save":
+		return c.ompProvidersSave(args[1:])
+	case "delete":
+		return c.ompProvidersDelete(args[1:])
+	default:
+		return c.usage("unknown omp providers subcommand %q (want list | save | delete)", args[0])
+	}
+}
+
+func (c *cli) requireOmpProfile(id string) error {
+	profiles, err := omp.ListProfiles()
+	if err != nil {
+		return err
+	}
+	for _, profile := range profiles {
+		if profile.ID == id {
+			return nil
+		}
+	}
+	return fmt.Errorf("%w: omp profile %q", errNotFound, id)
+}
+
+// redactOmpProviders masks the apiKey every custom provider may carry
+// (§5.3). OMP profiles themselves hold no secrets — only model roles.
+func redactOmpProviders(list omp.OmpCustomProviders) omp.OmpCustomProviders {
+	for i := range list.Providers {
+		provider := &list.Providers[i].Config
+		if provider.APIKey != nil {
+			masked := core.RedactSecret(*provider.APIKey)
+			provider.APIKey = &masked
+		}
+	}
+	return list
+}
+
+func (c *cli) ompProfilesList(args []string) error {
+	if len(args) != 0 {
+		return c.usage("omp profiles list takes no arguments")
+	}
+	profiles, err := omp.ListProfiles()
+	if err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, profiles, func(w io.Writer) error {
+		if len(profiles) == 0 {
+			_, err := fmt.Fprintln(w, "no omp profiles")
+			return err
+		}
+		for _, profile := range profiles {
+			fmt.Fprintf(w, "%-24s %-20s\n", profile.ID, profile.Name)
+		}
+		return nil
+	})
+}
+
+func (c *cli) ompProfilesShow(args []string) error {
+	if len(args) != 1 {
+		return c.usage("omp profiles show needs <id>")
+	}
+	if err := c.requireOmpProfile(args[0]); err != nil {
+		return err
+	}
+	profile, err := omp.GetProfile(args[0])
+	if err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, profile, func(w io.Writer) error {
+		fmt.Fprintf(w, "id:         %s\n", profile.ID)
+		fmt.Fprintf(w, "name:       %s\n", profile.Name)
+		fmt.Fprintf(w, "modelRoles: %+v\n", profile.ModelRoles)
+		return nil
+	})
+}
+
+func (c *cli) ompProfilesActive(args []string) error {
+	if len(args) != 0 {
+		return c.usage("omp profiles active takes no arguments")
+	}
+	active, err := omp.GetActiveProfileID()
+	if err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, active, func(w io.Writer) error {
+		if active == nil {
+			_, err := fmt.Fprintln(w, "(none)")
+			return err
+		}
+		_, err := fmt.Fprintln(w, *active)
+		return err
+	})
+}
+
+func (c *cli) ompProfilesApply(args []string) error {
+	if len(args) != 1 {
+		return c.usage("omp profiles apply needs <id>")
+	}
+	id := args[0]
+	if err := c.requireNoDryRun("omp profiles apply"); err != nil {
+		return err
+	}
+	if err := c.requireOmpProfile(id); err != nil {
+		return err
+	}
+	if err := omp.ApplyProfile(id); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "id": id}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "applied omp profile %s\n", id)
+		return err
+	})
+}
+
+func (c *cli) ompProfilesSave(args []string) error {
+	return c.saveJSON("omp profiles", args, "path to a profile document (JSON, same shape as the GUI)",
+		func(raw []byte) (string, error) {
+			var profile omp.OmpProfile
+			if err := json.Unmarshal(raw, &profile); err != nil {
+				return "", c.usage("invalid profile JSON: %v", err)
+			}
+			if strings.TrimSpace(profile.Name) == "" {
+				return "", c.usage("profile needs a non-empty \"name\"")
+			}
+			if err := omp.SaveProfile(profile); err != nil {
+				return "", err
+			}
+			return profile.Name, nil
+		})
+}
+
+func (c *cli) ompProfilesDelete(args []string) error {
+	if len(args) != 1 {
+		return c.usage("omp profiles delete needs <id>")
+	}
+	id := args[0]
+	if err := c.requireNoDryRun("omp profiles delete"); err != nil {
+		return err
+	}
+	if err := c.requireOmpProfile(id); err != nil {
+		return err
+	}
+	if err := omp.DeleteProfile(id); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "id": id}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "deleted omp profile %s\n", id)
+		return err
+	})
+}
+
+func (c *cli) ompProvidersList(args []string) error {
+	if len(args) != 0 {
+		return c.usage("omp providers list takes no arguments")
+	}
+	list, err := omp.ReadCustomProviders()
+	if err != nil {
+		return err
+	}
+	if !c.opts.reveal {
+		list = redactOmpProviders(list)
+	}
+	return emit(c.opts, c.stdout, list, func(w io.Writer) error {
+		if len(list.Providers) == 0 {
+			_, err := fmt.Fprintln(w, "no custom providers")
+			return err
+		}
+		for _, entry := range list.Providers {
+			key := ""
+			if entry.Config.APIKey != nil {
+				key = " (api key set)"
+			}
+			fmt.Fprintf(w, "%-24s%s\n", entry.ProviderID, key)
+		}
+		return nil
+	})
+}
+
+func (c *cli) ompProvidersSave(args []string) error {
+	return c.saveJSON("omp providers", args, "path to a provider document ({providerId, config})",
+		func(raw []byte) (string, error) {
+			var entry omp.OmpCustomProviderEntry
+			if err := json.Unmarshal(raw, &entry); err != nil {
+				return "", c.usage("invalid provider JSON: %v", err)
+			}
+			if strings.TrimSpace(entry.ProviderID) == "" {
+				return "", c.usage("provider document needs a non-empty \"providerId\"")
+			}
+			if err := omp.SaveCustomProvider(entry.ProviderID, entry.Config); err != nil {
+				return "", err
+			}
+			return entry.ProviderID, nil
+		})
+}
+
+func (c *cli) ompProvidersDelete(args []string) error {
+	if len(args) != 1 {
+		return c.usage("omp providers delete needs <provider-id>")
+	}
+	id := args[0]
+	if err := c.requireNoDryRun("omp providers delete"); err != nil {
+		return err
+	}
+	list, err := omp.ReadCustomProviders()
+	if err != nil {
+		return err
+	}
+	found := false
+	for _, entry := range list.Providers {
+		if entry.ProviderID == id {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("%w: omp provider %q", errNotFound, id)
+	}
+	if err := omp.DeleteCustomProvider(id); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "providerId": id}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "deleted omp provider %s\n", id)
+		return err
+	})
+}
+
+func (c *cli) ompStatus(args []string) error {
+	if len(args) != 0 {
+		return c.usage("omp status takes no arguments")
+	}
+	status, err := omp.GetConfigStatus()
+	if err != nil {
+		return err
+	}
+	active, err := omp.GetActiveProfileID()
+	if err != nil {
+		return err
+	}
+	report := struct {
+		omp.OmpConfigStatus
+		ActiveProfileID *string `json:"activeProfileId"`
+	}{OmpConfigStatus: status, ActiveProfileID: active}
+	return emit(c.opts, c.stdout, report, func(w io.Writer) error {
+		fmt.Fprintf(w, "config:   %s (%s)\n", status.ConfigPath, presentOr(status.ConfigExists))
+		fmt.Fprintf(w, "modelsDb: %s\n", presentOr(status.ModelsDBExists))
+		fmt.Fprintf(w, "agentDb:  %s\n", presentOr(status.AgentDBExists))
+		if active == nil {
+			fmt.Fprintln(w, "active:   (none)")
+		} else {
+			fmt.Fprintf(w, "active:   %s\n", *active)
+		}
+		return nil
+	})
+}
+
+// saveJSON shares the "read a JSON document from --file and hand it to a
+// domain writer" shape used by every `… save --file` subcommand.
+func (c *cli) saveJSON(what string, args []string, help string, write func([]byte) (string, error)) error {
+	fs := c.newFlagSet(what + " save")
+	file := fs.String("file", "", help)
+	if err := fs.Parse(args); err != nil {
+		return c.usage("%v", err)
+	}
+	if fs.NArg() != 0 {
+		return c.usage("%s save takes no positional arguments", what)
+	}
+	if strings.TrimSpace(*file) == "" {
+		return c.usage("%s save needs --file <json>", what)
+	}
+	if err := c.requireNoDryRun(what + " save"); err != nil {
+		return err
+	}
+	raw, err := os.ReadFile(filepath.Clean(*file)) // #nosec G304 -- user-supplied document
+	if err != nil {
+		return fmt.Errorf("Failed to read file: %w", err)
+	}
+	name, err := write(raw)
+	if err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "name": name}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "saved %s %q\n", what, name)
+		return err
 	})
 }
 

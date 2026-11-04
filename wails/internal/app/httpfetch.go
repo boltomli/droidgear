@@ -11,55 +11,11 @@ import (
 	"droidgear-wails/internal/core"
 )
 
-// Channel/token/model discovery moved to internal/service/channels — the
-// `dg` CLI runs it headless, so it must not live under internal/app
-// (design doc §2 R3). What stays here is the connectivity tester and the
-// DSH model list, both GUI-only call sites.
-
-type probeResult struct {
-	success      bool
-	modelID      string
-	responseText *string
-	error        *string
-}
-
-// probeModelEndpoint performs the lightweight `/v1/models` ping used by the
-// connectivity tester (mirrors connectivity::probe_endpoint).
-func probeModelEndpoint(provider, baseURL, apiKey, modelID string, timeout time.Duration) probeResult {
-	if strings.TrimSpace(apiKey) == "" {
-		message := "No API key configured"
-		return probeResult{success: false, modelID: modelID, error: &message}
-	}
-
-	base := strings.TrimRight(strings.TrimSpace(baseURL), "/")
-	url := base + "/v1/models"
-	request, err := http.NewRequest(http.MethodGet, url, nil) // #nosec G107 -- provider URL from user config
-	if err != nil {
-		message := fmt.Sprintf("Failed to build request: %v", err)
-		return probeResult{success: false, modelID: modelID, error: &message}
-	}
-	if strings.Contains(provider, "anthropic") {
-		request.Header.Set("x-api-key", apiKey)
-		request.Header.Set("anthropic-version", "2023-06-01")
-	} else {
-		request.Header.Set("Authorization", "Bearer "+apiKey)
-	}
-
-	client := core.NewHTTPClient(timeout)
-	response, err := client.Do(request)
-	if err != nil {
-		message := fmt.Sprintf("Network error: %v", err)
-		return probeResult{success: false, modelID: modelID, error: &message}
-	}
-	defer func() { _ = response.Body.Close() }()
-
-	if response.StatusCode >= 200 && response.StatusCode < 300 {
-		return probeResult{success: true, modelID: modelID}
-	}
-	body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-	message := fmt.Sprintf("HTTP %d: %s", response.StatusCode, core.TruncateBody(string(body)))
-	return probeResult{success: false, modelID: modelID, error: &message}
-}
+// Channel/token/model discovery moved to internal/service/channels, and the
+// `/v1/models` probe moved to internal/service/omp (its only caller) — the
+// `dg` CLI runs both headless, so neither can live under internal/app
+// (design doc §2 R3). What stays here is the DSH model list, a GUI-only
+// call site.
 
 // ---------------------------------------------------------------------------
 // Model list parsers
