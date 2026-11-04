@@ -8,6 +8,11 @@ bridge). The full audit lives in
 (layout regression, window contract, fix cards). **Read this file first** —
 it lists only the traps that actually bite agents.
 
+**Branch scope (`spike/wails-v3-minimal`): Wails-only.** `src-tauri/` and the
+Rust TUI are frozen — no new Tauri commands, plugins or shim mappings. Non-GUI
+work goes to `internal/service` + `cmd/dg` (contract:
+[`../developer/wails-tui-cli-design.zh.md`](../developer/wails-tui-cli-design.zh.md)).
+
 ## Build order (a clean clone does NOT build)
 
 ```bash
@@ -66,13 +71,14 @@ steps **must** follow the frontend build because of `//go:embed`.
 
 ## Shell-specific code (not shared)
 
-| Area          | Tauri                  | Wails                                                                                    |
-| ------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
-| Entry         | `src/main.tsx` → `App` | `src/wails/main.tsx` → `AppShell`                                                        |
-| Plugin bridge | real `@tauri-apps/*`   | `src/wails/shims/*` (Vite aliases)                                                       |
-| Menu          | `src/lib/menu.ts`      | `internal/app/menu.go` + `menu-bridge.ts` (macOS only while frameless — see round2 §3.2) |
-| Window        | `src-tauri/src/lib.rs` | `wails/main.go` + contract in `wails/PORTING.md`                                         |
-| Shared data   | `src/lib/*.json`       | vendored via `node wails/scripts/sync-registry.mjs`                                      |
+| Area          | Tauri                    | Wails                                                                                    |
+| ------------- | ------------------------ | ---------------------------------------------------------------------------------------- |
+| Entry         | `src/main.tsx` → `App`   | `src/wails/main.tsx` → `AppShell`                                                        |
+| Plugin bridge | real `@tauri-apps/*`     | `src/wails/shims/*` (Vite aliases)                                                       |
+| Menu          | `src/lib/menu.ts`        | `internal/app/menu.go` + `menu-bridge.ts` (macOS only while frameless — see round2 §3.2) |
+| Window        | `src-tauri/src/lib.rs`   | `wails/main.go` + contract in `wails/PORTING.md`                                         |
+| Shared data   | `src/lib/*.json`         | vendored via `node wails/scripts/sync-registry.mjs`                                      |
+| CLI (non-GUI) | `droidgear-tui` (frozen) | `wails/cmd/dg` — planned, must not import `internal/app` (Wails deps)                    |
 
 ## Validation checklist
 

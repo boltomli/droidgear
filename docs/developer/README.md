@@ -4,16 +4,17 @@ Technical documentation for building and extending this app. These docs describe
 
 ## Architecture & Patterns
 
-| Document                                                  | Description                                                                             |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| [Architecture Guide](./architecture-guide.md)             | High-level overview, mental models, system architecture                                 |
-| [Rust Architecture](./rust-architecture.md)               | Rust module organization and patterns                                                   |
-| [Wails v3 Port Guidelines](./wails-port-guidelines.zh.md) | Go/Wails port audit + GUI/TUI/CLI guidance                                              |
-| [Wails v3 Round 2](./wails-round2-layout-and-gaps.zh.md)  | Layout regression root cause, window/menu limits, remaining gaps, agent-config review   |
-| [TUI Design](./tui-design.md)                             | Headless TUI architecture (core extraction + tests)                                     |
-| [ADR-001: TUI/CLI Fate](./adr-001-tui-fate.zh.md)         | Decision: rewrite the TUI in Go (freeze Rust TUI), phased `internal/service` + `cmd/dg` |
-| [State Management](./state-management.md)                 | Three-layer state onion, Zustand, TanStack Query                                        |
-| [Error Handling](./error-handling.md)                     | Error propagation, user feedback, retry patterns                                        |
+| Document                                                  | Description                                                                                                   |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [Architecture Guide](./architecture-guide.md)             | High-level overview, mental models, system architecture                                                       |
+| [Rust Architecture](./rust-architecture.md)               | Rust module organization and patterns                                                                         |
+| [Wails v3 Port Guidelines](./wails-port-guidelines.zh.md) | Go/Wails port audit + GUI/TUI/CLI guidance                                                                    |
+| [Wails v3 Round 2](./wails-round2-layout-and-gaps.zh.md)  | Layout regression root cause, window/menu limits, remaining gaps, agent-config review                         |
+| [TUI Design](./tui-design.md)                             | Headless TUI architecture (core extraction + tests)                                                           |
+| [ADR-001: TUI/CLI Fate](./adr-001-tui-fate.zh.md)         | Decision: rewrite the TUI in Go (freeze Rust TUI), phased `internal/service` + `cmd/dg`                       |
+| [Wails CLI/TUI Design](./wails-tui-cli-design.zh.md)      | Execution spec: service layering, `dg` CLI contract, headless rules, TUI deferred, Wails-only branch boundary |
+| [State Management](./state-management.md)                 | Three-layer state onion, Zustand, TanStack Query                                                              |
+| [Error Handling](./error-handling.md)                     | Error propagation, user feedback, retry patterns                                                              |
 
 ## Core Systems
 
@@ -26,7 +27,6 @@ Technical documentation for building and extending this app. These docs describe
 | [Tauri Commands](./tauri-commands.md)                   | Type-safe Rust-TypeScript bridge (tauri-specta)           |
 | [Tauri Plugins](./tauri-plugins.md)                     | Plugin usage and configuration                            |
 | [Claude Code Profiles](./claude-code-profile-design.md) | Product and runtime design for Claude Code profiles       |
-| [Temporary Tool Runs](./temporary-tool-run-design.md)   | Design for launching tools with ephemeral config overlays |
 | [DSH Config Surfaces](./dsh-config-surfaces.zh.md)      | DeepSeek Harness local config model and Dsh page surfaces |
 
 - [GitHub Copilot BYOK](./copilot-byok.md) — Profiles, local configuration, and temporary launchers

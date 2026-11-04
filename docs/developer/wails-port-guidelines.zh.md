@@ -342,6 +342,8 @@ Go:   internal/core  ──► internal/app（Wails service）──► React GU
    - C. **Rust 为唯一 core**，Go 只做 GUI 适配 —— 与当前「Go 功能先行」方向相反，需回滚大量工作。
      **已决策（2026-11）**：**B**，过渡期按 A 冻结 Rust TUI；分期见
      [`adr-001-tui-fate.zh.md`](./adr-001-tui-fate.zh.md)（service 下沉 → `cmd/dg` → Go TUI → 移除 Rust TUI）。
+     执行细则（分层规则、`dg` 契约、headless/并发写、TUI 延后决策）见
+     [`wails-tui-cli-design.zh.md`](./wails-tui-cli-design.zh.md)。
 4. **ChangeSet 契约**（沿用 `docs/developer/tui-design.md` 的 Plan → Preview → Apply）：
    service 层返回「计划写哪些文件 / 前后内容 / hash」，GUI 显示 diff、CLI `--dry-run`、
    TUI 预览共用同一套计算，避免三端各自实现 diff。

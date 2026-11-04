@@ -197,3 +197,12 @@ rules apply to anything claiming to be a non-GUI consumer:
    only. New features go through the service and reach the CLI first; the
    Rust TUI keeps shipping in `release.yml` until the Go TUI catches up
    (ADR-001 phase 4).
+
+Implementation detail (layering rules, `dg` flags / exit codes / JSON shapes,
+headless + conflict handling, phased batches) lives in
+[`docs/developer/wails-tui-cli-design.zh.md`](../docs/developer/wails-tui-cli-design.zh.md) —
+that file wins over this section when they disagree.
+
+**Branch boundary**: from `spike/wails-v3-minimal` the Tauri shell in
+`src-tauri/` is frozen (no new commands, plugins or shim mappings); the Wails
+GUI + `cmd/dg` are the only supported consumers. See that file §0.

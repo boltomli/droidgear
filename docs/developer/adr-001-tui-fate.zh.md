@@ -3,7 +3,7 @@
 - **状态**：已接受
 - **日期**：2026-11
 - **决策人**：维护者
-- **关联**：[`wails-port-guidelines.zh.md`](./wails-port-guidelines.zh.md) §5、[`wails-round2-layout-and-gaps.zh.md`](./wails-round2-layout-and-gaps.zh.md) B11、AGENTS.md 规则 9、[`wails/PORTING.md`](../../wails/PORTING.md)「CLI 契约」
+- **关联**：[`wails-port-guidelines.zh.md`](./wails-port-guidelines.zh.md) §5、[`wails-round2-layout-and-gaps.zh.md`](./wails-round2-layout-and-gaps.zh.md) B11、[`wails-tui-cli-design.zh.md`](./wails-tui-cli-design.zh.md)（**执行细则**）、AGENTS.md 规则 9、[`wails/PORTING.md`](../../wails/PORTING.md)「CLI 契约」
 
 ## 背景
 
@@ -66,6 +66,17 @@ Go:   internal/core  ──► internal/app（Wails service）──► React GU
 | 2   | `cmd/dg` CLI（`--json`，覆盖 channels/dsh/pi/hermes/omp/codex 的 list/apply/export） | 每个子命令有 golden 测试；README 记录用法 |
 | 3   | Go TUI（bubbletea）按工具分批迁移，Rust TUI 同步标注差异                             | 迁移完一个工具即从差异表移除一个          |
 | 4   | Go TUI 功能追平后，移除 `droidgear-tui` 与 Rust TUI 发布项                           | README/发布流水线无 Rust TUI 引用         |
+
+### 执行细则与顺序调整
+
+具体分层、`dg` 契约与门禁见 [`wails-tui-cli-design.zh.md`](./wails-tui-cli-design.zh.md)。
+相对本 ADR 原文的两处调整（不改变决策本体）：
+
+1. **TUI 延后到显式决策点**：先做完期 1（service）与期 2–3（`cmd/dg`），
+   `bubbletea`/`cobra` 等三方依赖在启动 TUI 时再放行，避免为未确定的 UI 先背依赖。
+2. **本分支（`spike/wails-v3-minimal`）的 Tauri 壳与 Rust TUI 一律冻结**：
+   不加命令/插件/shim，新能力只进 Go service；彻底删除 `src-tauri` 作为独立任务
+   （含 `package.json` 的 `tauri:*`/`rust:*`/`tui:*` 脚本与 `release.yml` 的 Tauri/TUI 发布项）。
 
 ## 未决问题
 

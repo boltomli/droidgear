@@ -24,6 +24,15 @@ Tauri v2 + React 19 desktop app. Uses npm (NOT pnpm), TypeScript strict mode, Zu
 
 ## Dual Shell (Tauri + Wails v3)
 
+> **Branch scope — `spike/wails-v3-minimal` is Wails-only.** The Tauri shell
+> (`src-tauri/`) and the Rust TUI are **frozen**: no new Tauri commands,
+> plugins, plugin-\* shims, or Rust TUI features. New work lands in `wails/`
+> (Go) + the shared `src/`. Differences where Rust and Go disagree are
+> resolved in favour of Go. Rules 1–2 below still apply to the shared
+> frontend (shims must resolve), but never extend them for Tauri's sake.
+> See `docs/developer/wails-tui-cli-design.zh.md` §0; drop this banner when
+> merging back into a dual-shell branch.
+
 `src/` is a component tree shared by two shells: **Tauri** (`src/main.tsx` →
 `src-tauri/`) and **Wails v3** (`src/wails/main.tsx` → `wails/`). Outside
 `src/wails/` and `src-tauri/`, **any change under `src/` must be evaluated
@@ -62,7 +71,7 @@ Deep dive: `docs/agents/wails-port.md`; full audit:
 6. **Tauri v2 docs only** — v1 patterns are incompatible; for the Wails shell **Wails v3 docs only** (v2 and v3 APIs are incompatible)
 7. **No unsolicited commits** — Only when explicitly requested
 8. **Use `rm -f`** when removing files
-9. **GUI/TUI parity** — When implementing a new GUI feature, synchronously implement the corresponding TUI version. **Transition exception (ADR-001)**: the Rust TUI (`src-tauri/crates/droidgear-tui`) is frozen — new features go to the Go `internal/service` layer and must reach at least one non-GUI consumer (`cmd/dg` CLI or the Go TUI), or the PR description must record the exemption and reason. GUI-only features (window, menu, updater, notifications) are exempt. See `docs/developer/adr-001-tui-fate.zh.md`
+9. **GUI/TUI parity** — When implementing a new GUI feature, synchronously implement the corresponding TUI version. **Transition exception (ADR-001)**: the Rust TUI (`src-tauri/crates/droidgear-tui`) is frozen — new features go to the Go `internal/service` layer and must reach at least one non-GUI consumer (`cmd/dg` CLI or the Go TUI), or the PR description must record the exemption and reason. GUI-only features (window, menu, updater, notifications) are exempt. `cmd/dg` is the primary non-GUI consumer; the contract (layering, flags, exit codes, JSON shapes, exemptions) is `docs/developer/wails-tui-cli-design.zh.md`. See also `docs/developer/adr-001-tui-fate.zh.md`
 10. **Pre-commit ready** — Before declaring work complete, run `npm audit fix`, `npm run rust:fmt`, `npm run format (the `.`means ALL files, not just your changes), and verify`npm run check:all`passes with ZERO errors. If`check:all` reports issues in ANY file — even files you didn't touch — you MUST fix them. Code must be commit-ready; do not leave formatting, lint, or audit issues for the user to discover at commit time
 
 ## Version Requirements

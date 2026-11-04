@@ -692,10 +692,12 @@ export function platform(): 'windows' | 'macos' | 'linux' {
 
 ### B11 — TUI / CLI 的决策记录（ADR）
 
-> **状态：已完成** —— 决策为「Go 重写 TUI（冻结 Rust 实现）」，见
+> **状态：已完成（决策）+ 已出执行细则** —— 决策为「Go 重写 TUI（冻结 Rust 实现）」，见
 > [`adr-001-tui-fate.zh.md`](./adr-001-tui-fate.zh.md)；AGENTS.md 规则 9 已改写；
-> `wails/PORTING.md` 已增「CLI contract」小节。分期 1–4（service 下沉 → `cmd/dg` →
-> Go TUI → 移除 Rust TUI）尚未开工，另立任务。
+> `wails/PORTING.md` 已增「CLI contract」小节。分层、`dg` 契约、门禁与分期见
+> [`wails-tui-cli-design.zh.md`](./wails-tui-cli-design.zh.md)（TUI 改为显式决策点，
+> 本分支 `src-tauri` 冻结）。分期 1–4（service 下沉 → `cmd/dg` → Go TUI → 移除 Rust TUI）
+> 尚未开工，另立任务。
 
 - **现状**：Go 新功能不流入 TUI；`Export Templates` 已在 GUI 落地但 TUI 缺失（AGENTS.md 规则 9 实质已破）；`internal/service` 与 `dg` CLI 仍是 P2。
 - **改哪里**：新增 `docs/developer/adr-00X-tui-fate.zh.md`（1 页） + 同步改 AGENTS.md 规则 9。
