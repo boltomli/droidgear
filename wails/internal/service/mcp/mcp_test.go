@@ -1,4 +1,4 @@
-package app
+package mcp
 
 import (
 	"droidgear-wails/internal/core"

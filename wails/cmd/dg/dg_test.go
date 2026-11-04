@@ -938,3 +938,89 @@ func TestOmpProfilesAndProvidersLifecycle(t *testing.T) {
 		t.Errorf("show after delete: exit=%d stderr=%s", code, errOut)
 	}
 }
+
+func TestMcpSaveListToggleDelete(t *testing.T) {
+	home := sandbox(t)
+
+	// An empty home lists nothing.
+	code, out, errOut := runCLI(t, "mcp", "list")
+	if code != 0 {
+		t.Fatalf("mcp list exit = %d, stderr = %s", code, errOut)
+	}
+	if !strings.Contains(out, "no MCP servers") {
+		t.Errorf("mcp list = %q", out)
+	}
+
+	// Save from a JSON document (the same shape the GUI writes).
+	doc := writeFile(t, home, "server.json",
+		`{"name":"acme","config":{"type":"stdio","command":"npx","args":["-y","acme-mcp"]}}`)
+	code, out, errOut = runCLI(t, "--json", "mcp", "save", "--file", doc)
+	if code != 0 {
+		t.Fatalf("mcp save exit = %d, stderr = %s", code, errOut)
+	}
+	if decode(t, out)["applied"] != true {
+		t.Errorf("save receipt = %v", out)
+	}
+
+	raw, err := os.ReadFile(filepath.Join(home, ".factory", "mcp.json")) // #nosec G304 -- temp fixture
+	if err != nil {
+		t.Fatalf("read mcp.json: %v", err)
+	}
+	if !strings.Contains(string(raw), "acme") {
+		t.Errorf("mcp.json missing the server: %s", raw)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "mcp", "list")
+	if code != 0 {
+		t.Fatalf("mcp list exit = %d, stderr = %s", code, errOut)
+	}
+	if servers := decodeList(t, out); len(servers) != 1 {
+		t.Fatalf("servers = %v, want one", servers)
+	}
+
+	// toggle flips the disabled flag…
+	code, out, errOut = runCLI(t, "--json", "mcp", "toggle", "acme")
+	if code != 0 {
+		t.Fatalf("mcp toggle exit = %d, stderr = %s", code, errOut)
+	}
+	if decode(t, out)["disabled"] != true {
+		t.Errorf("toggle receipt = %v", out)
+	}
+
+	// …and a dry run records the write instead of performing it.
+	code, out, errOut = runCLI(t, "--json", "--dry-run", "mcp", "toggle", "acme")
+	if code != 0 {
+		t.Fatalf("dry mcp toggle exit = %d, stderr = %s", code, errOut)
+	}
+	if decode(t, out)["applied"] != false {
+		t.Errorf("dry-run receipt = %v", out)
+	}
+	raw, err = os.ReadFile(filepath.Join(home, ".factory", "mcp.json")) // #nosec G304 -- temp fixture
+	if err != nil {
+		t.Fatalf("read mcp.json: %v", err)
+	}
+	if strings.Count(string(raw), `"disabled": true`) != 1 {
+		t.Errorf("dry-run changed mcp.json: %s", raw)
+	}
+
+	// show redacts env secrets unless --reveal is passed.
+	code, out, errOut = runCLI(t, "--json", "mcp", "show", "acme")
+	if code != 0 {
+		t.Fatalf("mcp show exit = %d, stderr = %s", code, errOut)
+	}
+	if !strings.Contains(out, `"disabled": true`) {
+		t.Errorf("show = %v", out)
+	}
+
+	code, _, errOut = runCLI(t, "--json", "mcp", "delete", "acme")
+	if code != 0 {
+		t.Fatalf("mcp delete exit = %d, stderr = %s", code, errOut)
+	}
+	code, out, errOut = runCLI(t, "--json", "mcp", "list")
+	if code != 0 {
+		t.Fatalf("mcp list exit = %d, stderr = %s", code, errOut)
+	}
+	if servers := decodeList(t, out); len(servers) != 0 {
+		t.Errorf("servers after delete = %v", servers)
+	}
+}

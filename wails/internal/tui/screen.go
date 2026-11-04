@@ -47,6 +47,7 @@ func DefaultModules() []Module {
 		{"hermes", "Hermes", HermesSource},
 		{"pi", "Pi", PiSource},
 		{"omp", "OMP", OmpSource},
+		{"mcp", "MCP", McpSource},
 	}
 
 	modules := []Module{

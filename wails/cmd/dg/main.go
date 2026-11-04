@@ -145,6 +145,8 @@ func run(args []string, stdout, stderr io.Writer) (exit int) {
 		runErr = c.omp(cmdArgs)
 	case "export":
 		runErr = c.export(cmdArgs)
+	case "mcp":
+		runErr = c.mcp(cmdArgs)
 	case "tui":
 		runErr = c.tui(cmdArgs)
 	default:
@@ -387,6 +389,7 @@ Commands:
   export save --file <json>     create or replace a template from a JSON document
   export delete <name>          delete a template
   export run <name>             run a template and write its output file
+  mcp list|show <name>|toggle <name>|save --file <json>|delete <name>|preset
   tui                           open the interactive terminal UI (needs a TTY)
 
 Global flags (accepted before or after the command):
