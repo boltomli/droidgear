@@ -22,16 +22,16 @@ vi.mock('sonner', () => ({
   toast: toastMock,
 }))
 
-vi.mock('@tauri-apps/plugin-clipboard-manager', () => ({
+vi.mock('@/lib/shell/clipboard', () => ({
   writeText: writeTextMock,
 }))
 
-vi.mock('@tauri-apps/plugin-dialog', () => ({
+vi.mock('@/lib/shell/dialog', () => ({
   open: openMock,
 }))
 
 import { render, screen, waitFor, within } from '@/test/test-utils'
-import { commands } from '@/lib/tauri-bindings'
+import { commands } from '@/lib/app-bindings'
 import { useModelStore } from '@/store/model-store'
 import { useUIStore } from '@/store/ui-store'
 import { DroidFeatureList } from './DroidFeatureList'

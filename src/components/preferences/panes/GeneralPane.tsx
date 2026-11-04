@@ -1,9 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -12,18 +9,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { SettingsField, SettingsSection } from '../shared/SettingsComponents'
-import { commands } from '@/lib/tauri-bindings'
-import { logger } from '@/lib/logger'
-import { useUIStore } from '@/store/ui-store'
-import {
-  checkForUpdate,
-  downloadAndInstallUpdate,
-  hasCachedUpdate,
-  hydratePendingUpdate,
-} from '@/services/updater'
+import { commands } from '@/lib/app-bindings'
+import { openUrl } from '@/lib/shell/opener'
 import { usePreferences, useSavePreferences } from '@/services/preferences'
 import { useIsWindows, useIsMacOS } from '@/hooks/use-platform'
-import { isUpdaterSupported } from '@/lib/capabilities'
+
+/**
+ * Releases page — the app ships no auto-update feed (the updater was
+ * Tauri-only; see docs/developer/tauri-removal-design.zh.md), so "Check for
+ * Updates" opens the published releases in the browser instead.
+ */
+const RELEASES_URL = 'https://github.com/Sunshow/droidgear/releases'
 
 export function GeneralPane() {
   const { t } = useTranslation()
@@ -32,19 +28,6 @@ export function GeneralPane() {
   const isWindows = useIsWindows()
   const isMacOS = useIsMacOS()
 
-  // Update state
-  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking'>('idle')
-  const [hasUpdate, setHasUpdate] = useState(false)
-  const [updateError, setUpdateError] = useState<string | null>(null)
-
-  // Read pending update from global store (set by auto-updater in App.tsx)
-  const pendingUpdate = useUIStore(state => state.pendingUpdate)
-  const isUpdateInstalling = useUIStore(state => state.isUpdateInstalling)
-
-  // Track if we've already triggered auto-check for pending update
-  const hasAutoChecked = useRef(false)
-
-  // Get current app version
   const { data: appVersion } = useQuery({
     queryKey: ['app-version'],
     queryFn: async () => {
@@ -53,93 +36,8 @@ export function GeneralPane() {
     staleTime: Infinity,
   })
 
-  // Auto-update disabled state
-  const disableAutoUpdate = preferences?.disable_auto_update ?? false
-
-  const handleDisableAutoUpdateChange = (checked: boolean) => {
-    if (preferences) {
-      savePreferences.mutate({
-        ...preferences,
-        disable_auto_update: checked || null, // Store null instead of false for cleaner serialization
-      })
-    }
-  }
-
   const handleCheckForUpdates = async () => {
-    setUpdateStatus('checking')
-    setUpdateError(null)
-
-    try {
-      const update = await checkForUpdate({ force: true })
-      if (update) {
-        setHasUpdate(true)
-        useUIStore.getState().setPendingUpdate(update)
-        logger.info('Update available', { version: update.version })
-      } else {
-        useUIStore.getState().clearPendingUpdate()
-        setHasUpdate(false)
-        logger.info('No updates available')
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error)
-      setUpdateError(errorMessage)
-      logger.error('Failed to check for updates', { error: errorMessage })
-    } finally {
-      setUpdateStatus('idle')
-    }
-  }
-
-  // When there's a pending update, ensure we still have its cached metadata
-  useEffect(() => {
-    if (!pendingUpdate) {
-      hasAutoChecked.current = false
-      setHasUpdate(false)
-      return
-    }
-
-    const fetchUpdate = async () => {
-      if (!hasAutoChecked.current) {
-        if (hasCachedUpdate(pendingUpdate)) {
-          setHasUpdate(true)
-          return
-        }
-
-        hasAutoChecked.current = true
-        logger.info('Fetching full update object for pending update', {
-          version: pendingUpdate.version,
-        })
-
-        setUpdateStatus('checking')
-        setUpdateError(null)
-
-        try {
-          const update = await hydratePendingUpdate(pendingUpdate)
-          if (update) {
-            setHasUpdate(true)
-            useUIStore.getState().setPendingUpdate(update)
-            logger.info('Update available', { version: update.version })
-          } else {
-            useUIStore.getState().clearPendingUpdate()
-            setHasUpdate(false)
-            logger.info('No updates available')
-          }
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error)
-          setUpdateError(errorMessage)
-          logger.error('Failed to check for updates', { error: errorMessage })
-        } finally {
-          setUpdateStatus('idle')
-        }
-      }
-    }
-
-    fetchUpdate()
-  }, [pendingUpdate])
-
-  const handleDownloadAndInstall = () => {
-    void downloadAndInstallUpdate()
+    await openUrl(RELEASES_URL)
   }
 
   return (
@@ -151,89 +49,10 @@ export function GeneralPane() {
           })}
           description=""
         >
-          {/* Always available so a previously displayed release never blocks a
-              fresh check (e.g. one that was published after it) */}
-          {/* Wails build: no update feed, so the check entry is hidden
-              (capabilities.isUpdaterSupported) instead of erroring at runtime */}
-          {isUpdaterSupported() && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCheckForUpdates}
-              disabled={updateStatus !== 'idle'}
-            >
-              {updateStatus === 'checking'
-                ? t('preferences.general.checking')
-                : t('preferences.general.checkForUpdates')}
-            </Button>
-          )}
+          <Button variant="outline" size="sm" onClick={handleCheckForUpdates}>
+            {t('preferences.general.checkForUpdates')}
+          </Button>
         </SettingsField>
-
-        {/* Update status display - show when update is available */}
-        {hasUpdate && (
-          <SettingsField
-            label={t('preferences.general.updateAvailable', {
-              version: pendingUpdate?.version,
-            })}
-            description=""
-          >
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleDownloadAndInstall}
-              disabled={isUpdateInstalling || updateStatus !== 'idle'}
-            >
-              {t('preferences.general.downloadAndInstall')}
-            </Button>
-          </SettingsField>
-        )}
-
-        {updateStatus === 'idle' &&
-          !hasUpdate &&
-          !pendingUpdate &&
-          !updateError &&
-          isUpdaterSupported() && (
-            <p className="text-sm text-muted-foreground">
-              {t('preferences.general.upToDate')}
-            </p>
-          )}
-
-        {updateError && (
-          <p className="text-sm text-destructive">
-            {t('preferences.general.updateFailed')}: {updateError}
-          </p>
-        )}
-
-        {/* Always show release notes if available */}
-        {pendingUpdate?.body && (
-          <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto rounded-md border p-3">
-            {pendingUpdate.body}
-          </div>
-        )}
-
-        {/* Auto-update toggle — only meaningful where an updater exists */}
-        {isUpdaterSupported() && (
-          <SettingsField
-            label={t('preferences.general.autoUpdate')}
-            description={t('preferences.general.autoUpdateDescription')}
-          >
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="auto-update-toggle"
-                checked={!disableAutoUpdate}
-                onCheckedChange={checked =>
-                  handleDisableAutoUpdateChange(!checked)
-                }
-                disabled={savePreferences.isPending}
-              />
-              <Label htmlFor="auto-update-toggle" className="text-sm">
-                {!disableAutoUpdate
-                  ? t('common.enabled')
-                  : t('common.disabled')}
-              </Label>
-            </div>
-          </SettingsField>
-        )}
       </SettingsSection>
 
       <SettingsSection title={t('preferences.general.terminal')}>

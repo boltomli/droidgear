@@ -1,23 +1,36 @@
 import ReactDOM from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import './i18n'
+import { queryClient } from '@/lib/query-client'
 import App from './App'
-import { queryClient } from './lib/query-client'
-import { applyInitialTheme } from './lib/theme-context'
+import './App.css'
+import './shell.css'
 
-// Apply the persisted theme before the first render so the initial frame
-// doesn't flash the wrong palette (ThemeProvider takes over after mount).
-applyInitialTheme()
-
-// Disable default browser context menu to prevent accidental page reload
+// Disable the browser context menu to prevent accidental reloads.
 document.addEventListener('contextmenu', e => {
   e.preventDefault()
 })
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+/** Hide the initial loader spinner. */
+function hideAppLoader() {
+  const loader = document.getElementById('app-loader')
+  if (loader) {
+    loader.classList.add('hidden')
+    setTimeout(() => loader.remove(), 300)
+  }
+}
+
+const rootElement = document.getElementById('root')
+if (!rootElement) {
+  throw new Error('Missing #root element')
+}
+
+ReactDOM.createRoot(rootElement).render(
   <QueryClientProvider client={queryClient}>
     <App />
-    <ReactQueryDevtools initialIsOpen={false} />
   </QueryClientProvider>
 )
+
+// The first frame is painted from the embedded HTML; drop the loader so the
+// app underneath becomes visible immediately.
+requestAnimationFrame(() => hideAppLoader())

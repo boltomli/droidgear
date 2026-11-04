@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Trash2,
 } from 'lucide-react'
-import { open } from '@tauri-apps/plugin-dialog'
+import { open } from '@/lib/shell/dialog'
 import { toast } from 'sonner'
 import { commands, type CopilotProfile } from '@/lib/bindings'
 import { useCopilotStore } from '@/store/copilot-store'

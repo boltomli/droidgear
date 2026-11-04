@@ -1,150 +1,98 @@
 import { useEffect } from 'react'
-import { getCurrentWindow } from '@tauri-apps/api/window'
-import { initializeCommandSystem } from './lib/commands'
-import { buildAppMenu, setupMenuLanguageListener } from './lib/menu'
-import { initializeLanguage } from './i18n/language-init'
-import { logger } from './lib/logger'
-import { cleanupOldFiles } from './lib/recovery'
-import { preloadShellEnv } from './services/shell-env'
-import {
-  checkForUpdate,
-  showUpdateNotification,
-  isUpdateCheckDisabled,
-} from './services/updater'
-import { commands } from './lib/tauri-bindings'
-import './App.css'
-import { MainWindow } from './components/layout/MainWindow'
-import { ThemeProvider } from './components/ThemeProvider'
-import { ErrorBoundary } from './components/ErrorBoundary'
-import { LegacyConfigDialog } from './components/LegacyConfigDialog'
+import { Window as CurrentWindow } from '@wailsio/runtime'
+import { ThemeProvider } from '@/components/ThemeProvider'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { MainWindow } from '@/components/layout/MainWindow'
+import { LegacyConfigDialog } from '@/components/LegacyConfigDialog'
+import { initializeCommandSystem } from '@/lib/commands'
+import { initializeLanguage } from '@/i18n/language-init'
+import { preloadShellEnv } from '@/services/shell-env'
+import { cleanupOldFiles } from '@/lib/recovery'
+import { commands } from '@/lib/app-bindings'
+import { initWailsMenu } from '@/lib/shell/menu-bridge'
+import { syncWindowBackground } from '@/lib/shell/window-theme'
+import { logger } from '@/lib/logger'
 
 /**
- * Hide the initial loader spinner
+ * The application shell: renders MainWindow (TitleBar + LeftSideBar +
+ * MainWindowContent + command palette + preferences) and the legacy-config
+ * prompt. Cross-cutting startup behaviour lives here: command system
+ * registration, language initialisation, shell-env preload, recovery cleanup,
+ * window fit, and the native-menu bridge.
  */
-function hideAppLoader() {
-  const loader = document.getElementById('app-loader')
-  if (loader) {
-    loader.classList.add('hidden')
-    // Remove from DOM after transition; fire-and-forget
-    setTimeout(() => {
-      loader.remove()
-    }, 300)
-  }
-}
-
-/**
- * Show main window immediately — called right after initial render
- * so the user sees the UI early while background init continues.
- */
-async function showMainWindow() {
-  try {
-    hideAppLoader()
-    const mainWindow = getCurrentWindow()
-    await mainWindow.show()
-    await mainWindow.setFocus()
-  } catch (error) {
-    logger.warn('Failed to show main window', { error })
-  }
-}
-
-function App() {
-  // Initialize command system and cleanup on app startup
+function AppShell() {
   useEffect(() => {
-    logger.info('🚀 Frontend application starting up')
     initializeCommandSystem()
-    logger.debug('Command system initialized')
 
-    logger.info('App environment', {
-      isDev: import.meta.env.DEV,
-      mode: import.meta.env.MODE,
+    // The window is created hidden (Hidden: true in wails/main.go, mirroring
+    // the original visible:false) — reveal it now that the shell has mounted,
+    // and keep the native background colour following the theme (round2 §B6).
+    const stopBackgroundSync = syncWindowBackground()
+    void CurrentWindow.Show().then(() => CurrentWindow.Focus())
+
+    // Shrink the window when the restored/default 1150×700 does not fit the
+    // current work area (small screens / large display scale), then re-centre.
+    // Both the runtime SetSize API and screen.avail* are in CSS pixels
+    // (Wails converts DIP → physical internally).
+    const margin = 48
+    const targetWidth = Math.min(1150, window.screen.availWidth - margin)
+    const targetHeight = Math.min(700, window.screen.availHeight - margin)
+    if (window.innerWidth > targetWidth || window.innerHeight > targetHeight) {
+      void CurrentWindow.SetSize(targetWidth, targetHeight).then(() =>
+        CurrentWindow.Center()
+      )
+    }
+
+    return stopBackgroundSync
+  }, [])
+
+  useEffect(() => {
+    // Language auto-detection: saved preference first, then system locale.
+    // Failures fall back to English inside initializeLanguage.
+    const init = async () => {
+      let savedLanguage: string | null = null
+      try {
+        const result = await commands.loadPreferences()
+        if (result.status === 'ok') {
+          savedLanguage = result.data.language
+        }
+      } catch {
+        // preferences unavailable — use system locale detection
+      }
+      await initializeLanguage(savedLanguage)
+    }
+    void init()
+
+    // Warm the shell env cache (used by the terminal) and clean up old crash
+    // recovery files.
+    void preloadShellEnv()
+    void cleanupOldFiles().catch(error => {
+      logger.warn('Recovery cleanup failed', { error })
     })
 
-    // Show the main window immediately — user sees the UI right away
-    showMainWindow()
-
-    // Background initialization after window is visible:
-    // - preload shell env (one-time Tauri command)
-    // - load language + build native menu (Tauri commands)
-    // - cleanup old recovery files (filesystem I/O)
-    // All run in parallel and don't block the UI
-    const backgroundInit = async () => {
-      await Promise.all([
-        // Preload shell environment to avoid delay when first terminal is created
-        preloadShellEnv().catch(() => {
-          /* preload errors are handled internally */
-        }),
-
-        // Initialize language and build native menu
-        (async () => {
-          try {
-            const result = await commands.loadPreferences()
-            const savedLanguage =
-              result.status === 'ok' ? result.data.language : null
-
-            await initializeLanguage(savedLanguage)
-            await buildAppMenu()
-            logger.debug('Application menu built')
-            setupMenuLanguageListener()
-          } catch (error) {
-            logger.warn('Failed to initialize language or menu', { error })
-          }
-        })(),
-
-        // Clean up old recovery files
-        cleanupOldFiles().catch(error => {
-          logger.warn('Failed to cleanup old recovery files', { error })
-        }),
-      ])
-    }
-
-    backgroundInit()
-
-    // Auto-updater logic - check for updates 5 seconds after app loads
-    const checkForUpdates = async () => {
-      if (isUpdateCheckDisabled()) {
-        logger.debug('Update check disabled via environment variable')
-        return
-      }
-
-      // Check if auto-update is disabled in preferences
-      const prefsResult = await commands.loadPreferences()
-      if (prefsResult.status === 'ok' && prefsResult.data.disable_auto_update) {
-        logger.debug('Auto-update check disabled in preferences')
-        return
-      }
-
-      try {
-        const update = await checkForUpdate()
-        if (update) {
-          logger.info(`Update available: ${update.version}`)
-          showUpdateNotification(update)
-        }
-      } catch (checkError) {
-        logger.error(`Update check failed: ${String(checkError)}`)
-        // Silent fail for update checks - don't bother user with network issues
-      }
-    }
-
-    // Check for updates 5 seconds after app loads
-    const updateTimer = setTimeout(checkForUpdates, 5000)
-
-    // Check for updates every hour (3600000ms = 1 hour)
-    const hourlyUpdateInterval = setInterval(checkForUpdates, 3600000)
-
-    return () => {
-      clearTimeout(updateTimer)
-      clearInterval(hourlyUpdateInterval)
-    }
+    // Native menu: install after language initialisation so labels match the
+    // detected locale, and re-emit on every language change.
+    return initWailsMenu()
   }, [])
 
   return (
+    <>
+      <MainWindow />
+      {/* Legacy ~/.droidgear/config.json migration prompt. */}
+      <LegacyConfigDialog />
+    </>
+  )
+}
+
+export default function App() {
+  return (
     <ErrorBoundary>
       <ThemeProvider>
-        <MainWindow />
-        <LegacyConfigDialog />
+        <TooltipProvider>
+          <AppShell />
+        </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
   )
 }
-
-export default App

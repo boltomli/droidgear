@@ -1,9 +1,8 @@
 /**
- * Wails bridge for `@tauri-apps/api/event`.
+ * Event bus helpers (Wails runtime events).
  *
- * Subscribes to the Wails event bus. The PTY shim listens for `pty:data` /
- * `pty:exit` through this module; the theming layer emits nothing (single
- * window, local state).
+ * The PTY module listens for `pty:data` / `pty:exit` through this module; the
+ * theming layer emits nothing (single window, local state).
  */
 
 import { Events } from '@wailsio/runtime'

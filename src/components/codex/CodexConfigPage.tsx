@@ -10,7 +10,7 @@ import {
   Download,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { open } from '@tauri-apps/plugin-dialog'
+import { open } from '@/lib/shell/dialog'
 import { commands } from '@/lib/bindings'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

@@ -1,63 +1,75 @@
-import { defineConfig, type UserConfig } from 'vite'
+import { defineConfig, type UserConfig, type Plugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
+import fs from 'node:fs'
 import path, { resolve } from 'path'
+import { fileURLToPath } from 'url'
 import packageJson from './package.json'
 
-const host = process.env.TAURI_DEV_HOST
-const port = parseInt(process.env.TAURI_DEV_PORT || '1420', 10)
+/**
+ * Single frontend build for the Wails shell.
+ *
+ * The bundle is embedded by `wails/main.go` (`//go:embed all:frontend/dist`),
+ * so `outDir` is `wails/frontend/dist`. Bindings are generated first
+ * (`wails3 generate bindings -clean=true -ts -i`, gitignored) and reach the
+ * source through the `@wails-bindings` alias.
+ *
+ * @see docs/agents/wails-port.md — build order and the Tailwind `@source` trap
+ */
 
-// https://vitejs.dev/config/
+const dir = path.dirname(fileURLToPath(import.meta.url))
+
+/**
+ * `emptyOutDir` wipes wails/frontend/dist on every build, including the
+ * tracked `.gitkeep` that keeps `//go:embed all:frontend/dist` compiling on a
+ * clean clone (wails/.gitignore negation). Restore it after each build so
+ * `git status` stays clean.
+ */
+function restoreGitkeep(): Plugin {
+  return {
+    name: 'restore-frontend-dist-gitkeep',
+    closeBundle() {
+      fs.writeFileSync(resolve(dir, 'wails/frontend/dist/.gitkeep'), '')
+    },
+  }
+}
+
 export default defineConfig(async () => {
   const babelPlugin = await babel({ presets: [reactCompilerPreset()] })
   return {
+    root: dir,
+    publicDir: resolve(dir, 'public'),
     define: {
       __APP_VERSION__: JSON.stringify(packageJson.version),
     },
-    plugins: [
-      ...react(),
-      babelPlugin,
-      tailwindcss(),
-    ],
+    plugins: [react(), babelPlugin, tailwindcss(), restoreGitkeep()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
-        'tauri-pty': path.resolve(
-          __dirname,
-          './node_modules/tauri-pty/dist/index.es.js'
+        '@': resolve(dir, 'src'),
+        '@wails-bindings': resolve(
+          dir,
+          'wails/frontend/bindings/droidgear-wails/internal/app/app.ts'
         ),
       },
     },
-    build: {
-      chunkSizeWarningLimit: 600, // Prevent warnings for template's bundled components
-      cssMinify: 'lightningcss',
-      rollupOptions: {
-        input: {
-          main: resolve(__dirname, 'index.html'),
-        },
-      },
-    },
-    // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-    //
-    // 1. prevent vite from obscuring rust errors
-    clearScreen: false,
-    // 2. tauri expects a fixed port; use TAURI_DEV_PORT env var to customize
     server: {
-      port,
+      host: '127.0.0.1',
+      port: Number(process.env.WAILS_VITE_PORT) || 9245,
       strictPort: true,
-      host: host || false,
-      hmr: host
-        ? {
-            protocol: 'ws',
-            host,
-            port: port + 1,
-          }
-        : undefined,
-      watch: {
-        // 3. tell vite to ignore watching `src-tauri`
-        ignored: ['**/src-tauri/**'],
+      fs: {
+        allow: [dir],
       },
     },
+    build: {
+      chunkSizeWarningLimit: 600,
+      cssMinify: 'lightningcss',
+      outDir: resolve(dir, 'wails/frontend/dist'),
+      emptyOutDir: true,
+      rollupOptions: {
+        input: resolve(dir, 'index.html'),
+      },
+    },
+    clearScreen: false,
   } satisfies UserConfig
 })

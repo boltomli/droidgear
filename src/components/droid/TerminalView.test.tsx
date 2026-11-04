@@ -78,12 +78,12 @@ vi.stubGlobal('ResizeObserver', ResizeObserverMock)
 
 vi.mock('@xterm/xterm', () => ({ Terminal: TerminalMock }))
 vi.mock('@xterm/addon-fit', () => ({ FitAddon: FitAddonMock }))
-vi.mock('tauri-pty', () => ({ spawn: spawnMock }))
-vi.mock('@tauri-apps/plugin-os', () => ({
+vi.mock('@/lib/shell/pty', () => ({ spawn: spawnMock }))
+vi.mock('@/lib/shell/os', () => ({
   platform: () => 'windows',
   version: () => '10.0.26300',
 }))
-vi.mock('@tauri-apps/plugin-clipboard-manager', () => ({
+vi.mock('@/lib/shell/clipboard', () => ({
   writeText: vi.fn().mockResolvedValue(undefined),
   readText: vi.fn().mockResolvedValue(''),
 }))

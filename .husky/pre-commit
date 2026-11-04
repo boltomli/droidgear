@@ -34,21 +34,11 @@ if ! npm run format:check; then
     exit 1
 fi
 
-# Rust format check
+# No Tauri references (docs/ and wails/PORTING.md keep the history)
 echo ""
-echo "🦀 Running Rust format check..."
-if ! npm run rust:fmt:check; then
-    echo "❌ Rust format check failed!"
-    echo "💡 Run 'npm run rust:fmt' to fix formatting issues"
-    exit 1
-fi
-
-# Rust clippy
-echo ""
-echo "📎 Running Rust clippy..."
-if ! npm run rust:clippy; then
-    echo "❌ Rust clippy failed!"
-    echo "💡 Run 'npm run rust:clippy:fix' to fix some issues automatically"
+echo "🚫 Checking for Tauri references..."
+if ! npm run check:no-tauri; then
+    echo "❌ Tauri reference found!"
     exit 1
 fi
 

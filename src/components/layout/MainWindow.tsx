@@ -22,7 +22,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/ui-store'
 import { useMainWindowEventListeners } from '@/hooks/useMainWindowEventListeners'
-import { getCurrentWindow } from '@tauri-apps/api/window'
+import { getCurrentWindow } from '@/lib/shell/window'
 import { cn } from '@/lib/utils'
 
 /**

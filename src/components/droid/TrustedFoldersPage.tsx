@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Folder, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react'
-import { open } from '@tauri-apps/plugin-dialog'
+import { open } from '@/lib/shell/dialog'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -19,7 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { commands, type TrustedFolder } from '@/lib/tauri-bindings'
+import { commands, type TrustedFolder } from '@/lib/app-bindings'
 import { useUIStore } from '@/store/ui-store'
 
 function formatTrustedAt(value: string) {

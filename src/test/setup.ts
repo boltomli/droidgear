@@ -106,14 +106,60 @@ if (!('scrollIntoView' in Element.prototype)) {
   ).scrollIntoView = () => undefined
 }
 
-// Mock Tauri APIs for tests
-vi.mock('@tauri-apps/api/event', () => ({
+// The Wails runtime package performs real IPC (fetch against the jsdom
+// origin, http://localhost:3000) as soon as a method is called — in tests
+// every call must be inert, otherwise each one lands as an unhandled
+// ECONNREFUSED. Sub-modules with their own behaviour (shell/window,
+// shell/events, shell/os, …) are mocked below with richer fixtures.
+vi.mock('@wailsio/runtime', () => {
+  const noop = async () => undefined
+  const noopUnlisten = () => undefined
+  const windowMock = {
+    Show: noop,
+    Hide: noop,
+    Close: noop,
+    Focus: noop,
+    Center: noop,
+    SetTitle: noop,
+    SetSize: noop,
+    SetBackgroundColour: noop,
+    Minimise: noop,
+    Maximise: noop,
+    UnMaximise: noop,
+    ToggleMaximise: noop,
+    IsMaximised: async () => false,
+    IsFocused: async () => false,
+    Fullscreen: noop,
+    UnFullscreen: noop,
+    IsFullscreen: async () => false,
+  }
+  return {
+    Window: windowMock,
+    Events: { On: () => noopUnlisten, Once: () => noopUnlisten, Emit: noop },
+    Dialogs: { OpenFile: async () => '', SaveFile: async () => '' },
+    Clipboard: { SetText: noop, Text: async () => '' },
+    System: {
+      Environment: async () => ({
+        OS: 'windows',
+        Arch: 'x86_64',
+        OSInfo: { Version: '10.0.19045 (Build: 19045)' },
+      }),
+    },
+    Application: {},
+    Browser: {},
+    Screens: { Primary: async () => ({}) },
+    Flags: { All: async () => ({}) },
+  }
+})
+
+// Mock the shell bridges for tests
+vi.mock('@/lib/shell/events', () => ({
   listen: vi.fn().mockResolvedValue(() => {
     // Mock unlisten function
   }),
 }))
 
-vi.mock('@tauri-apps/api/window', () => ({
+vi.mock('@/lib/shell/window', () => ({
   getCurrentWindow: vi.fn().mockReturnValue({
     onFocusChanged: vi.fn().mockResolvedValue(() => undefined),
     onCloseRequested: vi.fn().mockResolvedValue(() => undefined),
@@ -126,46 +172,27 @@ vi.mock('@tauri-apps/api/window', () => ({
   }),
 }))
 
-vi.mock('@tauri-apps/api/core', () => ({
+vi.mock('@/lib/shell/commands', () => ({
   invoke: vi.fn().mockResolvedValue(undefined),
 }))
 
-vi.mock('@tauri-apps/plugin-os', () => ({
+vi.mock('@/lib/shell/os', () => ({
   locale: vi.fn().mockResolvedValue('en-US'),
   platform: vi.fn().mockResolvedValue('macos'),
 }))
 
-vi.mock('@tauri-apps/api/menu', () => ({
-  Menu: {
-    new: vi.fn().mockResolvedValue({ setAsAppMenu: vi.fn() }),
-  },
-  MenuItem: {
-    new: vi.fn().mockResolvedValue({}),
-  },
-  Submenu: {
-    new: vi.fn().mockResolvedValue({}),
-  },
-  PredefinedMenuItem: {
-    new: vi.fn().mockResolvedValue({}),
-  },
+vi.mock('@/lib/shell/fonts', () => ({
+  getSystemFonts: vi.fn().mockResolvedValue([]),
 }))
 
-vi.mock('@tauri-apps/plugin-updater', () => ({
-  check: vi.fn().mockResolvedValue(null),
-}))
-
-vi.mock('@tauri-apps/plugin-opener', () => ({
+vi.mock('@/lib/shell/opener', () => ({
   openUrl: vi.fn().mockResolvedValue(undefined),
   openPath: vi.fn().mockResolvedValue(undefined),
   revealItemInDir: vi.fn().mockResolvedValue(undefined),
 }))
 
-vi.mock('@tauri-apps/plugin-process', () => ({
-  relaunch: vi.fn().mockResolvedValue(undefined),
-}))
-
-// Mock typed Tauri bindings (tauri-specta generated)
-vi.mock('@/lib/tauri-bindings', () => ({
+// Mock the typed command facade
+vi.mock('@/lib/app-bindings', () => ({
   commands: {
     greet: vi.fn().mockResolvedValue('Hello, test!'),
     getAppVersion: vi.fn().mockResolvedValue('0.5.3'),
@@ -174,15 +201,6 @@ vi.mock('@/lib/tauri-bindings', () => ({
       .mockResolvedValue({ status: 'ok', data: { theme: 'system' } }),
     savePreferences: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
     sendNativeNotification: vi
-      .fn()
-      .mockResolvedValue({ status: 'ok', data: null }),
-    getUpdateChannel: vi
-      .fn()
-      .mockResolvedValue({ status: 'ok', data: 'managed' }),
-    checkPortableUpdate: vi
-      .fn()
-      .mockResolvedValue({ status: 'ok', data: null }),
-    installPortableUpdate: vi
       .fn()
       .mockResolvedValue({ status: 'ok', data: null }),
     saveEmergencyData: vi.fn().mockResolvedValue({ status: 'ok', data: null }),

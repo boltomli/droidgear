@@ -7,11 +7,9 @@
     "src/test/**",
     "**/index.ts",
     "src/lib/platform-strings.ts",
-    "src/wails/shims/**",
-    "src/wails/error-i18n.ts"
+    "src/lib/shell/**"
   ],
   "ignoreDependencies": [
-    "@tauri-apps/*",
     "@radix-ui/*",
     "tailwindcss",
     "tw-animate-css",

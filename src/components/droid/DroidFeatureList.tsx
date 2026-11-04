@@ -18,8 +18,8 @@ import {
   ChevronDown,
   Link2,
 } from 'lucide-react'
-import { writeText } from '@tauri-apps/plugin-clipboard-manager'
-import { open } from '@tauri-apps/plugin-dialog'
+import { writeText } from '@/lib/shell/clipboard'
+import { open } from '@/lib/shell/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/components/ui/action-button'
@@ -54,9 +54,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useUIStore } from '@/store/ui-store'
 import { useModelStore } from '@/store/model-store'
 import { useIsWindows } from '@/hooks/use-platform'
-import { commands } from '@/lib/tauri-bindings'
+import { commands } from '@/lib/app-bindings'
 import type { DroidSubView } from '@/store/ui-store'
-import type { SettingsFileInfo } from '@/lib/tauri-bindings'
+import type { SettingsFileInfo } from '@/lib/app-bindings'
 
 interface FeatureItem {
   id: DroidSubView

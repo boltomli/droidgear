@@ -3,7 +3,6 @@ import { Settings, MessageSquare, TerminalSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/components/ui/action-button'
 import { useUIStore, type OmpSubView } from '@/store/ui-store'
-import { isSessionsSupported } from '@/lib/capabilities'
 
 interface FeatureItem {
   id: OmpSubView
@@ -33,22 +32,18 @@ export function OmpFeatureList() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-1 p-2">
-        {features
-          .filter(
-            feature => feature.id !== 'sessions' || isSessionsSupported('omp')
-          )
-          .map(feature => (
-            <ActionButton
-              key={feature.id}
-              variant={ompSubView === feature.id ? 'secondary' : 'ghost'}
-              size="sm"
-              className={cn('justify-start w-full')}
-              onClick={() => setOmpSubView(feature.id)}
-            >
-              <feature.icon className="h-4 w-4 mr-2" />
-              {t(feature.labelKey)}
-            </ActionButton>
-          ))}
+        {features.map(feature => (
+          <ActionButton
+            key={feature.id}
+            variant={ompSubView === feature.id ? 'secondary' : 'ghost'}
+            size="sm"
+            className={cn('justify-start w-full')}
+            onClick={() => setOmpSubView(feature.id)}
+          >
+            <feature.icon className="h-4 w-4 mr-2" />
+            {t(feature.labelKey)}
+          </ActionButton>
+        ))}
       </div>
 
       <div className="mt-auto p-3 border-t text-xs text-muted-foreground">

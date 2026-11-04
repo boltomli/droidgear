@@ -8,7 +8,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react'
-import { open } from '@tauri-apps/plugin-dialog'
+import { open } from '@/lib/shell/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { SettingsField, SettingsSection } from '../shared/SettingsComponents'
-import { commands } from '@/lib/tauri-bindings'
+import { commands } from '@/lib/app-bindings'
 import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
 import { useOpenClawStore } from '@/store/openclaw-store'

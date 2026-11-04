@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Copy, Check, Plus, Trash2, RefreshCw } from 'lucide-react'
-import { writeText } from '@tauri-apps/plugin-clipboard-manager'
+import { writeText } from '@/lib/shell/clipboard'
 import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'

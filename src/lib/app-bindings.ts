@@ -1,12 +1,13 @@
 /**
- * Re-export generated Tauri bindings with project conventions
+ * Re-export the command facade with project conventions
  *
- * This file provides type-safe access to all Tauri commands.
- * Types are auto-generated from Rust by tauri-specta.
+ * This file provides type-safe access to every backend command. The
+ * facade itself (`src/lib/bindings.ts`) carries the snake_case command
+ * shapes; `src/lib/shell/commands.ts` maps them onto the Go service.
  *
  * @example
  * ```typescript
- * import { commands, unwrapResult } from '@/lib/tauri-bindings'
+ * import { commands, unwrapResult } from '@/lib/app-bindings'
  *
  * // In TanStack Query - let errors propagate
  * const prefs = unwrapResult(await commands.loadPreferences())
@@ -25,11 +26,9 @@ export { commands, type Result } from './bindings'
 export type {
   AppPreferences,
   JsonValue,
-  PortableUpdateInfo,
   RecoveryError,
   SettingsFileInfo,
   TrustedFolder,
-  UpdateChannel,
 } from './bindings'
 
 /**

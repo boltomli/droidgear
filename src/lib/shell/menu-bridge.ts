@@ -1,22 +1,20 @@
 /**
- * Wails menu bridge — the native menu is built in Go
- * (internal/app/menu.go) because the Wails shell has no
- * `@tauri-apps/api/menu`. Two responsibilities:
+ * Native menu bridge — the menu is built in Go
+ * (internal/app/menu.go). Two responsibilities:
  *
  * 1. Ask Go to (re)build the menu whenever the language is known/changes,
  *    passing the current i18n language (the Go side keeps its own en/zh
  *    label tables, mirroring the `menu.*` locale keys).
- * 2. Translate the `menu:*` events emitted by Go into the same store
- *    actions as the Tauri menu handlers in src/lib/menu.ts.
+ * 2. Translate the `menu:*` events emitted by Go into the store actions.
  *
- * The updater entry ("Check for Updates") is intentionally not present:
- * the updater is Tauri-only (capabilities.isUpdaterSupported).
+ * The updater entry ("Check for Updates") is intentionally not present: the
+ * app ships no update feed (see docs/developer/tauri-removal-design.zh.md).
  */
 
-import { listen } from '@tauri-apps/api/event'
-import { invoke } from '@tauri-apps/api/core'
+import { listen } from './events'
+import { invoke } from './commands'
 import i18n from '@/i18n/config'
-import { commands } from '@/lib/tauri-bindings'
+import { commands } from '@/lib/app-bindings'
 import { useUIStore } from '@/store/ui-store'
 import { logger } from '@/lib/logger'
 

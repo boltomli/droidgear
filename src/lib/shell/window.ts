@@ -1,11 +1,10 @@
 /**
- * Wails bridge for `@tauri-apps/api/webviewWindow` and
- * `@tauri-apps/api/window`.
+ * Main-window control (single window).
  *
- * Backed by the `@wailsio/runtime` Window instance (single main window) and
- * the Wails event bus. Only the surface used by the shared Tauri components
- * is implemented: window commands (`window-commands.ts`), the Windows
- * title bar controls, the close-confirmation flow and the drag region.
+ * Backed by the `@wailsio/runtime` Window instance and the Wails event bus.
+ * Only the surface the app uses is implemented: window commands
+ * (`window-commands.ts`), the Windows title bar controls, the
+ * close-confirmation flow and the drag region.
  */
 
 import { Window, Events } from '@wailsio/runtime'
@@ -138,9 +137,23 @@ export class WebviewWindow {
     return () => unlistens.forEach(unlisten => unlisten())
   }
 
-  /** Resolves on the next focus change (used to sync maximised state). */
-  async onFocusChanged(handler: () => void): Promise<() => void> {
-    const unlistens = FOCUS_EVENTS.map(name => Events.On(name, () => handler()))
+  /**
+   * Resolves on the next focus change (used to sync maximised state).
+   *
+   * The Wails focus events carry no payload, so the current state is read
+   * back from the window — the shape matches the old
+   * `onFocusChanged(({ payload }) => …)` call site.
+   */
+  async onFocusChanged(
+    handler: (event: { payload: boolean }) => void
+  ): Promise<() => void> {
+    const unlistens = FOCUS_EVENTS.map(name =>
+      Events.On(name, () => {
+        void Window.IsFocused()
+          .then(focused => handler({ payload: focused }))
+          .catch(() => handler({ payload: true }))
+      })
+    )
     return () => unlistens.forEach(unlisten => unlisten())
   }
 }

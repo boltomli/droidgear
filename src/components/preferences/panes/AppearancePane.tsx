@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { locale } from '@tauri-apps/plugin-os'
-import { getSystemFonts } from 'tauri-plugin-system-fonts-api'
+import { locale } from '@/lib/shell/os'
+import { getSystemFonts } from '@/lib/shell/fonts'
 import { toast } from 'sonner'
 import {
   Select,

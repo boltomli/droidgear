@@ -34,7 +34,7 @@ vi.mock('sonner', () => ({
   toast: toastMock,
 }))
 
-vi.mock('@tauri-apps/plugin-dialog', () => ({
+vi.mock('@/lib/shell/dialog', () => ({
   open: openMock,
 }))
 

@@ -13,8 +13,8 @@ import {
   FileCode,
   Settings,
 } from 'lucide-react'
-import { open } from '@tauri-apps/plugin-dialog'
-import { writeText } from '@tauri-apps/plugin-clipboard-manager'
+import { open } from '@/lib/shell/dialog'
+import { writeText } from '@/lib/shell/clipboard'
 import { ActionButton } from '@/components/ui/action-button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'

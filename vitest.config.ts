@@ -16,14 +16,7 @@ export default defineConfig({
     },
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: [
-      'node_modules',
-      'dist',
-      'src-tauri',
-      '.git',
-      '.cache',
-      'build',
-    ],
+    exclude: ['node_modules', 'dist', '.git', '.cache', 'build'],
     coverage: {
       provider: 'v8',
       thresholds: {
@@ -36,9 +29,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'tauri-pty': path.resolve(
+      '@wails-bindings': path.resolve(
         __dirname,
-        './node_modules/tauri-pty/dist/index.es.js'
+        './wails/frontend/bindings/droidgear-wails/internal/app/app.ts'
       ),
     },
   },

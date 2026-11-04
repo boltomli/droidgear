@@ -4,7 +4,7 @@
 
 import { toast } from 'sonner'
 import { logger } from './logger'
-import { commands } from './tauri-bindings'
+import { commands } from './app-bindings'
 
 type NotificationType = 'success' | 'error' | 'info' | 'warning'
 

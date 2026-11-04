@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { MacOSIcons } from './WindowControlIcons'
 import { useCommandContext } from '@/hooks/use-command-context'
 import { executeCommand } from '@/lib/commands'
-import { getCurrentWindow } from '@tauri-apps/api/window'
+import { getCurrentWindow } from '@/lib/shell/window'
 
 interface MacOSWindowControlsProps extends HTMLProps<HTMLDivElement> {
   className?: string

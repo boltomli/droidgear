@@ -1,10 +1,10 @@
 /**
- * Wails bridge for `@tauri-apps/plugin-opener`.
+ * Opening URLs, paths and file-manager reveals.
  *
  * Routes `openUrl` / `openPath` / `revealItemInDir` to the Go opener service
  * (`internal/app/opener.go`): rundll32 on Windows, `open` on macOS and
  * `xdg-open` on Linux. Used by AboutPane, McpPage, LegacyVersionsPage,
- * ExportTemplatesPage and the updater's release-page links.
+ * ExportTemplatesPage and GeneralPane's releases link.
  */
 
 import { OpenPath, OpenUrl, RevealItemInDir } from '@wails-bindings'

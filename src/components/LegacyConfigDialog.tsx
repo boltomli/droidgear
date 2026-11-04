@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { commands } from '@/lib/tauri-bindings'
+import { commands } from '@/lib/app-bindings'
 import { logger } from '@/lib/logger'
 
 export function LegacyConfigDialog() {

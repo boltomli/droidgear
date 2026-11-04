@@ -1,4 +1,4 @@
-import { platform, type Platform } from '@tauri-apps/plugin-os'
+import { platform, type Platform } from '@/lib/shell/os'
 import { logger } from '@/lib/logger'
 
 /**

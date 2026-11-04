@@ -10,10 +10,10 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
-import { spawn, type IPty } from 'tauri-pty'
-import { writeText, readText } from '@tauri-apps/plugin-clipboard-manager'
+import { spawn, type IPty } from '@/lib/shell/pty'
+import { writeText, readText } from '@/lib/shell/clipboard'
 import { useTheme } from '@/hooks/use-theme'
-import { platform, version } from '@tauri-apps/plugin-os'
+import { platform, version } from '@/lib/shell/os'
 import { usePreferences } from '@/services/preferences'
 import { notify } from '@/lib/notifications'
 import { getShellEnv } from '@/services/shell-env'
@@ -311,7 +311,7 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
       const cols = dims?.cols || 80
       const rows = dims?.rows || 24
 
-      // Spawn PTY using tauri-pty with initial cwd from ref
+      // Spawn the PTY with the initial cwd from the ref
       // Pass shell environment variables for GUI apps that don't inherit shell env
       // Manually add TERM since passing env replaces PTY defaults
       // Ensure locale is set for proper CJK character display

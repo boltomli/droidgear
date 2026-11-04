@@ -1,7 +1,7 @@
 /**
- * Wails bridge for `@tauri-apps/plugin-dialog`.
+ * Native file dialogs (Wails runtime dialogs — WebView2 pickers on
+ * Windows).
  *
- * Backed by the Wails runtime dialogs (WebView2 native pickers on Windows).
  * `open()` maps to OpenFile (single or multiple), `save()` to SaveFile.
  */
 
@@ -38,6 +38,12 @@ function mapFilters(filters?: DialogFilter[]): WailsFileFilter[] {
   }))
 }
 
+export async function open(
+  options: OpenDialogOptions & { multiple: true }
+): Promise<string[]>
+export async function open(
+  options?: OpenDialogOptions & { multiple?: false }
+): Promise<string | null>
 export async function open(
   options?: OpenDialogOptions
 ): Promise<string | string[] | null> {

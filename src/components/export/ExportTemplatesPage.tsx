@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
+import { openPath, revealItemInDir } from '@/lib/shell/opener'
 import { toast } from 'sonner'
 import { useExportStore } from '@/store/export-store'
 import { useUIStore } from '@/store/ui-store'

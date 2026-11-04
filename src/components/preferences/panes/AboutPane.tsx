@@ -1,11 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { ExternalLink } from 'lucide-react'
-import { openUrl } from '@tauri-apps/plugin-opener'
+import { openUrl } from '@/lib/shell/opener'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { commands } from '@/lib/tauri-bindings'
-import { IS_WAILS_BACKEND } from '@/lib/capabilities'
+import { commands } from '@/lib/app-bindings'
 
 const PROJECT_URL = 'https://github.com/Sunshow/droidgear'
 const TEMPLATE_URL = 'https://github.com/dannysmith/tauri-template'
@@ -102,11 +101,11 @@ export function AboutPane() {
           {t('preferences.about.techStack')}
         </span>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{IS_WAILS_BACKEND ? 'Wails v3' : 'Tauri'}</span>
+          <span>Wails v3</span>
           <span>·</span>
           <span>React</span>
           <span>·</span>
-          <span>{IS_WAILS_BACKEND ? 'Go' : 'Rust'}</span>
+          <span>Go</span>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
  * Language initialization utilities for detecting and applying the user's
  * preferred language at app startup.
  */
-import { locale } from '@tauri-apps/plugin-os'
+import { locale } from '@/lib/shell/os'
 import i18n, { availableLanguages } from './config'
 import { logger } from '@/lib/logger'
 

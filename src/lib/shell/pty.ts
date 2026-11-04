@@ -1,14 +1,13 @@
 /**
- * Wails bridge for the `tauri-pty` npm package.
+ * Pseudo-terminal access for the terminal pane.
  *
- * The Rust plugin (spawn/read/resize/write/kill over Tauri IPC) is replaced
- * by the Go PTY service (`PtyStart` etc. in wails/internal/app/pty.go).
- * Output and exit are streamed over the Wails event bus as base64 chunks,
- * reassembled here with a streaming TextDecoder so multibyte characters
- * split across reads stay intact.
+ * spawn/read/resize/write/kill go to the Go PTY service (`PtyStart` etc. in
+ * wails/internal/app/pty.go). Output and exit are streamed over the Wails
+ * event bus as base64 chunks, reassembled here with a streaming TextDecoder
+ * so multibyte characters split across reads stay intact.
  *
- * The public surface mirrors tauri-pty's `spawn()` / `IPty` so
- * `TerminalView.tsx` needs no changes.
+ * The public surface is `spawn()` / `IPty`, which `TerminalView.tsx` consumes
+ * directly.
  */
 
 import { Events } from '@wailsio/runtime'

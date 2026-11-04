@@ -3,9 +3,7 @@ import type { ClaudeTemporaryRunDebugPreview } from '@/lib/bindings'
 /**
  * Formats a temporary-run debug preview as plain text for display.
  *
- * Only secret env *keys* are shown, never their values. Keep this in sync
- * with the TUI formatter (`droidgear-tui/src/tui/utils.rs`,
- * `format_claude_temporary_run_preview`).
+ * Only secret env *keys* are shown, never their values.
  */
 export function formatClaudePreview(
   preview: ClaudeTemporaryRunDebugPreview

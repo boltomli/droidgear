@@ -14,8 +14,8 @@ import {
   Wifi,
   Heart,
 } from 'lucide-react'
-import { save, open } from '@tauri-apps/plugin-dialog'
-import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
+import { save, open } from '@/lib/shell/dialog'
+import { writeTextFile, readTextFile } from '@/lib/shell/fs'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

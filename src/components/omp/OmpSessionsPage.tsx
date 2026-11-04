@@ -18,7 +18,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { Streamdown } from 'streamdown'
-import { listen } from '@tauri-apps/api/event'
+import { listen } from '@/lib/shell/events'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -40,7 +40,7 @@ import {
   type ContentBlock,
 } from '@/lib/bindings'
 import { useTheme } from '@/hooks/use-theme'
-import { showContextMenu } from '@/lib/context-menu'
+import { showContextMenu } from '@/lib/shell/context-menu'
 
 type ViewMode = 'list' | 'grouped'
 

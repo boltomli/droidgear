@@ -1,9 +1,9 @@
 /**
- * Wails bridge for `@tauri-apps/plugin-os`.
+ * OS facts for the shell.
  *
- * Mirrors the Tauri plugin's API: `platform()` / `family()` / `version()` /
- * `arch()` / `type()` are synchronous (use-platform and TerminalView call
- * them synchronously), `locale()` / `hostname()` stay async.
+ * `platform()` / `family()` / `version()` / `arch()` / `type()` are
+ * synchronous (use-platform and TerminalView call them synchronously),
+ * `locale()` / `hostname()` stay async.
  *
  * Platform facts come from the Wails runtime, not the UA:
  * `internal/runtime/runtime_prod.go` injects
@@ -14,8 +14,34 @@
  * exposed through the async `System.Environment()` call — so this module
  * warms a cache at load time and the sync getter returns it (round2 §B8).
  */
-import type { Arch, Family, OsType, Platform } from '@tauri-apps/plugin-os'
 import { System } from '@wailsio/runtime'
+
+/** Values mirror the shape the components already consume. */
+export type Platform =
+  | 'linux'
+  | 'macos'
+  | 'ios'
+  | 'freebsd'
+  | 'dragonfly'
+  | 'netbsd'
+  | 'openbsd'
+  | 'solaris'
+  | 'android'
+  | 'windows'
+export type Family = 'unix' | 'windows'
+export type OsType = 'linux' | 'windows' | 'macos' | 'ios' | 'android'
+export type Arch =
+  | 'x86'
+  | 'x86_64'
+  | 'arm'
+  | 'aarch64'
+  | 'mips'
+  | 'mips64'
+  | 'powerpc'
+  | 'powerpc64'
+  | 'riscv64'
+  | 's390x'
+  | 'sparc64'
 
 type WailsOS = 'windows' | 'darwin' | 'linux' | 'ios' | 'android'
 

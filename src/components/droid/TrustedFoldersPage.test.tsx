@@ -9,11 +9,11 @@ const { openMock, toastMock } = vi.hoisted(() => ({
   }),
 }))
 
-vi.mock('@tauri-apps/plugin-dialog', () => ({ open: openMock }))
+vi.mock('@/lib/shell/dialog', () => ({ open: openMock }))
 vi.mock('sonner', () => ({ toast: toastMock }))
 
 import { render, screen, waitFor } from '@/test/test-utils'
-import { commands } from '@/lib/tauri-bindings'
+import { commands } from '@/lib/app-bindings'
 import { TrustedFoldersPage } from './TrustedFoldersPage'
 
 describe('TrustedFoldersPage', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState, useRef } from 'react'
-import { emit } from '@tauri-apps/api/event'
+import { emit } from '@/lib/shell/events'
 import {
   resolveIsDark,
   THEME_STORAGE_KEY,

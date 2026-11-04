@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Server, LifeBuoy, Bot, TerminalSquare } from 'lucide-react'
-import { writeText } from '@tauri-apps/plugin-clipboard-manager'
+import { writeText } from '@/lib/shell/clipboard'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/components/ui/action-button'

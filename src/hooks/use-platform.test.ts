@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
 // Mock the Tauri OS plugin
-vi.mock('@tauri-apps/plugin-os', () => ({
+vi.mock('@/lib/shell/os', () => ({
   platform: vi.fn(() => 'macos'),
 }))
 
@@ -17,7 +17,7 @@ vi.mock('@/lib/logger', () => ({
 }))
 
 // Import the module under test after mocks are set up
-const { platform } = await import('@tauri-apps/plugin-os')
+const { platform } = await import('@/lib/shell/os')
 const {
   getPlatform,
   usePlatform,

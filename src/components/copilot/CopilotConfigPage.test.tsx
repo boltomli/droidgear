@@ -7,7 +7,7 @@ import {
   within,
 } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { open } from '@tauri-apps/plugin-dialog'
+import { open } from '@/lib/shell/dialog'
 import { commands, type CopilotProfile } from '@/lib/bindings'
 import { useCopilotStore } from '@/store/copilot-store'
 import { useChannelStore } from '@/store/channel-store'
@@ -16,7 +16,7 @@ import { CopilotConfigPage } from './CopilotConfigPage'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
-vi.mock('@tauri-apps/plugin-dialog', () => ({ open: vi.fn() }))
+vi.mock('@/lib/shell/dialog', () => ({ open: vi.fn() }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/lib/bindings', () => ({
   commands: {

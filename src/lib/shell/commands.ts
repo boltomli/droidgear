@@ -1,23 +1,22 @@
 /**
- * Wails bridge for `@tauri-apps/api/core`.
+ * Command bridge: the single funnel from the frontend to the Go service.
  *
- * The Wails build reuses the entire Tauri frontend (stores, pages, i18n).
- * Every backend call funnels through `TAURI_INVOKE(cmd, args)` in the
- * auto-generated `src/lib/bindings.ts`, so replacing this one module routes
- * all calls to the Go service.
+ * Every backend call funnels through `invoke(cmd, args)` in
+ * `src/lib/bindings.ts`, so this module is the only place that knows the
+ * snake_case → PascalCase mapping and the positional argument order.
  *
  * Contract:
- * - Tauri `Err(String)` rejects with a plain string, which bindings.ts wraps
- *   into `{ status: 'error', error }`. Wails rejects with a RuntimeError
- *   whose `.cause` carries the raw Go error value and `.message` a formatted
- *   description — we normalise both back to a plain string.
- * - Tauri command names are snake_case; the Go methods are PascalCase with
+ * - Go errors reject with a Wails RuntimeError whose `.cause` carries the raw
+ *   Go error value and `.message` a formatted description — we normalise both
+ *   back to a plain string, which bindings.ts wraps into
+ *   `{ status: 'error', error }`.
+ * - Frontend command names are snake_case; the Go methods are PascalCase with
  *   positional arguments. The map below fixes the argument order (mirrors
  *   the signatures in src/lib/bindings.ts).
  */
 
 import * as AppBindingsModule from '@wails-bindings'
-import { localizeWailsError } from '../error-i18n'
+import { localizeWailsError } from './error-i18n'
 
 type BindingFn = (...args: unknown[]) => Promise<unknown>
 
@@ -623,38 +622,4 @@ function normalizeError(raw: unknown): unknown {
     return localizeWailsError(raw)
   }
   return raw
-}
-
-/**
- * Stub for `@tauri-apps/api/core`'s Channel. The tauri-specta output imports
- * it (dead import); PTY data flows over Wails events instead (see
- * shims/tauri-pty.ts).
- */
-export class Channel<T = unknown> {
-  send(_message: T): void {
-    throw new Error('Channels are not supported in this Wails build')
-  }
-}
-
-/**
- * Stub for `@tauri-apps/api/core`'s Resource, imported (unused) by
- * `@tauri-apps/plugin-updater`. Auto-update is Tauri-only; the Wails build
- * checks for new versions through its own release feed in a later phase.
- */
-/**
- * Stub for `@tauri-apps/api/core`'s Resource, subclassed (but never
- * instantiated against the Go service) by `@tauri-apps/plugin-updater`.
- * Auto-update is Tauri-only; the Wails build checks for new versions through
- * its own release feed in a later phase.
- */
-export class Resource {
-  readonly rid: number
-
-  constructor(rid: number) {
-    this.rid = rid
-  }
-
-  async close(): Promise<void> {
-    // no-op
-  }
 }

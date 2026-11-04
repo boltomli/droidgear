@@ -1,6 +1,5 @@
 import type { AppCommand } from './types'
-import { getCurrentWindow } from '@tauri-apps/api/window'
-import { exit } from '@tauri-apps/plugin-process'
+import { getCurrentWindow } from '@/lib/shell/window'
 import i18n from '@/i18n/config'
 import { useModelStore } from '@/store/model-store'
 import { useUIStore } from '@/store/ui-store'
@@ -27,14 +26,13 @@ export const windowCommands: AppCommand[] = [
         await appWindow.close()
       } catch (error) {
         console.error('[window-close] close() failed:', error)
-        // Fallback: try destroy()
+        // Fallback: try destroy() — there is no process-exit API in the
+        // webview, so a failure here is only logged.
         try {
           const appWindow = getCurrentWindow()
           await appWindow.destroy()
         } catch (destroyError) {
           console.error('[window-close] destroy() also failed:', destroyError)
-          // Last resort: exit the process
-          await exit(0)
         }
       }
     },

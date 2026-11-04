@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
-import { commands, type AppPreferences } from '@/lib/tauri-bindings'
+import { commands, type AppPreferences } from '@/lib/app-bindings'
 
 // Query keys for preferences
 export const preferencesQueryKeys = {

@@ -5,9 +5,9 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DroidGear</title>
-    <!-- Keep styles external. An inline <style> here makes Tauri add a CSP
-         nonce to style-src, which disables 'unsafe-inline' and blocks the
-         <style> elements xterm.js injects at runtime (terminal font breaks). -->
+    <!-- Keep styles external: xterm.js injects <style> elements at runtime,
+         and any inline <style> in this document would make the CSP of some
+         webviews block them (terminal font breaks). -->
     <link rel="stylesheet" href="/loader.css" />
   </head>
 

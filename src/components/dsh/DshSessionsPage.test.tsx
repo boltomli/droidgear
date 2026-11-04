@@ -14,11 +14,11 @@ const { commandMocks, showContextMenuMock, listenMock } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@tauri-apps/api/event', () => ({
+vi.mock('@/lib/shell/events', () => ({
   listen: listenMock,
 }))
 
-vi.mock('@/lib/context-menu', () => ({
+vi.mock('@/lib/shell/context-menu', () => ({
   showContextMenu: showContextMenuMock,
 }))
 

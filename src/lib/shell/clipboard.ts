@@ -1,8 +1,8 @@
 /**
- * Wails bridge for `@tauri-apps/plugin-clipboard-manager`.
+ * Clipboard access (Wails runtime clipboard).
  *
- * Backed by the Wails runtime clipboard (used by the terminal for
- * copy-on-select, Ctrl+Shift+C/V and snippet insertion).
+ * Used by the terminal for copy-on-select, Ctrl+Shift+C/V and snippet
+ * insertion.
  */
 
 import { Clipboard } from '@wailsio/runtime'
