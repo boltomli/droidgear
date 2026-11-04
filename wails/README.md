@@ -178,11 +178,17 @@ tools (`codex`, `pi`, `hermes`, …) follow once their domains move into
 
 **Release builds** ship `dg` next to the GUI single-file executable:
 `release-single.yml` produces `dg-windows-x64.exe` / `dg-macos-arm64` /
-`dg-linux-x64` alongside the three `droidgear-wails-*` assets, and the
-Windows `publish-wails` job in `release.yml` uploads `dg_windows_x64.exe`
-next to the exe and the NSIS installer. Both build it with `CGO_ENABLED=0`
-and **without** `-H windowsgui` — the CLI is a console binary that needs
-none of the GUI's WebView2/GTK/WebKit runtime.
+`dg-linux-x64` alongside the three `droidgear-wails-*` assets, built with
+`CGO_ENABLED=0` and **without** `-H windowsgui` — the CLI is a console
+binary that needs none of the GUI's WebView2/GTK/WebKit runtime.
+
+Two release workflows exist on purpose: `release-single.yml`
+(`wails-v*` tags) is the Wails-only line — GUI single file + `dg`, nothing
+else — while the legacy `release.yml` (`v*` tags) still drives the Tauri
+installers, the updater manifest and the Windows NSIS package. The tag
+prefixes are disjoint so a `wails-v…` push can never fire the old pipeline;
+that also keeps CLI changes out of `release.yml` until the Tauri shell is
+removed (design doc §0).
 
 ## Building
 

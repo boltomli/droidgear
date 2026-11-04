@@ -417,20 +417,20 @@ CLI 契约测试的写法约定：直接调 `run(args, &stdout, &stderr)`（它�
 
 ## 10. 落地状态（本分支当前进度）
 
-| 模块                                                                           | 状态 |
-| ------------------------------------------------------------------------------ | ---- |
-| `internal/version`（GUI/CLI 共用 ldflags 目标）                                | ✅   |
-| `scripts/check-go-layering.mjs` + `wails.yml` 两个 CI job                      | ✅   |
-| `internal/service/paths`（九个路径键 + WSL）                                   | ✅   |
-| `internal/service/channels`（列表/凭据/token/模型/类型探测 + `ErrUpstream`）   | ✅   |
-| `internal/service/export`（模板 CRUD + 运行引擎 + dry-run 预览与打码）         | ✅   |
-| `cmd/dg`：`version` `doctor` `path` `channels` `export`                        | ✅   |
-| 发布构建：`release-single.yml` 三端 + `release.yml` Windows 都产出 `dg` 单文件 | ✅   |
-| 测试：`service/*` 15 条 + `cmd/dg` 13 条契约测试（合计 253 条）                | ✅   |
-| `internal/service/{codex,pi,hermes,omp,opencode,openclaw,…}`（B2/B3）          | ⏳   |
-| `dg` 的 codex/pi/… 子命令（期 2 剩余）                                         | ⏳   |
-| `--force` + `beforeHash` 冲突检测（exit 3）                                    | ⏳   |
-| TUI（§6 决策点）/ 删除 `src-tauri`                                             | ⏳   |
+| 模块                                                                         | 状态 |
+| ---------------------------------------------------------------------------- | ---- |
+| `internal/version`（GUI/CLI 共用 ldflags 目标）                              | ✅   |
+| `scripts/check-go-layering.mjs` + `wails.yml` 两个 CI job                    | ✅   |
+| `internal/service/paths`（九个路径键 + WSL）                                 | ✅   |
+| `internal/service/channels`（列表/凭据/token/模型/类型探测 + `ErrUpstream`） | ✅   |
+| `internal/service/export`（模板 CRUD + 运行引擎 + dry-run 预览与打码）       | ✅   |
+| `cmd/dg`：`version` `doctor` `path` `channels` `export`                      | ✅   |
+| 发布构建：`release-single.yml` 三端 GUI+CLI 各一个单文件                     | ✅   |
+| 测试：`service/*` 15 条 + `cmd/dg` 13 条契约测试（合计 253 条）              | ✅   |
+| `internal/service/{codex,pi,hermes,omp,opencode,openclaw,…}`（B2/B3）        | ⏳   |
+| `dg` 的 codex/pi/… 子命令（期 2 剩余）                                       | ⏳   |
+| `--force` + `beforeHash` 冲突检测（exit 3）                                  | ⏳   |
+| TUI（§6 决策点）/ 删除 `src-tauri`                                           | ⏳   |
 
 下一批建议顺序：B2 的 `codex`（profile CRUD + apply，headless 需求最高）→
 `dg codex profiles …` → 再回来补冲突检测（那时 `--force` 才有真实语义）。
