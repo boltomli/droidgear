@@ -20,7 +20,12 @@ export function containsRegexSpecialChars(value: string): boolean {
 }
 
 export type ReasoningEffort =
-  'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+  | 'none'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'xhigh'
+  | 'max'
 
 function normalizeModelId(modelId: string): string {
   return modelId.toLowerCase().replace(/[-_]/g, '.')

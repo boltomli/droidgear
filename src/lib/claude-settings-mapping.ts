@@ -25,7 +25,11 @@ export const CLAUDE_AUTO_COMPACT_WINDOW_MIN = 100_000
 export const CLAUDE_AUTO_COMPACT_WINDOW_MAX = 1_000_000
 
 export type ClaudeReasoningEffort =
-  'inherit' | 'low' | 'medium' | 'high' | 'max'
+  | 'inherit'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'max'
 
 export type ClaudeThinkingMode = 'inherit' | 'on' | 'off'
 

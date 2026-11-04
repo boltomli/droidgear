@@ -36,7 +36,7 @@
     "tauri:build": "npm run tauri build",
     "tauri:check": "npm run typecheck && npm run tauri -- build --no-bundle",
     "test:all": "npm run test:run && npm run rust:test",
-    "check:all": "npm run typecheck && npm run biome:lint && npm run ast:lint && npm run format:check && npm run rust:fmt:check && npm run rust:clippy && npm run test:run && npm run rust:test",
+    "check:all": "npm run typecheck && npm run biome:lint && npm run ast:lint && npm run format:check && npm run rust:fmt:check && npm run rust:clippy && npm run test:run && npm run rust:test && npm run build",
     "fix:all": "npm run biome:fix && npm run format && npm run ast:fix && npm run rust:fmt && npm run rust:clippy:fix",
     "ts:version": "tsc --version",
     "build:analyze": "vite build && echo '\\n📊 Bundle analysis complete. Check dist/ folder sizes or use a tool like webpack-bundle-analyzer on the dist folder.'",
@@ -140,9 +140,10 @@
     "uuid": "^14.0.0",
     "@babel/plugin-proposal-private-methods": "npm:@babel/plugin-transform-private-methods@^7.25.0",
     "js-yaml": "^4.3.2",
+    "minimatch": "^11.0.1",
     "smol-toml": "^1.7.1"
   },
   "allowScripts": {
-    "@ast-grep/cli@0.51.0": true
+    "@ast-grep/cli@0.51.1": true
   }
 }

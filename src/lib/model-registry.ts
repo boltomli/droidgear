@@ -2,10 +2,15 @@ import registryData from './model-registry-data.json'
 import { type ReasoningEffort } from './utils'
 
 export type ModelPlatform =
-  'openai-completions' | 'openai-responses' | 'anthropic-messages' | 'gemini'
+  | 'openai-completions'
+  | 'openai-responses'
+  | 'anthropic-messages'
+  | 'gemini'
 
 export type EffortProvider =
-  'anthropic' | 'openai' | 'generic-chat-completion-api'
+  | 'anthropic'
+  | 'openai'
+  | 'generic-chat-completion-api'
 
 /** Named encoding profiles expanded at runtime into extraArgs fragments. */
 export type EffortEncodingProfile =
@@ -46,7 +51,13 @@ export interface ModelReasoningConfig {
 }
 
 export type PiThinkingLevel =
-  'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+  | 'off'
+  | 'minimal'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'xhigh'
+  | 'max'
 
 export type PiThinkingLevelMap = Partial<Record<PiThinkingLevel, string | null>>
 
