@@ -16,6 +16,7 @@ import (
 	"droidgear-wails/internal/service/export"
 	"droidgear-wails/internal/service/hermes"
 	"droidgear-wails/internal/service/paths"
+	"droidgear-wails/internal/service/pi"
 	"droidgear-wails/internal/version"
 )
 
@@ -912,6 +913,257 @@ func (c *cli) hermesStatus(args []string) error {
 		hermes.HermesConfigStatus
 		ActiveProfileID *string `json:"activeProfileId"`
 	}{HermesConfigStatus: status, ActiveProfileID: active}
+	return emit(c.opts, c.stdout, report, func(w io.Writer) error {
+		fmt.Fprintf(w, "config: %s (%s)\n", status.ConfigPath, presentOr(status.ConfigExists))
+		if active == nil {
+			fmt.Fprintln(w, "active: (none)")
+		} else {
+			fmt.Fprintf(w, "active: %s\n", *active)
+		}
+		return nil
+	})
+}
+
+// ---------------------------------------------------------------------------
+// dg pi
+// ---------------------------------------------------------------------------
+
+func (c *cli) pi(args []string) error {
+	if len(args) == 0 {
+		return c.usage("pi needs a subcommand: profiles | status")
+	}
+	switch args[0] {
+	case "profiles":
+		return c.piProfiles(args[1:])
+	case "status":
+		return c.piStatus(args[1:])
+	default:
+		return c.usage("unknown pi subcommand %q (want profiles | status)", args[0])
+	}
+}
+
+func (c *cli) piProfiles(args []string) error {
+	if len(args) == 0 {
+		return c.usage("pi profiles needs a subcommand: list | show | active | apply | save | delete")
+	}
+	switch args[0] {
+	case "list":
+		return c.piProfilesList(args[1:])
+	case "show":
+		return c.piProfilesShow(args[1:])
+	case "active":
+		return c.piProfilesActive(args[1:])
+	case "apply":
+		return c.piProfilesApply(args[1:])
+	case "save":
+		return c.piProfilesSave(args[1:])
+	case "delete":
+		return c.piProfilesDelete(args[1:])
+	default:
+		return c.usage("unknown pi profiles subcommand %q (want list | show | active | apply | save | delete)", args[0])
+	}
+}
+
+func (c *cli) requirePiProfile(id string) error {
+	profiles, err := pi.ListProfiles()
+	if err != nil {
+		return err
+	}
+	for _, profile := range profiles {
+		if profile.ID == id {
+			return nil
+		}
+	}
+	return fmt.Errorf("%w: pi profile %q", errNotFound, id)
+}
+
+// redactPiProfile masks the two secrets a pi provider carries: the API key
+// and the OAuth token blob (§5.3).
+func redactPiProfile(profile pi.PiProfile) pi.PiProfile {
+	if profile.Providers == nil {
+		return profile
+	}
+	providers := make(map[string]pi.PiProviderConfig, len(profile.Providers))
+	for id, provider := range profile.Providers {
+		if provider.APIKey != nil {
+			masked := core.RedactSecret(*provider.APIKey)
+			provider.APIKey = &masked
+		}
+		if provider.OAuth != nil {
+			masked := core.RedactSecret(*provider.OAuth)
+			provider.OAuth = &masked
+		}
+		providers[id] = provider
+	}
+	profile.Providers = providers
+	return profile
+}
+
+func (c *cli) piProfilesList(args []string) error {
+	if len(args) != 0 {
+		return c.usage("pi profiles list takes no arguments")
+	}
+	profiles, err := pi.ListProfiles()
+	if err != nil {
+		return err
+	}
+	if !c.opts.reveal {
+		for i := range profiles {
+			profiles[i] = redactPiProfile(profiles[i])
+		}
+	}
+	return emit(c.opts, c.stdout, profiles, func(w io.Writer) error {
+		if len(profiles) == 0 {
+			_, err := fmt.Fprintln(w, "no pi profiles")
+			return err
+		}
+		for _, profile := range profiles {
+			fmt.Fprintf(w, "%-24s %-20s %d provider(s)\n", profile.ID, profile.Name, len(profile.Providers))
+		}
+		return nil
+	})
+}
+
+func (c *cli) piProfilesShow(args []string) error {
+	if len(args) != 1 {
+		return c.usage("pi profiles show needs <id>")
+	}
+	if err := c.requirePiProfile(args[0]); err != nil {
+		return err
+	}
+	profile, err := pi.GetProfile(args[0])
+	if err != nil {
+		return err
+	}
+	if !c.opts.reveal {
+		profile = redactPiProfile(profile)
+	}
+	return emit(c.opts, c.stdout, profile, func(w io.Writer) error {
+		fmt.Fprintf(w, "id:        %s\n", profile.ID)
+		fmt.Fprintf(w, "name:      %s\n", profile.Name)
+		for id, provider := range profile.Providers {
+			fmt.Fprintf(w, "provider:  %s\n", id)
+			if provider.BaseURL != nil {
+				fmt.Fprintf(w, "  baseUrl: %s\n", *provider.BaseURL)
+			}
+			if provider.APIKey != nil {
+				fmt.Fprintf(w, "  apiKey:  %s\n", *provider.APIKey)
+			}
+		}
+		return nil
+	})
+}
+
+func (c *cli) piProfilesActive(args []string) error {
+	if len(args) != 0 {
+		return c.usage("pi profiles active takes no arguments")
+	}
+	active, err := pi.GetActiveProfileID()
+	if err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, active, func(w io.Writer) error {
+		if active == nil {
+			_, err := fmt.Fprintln(w, "(none)")
+			return err
+		}
+		_, err := fmt.Fprintln(w, *active)
+		return err
+	})
+}
+
+func (c *cli) piProfilesApply(args []string) error {
+	if len(args) != 1 {
+		return c.usage("pi profiles apply needs <id>")
+	}
+	id := args[0]
+	if err := c.requireNoDryRun("pi profiles apply"); err != nil {
+		return err
+	}
+	if err := c.requirePiProfile(id); err != nil {
+		return err
+	}
+	if err := pi.ApplyProfile(id); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "id": id}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "applied pi profile %s\n", id)
+		return err
+	})
+}
+
+func (c *cli) piProfilesSave(args []string) error {
+	fs := c.newFlagSet("pi profiles save")
+	file := fs.String("file", "", "path to a profile document (JSON, same shape as the GUI)")
+	if err := fs.Parse(args); err != nil {
+		return c.usage("%v", err)
+	}
+	if fs.NArg() != 0 {
+		return c.usage("pi profiles save takes no positional arguments")
+	}
+	if strings.TrimSpace(*file) == "" {
+		return c.usage("pi profiles save needs --file <json>")
+	}
+	if err := c.requireNoDryRun("pi profiles save"); err != nil {
+		return err
+	}
+
+	raw, err := os.ReadFile(filepath.Clean(*file)) // #nosec G304 -- user-supplied profile file
+	if err != nil {
+		return fmt.Errorf("Failed to read profile file: %w", err)
+	}
+	var profile pi.PiProfile
+	if err := json.Unmarshal(raw, &profile); err != nil {
+		return c.usage("invalid profile JSON: %v", err)
+	}
+	if strings.TrimSpace(profile.Name) == "" {
+		return c.usage("profile needs a non-empty \"name\"")
+	}
+	if err := pi.SaveProfile(profile); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "name": profile.Name}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "saved pi profile %q\n", profile.Name)
+		return err
+	})
+}
+
+func (c *cli) piProfilesDelete(args []string) error {
+	if len(args) != 1 {
+		return c.usage("pi profiles delete needs <id>")
+	}
+	id := args[0]
+	if err := c.requireNoDryRun("pi profiles delete"); err != nil {
+		return err
+	}
+	if err := c.requirePiProfile(id); err != nil {
+		return err
+	}
+	if err := pi.DeleteProfile(id); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "id": id}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "deleted pi profile %s\n", id)
+		return err
+	})
+}
+
+func (c *cli) piStatus(args []string) error {
+	if len(args) != 0 {
+		return c.usage("pi status takes no arguments")
+	}
+	status, err := pi.GetConfigStatus()
+	if err != nil {
+		return err
+	}
+	active, err := pi.GetActiveProfileID()
+	if err != nil {
+		return err
+	}
+	report := struct {
+		pi.PiConfigStatus
+		ActiveProfileID *string `json:"activeProfileId"`
+	}{PiConfigStatus: status, ActiveProfileID: active}
 	return emit(c.opts, c.stdout, report, func(w io.Writer) error {
 		fmt.Fprintf(w, "config: %s (%s)\n", status.ConfigPath, presentOr(status.ConfigExists))
 		if active == nil {

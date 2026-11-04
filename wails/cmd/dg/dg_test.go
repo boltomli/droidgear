@@ -671,3 +671,99 @@ func TestHermesProfilesLifecycle(t *testing.T) {
 		t.Errorf("show after delete: exit=%d stderr=%s", code, errOut)
 	}
 }
+
+func TestPiProfilesLifecycle(t *testing.T) {
+	home := sandbox(t)
+
+	code, out, errOut := runCLI(t, "--json", "pi", "profiles", "list")
+	if code != 0 {
+		t.Fatalf("list exit = %d, stderr = %s", code, errOut)
+	}
+	if got := decodeList(t, out); len(got) != 0 {
+		t.Errorf("expected no profiles, got %v", got)
+	}
+
+	profilePath := writeFile(t, home, "pi-profile.json", `{
+	  "id": "p1",
+	  "name": "Pi One",
+	  "providers": {
+	    "deepseek": {
+	      "baseUrl": "https://api.deepseek.com/v1",
+	      "api": "openai-completions",
+	      "apiKey": "sk-pi-1234",
+	      "oauth": "oauth-blob-5678",
+	      "models": [{"id": "deepseek-chat"}]
+	    }
+	  }
+	}`)
+	code, out, errOut = runCLI(t, "--json", "pi", "profiles", "save", "--file", profilePath)
+	if code != 0 {
+		t.Fatalf("save exit = %d, stderr = %s", code, errOut)
+	}
+	if receipt := decode(t, out); receipt["applied"] != true || receipt["name"] != "Pi One" {
+		t.Errorf("save receipt = %v", receipt)
+	}
+
+	// Both provider secrets are redacted by default.
+	code, out, errOut = runCLI(t, "--json", "pi", "profiles", "list")
+	if code != 0 {
+		t.Fatalf("list exit = %d, stderr = %s", code, errOut)
+	}
+	list := decodeList(t, out)
+	if len(list) != 1 {
+		t.Fatalf("profiles = %v", list)
+	}
+	providers, _ := list[0].(map[string]any)["providers"].(map[string]any)
+	deepseek, _ := providers["deepseek"].(map[string]any)
+	if deepseek["apiKey"] != "****1234" || deepseek["oauth"] != "****5678" {
+		t.Errorf("provider secrets = apiKey %v, oauth %v", deepseek["apiKey"], deepseek["oauth"])
+	}
+
+	code, out, errOut = runCLI(t, "--json", "--reveal", "pi", "profiles", "list")
+	if code != 0 {
+		t.Fatalf("reveal exit = %d, stderr = %s", code, errOut)
+	}
+	providers, _ = decodeList(t, out)[0].(map[string]any)["providers"].(map[string]any)
+	deepseek, _ = providers["deepseek"].(map[string]any)
+	if deepseek["apiKey"] != "sk-pi-1234" || deepseek["oauth"] != "oauth-blob-5678" {
+		t.Errorf("--reveal secrets = apiKey %v, oauth %v", deepseek["apiKey"], deepseek["oauth"])
+	}
+
+	code, _, errOut = runCLI(t, "--json", "pi", "profiles", "show", "ghost")
+	if code != exitRuntime || decode(t, errOut)["error"].(map[string]any)["code"] != "not_found" {
+		t.Errorf("show ghost: exit=%d stderr=%s", code, errOut)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "pi", "profiles", "apply", "p1")
+	if code != 0 {
+		t.Fatalf("apply exit = %d, stderr = %s", code, errOut)
+	}
+	if applied := decode(t, out)["applied"]; applied != true {
+		t.Errorf("apply receipt = %s", out)
+	}
+	configPath := filepath.Join(home, ".pi", "agent", "models.json")
+	raw, err := os.ReadFile(configPath) // #nosec G304 -- temp fixture
+	if err != nil {
+		t.Fatalf("read live config: %v", err)
+	}
+	if !strings.Contains(string(raw), "deepseek-chat") {
+		t.Errorf("live config missing the model: %s", raw)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "pi", "profiles", "active")
+	if code != 0 {
+		t.Fatalf("active exit = %d, stderr = %s", code, errOut)
+	}
+	if active := strings.TrimSpace(out); active != `"p1"` {
+		t.Errorf("active = %s, want \"p1\"", active)
+	}
+
+	code, _, errOut = runCLI(t, "--json", "pi", "profiles", "delete", "p1")
+	if code != 0 {
+		t.Fatalf("delete exit = %d, stderr = %s", code, errOut)
+	}
+	code, _, errOut = runCLI(t, "--json", "pi", "profiles", "show", "p1")
+	if code != exitRuntime || decode(t, errOut)["error"].(map[string]any)["code"] != "not_found" {
+		t.Errorf("show after delete: exit=%d stderr=%s", code, errOut)
+	}
+}

@@ -102,6 +102,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		runErr = c.codex(cmdArgs)
 	case "hermes":
 		runErr = c.hermes(cmdArgs)
+	case "pi":
+		runErr = c.pi(cmdArgs)
 	case "export":
 		runErr = c.export(cmdArgs)
 	default:
@@ -297,6 +299,8 @@ Commands:
   codex status                  report live config/auth paths and the active profile
   hermes profiles list|show|active|apply|save|delete  manage hermes profiles
   hermes status                 report the live config path and active profile
+  pi profiles list|show|active|apply|save|delete  manage pi profiles
+  pi status                     report the live config path and active profile
   export list                   list export templates
   export save --file <json>     create or replace a template from a JSON document
   export delete <name>          delete a template
