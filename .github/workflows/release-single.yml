@@ -11,14 +11,12 @@ name: 'Release single binaries'
 #     **default branch** (main), so on a feature branch use the tag trigger.
 #
 # Produces one self-contained executable per platform and nothing else. It
-# deliberately does NOT touch the tag-triggered pipeline in release.yml (Tauri
-# installers, portable updater assets, latest.json, droidgear-tui packages) —
-# it never uploads installers, signatures or manifests.
+# deliberately does NOT touch the tag-triggered pipeline in release.yml (the
+# Windows GUI installer) — it never uploads installers, signatures or
+# manifests.
 #
 # Why the Wails shell: `go:embed all:frontend/dist` bakes the Vite bundle into
-# the Go binary, so `go build` alone yields the whole app as one file. The
-# Tauri shell cannot do that on macOS (.app/.dmg only), so it stays in
-# release.yml.
+# the Go binary, so `go build` alone yields the whole app as one file.
 #
 # Runtime deps are still the platform webview — a single file is not a fully
 # static app: Windows needs the WebView2 runtime (preinstalled on Win10+),
@@ -79,8 +77,8 @@ jobs:
 
           tag="${RELEASE_TAG//[[:space:]]/}"
           # `wails-v…` is required, not just cosmetic: release.yml triggers on
-          # `v*` tags, so a plain `v1.3.9-…` tag would also fire the full Tauri
-          # installer/updater pipeline.
+          # `v*` tags, so a plain `v1.3.9-…` tag would also fire the
+          # tag-triggered installer pipeline there.
           if [[ ! "$tag" =~ ^wails-v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             echo "::error::tag must look like wails-v1.2.3 or wails-v1.2.3-1 (got '$tag')"
             exit 1
@@ -230,7 +228,7 @@ jobs:
 
       # Creates wails/frontend/dist for `//go:embed all:frontend/dist`.
       - name: Build frontend bundle
-        run: npx vite build --config wails/vite.config.ts --mode production
+        run: npx vite build
 
       - name: Sync version metadata
         shell: bash

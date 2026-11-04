@@ -1,6 +1,6 @@
 name: wails
 
-# Guards the Wails port against the drift classes found in
+# Guards the single-shell frontend against the drift classes found in
 # docs/developer/wails-port-guidelines.zh.md (§8.1): command-surface
 # divergence, version-source drift and shared registry data drift.
 # Also guards docs/developer/wails-round2-layout-and-gaps.zh.md §5.2:
@@ -17,6 +17,10 @@ on:
       - 'src/**'
       - 'scripts/check-command-surface.mjs'
       - 'scripts/check-go-layering.mjs'
+      - 'scripts/check-no-tauri.mjs'
+      - 'vite.config.ts'
+      - 'vitest.config.ts'
+      - 'package.json'
       - 'locales/**'
       - '.github/workflows/wails.yml'
   workflow_dispatch:
@@ -41,6 +45,16 @@ jobs:
       - name: Dependency drift
         run: npm ls --depth=0
 
+      # Bindings are gitignored and imported through the `@wails-bindings`
+      # alias by src/lib/shell/* — generate them before any step that
+      # resolves frontend modules (typecheck, tests, build).
+      - name: Install wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+
+      - name: Generate bindings
+        working-directory: wails
+        run: wails3 generate bindings -clean=true -ts -i
+
       - name: TypeScript
         run: npm run typecheck
 
@@ -50,23 +64,21 @@ jobs:
       - name: Prettier
         run: npm run format:check
 
+      # Tauri is gone (docs/developer/tauri-removal-design.zh.md) — this gate
+      # keeps it from creeping back into src/, the build config or CI.
+      - name: No Tauri references
+        run: npm run check:no-tauri
+
       - name: Frontend tests
         run: npm run test:run
 
-      - name: Install wails3
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
-
-      - name: Generate bindings
-        working-directory: wails
-        run: wails3 generate bindings -clean=true -ts -i
-
-      # Creates frontend/dist for go:embed — must precede the Go steps.
+      # Creates wails/frontend/dist for go:embed — must precede the Go steps.
       - name: Build Wails frontend
-        run: npx vite build --config wails/vite.config.ts --mode production
+        run: npx vite build
 
       # Cheapest regression sentinel for the Tailwind v4/Vite-root trap
-      # (round2 §2): if content detection drifts back to wails/ only, the
-      # CSS collapses to ~45 kB and every layout utility disappears.
+      # (round2 §2): if content detection drifts, the CSS collapses to
+      # ~45 kB and every layout utility disappears.
       - name: Tailwind utilities guard
         shell: bash
         run: |

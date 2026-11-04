@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global Buffer, console, process */
 /**
- * Generate `src-tauri/crates/droidgear-core/res/dsh-config-schema.json` from a
+ * Generate `wails/internal/app/schema/dsh-config-schema.json` from a
  * DeepSeek Harness (DSH) source checkout.
  *
  * Data sources (all read-only):
@@ -21,7 +21,7 @@
  * The JSON contract (schemaVersion/bundles/entries) is defined in
  * `/tmp/dsh-config-contract.md` (worktree copy:
  * `docs/developer/dsh-config-surfaces.zh.md`) and consumed by
- * `src-tauri/crates/droidgear-core/src/dsh_config.rs`.
+ * `wails/internal/app/dsh_config.go`.
  *
  * Regenerate (from the DroidGear repo root):
  *
@@ -75,7 +75,7 @@ const DEFAULT_DSH_REPO = process.env.DSH_SOURCE_DIR
   : resolve(REPO_ROOT, '..', 'deepseek-harness')
 const DEFAULT_OUT_PATH = join(
   REPO_ROOT,
-  'src-tauri/crates/droidgear-core/res/dsh-config-schema.json'
+  'wails/internal/app/schema/dsh-config-schema.json'
 )
 
 /** Bundle packages baked into the schema, in composition order. */
@@ -417,13 +417,13 @@ function parseArgs(argv) {
 
 const HELP = `Usage: node scripts/gen-dsh-config-schema.mjs [options]
 
-Generate res/dsh-config-schema.json from a DeepSeek Harness source checkout.
+Generate the DSH config schema JSON from a DeepSeek Harness source checkout.
 
 Options:
   --dsh <path>      DSH source checkout (default: $DSH_SOURCE_DIR or a
                     deepseek-harness checkout next to this repository)
   --version <ver>   DSH version label (default: <dsh>/package.json version)
-  --out <path>      Output path (default: src-tauri/crates/droidgear-core/res/dsh-config-schema.json)
+  --out <path>      Output path (default: wails/internal/app/schema/dsh-config-schema.json)
   --check           Validate the committed JSON and verify it is up to date (no write)
   --stats           Print extraction statistics to stderr (still writes unless --check)
   -h, --help        Show this help
