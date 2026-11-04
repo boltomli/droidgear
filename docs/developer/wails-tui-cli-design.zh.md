@@ -180,9 +180,10 @@ func (a *App) ApplyCodexProfile(id string) (CodexConfigStatus, error) {
 | B3  | `claude`、`copilot`、`droid`、`dsh`、`factory`、`mcp`、`legacy_config` | 写面复杂（settings/凭据/DB），需要 B1–B2 的 ChangeSet 收敛        |
 | B4  | `sessions`、`specs`（只读）                                            | 纯读 + watcher；watcher 留在 GUI 适配层                           |
 
-状态（2026-11）：**B1 ✅**；**B2 进行中 —— `codex` ✅**（`service/codex` + `dg codex …`），
-pi/hermes/omp/opencode/openclaw 待做；B3/B4 未开始。codex 的边界划法（为什么是
-`codex.go` + `codex_auth_profiles.go` 整体下沉、而 launch 的偏好项留在 app）见 §10 的迁移备注。
+状态（2026-11）：**B1 ✅**；**B2 ✅（`codex`、`hermes`、`pi`、`omp` 四个域已下沉并接上 CLI；
+`openclaw` / `opencode` 暂缓）**；B3/B4 未开始。codex 的边界划法（为什么是
+`codex.go` + `codex_auth_profiles.go` 整体下沉、而 launch 的偏好项留在 app）见 §10 的迁移备注，
+hermes/pi/omp 三批的共同做法也一并记在那里。
 
 ### 3.5 期 1 验收
 
@@ -215,7 +216,8 @@ dg channels list|show <id>|tokens <id>        # T1/T2 ✅（tokens 默认打码�
 dg export list|save --file <json>|delete <name>|run <name>  # T1/T2 ✅（run 支持 --dry-run）
 dg codex profiles list|show <id>|active|apply <id>|save --file <json>|delete <id>  # T1/T2 ✅
 dg codex status                               # T2 ✅（config/auth 路径 + active profile）
-dg pi|hermes|omp|opencode|openclaw|claude|copilot ...  # 同上形态
+dg pi|hermes|omp profiles ...                   # T1/T2 ✅（与 codex 同形态；omp 另有 providers）
+dg opencode|openclaw|claude|copilot ...          # 同上形态（未做）
 dg droid models list|apply                    # T1    B3
 dg dsh providers list|apply [--profile desktop|web]     # T1    B3
 dg mcp list|toggle <id>|apply                 # T1/T2 B3
@@ -424,24 +426,24 @@ CLI 契约测试的写法约定：直接调 `run(args, &stdout, &stderr)`（它�
 
 ## 10. 落地状态（本分支当前进度）
 
-| 模块                                                                         | 状态 |
-| ---------------------------------------------------------------------------- | ---- |
-| `internal/version`（GUI/CLI 共用 ldflags 目标）                              | ✅   |
-| `scripts/check-go-layering.mjs` + `wails.yml` 两个 CI job                    | ✅   |
-| `internal/service/paths`（九个路径键 + WSL）                                 | ✅   |
-| `internal/service/channels`（列表/凭据/token/模型/类型探测 + `ErrUpstream`） | ✅   |
-| `internal/service/export`（模板 CRUD + 运行引擎 + dry-run 预览与打码）       | ✅   |
-| `cmd/dg`：`version` `doctor` `path` `channels` `codex` `export`              | ✅   |
-| `internal/service/codex`（profile + auth profile + 临时运行启动）            | ✅   |
-| 发布构建：`release-single.yml` 三端 GUI+CLI 各一个单文件                     | ✅   |
-| 测试：`service/*` 42 条 + `cmd/dg` 14 条契约测试（合计 254 条）              | ✅   |
-| `internal/service/{pi,hermes,omp,opencode,openclaw,…}`（B2 剩余 + B3）       | ⏳   |
-| `dg` 的 pi/hermes/… 子命令（期 2 剩余）                                      | ⏳   |
-| `--force` + `beforeHash` 冲突检测（exit 3）                                  | ⏳   |
-| TUI（§6 决策点）/ 删除 `src-tauri`                                           | ⏳   |
+| 模块                                                                                | 状态 |
+| ----------------------------------------------------------------------------------- | ---- |
+| `internal/version`（GUI/CLI 共用 ldflags 目标）                                     | ✅   |
+| `scripts/check-go-layering.mjs` + `wails.yml` 两个 CI job                           | ✅   |
+| `internal/service/paths`（九个路径键 + WSL）                                        | ✅   |
+| `internal/service/channels`（列表/凭据/token/模型/类型探测 + `ErrUpstream`）        | ✅   |
+| `internal/service/export`（模板 CRUD + 运行引擎 + dry-run 预览与打码）              | ✅   |
+| `cmd/dg`：`version` `doctor` `path` `channels` `codex` `hermes` `pi` `omp` `export` | ✅   |
+| `internal/service/{codex,hermes,pi,omp}`（B2 四个域）                               | ✅   |
+| 发布构建：`release-single.yml` 三端 GUI+CLI 各一个单文件                            | ✅   |
+| 测试：`service/*` 48 条 + `cmd/dg` 17 条契约测试（合计 257 条）                     | ✅   |
+| `internal/service/{opencode,openclaw,…}`（B2 暂缓）+ B3                             | ⏳   |
+| `dg` 的 opencode/openclaw/… 子命令（期 2 剩余）                                     | ⏳   |
+| `--force` + `beforeHash` 冲突检测（exit 3）                                         | ⏳   |
+| TUI（§6 决策点）/ 删除 `src-tauri`                                                  | ⏳   |
 
-下一批建议顺序：B2 的剩余工具（pi → hermes → opencode → openclaw → omp，
-按测试覆盖厚薄排序）→ 再回来补冲突检测（那时 `--force` 才有真实语义）。
+下一批：`openclaw` / `opencode`（B2 暂缓，等维护者安排）→ B3（claude/copilot/droid/dsh/
+factory/mcp）→ 再回来补冲突检测（那时 `--force` 才有真实语义）。
 
 ### codex 迁移备注（B2 第一批）
 
@@ -460,3 +462,26 @@ CLI 契约测试的写法约定：直接调 `run(args, &stdout, &stderr)`（它�
   所以 app 侧的 sessions 测试就地构造它需要的那份 profile。
 - **profile 自带 secrets**：顶层 `apiKey` 与每个 provider 的 `apiKey` 都是文档字段，
   因此 `dg codex profiles list/show` 默认两处都打码，`--reveal` 才出明文。
+
+### hermes / pi / omp 迁移备注（B2 第二~四批）
+
+- **向上依赖只有 `fileExists`**（hermes、pi），所以这两批都是「整个文件 + 测试」直接下沉；
+  omp 多两个，各自就地解决：
+  - `sqlOpen` → `db.go` 一并搬进 `service/omp`（只有 OMP 读 SQLite catalog，纯 Go driver
+    不必进 `core`，也就不会被所有消费者链接）；
+  - `probeModelEndpoint` / `probeResult` → `service/omp/probe.go`（唯一调用方就是 OMP 的
+    连通性测试）；留在 app 会让 service 反向依赖 GUI 层（R1）。
+- **App 方法几乎都是「厚」的**（只有 `list<Domain>Profiles` 是单行转发）：方法体整体变成
+  service 的包级函数（`GetProfile` / `SaveProfile` / `ApplyProfile` / `GetConfigStatus` / …），
+  app 只保留 10~14 个签名不变的转发，`check-command-surface` 因此全程为绿。
+- **跨包测试 helper 一律进 `testutil`**（`IsolatedHome`、`MustRead`），且 testutil **不 import
+  任何 domain** —— 否则 `testutil → domain` 加 `domain 测试 → testutil` 就是 import cycle；
+  各域自己的 fixture 因此留在各自的测试文件里。
+- **`dg` 的四个工具形态一致**：`profiles list|show|active|apply|save|delete` + `status`，
+  omp 额外有 `providers list|save --file <json>|delete <id>`。secrets 分布各不相同：codex 两层
+  `apiKey`、hermes 每个 model 一个、pi 每个 provider `apiKey`+`oauth`、omp 只有 custom
+  provider 有（profile 本身无 secrets）。
+- **测试沙箱必须连 `PATH` 一起隔离**（`cmd/dg` 的 `sandbox()`）：`HermesHome` 的 Windows
+  优先级链会回退到默认 WSL 发行版，不隔离就会把 `dg hermes apply` 的输出写进真实 `\\wsl$`。
+- **`--dry-run` 仍未实现**：这四个工具的 apply/save/delete 都直接拒绝该 flag（exit 2），
+  等 plan/apply 拆分（§3.3 3a）落地后再放开。
