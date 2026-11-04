@@ -18,6 +18,9 @@
  *       (internal/app carries Windows-only syscall fields and
  *       //go:embed assets; importing it makes the CLI unbuildable
  *       outside Windows and drags in the whole Wails runtime)
+ *   R4  internal/tui must not depend on internal/app or wails v3
+ *       (the TUI is the parity consumer of internal/service — see
+ *       docs/developer/tui-parity.zh.md §6)
  *
  * Layers that do not exist yet are reported as skipped, so the gate can
  * land in CI before the extraction work starts. Requires a Go toolchain.
@@ -58,6 +61,21 @@ const RULES = [
       {
         prefix: 'github.com/wailsapp/wails',
         why: 'R3: CLI 必须在无 WebKit/Cocoa 的环境可构建',
+      },
+    ],
+  },
+  {
+    layer: './internal/tui/...',
+    dir: path.join(WAILS_DIR, 'internal', 'tui'),
+    name: 'internal/tui',
+    rules: [
+      {
+        prefix: 'droidgear-wails/internal/app',
+        why: 'R4: TUI 只能消费 service（对齐矩阵的前置条件）',
+      },
+      {
+        prefix: 'github.com/wailsapp/wails',
+        why: 'R4: TUI 必须在无 WebKit/Cocoa 的环境可构建',
       },
     ],
   },

@@ -145,6 +145,8 @@ func run(args []string, stdout, stderr io.Writer) (exit int) {
 		runErr = c.omp(cmdArgs)
 	case "export":
 		runErr = c.export(cmdArgs)
+	case "tui":
+		runErr = c.tui(cmdArgs)
 	default:
 		return fail(stderr, opts, exitUsage, "usage",
 			fmt.Sprintf("unknown command %q", cmd), "run `dg help`")
@@ -385,6 +387,7 @@ Commands:
   export save --file <json>     create or replace a template from a JSON document
   export delete <name>          delete a template
   export run <name>             run a template and write its output file
+  tui                           open the interactive terminal UI (needs a TTY)
 
 Global flags (accepted before or after the command):
   --json            print one JSON document on stdout (errors go to stderr)

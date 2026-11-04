@@ -127,10 +127,12 @@ jobs:
         with:
           go-version-file: wails/go.mod
 
-      - name: Build dg (CGO off, no WebKit installed)
+      # The TUI must build in the same headless environment: bubbletea is
+      # pure Go, so a green build here proves R4 (no WebKit, no internal/app).
+      - name: Build dg + TUI (CGO off, no WebKit installed)
         working-directory: wails
-        run: CGO_ENABLED=0 go build -o dg ./cmd/dg
+        run: CGO_ENABLED=0 go build -o dg ./cmd/dg && CGO_ENABLED=0 go build ./internal/tui
 
-      - name: Headless tests (CLI, service, core)
+      - name: Headless tests (CLI, service, core, TUI)
         working-directory: wails
-        run: go test ./cmd/... ./internal/service/... ./internal/core/...
+        run: go test ./cmd/... ./internal/service/... ./internal/core/... ./internal/tui/...
