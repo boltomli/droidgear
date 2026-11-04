@@ -1024,3 +1024,83 @@ func TestMcpSaveListToggleDelete(t *testing.T) {
 		t.Errorf("servers after delete = %v", servers)
 	}
 }
+
+func TestFactoryModelsFavoritesDefaultsRoundTrip(t *testing.T) {
+	home := sandbox(t)
+
+	code, out, errOut := runCLI(t, "--json", "factory", "models", "list")
+	if code != 0 {
+		t.Fatalf("factory models list exit = %d, stderr = %s", code, errOut)
+	}
+	if out == "" || strings.TrimSpace(out) == "[]" {
+		// Empty home: the human path says so, the JSON path prints [].
+	}
+	if strings.TrimSpace(out) != "[]" {
+		t.Errorf("empty models = %q, want []", out)
+	}
+
+	// Save a model, then read it back with the key redacted by default.
+	doc := writeFile(t, home, "models.json",
+		`[{"model":"acme/acme-1","displayName":"Acme One","baseUrl":"https://api.example.com","apiKey":"sk-live-secret-12345"}]`)
+	code, out, errOut = runCLI(t, "--json", "factory", "models", "save", "--file", doc)
+	if code != 0 {
+		t.Fatalf("factory models save exit = %d, stderr = %s", code, errOut)
+	}
+	if decode(t, out)["count"] != float64(1) {
+		t.Errorf("save receipt = %v", out)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "factory", "models", "list")
+	if code != 0 {
+		t.Fatalf("factory models list exit = %d, stderr = %s", code, errOut)
+	}
+	if strings.Contains(out, "sk-live-secret-12345") {
+		t.Errorf("models list leaked the api key: %s", out)
+	}
+	if !strings.Contains(out, "****") {
+		t.Errorf("models list shows no redaction: %s", out)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "--reveal", "factory", "models", "list")
+	if code != 0 {
+		t.Fatalf("factory models list --reveal exit = %d, stderr = %s", code, errOut)
+	}
+	if !strings.Contains(out, "sk-live-secret-12345") {
+		t.Errorf("--reveal hid the key: %s", out)
+	}
+
+	// Favorites round-trip.
+	favDoc := writeFile(t, home, "favorites.json", `["acme/acme-1"]`)
+	code, out, errOut = runCLI(t, "--json", "factory", "favorites", "save", "--file", favDoc)
+	if code != 0 {
+		t.Fatalf("factory favorites save exit = %d, stderr = %s", code, errOut)
+	}
+	code, out, errOut = runCLI(t, "--json", "factory", "favorites", "list")
+	if code != 0 {
+		t.Fatalf("factory favorites list exit = %d, stderr = %s", code, errOut)
+	}
+	if got := decodeList(t, out); len(got) != 1 || got[0] != "acme/acme-1" {
+		t.Errorf("favorites = %v", got)
+	}
+
+	// Session defaults round-trip, with a dry run that must not write.
+	defDoc := writeFile(t, home, "defaults.json", `{"model":"acme/acme-1"}`)
+	code, out, errOut = runCLI(t, "--json", "--dry-run", "factory", "defaults", "save", "--file", defDoc)
+	if code != 0 {
+		t.Fatalf("dry defaults save exit = %d, stderr = %s", code, errOut)
+	}
+	if decode(t, out)["applied"] != false {
+		t.Errorf("dry-run receipt = %v", out)
+	}
+	code, out, errOut = runCLI(t, "--json", "factory", "defaults", "save", "--file", defDoc)
+	if code != 0 {
+		t.Fatalf("defaults save exit = %d, stderr = %s", code, errOut)
+	}
+	code, out, errOut = runCLI(t, "--json", "factory", "defaults", "show")
+	if code != 0 {
+		t.Fatalf("defaults show exit = %d, stderr = %s", code, errOut)
+	}
+	if !strings.Contains(out, "acme/acme-1") {
+		t.Errorf("defaults show = %s", out)
+	}
+}

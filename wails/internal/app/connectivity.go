@@ -12,6 +12,7 @@ package app
 
 import (
 	"bytes"
+	"droidgear-wails/internal/service/factory"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -342,7 +343,7 @@ func connectivityTimestamp() string {
 }
 
 // connectivityProviderString mirrors connectivity::provider_to_string. The
-// Go CustomModel carries the kebab-case wire value ("anthropic", "openai",
+// Go factory.CustomModel carries the kebab-case wire value ("anthropic", "openai",
 // "generic-chat-completion-api"); diagnostics report the Rust short names.
 func connectivityProviderString(provider string) string {
 	switch provider {
@@ -414,7 +415,7 @@ func connectivityPromptOrDefault(prompt *string) string {
 
 // connectivityCustomModelDisplay mirrors the display-name fallback used for
 // ModelTestResult.model_name.
-func connectivityCustomModelDisplay(model CustomModel) string {
+func connectivityCustomModelDisplay(model factory.CustomModel) string {
 	if model.DisplayName != nil {
 		return *model.DisplayName
 	}
@@ -463,7 +464,7 @@ func (a *App) connectivityTestSpecificModel(modelID, mode string, prompt *string
 		return ModelTestResult{}, err
 	}
 	models, _ := a.LoadCustomModels()
-	var model *CustomModel
+	var model *factory.CustomModel
 	for index := range models {
 		if models[index].ID != nil && *models[index].ID == modelID {
 			model = &models[index]

@@ -10,6 +10,7 @@
 package app
 
 import (
+	"droidgear-wails/internal/service/factory"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -678,7 +679,7 @@ func (a *App) GetReasoningEffort() (*string, error) {
 	if raw, present := obj["sessionDefaultSettings"]; present {
 		data, err := json.Marshal(raw)
 		if err == nil {
-			var settings SessionDefaultSettings
+			var settings factory.SessionDefaultSettings
 			if err := json.Unmarshal(data, &settings); err == nil && settings.ReasoningEffort != nil {
 				return settings.ReasoningEffort, nil
 			}

@@ -48,6 +48,7 @@ func DefaultModules() []Module {
 		{"pi", "Pi", PiSource},
 		{"omp", "OMP", OmpSource},
 		{"mcp", "MCP", McpSource},
+		{"models", "Models", FactorySource},
 	}
 
 	modules := []Module{

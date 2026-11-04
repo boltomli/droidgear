@@ -147,6 +147,8 @@ func run(args []string, stdout, stderr io.Writer) (exit int) {
 		runErr = c.export(cmdArgs)
 	case "mcp":
 		runErr = c.mcp(cmdArgs)
+	case "factory":
+		runErr = c.factory(cmdArgs)
 	case "tui":
 		runErr = c.tui(cmdArgs)
 	default:
@@ -390,6 +392,7 @@ Commands:
   export delete <name>          delete a template
   export run <name>             run a template and write its output file
   mcp list|show <name>|toggle <name>|save --file <json>|delete <name>|preset
+  factory path|reset|models list|save --file <json>|favorites list|save|defaults show|save
   tui                           open the interactive terminal UI (needs a TTY)
 
 Global flags (accepted before or after the command):
