@@ -13,6 +13,7 @@ Go TUI」这条路线拆成可验收的步骤，并固定 CLI/TUI 的对外契�
   - [`../agents/wails-port.md`](../agents/wails-port.md) — 面向 agent 的 Wails 速查
   - [`tauri-removal-design.zh.md`](./tauri-removal-design.zh.md) — **去 Tauri 化**（前端去壳 + 删除 `src-tauri`）设计方案
   - [`tauri-removal-tasks.zh.md`](./tauri-removal-tasks.zh.md) — 上述方案的执行任务书
+  - [`tui-parity.zh.md`](./tui-parity.zh.md) — **TUI 对齐 GUI** 的设计（豁免清单、对齐矩阵、分期与 `dg` 退役）
 
 ---
 
@@ -358,10 +359,14 @@ exit 3 依赖 §5.2 的 `beforeHash` 冲突检测，随 `--force` 一起落地�
 
 ---
 
-## 6. 期 4：TUI —— 延后决策（记录理由与触发条件）
+## 6. 期 4：TUI —— 已启动（决策见 tui-parity.zh.md）
 
-**当前决策：CLI 稳定前不做 TUI，也不引入 `bubbletea`/`lipgloss`/`cobra`。**
-ADR-001 选择路线 B（Go 重写 TUI）仍然有效，但执行顺序调整为「CLI 先行、TUI 按需启动」。
+**决策已更新（2026-11，Q2-A + Q4）**：TUI 现在启动（bubbletea + lipgloss 已在
+`wails/go.mod` 放行），并且验收标准从「CLI 覆盖 T1」提高为
+**「TUI 与 GUI 完全对齐」**——对齐后 TUI 成为默认终端体验、`dg` 退役。
+豁免清单、对齐矩阵与分期见 [`tui-parity.zh.md`](./tui-parity.zh.md)。
+`internal/tui` 已落地（P0：Paths + codex/hermes/pi/omp 四个 profile 域只读），
+分层门禁 R4 已接入 `scripts/check-go-layering.mjs`。
 
 触发条件（任一满足再启动）：
 
@@ -449,7 +454,9 @@ CLI 契约测试的写法约定：直接调 `run(args, &stdout, &stderr)`（它�
 | `internal/service/{opencode,openclaw,…}`（B2 暂缓）+ B3                             | ⏳   |
 | `dg` 的 opencode/openclaw/… 子命令（期 2 剩余）                                     | ⏳   |
 | `--force` + `beforeHash` 冲突检测（exit 3）                                         | ⏳   |
-| TUI（§6 决策点）/ 删除 `src-tauri`                                                  | ⏳   |
+| 删除 `src-tauri`（tauri-removal 阶段 A/B）                                          | ✅   |
+| TUI P0（`internal/tui` + `dg tui`，Paths + 四个 profile 域只读）                    | ✅   |
+| TUI 对齐 GUI（矩阵见 tui-parity.zh.md）                                             | 🚧   |
 
 下一批：`openclaw` / `opencode`（B2 暂缓，等维护者安排）→ B3（claude/copilot/droid/dsh/
 factory/mcp）→ 再回来补冲突检测（那时 `--force` 才有真实语义）。
