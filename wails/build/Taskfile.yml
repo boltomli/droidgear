@@ -28,7 +28,7 @@ tasks:
       - task: install:frontend:deps
       - task: generate:bindings
     cmds:
-      - npx vite build --config wails/vite.config.ts{{if ne .DEV "true"}} --mode production{{else}} --mode development --minify false{{end}}
+      - npx vite build{{if ne .DEV "true"}} --mode production{{else}} --mode development --minify false{{end}}
 
   generate:bindings:
     summary: Generates the TS bindings consumed by the invoke shim
