@@ -75,7 +75,7 @@ describe('DshConfigPage integration', () => {
   })
 
   it('mounts the real tabs and loads the composed snapshot', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshConfigPage profile="desktop" />)
 
     await screen.findByText('Config status')
@@ -95,7 +95,7 @@ describe('DshConfigPage integration', () => {
   })
 
   it('keeps the store error banner visible across tab switches', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     commandMocks.readDshConfigSnapshot.mockResolvedValue({
       status: 'error',
       error: 'DSH_CONFIG_CONFLICT: stale',

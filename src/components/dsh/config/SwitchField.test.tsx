@@ -15,7 +15,7 @@ describe('SwitchField', () => {
   })
 
   it('calls onChange with the next state when toggled', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onChange = vi.fn()
     render(<SwitchField value={false} onChange={onChange} />)
 

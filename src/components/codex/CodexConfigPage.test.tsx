@@ -152,7 +152,7 @@ describe('CodexConfigPage', () => {
   })
 
   it('launches Codex temporary run from the selected profile', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<CodexConfigPage />)
 
     await screen.findByRole('button', {
@@ -201,7 +201,7 @@ describe('CodexConfigPage', () => {
   })
 
   it('does not launch Codex when saving the current profile fails', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     commandMocks.saveCodexProfile.mockResolvedValue({
       status: 'error',
       error: 'Failed to save profile to disk',
@@ -226,7 +226,7 @@ describe('CodexConfigPage', () => {
   })
 
   it('surfaces the raw Codex launch error when the backend reports failure', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     commandMocks.launchCodex.mockResolvedValue({
       status: 'error',
       error: 'Failed to execute codex --version: No such file or directory',
@@ -252,7 +252,7 @@ describe('CodexConfigPage', () => {
   })
 
   it('preserves arbitrary launch errors verbatim', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     commandMocks.launchCodex.mockResolvedValue({
       status: 'error',
       error: 'Failed to launch preferred terminal: No such file or directory',
@@ -278,7 +278,7 @@ describe('CodexConfigPage', () => {
   })
 
   it('does not launch Codex when the directory picker is cancelled', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     openMock.mockResolvedValueOnce(null)
 
     render(<CodexConfigPage />)

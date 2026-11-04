@@ -43,7 +43,7 @@ describe('TrustedFoldersPage', () => {
   })
 
   it('loads folders and adds a directory selected from the native picker', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TrustedFoldersPage />)
 
     expect(await screen.findByText('/home/user/existing')).toBeInTheDocument()
@@ -63,7 +63,7 @@ describe('TrustedFoldersPage', () => {
   })
 
   it('requires confirmation before removing a folder', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TrustedFoldersPage />)
 
     await screen.findByText('/home/user/existing')
@@ -88,7 +88,7 @@ describe('TrustedFoldersPage', () => {
   })
 
   it('selects all folders and removes them with one batch command', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     vi.mocked(commands.listDroidTrustedFolders).mockResolvedValue({
       status: 'ok',
       data: [

@@ -36,7 +36,7 @@ describe('Pi ProviderCard', () => {
   })
 
   it('tests the provider through the Pi command and shows success details', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     commandMocks.testPiProviderConnection.mockResolvedValue({
       status: 'ok',
       data: {

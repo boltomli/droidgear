@@ -64,7 +64,7 @@ describe('DshGeneralTab', () => {
   })
 
   it('saves the complete effective config with the snapshot hash', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshGeneralTab />)
 
     await user.click(screen.getByRole('switch'))
@@ -124,7 +124,7 @@ describe('DshGeneralTab', () => {
   })
 
   it('discards local edits without writing', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshGeneralTab />)
 
     await user.click(screen.getByRole('switch'))
@@ -137,7 +137,7 @@ describe('DshGeneralTab', () => {
   })
 
   it('toasts and keeps the draft when the backend refuses the write', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     commandMocks.saveDshConfigEntry.mockResolvedValue({
       status: 'error',
       error: 'DSH_CONFIG_CONFLICT: stale',

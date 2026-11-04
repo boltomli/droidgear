@@ -5,7 +5,7 @@ import { ModelDialog } from './ModelDialog'
 
 describe('ModelDialog', () => {
   it('does not clear api url when switching provider in add mode', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <ModelDialog
         open
@@ -36,7 +36,7 @@ describe('ModelDialog', () => {
   })
 
   it('preserves an existing anthropic xhigh effort when editing and saving', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onSave = vi.fn()
 
     render(
@@ -73,7 +73,7 @@ describe('ModelDialog', () => {
   })
 
   it('keeps anthropic xhigh selected when changing to another fallback claude model', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onSave = vi.fn()
 
     render(
@@ -114,7 +114,7 @@ describe('ModelDialog', () => {
   })
 
   it('emits Opus 4.7 style extraArgs and strips sampling params for claude-sonnet-5', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onSave = vi.fn()
 
     render(
@@ -155,7 +155,7 @@ describe('ModelDialog', () => {
   })
 
   it('trims whitespace from baseUrl, apiKey and model id on save', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onSave = vi.fn()
 
     render(
@@ -190,7 +190,7 @@ describe('ModelDialog', () => {
   })
 
   it('preserves a manual thinking extra arg when reasoning effort is none', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onSave = vi.fn()
 
     render(
@@ -221,7 +221,7 @@ describe('ModelDialog', () => {
   })
 
   it('round-trips thinking-format extraArgs (thinking + reasoning_effort)', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onSave = vi.fn()
 
     render(
@@ -258,7 +258,7 @@ describe('ModelDialog', () => {
   })
 
   it('emits thinking.type=disabled when selecting thinking format with none effort', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onSave = vi.fn()
 
     render(

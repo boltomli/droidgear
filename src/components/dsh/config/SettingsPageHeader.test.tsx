@@ -32,7 +32,7 @@ describe('SettingsPageHeader', () => {
   })
 
   it('calls onSave and onReset from the buttons', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onSave = vi.fn()
     const onReset = vi.fn()
     render(

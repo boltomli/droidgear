@@ -116,7 +116,7 @@ describe('DshAdvancedTab', () => {
   })
 
   it('renders editable A-tier fields and read-only C-tier fields', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshAdvancedTab />)
 
     await user.click(screen.getByRole('button', { name: 'bash-sandbox' }))
@@ -137,7 +137,7 @@ describe('DshAdvancedTab', () => {
   })
 
   it('renders !!js and secret fields as read-only with badges', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshAdvancedTab />)
 
     await user.click(screen.getByRole('button', { name: /Sandbox policy/ }))
@@ -158,7 +158,7 @@ describe('DshAdvancedTab', () => {
   })
 
   it('saves a modified field and shows the restart badge for non-volatile fields', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshAdvancedTab />)
 
     await user.click(screen.getByRole('button', { name: 'bash-sandbox' }))
@@ -184,7 +184,7 @@ describe('DshAdvancedTab', () => {
   })
 
   it('toggles an entry disabled from the card header', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshAdvancedTab />)
 
     await user.click(screen.getByRole('button', { name: 'bash-sandbox' }))

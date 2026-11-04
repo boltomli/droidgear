@@ -41,7 +41,7 @@ describe('ClaudeSettingsPage auto-compact window', () => {
   beforeEach(() => seed({ env: { ANTHROPIC_MODEL: 'claude-opus-4-8' } }))
 
   it('writes a picked preset at the document root', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<ClaudeSettingsPage />)
 
     await pickAutoCompactOption(user, '1M (1,000,000)')
@@ -52,7 +52,7 @@ describe('ClaudeSettingsPage auto-compact window', () => {
 
   it('removes the key when switched back to auto', async () => {
     seed({ autoCompactWindow: 500_000 })
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<ClaudeSettingsPage />)
 
     await pickAutoCompactOption(user, 'Auto (unset)')
@@ -61,7 +61,7 @@ describe('ClaudeSettingsPage auto-compact window', () => {
   })
 
   it('accepts a custom in-range value', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<ClaudeSettingsPage />)
 
     await pickAutoCompactOption(user, 'Custom')
@@ -77,7 +77,7 @@ describe('ClaudeSettingsPage auto-compact window', () => {
   })
 
   it('flags out-of-range input without writing it', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<ClaudeSettingsPage />)
 
     await pickAutoCompactOption(user, 'Custom')

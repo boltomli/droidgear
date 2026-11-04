@@ -19,7 +19,7 @@ import { ChannelDialog } from './ChannelDialog'
 
 describe('ChannelDialog', () => {
   it('trims whitespace from name, baseUrl and apiKey on save', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onSave = vi.fn()
 
     render(

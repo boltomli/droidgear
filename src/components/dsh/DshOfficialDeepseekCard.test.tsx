@@ -47,7 +47,7 @@ describe('DshOfficialDeepseekCard', () => {
     storeMocks.snapshot = snapshotWithConfig({
       apiKeyEnv: 'DEEPSEEK_API_KEY',
     })
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshOfficialDeepseekCard />)
 
     expect(screen.getByText('Not configured')).toBeInTheDocument()
@@ -74,7 +74,7 @@ describe('DshOfficialDeepseekCard', () => {
       apiKeyEnv: 'DEEPSEEK_API_KEY',
     })
     storeMocks.credentials = { DEEPSEEK_API_KEY: 'sk-old' }
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshOfficialDeepseekCard />)
 
     expect(screen.getByText('Configured')).toBeInTheDocument()
@@ -93,7 +93,7 @@ describe('DshOfficialDeepseekCard', () => {
       apiKeyEnv: 'DEEPSEEK_API_KEY',
       baseURL: 'https://api.deepseek.com',
     })
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshOfficialDeepseekCard />)
 
     await user.type(screen.getByLabelText('API Key'), 'sk-x')
@@ -122,7 +122,7 @@ describe('DshOfficialDeepseekCard', () => {
     storeMocks.snapshot = snapshotWithConfig({
       apiKeyEnv: 'DEEPSEEK_API_KEY',
     })
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshOfficialDeepseekCard />)
 
     await user.type(screen.getByLabelText('API Key'), 'sk-x')

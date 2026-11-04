@@ -63,7 +63,7 @@ function selectText(index: number): string {
 
 describe('ProviderDialog context window tier linkage', () => {
   it('links the auto-compact preset when a context window preset is picked and saves both values', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <ProviderDialog
         open
@@ -98,7 +98,7 @@ describe('ProviderDialog context window tier linkage', () => {
   })
 
   it('allows re-picking the auto-compact tier after the linked selection', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <ProviderDialog
         open

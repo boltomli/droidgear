@@ -50,7 +50,7 @@ describe('DshConfigPage', () => {
   })
 
   it('loads the profile and switches between all seven tabs', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshConfigPage profile="desktop" />)
 
     expect(storeMocks.setProfile).toHaveBeenCalledWith('desktop')
@@ -81,7 +81,7 @@ describe('DshConfigPage', () => {
   })
 
   it('refreshes every slice from the header button', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshConfigPage profile="web" />)
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }))
@@ -91,7 +91,7 @@ describe('DshConfigPage', () => {
   })
 
   it('renders the store error with a dismiss action', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     storeMocks.error = 'DSH_CONFIG_CONFLICT'
     render(<DshConfigPage profile="desktop" />)
 

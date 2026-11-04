@@ -133,7 +133,7 @@ describe('Copilot temporary run', () => {
   it.each(['openai', 'anthropic'] as const)(
     'imports a Sub2API %s model through the shared channel picker',
     async provider => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       useChannelStore.setState({
         channels: [
           {

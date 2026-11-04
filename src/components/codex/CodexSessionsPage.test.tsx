@@ -160,7 +160,7 @@ describe('CodexSessionsPage', () => {
   })
 
   it('loads and renders the session detail when selected', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<CodexSessionsPage />)
 
     const item = await screen.findByText('Fix the bug')
@@ -185,7 +185,7 @@ describe('CodexSessionsPage', () => {
 
   it('expands thinking blocks when the preference is set', async () => {
     localStorage.setItem('codex-sessions-expand-thinking', 'true')
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<CodexSessionsPage />)
 
     await user.click(await screen.findByText('Fix the bug'))
@@ -228,7 +228,7 @@ describe('CodexSessionsPage', () => {
   })
 
   it('shows the session provider in the detail header', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<CodexSessionsPage />)
 
     await user.click(await screen.findByText('Fix the bug'))
@@ -240,7 +240,7 @@ describe('CodexSessionsPage', () => {
   })
 
   it('switches the session provider from the detail header', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<CodexSessionsPage />)
 
     await user.click(await screen.findByText('Fix the bug'))
@@ -265,7 +265,7 @@ describe('CodexSessionsPage', () => {
   })
 
   it('does not call the switch command for the current provider', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<CodexSessionsPage />)
 
     await user.click(await screen.findByText('Fix the bug'))

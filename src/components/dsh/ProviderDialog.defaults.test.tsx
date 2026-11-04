@@ -61,7 +61,7 @@ describe('ProviderDialog defaults', () => {
   })
 
   it('suggests high for registry models and saves reasoning + default model', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <ProviderDialog
         open
@@ -118,7 +118,7 @@ describe('ProviderDialog defaults', () => {
   })
 
   it('lets the user turn image support off for a custom gateway', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <ProviderDialog
         open
@@ -151,7 +151,7 @@ describe('ProviderDialog defaults', () => {
   })
 
   it('omits reasoningEffort when the default level is not set', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <ProviderDialog
         open
@@ -189,7 +189,7 @@ describe('ProviderDialog defaults', () => {
   })
 
   it('keeps the dialog open when only the default-model write fails', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     commandMocks.saveDshConfigEntry.mockResolvedValue({
       status: 'error',
       error: 'DSH_CONFIG_CONFLICT: stale',

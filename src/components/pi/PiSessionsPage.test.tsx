@@ -132,7 +132,7 @@ describe('PiSessionsPage', () => {
   })
 
   it('loads the selected session detail', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<PiSessionsPage />)
 
     await user.click(await screen.findByText('Inspect the parser'))

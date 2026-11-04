@@ -31,7 +31,7 @@ describe('EnumField', () => {
   })
 
   it('calls onChange when another option is picked', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const onChange = vi.fn()
     render(
       <EnumField id="locale" value="en" options={options} onChange={onChange} />

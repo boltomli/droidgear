@@ -127,7 +127,7 @@ describe('DshSessionsPage', () => {
   })
 
   it('loads the selected session detail', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DshSessionsPage />)
 
     await user.click(await screen.findByText('Inspect the parser'))
@@ -143,7 +143,7 @@ describe('DshSessionsPage', () => {
   })
 
   it('groups consecutive thinking-only messages into one collapsible block', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     commandMocks.getDshSessionDetail.mockResolvedValue({
       status: 'ok',
       data: {

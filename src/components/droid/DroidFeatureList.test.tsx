@@ -97,7 +97,7 @@ describe('DroidFeatureList', () => {
   })
 
   it('launches Droid directly when the terminal launch succeeds', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DroidFeatureList />)
 
     const launchButton = await screen.findByTitle(
@@ -116,7 +116,7 @@ describe('DroidFeatureList', () => {
 
   it('does not launch Droid when directory selection is cancelled', async () => {
     openMock.mockResolvedValue(null)
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DroidFeatureList />)
 
     const launchButton = await screen.findByTitle(
@@ -132,7 +132,7 @@ describe('DroidFeatureList', () => {
   })
 
   it('saves pending model changes before launching Droid', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const saveModels = vi.fn(async () => {
       useModelStore.setState({ hasChanges: false })
     })
@@ -155,7 +155,7 @@ describe('DroidFeatureList', () => {
   })
 
   it('switches back to Models and shows an error when saving model changes hits a config parse error', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     useUIStore.setState({ droidSubView: 'settings' })
     const saveModels = vi.fn(async () => {
       useModelStore.setState({
@@ -187,7 +187,7 @@ describe('DroidFeatureList', () => {
   })
 
   it('shows a fallback error before aborting launch when model saving still fails without details', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     useUIStore.setState({ droidSubView: 'mcp' })
     const saveModels = vi.fn().mockResolvedValue(undefined)
     useModelStore.setState({
@@ -214,7 +214,7 @@ describe('DroidFeatureList', () => {
   })
 
   it('copies the legacy launch command when direct launch fails', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     vi.mocked(commands.launchDroid).mockResolvedValue({
       status: 'error',
       error: 'launch failed',
@@ -247,7 +247,7 @@ describe('DroidFeatureList', () => {
   })
 
   it('shows a generic error when both launch and fallback command retrieval fail', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     vi.mocked(commands.launchDroid).mockResolvedValue({
       status: 'error',
       error: 'launch failed',
@@ -272,7 +272,7 @@ describe('DroidFeatureList', () => {
 
   it('links a local JSON file as the active settings file', async () => {
     openMock.mockResolvedValue('/home/user/configs/team-settings.json')
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DroidFeatureList />)
 
     const linkButton = await screen.findByTitle('Link local JSON file')
@@ -293,7 +293,7 @@ describe('DroidFeatureList', () => {
 
   it('does not link a file when the picker is cancelled', async () => {
     openMock.mockResolvedValue(null)
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DroidFeatureList />)
 
     const linkButton = await screen.findByTitle('Link local JSON file')
@@ -311,7 +311,7 @@ describe('DroidFeatureList', () => {
       status: 'error',
       error: 'Settings file is not valid JSON',
     })
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DroidFeatureList />)
 
     const linkButton = await screen.findByTitle('Link local JSON file')
@@ -347,7 +347,7 @@ describe('DroidFeatureList', () => {
         },
       ],
     })
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DroidFeatureList />)
 
     const unlinkButton = await screen.findByTitle('Unlink')
@@ -389,7 +389,7 @@ describe('DroidFeatureList', () => {
         },
       ],
     })
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<DroidFeatureList />)
 
     const trigger = await screen.findByRole('button', { name: /Global/ })

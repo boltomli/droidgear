@@ -75,7 +75,7 @@ describe('ProviderDialog credential reference', () => {
   })
 
   it('derives the reference from the provider id and tracks edits', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <ProviderDialog
         open
@@ -118,7 +118,7 @@ describe('ProviderDialog credential reference', () => {
   })
 
   it('lets the user customize the reference name', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <ProviderDialog
         open
@@ -176,7 +176,7 @@ describe('ProviderDialog credential reference', () => {
   })
 
   it('warns about characters the backend would reject', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <ProviderDialog
         open
@@ -197,7 +197,7 @@ describe('ProviderDialog credential reference', () => {
   })
 
   it('clears the stored credential when the key value is emptied', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     useDshStore.setState({
       providers: {
         byok: providerConfig({ apiKeyEnv: 'CUSTOM_KEY' }),
@@ -225,7 +225,7 @@ describe('ProviderDialog credential reference', () => {
   })
 
   it('keeps a derived reference collapsed and unchanged when editing', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     useDshStore.setState({
       providers: {
         byok: providerConfig({ apiKeyEnv: 'BYOK_API_KEY' }),

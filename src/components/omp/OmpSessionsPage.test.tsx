@@ -146,7 +146,7 @@ describe('OmpSessionsPage', () => {
   })
 
   it('loads the selected session detail and renders tool calls', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<OmpSessionsPage />)
 
     await user.click(await screen.findByText('Inspect the parser'))
@@ -164,7 +164,7 @@ describe('OmpSessionsPage', () => {
   })
 
   it('keeps tool results collapsed until expanded', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<OmpSessionsPage />)
 
     await user.click(await screen.findByText('Inspect the parser'))
