@@ -1,6 +1,7 @@
 package app
 
 import (
+	"droidgear-wails/internal/core"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -13,7 +14,7 @@ func mcpReadConfig(t *testing.T, home string) map[string]any {
 	if err != nil {
 		t.Fatalf("read mcp.json: %v", err)
 	}
-	value, err := droidDecodeJSONValue(data)
+	value, err := core.DecodeJSONValue(data)
 	if err != nil {
 		t.Fatalf("parse mcp.json: %v", err)
 	}

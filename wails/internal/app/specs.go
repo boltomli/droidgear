@@ -10,8 +10,6 @@
 package app
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,51 +40,6 @@ func droidHomeDir() (string, error) {
 		return "", errString("Failed to get home directory")
 	}
 	return home, nil
-}
-
-// droidFactoryHomeForHome resolves the Factory home for home, honoring the
-// configPaths.factory override in <home>/.droidgear/settings.json (mirrors
-// paths::get_factory_home_for_home). A configPaths object whose known keys
-// are not all strings fails to deserialize in Rust and yields the default.
-func droidFactoryHomeForHome(home string) string {
-	fallback := filepath.Join(home, ".factory")
-	data, err := os.ReadFile(filepath.Join(home, ".droidgear", "settings.json"))
-	if err != nil || strings.TrimSpace(string(data)) == "" {
-		return fallback
-	}
-	settings, err := droidDecodeJSONValue(data)
-	if err != nil {
-		return fallback
-	}
-	root, ok := settings.(map[string]any)
-	if !ok {
-		return fallback
-	}
-	paths, ok := root["configPaths"].(map[string]any)
-	if !ok {
-		return fallback
-	}
-	for _, key := range []string{"factory", "opencode", "opencodeAuth", "codex", "claude", "openclaw", "hermes", "pi", "omp"} {
-		if value, present := paths[key]; present {
-			if _, isString := value.(string); !isString {
-				return fallback
-			}
-		}
-	}
-	if override, ok := paths["factory"].(string); ok && override != "" {
-		return override
-	}
-	return fallback
-}
-
-// droidWithExtension mirrors Rust Path::with_extension: the suffix after the
-// final dot is replaced (dotfiles keep their whole name and gain the ext).
-func droidWithExtension(path string, ext string) string {
-	dir, base := filepath.Split(path)
-	if i := strings.LastIndex(base, "."); i > 0 {
-		base = base[:i]
-	}
-	return dir + base + "." + ext
 }
 
 // droidExtension mirrors Rust Path::extension() for a file *name*.
@@ -141,18 +94,6 @@ func droidPathHasPrefix(path string, prefix string) bool {
 	return len(rest) > 0 && rest[0] == filepath.Separator
 }
 
-// droidPathExists reports whether path exists (any file type).
-func droidPathExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-// droidIsSymlink reports whether path is a symlink (mirrors Path::is_symlink).
-func droidIsSymlink(path string) bool {
-	info, err := os.Lstat(path)
-	return err == nil && info.Mode()&os.ModeSymlink != 0
-}
-
 // droidResolvePath mirrors std::fs::canonicalize (absolute, symlinks
 // resolved). On Windows the Rust side keeps the verbatim \\?\ prefix; the Go
 // port stores the ordinary absolute path, which stays self-consistent across
@@ -169,39 +110,11 @@ func droidResolvePath(path string) (string, error) {
 	return resolved, nil
 }
 
-// droidDecodeJSONValue parses JSON preserving number literals, mirroring
-// serde_json::Value (integers stay integers; unknown structure is kept).
-func droidDecodeJSONValue(data []byte) (any, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	var value any
-	if err := dec.Decode(&value); err != nil {
-		return nil, err
-	}
-	if dec.More() {
-		return nil, fmt.Errorf("trailing garbage after JSON value")
-	}
-	return value, nil
-}
-
-// droidMarshalPretty renders JSON the way serde_json::to_string_pretty does:
-// two-space indent, no HTML escaping, no trailing newline, map keys sorted.
-func droidMarshalPretty(value any) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(value); err != nil {
-		return nil, err
-	}
-	return bytes.TrimRight(buf.Bytes(), "\n"), nil
-}
-
 // droidAtomicWrite mirrors droidgear-core::storage::atomic_write: a unique
 // sibling temp file renamed over the target, with byte-identical errors.
 func droidAtomicWrite(path string, data []byte) error {
 	parent := filepath.Dir(path)
-	if !droidPathExists(parent) {
+	if !core.PathExists(parent) {
 		if err := os.MkdirAll(parent, 0o755); err != nil { // #nosec G301 -- config directory
 			return fmt.Errorf("Failed to create directory: %w", err)
 		}
@@ -215,7 +128,7 @@ func droidAtomicWrite(path string, data []byte) error {
 			suffix = fmt.Sprintf("%s-%d", suffix, counter)
 		}
 		candidate := filepath.Join(parent, "."+name+"."+suffix+".tmp")
-		if droidPathExists(candidate) {
+		if core.PathExists(candidate) {
 			continue
 		}
 		if err := writeDroidTempFile(candidate, data, path); err != nil {
@@ -253,7 +166,7 @@ type SpecFile struct {
 // ---------------------------------------------------------------------------
 
 func specsDirForHome(home string) string {
-	return filepath.Join(droidFactoryHomeForHome(home), "specs")
+	return filepath.Join(core.FactoryHomeForHome(home), "specs")
 }
 
 // ---------------------------------------------------------------------------
@@ -328,7 +241,7 @@ func renameSpecForHome(home string, oldPath string, newName string) (SpecFile, e
 	if !droidPathHasPrefix(cleanOld, specsDir) {
 		return SpecFile{}, errString("Invalid file path")
 	}
-	if !droidPathExists(cleanOld) {
+	if !core.PathExists(cleanOld) {
 		return SpecFile{}, errString("Spec file not found")
 	}
 
@@ -344,7 +257,7 @@ func renameSpecForHome(home string, oldPath string, newName string) (SpecFile, e
 	}
 
 	newPath := filepath.Join(specsDir, newName)
-	if droidPathExists(newPath) && !droidPathsEqual(newPath, cleanOld) {
+	if core.PathExists(newPath) && !droidPathsEqual(newPath, cleanOld) {
 		return SpecFile{}, errString("A file with this name already exists")
 	}
 	if err := os.Rename(cleanOld, newPath); err != nil {
@@ -359,7 +272,7 @@ func deleteSpecForHome(home string, path string) error {
 	if !droidPathHasPrefix(cleanPath, specsDir) {
 		return errString("Invalid file path")
 	}
-	if !droidPathExists(cleanPath) {
+	if !core.PathExists(cleanPath) {
 		return errString("Spec file not found")
 	}
 	if err := os.Remove(cleanPath); err != nil {
@@ -374,7 +287,7 @@ func updateSpecForHome(home string, path string, content string) (SpecFile, erro
 	if !droidPathHasPrefix(cleanPath, specsDir) {
 		return SpecFile{}, errString("Invalid file path")
 	}
-	if !droidPathExists(cleanPath) {
+	if !core.PathExists(cleanPath) {
 		return SpecFile{}, errString("Spec file not found")
 	}
 	if err := os.WriteFile(cleanPath, []byte(content), 0o644); err != nil { // #nosec G306 -- spec files

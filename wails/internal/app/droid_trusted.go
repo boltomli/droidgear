@@ -32,7 +32,7 @@ type TrustedFolder struct {
 // droidTrustedConfigPath resolves <factory home>/settings.json, creating the
 // Factory home directory like factory_settings::factory_config_path_for_home.
 func droidTrustedConfigPath(home string) (string, error) {
-	factoryHome := droidFactoryHomeForHome(home)
+	factoryHome := core.FactoryHomeForHome(home)
 	if err := core.EnsureDir(factoryHome); err != nil {
 		return "", fmt.Errorf("Failed to create .factory directory: %w", err)
 	}
@@ -52,7 +52,7 @@ func droidTrustedReadConfig(path string) (any, error) {
 	if strings.TrimSpace(string(data)) == "" {
 		return map[string]any{}, nil
 	}
-	config, err := droidDecodeJSONValue(data)
+	config, err := core.DecodeJSONValue(data)
 	if err != nil {
 		return nil, fmt.Errorf("CONFIG_PARSE_ERROR: Failed to parse config JSON: %w", err)
 	}
@@ -63,14 +63,14 @@ func droidTrustedReadConfig(path string) (any, error) {
 // shared atomic writer (symlink targets are resolved first, like Rust).
 func droidTrustedWriteConfig(path string, config any) error {
 	actualPath := path
-	if droidIsSymlink(path) {
+	if core.IsSymlink(path) {
 		resolved, err := filepath.EvalSymlinks(path)
 		if err != nil {
 			return fmt.Errorf("Failed to resolve Factory settings symlink: %w", err)
 		}
 		actualPath = resolved
 	}
-	data, err := droidMarshalPretty(config)
+	data, err := core.MarshalPretty(config)
 	if err != nil {
 		return fmt.Errorf("Failed to serialize Factory settings: %w", err)
 	}

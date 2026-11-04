@@ -25,8 +25,8 @@ func TestDroidWithExtensionMirrorsPathSemantics(t *testing.T) {
 		{filepath.Join("dir", "settings"), "tmp", filepath.Join("dir", "settings.tmp")},
 	}
 	for _, c := range cases {
-		if got := droidWithExtension(c.path, c.ext); got != c.want {
-			t.Errorf("droidWithExtension(%q, %q) = %q, want %q", c.path, c.ext, got, c.want)
+		if got := core.WithExtension(c.path, c.ext); got != c.want {
+			t.Errorf("core.WithExtension(%q, %q) = %q, want %q", c.path, c.ext, got, c.want)
 		}
 	}
 	if got := droidFileStem("my.profile.json"); got != "my.profile" {
@@ -371,7 +371,7 @@ func TestDroidSettingsValuesDefaultsAndRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read settings: %v", err)
 	}
-	decoded, err := droidDecodeJSONValue(raw)
+	decoded, err := core.DecodeJSONValue(raw)
 	if err != nil {
 		t.Fatalf("parse settings: %v", err)
 	}
@@ -408,7 +408,7 @@ func TestDroidSettingsValuesPreserveUnknownFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	decoded, err := droidDecodeJSONValue(raw)
+	decoded, err := core.DecodeJSONValue(raw)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"droidgear-wails/internal/core"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -27,7 +28,7 @@ func trustedReadConfig(t *testing.T, path string) map[string]any {
 	if err != nil {
 		t.Fatalf("read config: %v", err)
 	}
-	value, err := droidDecodeJSONValue(data)
+	value, err := core.DecodeJSONValue(data)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}

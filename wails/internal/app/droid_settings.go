@@ -73,10 +73,10 @@ func droidSettingsFilesDir(home string) string {
 
 // droidGlobalSettingsPath is the "Global" settings file. The Rust core
 // hardcodes <home>/.factory/settings.json here; the Wails port resolves
-// through droidFactoryHomeForHome so the Preferences → Paths override keeps
+// through core.FactoryHomeForHome so the Preferences → Paths override keeps
 // working across the whole Go service (see the porting report).
 func droidGlobalSettingsPath(home string) string {
-	return filepath.Join(droidFactoryHomeForHome(home), "settings.json")
+	return filepath.Join(core.FactoryHomeForHome(home), "settings.json")
 }
 
 // droidReadDroidGearSettings parses ~/.droidgear/settings.json (missing or
@@ -93,7 +93,7 @@ func droidReadDroidGearSettings(home string) (any, error) {
 	if strings.TrimSpace(string(data)) == "" {
 		return map[string]any{}, nil
 	}
-	settings, err := droidDecodeJSONValue(data)
+	settings, err := core.DecodeJSONValue(data)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse settings: %w", err)
 	}
@@ -105,16 +105,16 @@ func droidReadDroidGearSettings(home string) (any, error) {
 func droidWriteDroidGearSettings(home string, settings any) error {
 	path := droidDroidGearSettingsPath(home)
 	dir := filepath.Dir(path)
-	if !droidPathExists(dir) {
+	if !core.PathExists(dir) {
 		if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- config directory
 			return fmt.Errorf("Failed to create .droidgear directory: %w", err)
 		}
 	}
-	data, err := droidMarshalPretty(settings)
+	data, err := core.MarshalPretty(settings)
 	if err != nil {
 		return fmt.Errorf("Failed to serialize settings: %w", err)
 	}
-	tempPath := droidWithExtension(path, "tmp")                 // settings.json → settings.tmp
+	tempPath := core.WithExtension(path, "tmp")                 // settings.json → settings.tmp
 	if err := os.WriteFile(tempPath, data, 0o644); err != nil { // #nosec G306 -- config files
 		return fmt.Errorf("Failed to write settings: %w", err)
 	}
@@ -170,13 +170,13 @@ func droidActiveSettingsPath(home string) (string, error) {
 		return global, nil
 	}
 	if filepath.IsAbs(name) {
-		if droidPathExists(name) {
+		if core.PathExists(name) {
 			return name, nil
 		}
 		return global, nil
 	}
-	managed := droidWithExtension(filepath.Join(droidSettingsFilesDir(home), name), "json")
-	if droidPathExists(managed) {
+	managed := core.WithExtension(filepath.Join(droidSettingsFilesDir(home), name), "json")
+	if core.PathExists(managed) {
 		return managed, nil
 	}
 	return global, nil
@@ -247,8 +247,8 @@ func droidDisplayNameInUse(home string, name string) (bool, error) {
 			return true, nil
 		}
 	}
-	managed := droidWithExtension(filepath.Join(droidSettingsFilesDir(home), name), "json")
-	return droidPathExists(managed), nil
+	managed := core.WithExtension(filepath.Join(droidSettingsFilesDir(home), name), "json")
+	return core.PathExists(managed), nil
 }
 
 // droidPickLinkDisplayName appends -2, -3, … until a display name is free
@@ -289,7 +289,7 @@ func droidListSettingsFiles(home string) ([]SettingsFileInfo, error) {
 		Path:     globalPath,
 		IsGlobal: true,
 		IsActive: droidPathsEqual(activePath, globalPath),
-		Exists:   droidPathExists(globalPath),
+		Exists:   core.PathExists(globalPath),
 	}}
 
 	if entries, err := os.ReadDir(droidSettingsFilesDir(home)); err == nil {
@@ -317,7 +317,7 @@ func droidListSettingsFiles(home string) ([]SettingsFileInfo, error) {
 			Name:       file.Name,
 			Path:       file.Path,
 			IsActive:   droidPathsEqual(activePath, file.Path),
-			Exists:     droidPathExists(file.Path),
+			Exists:     core.PathExists(file.Path),
 			IsExternal: true,
 		})
 	}
@@ -348,8 +348,8 @@ func droidSetActiveSettingsFile(home string, name string) (SettingsFileInfo, err
 				return SettingsFileInfo{}, fmt.Errorf("Settings file '%s' is not a linked settings file", name)
 			}
 		} else {
-			managed := droidWithExtension(filepath.Join(droidSettingsFilesDir(home), name), "json")
-			if !droidPathExists(managed) {
+			managed := core.WithExtension(filepath.Join(droidSettingsFilesDir(home), name), "json")
+			if !core.PathExists(managed) {
 				return SettingsFileInfo{}, fmt.Errorf("Settings file '%s' does not exist", name)
 			}
 		}
@@ -380,7 +380,7 @@ func droidSetActiveSettingsFile(home string, name string) (SettingsFileInfo, err
 		Path:       activePath,
 		IsGlobal:   isGlobal,
 		IsActive:   true,
-		Exists:     droidPathExists(activePath),
+		Exists:     core.PathExists(activePath),
 		IsExternal: isExternal,
 	}, nil
 }
@@ -394,13 +394,13 @@ func droidCreateSettingsFile(home string, name string, copyFromActive bool) (Set
 	}
 
 	dir := droidSettingsFilesDir(home)
-	if !droidPathExists(dir) {
+	if !core.PathExists(dir) {
 		if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- config directory
 			return SettingsFileInfo{}, fmt.Errorf("Failed to create droid-settings directory: %w", err)
 		}
 	}
-	path := droidWithExtension(filepath.Join(dir, name), "json")
-	if droidPathExists(path) {
+	path := core.WithExtension(filepath.Join(dir, name), "json")
+	if core.PathExists(path) {
 		return SettingsFileInfo{}, fmt.Errorf("Settings file '%s' already exists", name)
 	}
 
@@ -409,7 +409,7 @@ func droidCreateSettingsFile(home string, name string, copyFromActive bool) (Set
 		if err != nil {
 			return SettingsFileInfo{}, err
 		}
-		if droidPathExists(activePath) {
+		if core.PathExists(activePath) {
 			data, err := os.ReadFile(activePath) // #nosec G304 -- active settings path
 			if err != nil {
 				return SettingsFileInfo{}, fmt.Errorf("Failed to copy settings: %w", err)
@@ -435,8 +435,8 @@ func droidDeleteSettingsFile(home string, name string) error {
 	if strings.EqualFold(name, "global") {
 		return errString("Cannot delete the global settings file")
 	}
-	path := droidWithExtension(filepath.Join(droidSettingsFilesDir(home), name), "json")
-	if !droidPathExists(path) {
+	path := core.WithExtension(filepath.Join(droidSettingsFilesDir(home), name), "json")
+	if !core.PathExists(path) {
 		return fmt.Errorf("Settings file '%s' does not exist", name)
 	}
 	if err := os.Remove(path); err != nil {
@@ -462,7 +462,7 @@ func droidLinkSettingsFile(home string, sourcePath string) (SettingsFileInfo, er
 	if err != nil {
 		return SettingsFileInfo{}, fmt.Errorf("Failed to read settings file '%s': %w", resolved, err)
 	}
-	if _, err := droidDecodeJSONValue(data); err != nil {
+	if _, err := core.DecodeJSONValue(data); err != nil {
 		return SettingsFileInfo{}, fmt.Errorf("Settings file '%s' is not valid JSON: %w", resolved, err)
 	}
 
@@ -552,7 +552,7 @@ func droidReadActiveConfig(home string) (any, droidConfigStatus, error) {
 	if err != nil {
 		return nil, droidConfigNotFound, nil
 	}
-	if !droidPathExists(activePath) {
+	if !core.PathExists(activePath) {
 		return nil, droidConfigNotFound, nil
 	}
 	data, err := os.ReadFile(activePath) // #nosec G304 -- active settings path
@@ -562,7 +562,7 @@ func droidReadActiveConfig(home string) (any, droidConfigStatus, error) {
 	if strings.TrimSpace(string(data)) == "" {
 		return nil, droidConfigNotFound, nil
 	}
-	value, err := droidDecodeJSONValue(data)
+	value, err := core.DecodeJSONValue(data)
 	if err != nil {
 		return nil, droidConfigParseError, fmt.Errorf("Failed to parse config JSON: %w", err)
 	}
@@ -577,24 +577,24 @@ func droidWriteActiveConfig(home string, config any) error {
 		return err
 	}
 	parent := filepath.Dir(activePath)
-	if !droidPathExists(parent) {
+	if !core.PathExists(parent) {
 		if err := os.MkdirAll(parent, 0o755); err != nil { // #nosec G301 -- config directory
 			return fmt.Errorf("Failed to create directory: %w", err)
 		}
 	}
 	actualPath := activePath
-	if droidIsSymlink(activePath) {
+	if core.IsSymlink(activePath) {
 		resolved, err := filepath.EvalSymlinks(activePath)
 		if err != nil {
 			return fmt.Errorf("Failed to resolve symlink: %w", err)
 		}
 		actualPath = resolved
 	}
-	data, err := droidMarshalPretty(config)
+	data, err := core.MarshalPretty(config)
 	if err != nil {
 		return fmt.Errorf("Failed to serialize config: %w", err)
 	}
-	tempPath := droidWithExtension(actualPath, "tmp")           // settings.json → settings.tmp
+	tempPath := core.WithExtension(actualPath, "tmp")           // settings.json → settings.tmp
 	if err := os.WriteFile(tempPath, data, 0o644); err != nil { // #nosec G306 -- config files
 		return fmt.Errorf("Failed to write config file: %w", err)
 	}
@@ -1129,7 +1129,7 @@ func droidLaunchArtifactPath(filename string) string {
 }
 
 func droidWriteLaunchScript(path string, contents string) error {
-	if parent := filepath.Dir(path); parent != "" && !droidPathExists(parent) {
+	if parent := filepath.Dir(path); parent != "" && !core.PathExists(parent) {
 		if err := os.MkdirAll(parent, 0o755); err != nil { // #nosec G301 -- temp directory
 			return fmt.Errorf("Failed to create launch script directory: %w", err)
 		}
@@ -1326,7 +1326,7 @@ func droidFindWindowsShellExecutable(name string) (string, bool) {
 				filepath.Join(localAppData, "Microsoft", "WindowsApps", "pwsh.exe"))
 		}
 		for _, candidate := range candidates {
-			if droidPathExists(candidate) { // app execution aliases are reparse points
+			if core.PathExists(candidate) { // app execution aliases are reparse points
 				return candidate, true
 			}
 		}

@@ -64,7 +64,7 @@ type McpServer struct {
 // ---------------------------------------------------------------------------
 
 func mcpConfigPathForHome(home string) (string, error) {
-	factoryHome := droidFactoryHomeForHome(home)
+	factoryHome := core.FactoryHomeForHome(home)
 	if err := core.EnsureDir(factoryHome); err != nil {
 		return "", fmt.Errorf("Failed to create .factory directory: %w", err)
 	}
@@ -76,7 +76,7 @@ func readMcpFileForHome(home string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !droidPathExists(path) {
+	if !core.PathExists(path) {
 		return map[string]any{"mcpServers": map[string]any{}}, nil
 	}
 	data, err := os.ReadFile(path) // #nosec G304 -- factory home path
@@ -86,7 +86,7 @@ func readMcpFileForHome(home string) (any, error) {
 	if strings.TrimSpace(string(data)) == "" {
 		return map[string]any{"mcpServers": map[string]any{}}, nil
 	}
-	config, err := droidDecodeJSONValue(data)
+	config, err := core.DecodeJSONValue(data)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse MCP config JSON: %w", err)
 	}
@@ -99,18 +99,18 @@ func writeMcpFileForHome(home string, config any) error {
 		return err
 	}
 	actualPath := path
-	if droidIsSymlink(path) {
+	if core.IsSymlink(path) {
 		resolved, err := filepath.EvalSymlinks(path)
 		if err != nil {
 			return fmt.Errorf("Failed to resolve symlink: %w", err)
 		}
 		actualPath = resolved
 	}
-	data, err := droidMarshalPretty(config)
+	data, err := core.MarshalPretty(config)
 	if err != nil {
 		return fmt.Errorf("Failed to serialize MCP config: %w", err)
 	}
-	tempPath := droidWithExtension(actualPath, "tmp")           // mcp.json → mcp.tmp
+	tempPath := core.WithExtension(actualPath, "tmp")           // mcp.json → mcp.tmp
 	if err := os.WriteFile(tempPath, data, 0o644); err != nil { // #nosec G306 -- config files
 		return fmt.Errorf("Failed to write MCP config file: %w", err)
 	}

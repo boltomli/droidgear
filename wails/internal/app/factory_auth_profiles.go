@@ -80,7 +80,7 @@ func droidWriteAuthManifest(home string, manifest AuthProfileState) error {
 	if manifest.Profiles == nil {
 		manifest.Profiles = []AuthProfile{} // serde Vec serializes as []
 	}
-	data, err := droidMarshalPretty(manifest)
+	data, err := core.MarshalPretty(manifest)
 	if err != nil {
 		return fmt.Errorf("Failed to serialize profiles manifest: %w", err)
 	}
@@ -135,8 +135,8 @@ func droidAuthCopyFiles(srcDir string, dstDir string) error {
 }
 
 func droidAuthFilesExist(dir string) bool {
-	return droidPathExists(filepath.Join(dir, droidAuthKeyFile)) &&
-		droidPathExists(filepath.Join(dir, droidAuthTokenFile))
+	return core.PathExists(filepath.Join(dir, droidAuthKeyFile)) &&
+		core.PathExists(filepath.Join(dir, droidAuthTokenFile))
 }
 
 func droidAuthProfileExists(manifest AuthProfileState, name string) bool {
@@ -160,7 +160,7 @@ func droidSaveCurrentAuthProfile(home string, name string, label string) error {
 	if err := droidValidateProfileName(name); err != nil {
 		return err
 	}
-	factoryHome := droidFactoryHomeForHome(home)
+	factoryHome := core.FactoryHomeForHome(home)
 	if !droidAuthFilesExist(factoryHome) {
 		return errString("No active auth files found in Factory home directory")
 	}
@@ -204,7 +204,7 @@ func droidSwitchAuthProfile(home string, name string) error {
 	if !droidAuthFilesExist(targetDir) {
 		return fmt.Errorf("Auth files missing for profile '%s'", name)
 	}
-	factoryHome := droidFactoryHomeForHome(home)
+	factoryHome := core.FactoryHomeForHome(home)
 
 	// Back up the current auth files to the active profile before switching.
 	if manifest.Active != nil && *manifest.Active != name && droidAuthFilesExist(factoryHome) {
@@ -233,7 +233,7 @@ func droidDeleteAuthProfile(home string, name string) error {
 		return errString("Cannot delete the currently active profile")
 	}
 	profileDir := droidAuthProfileDir(home, name)
-	if droidPathExists(profileDir) {
+	if core.PathExists(profileDir) {
 		if err := os.RemoveAll(profileDir); err != nil {
 			return fmt.Errorf("Failed to delete profile directory: %w", err)
 		}
