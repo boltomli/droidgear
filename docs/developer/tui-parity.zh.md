@@ -48,33 +48,33 @@
 
 状态：`✅` 已对齐 · `🚧` 部分实现 · `⏳` 未开始 · `GUI-only` 豁免
 
-| GUI 入口                               | 子视图                                | service 包                        | TUI 屏                     | 状态           |
-| -------------------------------------- | ------------------------------------- | --------------------------------- | -------------------------- | -------------- |
-| 左栏 · 10 个工具 + Channels            | —                                     | —                                 | 模块列表 + 命令面板        | ✅ P0          |
-| Preferences → Paths                    | 九个路径键 + WSL 信息                 | `service/paths`                   | Paths 屏（查看/set/reset） | ✅ P0          |
-| Codex → Providers                      | `providers`                           | `service/codex`                   | Profiles 屏（通用）        | ✅ P0 读       |
-| Codex → Auth profiles                  | `auth-profiles`                       | `service/codex`                   | AuthProfiles 屏            | ⏳ P1          |
-| Codex → Sessions                       | `sessions`                            | `service/read`（B4）              | Sessions 屏                | ⏳ P3          |
-| Pi → Providers                         | `providers`                           | `service/pi`                      | Profiles 屏（通用）        | ✅ P0 读       |
-| Hermes → Model                         | `model`                               | `service/hermes`                  | Profiles 屏（通用）        | ✅ P0 读       |
-| OMP → Config                           | `config`                              | `service/omp`                     | Profiles 屏（通用）        | ✅ P0 读       |
-| Pi / OMP / Dsh / Droid → Sessions      | `sessions`                            | `service/read`（B4）              | Sessions 屏                | ⏳ P3          |
-| Channels → 列表/详情/token/凭据        | `detail`                              | `service/channels`                | Channels 屏                | ⏳ P1          |
-| Channels → Export templates            | `export-templates`                    | `service/export`                  | Export 屏                  | ⏳ P1          |
-| Claude → Settings                      | `settings`                            | `service/claude`（B3 未下沉）     | Settings 屏                | ⏳ P1          |
-| Copilot → Profiles                     | `profiles`                            | `service/copilot`（B3 未下沉）    | Profiles 屏                | ⏳ P1          |
-| Droid → Models / Settings / Trusted    | `models` `settings` `trusted-folders` | `service/droid`（B3 未下沉）      | Droid 屏（分节）           | ⏳ P1          |
-| Droid → Auth profiles / MCP / Specs    | `auth-profiles` `mcp` `specs`         | `service/droid`、`service/mcp`    | 同上 + Specs 屏            | ⏳ P1/P3       |
-| Droid → Missions / Legacy versions     | `missions` `legacy-versions`          | `service/droid`、`service/legacy` | 同上                       | ⏳ P1          |
-| Dsh → Desktop / Web                    | `desktop` `web`                       | `service/dsh`（B3 未下沉）        | Dsh 屏（profile 切换）     | ⏳ P1          |
-| OpenCode → Providers                   | `providers`                           | `service/opencode`（B2 暂缓）     | Profiles 屏（通用）        | ⏳ **P3 后置** |
-| OpenClaw → Providers/Helpers/Subagents | `providers` `helpers` `subagents`     | `service/openclaw`（B2 暂缓）     | OpenClaw 屏（分节）        | ⏳ **P3 后置** |
-| Preferences → Paths（写）              | set/reset                             | `service/paths`                   | 编辑态 + ChangeSet 预览    | 🚧 P2          |
-| 任一工具 → Apply profile               | apply/save/delete                     | `service/<域>`                    | 预览（ChangeSet）→ 确认    | 🚧 P2          |
-| 冲突（外部改动后写盘）                 | —                                     | `core` beforeHash                 | 冲突提示 + `--force` 等价  | ⏳ P2          |
-| Preferences → General / Appearance     | 语言、主题                            | `service/preferences`（未下沉）   | Settings 屏                | ⏳ P1          |
-| 启动临时运行 / 打开终端                | launch                                | `service/<域>`                    | —                          | GUI-only       |
-| 窗口 / 菜单 / 通知 / PTY / 更新 / 字体 | —                                     | —                                 | —                          | GUI-only       |
+| GUI 入口                               | 子视图                                | service 包                        | TUI 屏                     | 状态                                                |
+| -------------------------------------- | ------------------------------------- | --------------------------------- | -------------------------- | --------------------------------------------------- |
+| 左栏 · 10 个工具 + Channels            | —                                     | —                                 | 模块列表 + 命令面板        | ✅ P0                                               |
+| Preferences → Paths                    | 九个路径键 + WSL 信息                 | `service/paths`                   | Paths 屏（查看/set/reset） | ✅ P0                                               |
+| Codex → Providers                      | `providers`                           | `service/codex`                   | Profiles 屏（通用）        | ✅ P0 读                                            |
+| Codex → Auth profiles                  | `auth-profiles`                       | `service/codex`                   | AuthProfiles 屏            | ⏳ P1                                               |
+| Codex → Sessions                       | `sessions`                            | `service/read`（B4）              | Sessions 屏                | ⏳ P3                                               |
+| Pi → Providers                         | `providers`                           | `service/pi`                      | Profiles 屏（通用）        | ✅ P0 读                                            |
+| Hermes → Model                         | `model`                               | `service/hermes`                  | Profiles 屏（通用）        | ✅ P0 读                                            |
+| OMP → Config                           | `config`                              | `service/omp`                     | Profiles 屏（通用）        | ✅ P0 读                                            |
+| Pi / OMP / Dsh / Droid → Sessions      | `sessions`                            | `service/read`（B4）              | Sessions 屏                | ⏳ P3                                               |
+| Channels → 列表/详情/token/凭据        | `detail`                              | `service/channels`                | Channels 屏                | 🚧 P1（list/detail ✅；token=网络、凭据=写，随 P2） |
+| Channels → Export templates            | `export-templates`                    | `service/export`                  | Export 屏                  | 🚧 P1（list/detail ✅；run=写，随 P2）              |
+| Claude → Settings                      | `settings`                            | `service/claude`（B3 未下沉）     | Settings 屏                | ⏳ P1                                               |
+| Copilot → Profiles                     | `profiles`                            | `service/copilot`（B3 未下沉）    | Profiles 屏                | ⏳ P1                                               |
+| Droid → Models / Settings / Trusted    | `models` `settings` `trusted-folders` | `service/droid`（B3 未下沉）      | Droid 屏（分节）           | ⏳ P1                                               |
+| Droid → Auth profiles / MCP / Specs    | `auth-profiles` `mcp` `specs`         | `service/droid`、`service/mcp`    | 同上 + Specs 屏            | ⏳ P1/P3                                            |
+| Droid → Missions / Legacy versions     | `missions` `legacy-versions`          | `service/droid`、`service/legacy` | 同上                       | ⏳ P1                                               |
+| Dsh → Desktop / Web                    | `desktop` `web`                       | `service/dsh`（B3 未下沉）        | Dsh 屏（profile 切换）     | ⏳ P1                                               |
+| OpenCode → Providers                   | `providers`                           | `service/opencode`（B2 暂缓）     | Profiles 屏（通用）        | ⏳ **P3 后置**                                      |
+| OpenClaw → Providers/Helpers/Subagents | `providers` `helpers` `subagents`     | `service/openclaw`（B2 暂缓）     | OpenClaw 屏（分节）        | ⏳ **P3 后置**                                      |
+| Preferences → Paths（写）              | set/reset                             | `service/paths`                   | 编辑态 + ChangeSet 预览    | 🚧 P2                                               |
+| 任一工具 → Apply profile               | apply/save/delete                     | `service/<域>`                    | 预览（ChangeSet）→ 确认    | 🚧 P2                                               |
+| 冲突（外部改动后写盘）                 | —                                     | `core` beforeHash                 | 冲突提示 + `--force` 等价  | ⏳ P2                                               |
+| Preferences → General / Appearance     | 语言、主题                            | `service/preferences`（未下沉）   | Settings 屏                | ⏳ P1                                               |
+| 启动临时运行 / 打开终端                | launch                                | `service/<域>`                    | —                          | GUI-only                                            |
+| 窗口 / 菜单 / 通知 / PTY / 更新 / 字体 | —                                     | —                                 | —                          | GUI-only                                            |
 
 **矩阵的完整性门禁（待落地，见 §6）**：`node scripts/check-tui-parity.mjs` 解析
 `src/store/ui-store.ts` 的子视图类型（`DroidSubView`、`CodexSubView` …），

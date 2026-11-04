@@ -32,11 +32,24 @@ type Module struct {
 	Open func(ctx context.Context) (Screen, error)
 }
 
-// DefaultModules is the P0 module set: paths plus the four profile domains
-// already extracted into internal/service. Parity adds the rest as their
-// service packages land (docs/developer/tui-parity.zh.md §2).
+// DefaultModules is the module set shipped so far. Parity adds a row per
+// GUI view as its service package lands — the source of truth for what is
+// still missing is the matrix in docs/developer/tui-parity.zh.md §2.
 func DefaultModules() []Module {
-	return []Module{
+	sources := []struct {
+		key    string
+		title  string
+		source func() ListSource
+	}{
+		{"channels", "Channels", ChannelsSource},
+		{"export", "Export", ExportSource},
+		{"codex", "Codex", CodexSource},
+		{"hermes", "Hermes", HermesSource},
+		{"pi", "Pi", PiSource},
+		{"omp", "OMP", OmpSource},
+	}
+
+	modules := []Module{
 		{
 			Key:   "paths",
 			Title: "Paths",
@@ -44,33 +57,16 @@ func DefaultModules() []Module {
 				return newPathsScreen(ctx)
 			},
 		},
-		{
-			Key:   "codex",
-			Title: "Codex",
-			Open: func(ctx context.Context) (Screen, error) {
-				return newProfilesScreen(ctx, CodexDomain())
-			},
-		},
-		{
-			Key:   "hermes",
-			Title: "Hermes",
-			Open: func(ctx context.Context) (Screen, error) {
-				return newProfilesScreen(ctx, HermesDomain())
-			},
-		},
-		{
-			Key:   "pi",
-			Title: "Pi",
-			Open: func(ctx context.Context) (Screen, error) {
-				return newProfilesScreen(ctx, PiDomain())
-			},
-		},
-		{
-			Key:   "omp",
-			Title: "OMP",
-			Open: func(ctx context.Context) (Screen, error) {
-				return newProfilesScreen(ctx, OmpDomain())
-			},
-		},
 	}
+	for _, entry := range sources {
+		entry := entry
+		modules = append(modules, Module{
+			Key:   entry.key,
+			Title: entry.title,
+			Open: func(ctx context.Context) (Screen, error) {
+				return newListScreen(ctx, entry.source())
+			},
+		})
+	}
+	return modules
 }
