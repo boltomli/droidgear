@@ -1,205 +1,74 @@
+// Channel commands: the channel list, its stored credentials and the
+// network helpers behind the Channels pane. The logic lives in
+// internal/service/channels (design doc §2 R2); this file only marshals
+// arguments and returns the same JSON the bindings already expose.
 package app
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
+	"context"
 
-	"droidgear-wails/internal/core"
+	// The service is imported under an alias so the method parameters can
+	// keep their original names: the generated bindings (and therefore the
+	// frontend shim) match on parameter names — scripts/check-command-surface.mjs
+	// fails the build when they drift.
+	svc "droidgear-wails/internal/service/channels"
 )
 
-// ---------------------------------------------------------------------------
-// Types (mirroring droidgear-core::channel)
-// ---------------------------------------------------------------------------
-
 // Channel mirrors channel::Channel.
-type Channel struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	Type      string  `json:"type"`
-	BaseURL   string  `json:"baseUrl"`
-	Enabled   bool    `json:"enabled"`
-	CreatedAt float64 `json:"createdAt"`
-}
+type Channel = svc.Channel
 
-// channelAuth mirrors channel::ChannelAuth (tagged enum):
-// {"type":"credentials","username":..,"password":..} or
-// {"type":"api_key","api_key":..}.
-type channelAuth struct {
-	Type     string `json:"type"`
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
-	APIKey   string `json:"api_key,omitempty"`
-}
+// ChannelToken mirrors channel::ChannelToken.
+type ChannelToken = svc.ChannelToken
 
-// ---------------------------------------------------------------------------
-// Paths
-// ---------------------------------------------------------------------------
+// ModelInfo mirrors factory_settings::ModelInfo.
+type ModelInfo = svc.ModelInfo
 
-func channelsPath() (string, error) {
-	dir, err := core.DroidGearDir()
-	if err != nil {
-		return "", err
-	}
-	if err := core.EnsureDir(dir); err != nil {
-		return "", fmt.Errorf("Failed to create .droidgear directory: %w", err)
-	}
-	return filepath.Join(dir, "channels.json"), nil
-}
-
-func channelAuthDir() (string, error) {
-	dir, err := core.DroidGearDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "auth"), nil
-}
-
-func channelAuthPath(channelID string) (string, error) {
-	dir, err := channelAuthDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, channelID+".json"), nil
-}
-
-// ---------------------------------------------------------------------------
-// Commands
-// ---------------------------------------------------------------------------
-
-// LoadChannels reads ~/.droidgear/channels.json, falling back to the legacy
-// Factory settings `channels` array for migration (mirrors the Rust core).
+// LoadChannels reads ~/.droidgear/channels.json (with Factory migration).
 func (a *App) LoadChannels() ([]Channel, error) {
-	path, err := channelsPath()
-	if err != nil {
-		return nil, err
-	}
-	if fileExists(path) {
-		data, err := os.ReadFile(path) // #nosec G304 -- channels file
-		if err != nil {
-			return nil, fmt.Errorf("Failed to read channels file: %w", err)
-		}
-		var channels []Channel
-		if err := json.Unmarshal(data, &channels); err != nil {
-			return nil, fmt.Errorf("Failed to parse channels file: %w", err)
-		}
-		return channels, nil
-	}
-
-	// Migration: ~/.factory/settings.json → channels array
-	settings := core.ReadJSONObjectFile(filepath.Join(core.FactoryHome(), "settings.json"))
-	if raw, ok := settings["channels"]; ok {
-		data, err := json.Marshal(raw)
-		if err == nil {
-			var channels []Channel
-			if json.Unmarshal(data, &channels) == nil && len(channels) > 0 {
-				if out, err := json.MarshalIndent(channels, "", "  "); err == nil {
-					_ = core.AtomicWrite(path, out)
-				}
-				return channels, nil
-			}
-		}
-	}
-	return []Channel{}, nil
+	return svc.Load(context.Background())
 }
 
 // SaveChannels writes the channel list atomically.
 func (a *App) SaveChannels(channels []Channel) error {
-	path, err := channelsPath()
-	if err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(channels, "", "  ")
-	if err != nil {
-		return fmt.Errorf("Failed to serialize channels: %w", err)
-	}
-	return core.AtomicWrite(path, data)
-}
-
-func readChannelAuth(channelID string) (*channelAuth, error) {
-	path, err := channelAuthPath(channelID)
-	if err != nil {
-		return nil, err
-	}
-	data, err := os.ReadFile(path) // #nosec G304 -- auth file
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("Failed to read auth file: %w", err)
-	}
-	var auth channelAuth
-	if err := json.Unmarshal(data, &auth); err != nil {
-		return nil, fmt.Errorf("Failed to parse auth file: %w", err)
-	}
-	return &auth, nil
-}
-
-func writeChannelAuth(channelID string, auth channelAuth) error {
-	dir, err := channelAuthDir()
-	if err != nil {
-		return err
-	}
-	if err := core.EnsureDir(dir); err != nil {
-		return fmt.Errorf("Failed to create auth directory: %w", err)
-	}
-	path, err := channelAuthPath(channelID)
-	if err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(auth, "", "  ")
-	if err != nil {
-		return fmt.Errorf("Failed to serialize auth: %w", err)
-	}
-	return core.AtomicWrite(path, data)
+	return svc.Save(context.Background(), channels)
 }
 
 // SaveChannelApiKey stores an api_key auth entry for a channel.
 func (a *App) SaveChannelApiKey(channelID string, apiKey string) error {
-	return writeChannelAuth(channelID, channelAuth{Type: "api_key", APIKey: apiKey})
+	return svc.SaveApiKey(context.Background(), channelID, apiKey)
 }
 
 // GetChannelApiKey returns the stored api key (null when absent).
 func (a *App) GetChannelApiKey(channelID string) (*string, error) {
-	auth, err := readChannelAuth(channelID)
-	if err != nil {
-		return nil, err
-	}
-	if auth == nil || auth.Type != "api_key" {
-		return nil, nil
-	}
-	key := auth.APIKey
-	return &key, nil
+	return svc.ApiKey(context.Background(), channelID)
 }
 
 // SaveChannelCredentials stores username/password auth for a channel.
 func (a *App) SaveChannelCredentials(channelID string, username string, password string) error {
-	return writeChannelAuth(channelID, channelAuth{
-		Type: "credentials", Username: username, Password: password,
-	})
+	return svc.SaveCredentials(context.Background(), channelID, username, password)
 }
 
 // GetChannelCredentials returns [username, password] (null when absent).
 func (a *App) GetChannelCredentials(channelID string) (*[2]string, error) {
-	auth, err := readChannelAuth(channelID)
-	if err != nil {
-		return nil, err
-	}
-	if auth == nil || auth.Type != "credentials" {
-		return nil, nil
-	}
-	return &[2]string{auth.Username, auth.Password}, nil
+	return svc.Credentials(context.Background(), channelID)
 }
 
 // DeleteChannelCredentials removes a channel's auth file.
 func (a *App) DeleteChannelCredentials(channelID string) error {
-	path, err := channelAuthPath(channelID)
-	if err != nil {
-		return err
-	}
-	if fileExists(path) {
-		return os.Remove(path)
-	}
-	return nil
+	return svc.DeleteCredentials(context.Background(), channelID)
+}
+
+// DetectChannelType probes well-known endpoints to classify a channel.
+func (a *App) DetectChannelType(baseUrl string) (string, error) {
+	return svc.DetectType(context.Background(), baseUrl)
+}
+
+// FetchChannelTokens logs in to a channel and lists its tokens.
+func (a *App) FetchChannelTokens(channelType string, baseUrl string, username string, password string) ([]ChannelToken, error) {
+	return svc.FetchTokens(context.Background(), channelType, baseUrl, username, password)
+}
+
+// FetchModelsByApiKey probes the platform-specific model endpoints.
+func (a *App) FetchModelsByApiKey(baseUrl string, apiKey string, platform *string) ([]ModelInfo, error) {
+	return svc.FetchModelsByApiKey(context.Background(), baseUrl, apiKey, platform)
 }

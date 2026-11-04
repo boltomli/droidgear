@@ -3,7 +3,7 @@
 本文件是 ADR-001「TUI/CLI 命运」的**执行细则**：把「Go 共享 service 层 → `cmd/dg` CLI →
 Go TUI」这条路线拆成可验收的步骤，并固定 CLI/TUI 的对外契约。
 
-- **状态**：设计与实现计划（未开工，代码尚未落地）
+- **状态**：**期 0 与期 1-B1 已落地**（`internal/version`、分层门禁、`service/{paths,channels,export}`、`cmd/dg` 骨架 + 测试），分期与缺口见 §10
 - **适用分支**：`spike/wails-v3-minimal`（**Wails v3 单一运行时**，见 §0）
 - **关联**：
   - [`adr-001-tui-fate.zh.md`](./adr-001-tui-fate.zh.md) — 决策本体与分期
@@ -66,7 +66,8 @@ Go TUI」这条路线拆成可验收的步骤，并固定 CLI/TUI 的对外契�
 ## 2. 分层与依赖方向
 
 ```
-   wails/internal/core      纯文件/格式层：路径解析、atomic write、JSON5/YAML 往返、registry
+   wails/internal/core      纯文件/格式 + 通用工具层：路径解析、atomic write、JSON5/YAML 往返、
+                            registry、FileExists / NewHTTPClient / RedactSecret（service 与 app 共用）
             ▲
             │  只被引用，不引用上层
    wails/internal/service   用例层：读 → 计算 ChangeSet → 校验 → 应用；**零 Wails 依赖**
@@ -194,28 +195,31 @@ func (a *App) ApplyCodexProfile(id string) (CodexConfigStatus, error) {
 
 - 独立二进制 `dg`（`wails/cmd/dg`），与 GUI 共享 `internal/service` + `internal/core`。
 - **不链接 Wails**：CLI 必须能在没有 WebKitGTK / Cocoa 的镜像里 `CGO_ENABLED=0 go build`。
-- 版本号：把 `internal/app.appVersion` 提到 `internal/version.Version`，两个 main 共用同一 `-ldflags`
-  注入点（`wails/Taskfile.yml`、`.github/workflows/wails.yml` 同步）。
+- 版本号：**已落地（期 0）** —— `internal/version.Version` 是唯一注入点，GUI（`GetAppVersion`、
+  About 菜单）与 `dg version` 共用；`wails/build/Taskfile.yml`、`wails/build/windows/Taskfile.yml`
+  与 `.github/workflows/release-single.yml` 的 `-X` 目标已同步（改名时三处必须一起改）。
 - 依赖策略：**本期只用标准库**（`flag` + 自写表格）。`cobra`/`urfave/cli`/`bubbletea`
   一律延后到 §6 的 TUI 决策点，与 ADR-001「需显式放行第三方依赖」一致。
 
 ### 4.2 命令树（镜像 GUI，按层级标注）
 
 ```bash
-dg version                                    # T3：版本/构建元信息
-dg doctor                                     # T2：路径/凭据/配置状态汇总（无写盘）
-dg path show|set <key> <path>|reset <key>     # T1
-dg channels list|show <id>|export <template>  # T1/T2
-dg export run <template> [--out DIR]          # T1（与 GUI Export 面板一致）
-dg codex profiles list|show <id>|apply <id>   # T1
-dg codex status                               # T2（对应 GetCodexConfigStatus）
+dg version                                    # T3 ✅
+dg doctor                                     # T2 ✅（只读：不加载 channels，避免触发迁移写）
+dg path show|set <key> <path>|reset <key>     # T1 ✅（set/reset 支持 --dry-run）
+dg channels list|show <id>|tokens <id>        # T1/T2 ✅（tokens 默认打码，--reveal 才出明文）
+dg export list|save --file <json>|delete <name>|run <name>  # T1/T2 ✅（run 支持 --dry-run）
+dg codex profiles list|show <id>|apply <id>   # T1    期 2 下一批（依赖 B2 的 profile 域下沉）
+dg codex status                               # T2    同上（对应 GetCodexConfigStatus）
 dg pi|hermes|omp|opencode|openclaw|claude|copilot ...  # 同上形态
-dg droid models list|apply                    # T1（Droid settings 文件）
-dg dsh providers list|apply [--profile desktop|web]     # T1
-dg mcp list|toggle <id>|apply                 # T1/T2
-dg sessions projects|list|show <id>           # T2（只读）
-dg spec list|cat <name>                       # T2（只读，写走 $EDITOR 手工路径）
+dg droid models list|apply                    # T1    B3
+dg dsh providers list|apply [--profile desktop|web]     # T1    B3
+dg mcp list|toggle <id>|apply                 # T1/T2 B3
+dg sessions projects|list|show <id>           # T2    B4（只读）
+dg spec list|cat <name>                       # T2    B4（只读，写走 $EDITOR 手工路径）
 ```
+
+✅ = 本仓库已实现并有测试（`cmd/dg/dg_test.go` + `service/*_test.go`）；其余按 §3.4 的批次推进。
 
 覆盖面分级（`PORTING.md` 的 `T1/T2/T3` 含义，沿用本文件）：
 
@@ -227,27 +231,39 @@ dg spec list|cat <name>                       # T2（只读，写走 $EDITOR 手
 
 ### 4.3 全局 flags 与输入
 
-| flag            | 语义                                                             |
-| --------------- | ---------------------------------------------------------------- |
-| `--json`        | stdout 输出**单个 JSON 文档**；人读文本不出现在 stdout           |
-| `--dry-run`     | 只计算并输出 ChangeSet（`applied:false`），不落盘                |
-| `--apply`       | 默认行为；显式写出便于脚本自解释（与 `--dry-run` 互斥）          |
-| `--home DIR`    | 覆盖 HOME（容器/测试/多套配置）；等价于 Rust TUI 的全局 `--home` |
-| `--force`       | 忽略陈旧冲突（`changeSet.conflicts` 非空时才允许写）             |
-| `--timeout 30s` | 网络类动作（token 拉取、模型连通性测试）的超时                   |
-| `--reveal`      | 预览/输出中包含明文 secrets（默认打码，见 §5.3）                 |
-| `--quiet`       | 抑制 stderr 进度文本                                             |
+| flag            | 语义                                                                   | 状态                                                                      |
+| --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `--json`        | stdout 输出**单个 JSON 文档**；人读文本不出现在 stdout                 | ✅                                                                        |
+| `--dry-run`     | 只计算并输出 ChangeSet（`applied:false`），不落盘                      | ✅（`path set/reset`、`export run`）                                      |
+| `--apply`       | 默认行为；显式写出便于脚本自解释（与 `--dry-run` 互斥，同给则 exit 2） | ✅                                                                        |
+| `--home DIR`    | 重定向整个 profile（见下）；等价于 Rust TUI 的全局 `--home`            | ✅                                                                        |
+| `--force`       | 忽略陈旧冲突（`changeSet.conflicts` 非空时才允许写）                   | ⏳ 随冲突检测（§5.2）落地，**尚未定义**                                   |
+| `--timeout DUR` | 单条命令的总截止时间；默认 `0` = 不额外限制                            | ✅                                                                        |
+| `--reveal`      | 预览/输出中包含明文 secrets（默认打码，见 §5.3）                       | ✅                                                                        |
+| `--quiet`       | 抑制 stderr 进度文本                                                   | ⏳ **暂不定义**：当前没有进度输出，不提供占位 flag（无用 flag = 假 shim） |
 
-`--home` 的实现约束：`internal/core` 目前用 `os.UserHomeDir()`（`core/paths.go`），
-所以 v1 在 main 里**解析参数前**设置 `HOME`/`USERPROFILE` 后统一走 core；CLI 是短命进程，
-这种进程级覆盖可接受。若将来 TUI/GUI 需要同进程多套 home，再把 `HomeDir` 提升为 service `Options` 字段。
+`--home` 的实现约束：`internal/core` 用 `os.UserHomeDir()`（`core/paths.go`），
+所以 main 在分发命令前设置 `HOME`/`USERPROFILE`；**Windows 还要一起设 `APPDATA`/`LOCALAPPDATA`**，
+否则 `%LOCALAPPDATA%/hermes`（Hermes 的优先级链）会指回真实 profile，沙箱就漏了——
+`cmd/dg/dg_test.go` 的 `TestHomeFlagSandboxesTheWholeProfile` 锁住这一点。CLI 是短命进程，
+进程级覆盖可接受；若将来 TUI/GUI 需要同进程多套 home，再把 `HomeDir` 提升为 service `Options` 字段。
+
+所有全局 flag 都在**命令前后**可写（`dg path show --json` 与 `dg --json path show` 等价）：
+main 里先扫一遍 argv 把已知全局 flag 摘出来，剩下的交给子命令自己的 `flag.FlagSet`。
+
+裸 `dg` 打印 usage 并返回 **exit 2**（用法错误）；`dg help` / `dg --help` 打印 usage 返回 **0**。
 
 ### 4.4 输出契约（机器可依赖）
 
 ```jsonc
-// 成功：data 直接就是 bindings 的返回形状（数组或对象），不再套信封
+// 成功·只读操作：data 直接就是 bindings 的返回形状（数组或对象），不套信封
 ["…"]                      // dg channels list --json
 { "key": "codex", "path": "/home/u/.codex", "isDefault": false }   // dg path show --json
+
+// 成功·写操作：GUI 侧返回值为空，CLI 给一个最小回执，形状固定
+{ "applied": true, "key": "codex", "path": "/elsewhere/codex" }    // dg path set --json
+{ "applied": true, "result": { "template": "t1", … } }             // dg export run --json
+{ "applied": false, "changes": [{ "path": …, "after": … }] }       // dg export run --dry-run --json
 ```
 
 ```jsonc
@@ -261,13 +277,17 @@ dg spec list|cat <name>                       # T2（只读，写走 $EDITOR 手
 }
 ```
 
-| exit | 含义                                     | 典型 `code`                   |
-| ---- | ---------------------------------------- | ----------------------------- |
-| 0    | 成功（含 `--dry-run` 与空变更）          | —                             |
-| 1    | 运行时错误 / 目标不存在 / 校验失败       | `not_found`、`invalid_config` |
-| 2    | 用法错误（`flag` 包默认行为，保持一致）  | `usage`                       |
-| 3    | 状态冲突（陈旧文件、需要 `--force`）     | `conflict`                    |
-| 4    | 外部依赖失败（网络、上游凭据、上游 CLI） | `network`、`upstream`         |
+| exit | 含义                                     | 典型 `code`            | 状态      |
+| ---- | ---------------------------------------- | ---------------------- | --------- |
+| 0    | 成功（含 `--dry-run` 与空变更）          | —                      | ✅        |
+| 1    | 运行时错误 / 目标不存在 / 校验失败       | `not_found`、`runtime` | ✅        |
+| 2    | 用法错误（flag/参数不对）                | `usage`                | ✅        |
+| 3    | 状态冲突（陈旧文件、需要 `--force`）     | `conflict`             | ⏳ 未实现 |
+| 4    | 外部依赖失败（网络、上游凭据、上游 CLI） | `upstream`             | ✅        |
+
+exit 4 由 `service/channels.ErrUpstream` 哨兵驱动：包装器只加标记、**不改文案**
+（GUI 的 `error-i18n.ts` 按原文匹配），`dg` 用 `errors.Is` 映射成 4。
+exit 3 依赖 §5.2 的 `beforeHash` 冲突检测，随 `--force` 一起落地。
 
 其他契约：
 
@@ -348,29 +368,37 @@ TUI 的唯一复用面是 **service + ChangeSet**：TUI 不得绕过 service 直
 
 ## 7. 质量门禁
 
-| 门禁                                             | 覆盖                                                                              | 何时引入   |
-| ------------------------------------------------ | --------------------------------------------------------------------------------- | ---------- |
-| `go vet ./... && go test ./...`                  | service/app/CLI 单测                                                              | 期 1 起    |
-| 分层门禁 `scripts/check-go-layering.mjs`（新增） | R1/R3：`go list -deps` 里不得出现 `wailsapp`（service）、`internal/app`（cmd/dg） | 期 1       |
-| CLI golden 测试                                  | `--json` 输出与 exit code 固定（`testdata/*.json`）                               | 期 2 起    |
-| `node scripts/check-command-surface.mjs`         | 命令面基线（只允许收缩，见 §0 规则 1）                                            | 已有       |
-| `npm run check:all`                              | 前端 + Rust 历史门禁（保持绿；本分支不新增 Rust 代码）                            | 已有       |
-| `dg doctor --json` 冒烟                          | 临时 `HOME` 下全流程可跑                                                          | CI（期 2） |
+| 门禁                                          | 覆盖                                                                              | 状态      |
+| --------------------------------------------- | --------------------------------------------------------------------------------- | --------- |
+| `go vet ./... && go test ./...`               | service/app/CLI 单测（251 条，含 26 条新增）                                      | ✅ 已引入 |
+| 分层门禁 `scripts/check-go-layering.mjs`      | R1/R3：`go list -deps` 里不得出现 `wailsapp`（service）、`internal/app`（cmd/dg） | ✅ 已引入 |
+| CI job `wails.yml → cli-headless`（ubuntu）   | `CGO_ENABLED=0 go build ./cmd/dg` + service/core/cmd 测试；**不装 wails3/npm**    | ✅ 已引入 |
+| CI job `wails.yml → build-test`（windows）    | 前端 + Go 全量 + 分层门禁 + 命令面 + 版本/registry 漂移                           | ✅ 已引入 |
+| `node scripts/check-command-surface.mjs`      | 命令面基线（含**参数名**，只允许收缩，见 §0 规则 1）                              | ✅ 已有   |
+| `npm run check:all`                           | 前端 + Rust 历史门禁（保持绿；本分支不新增 Rust 代码）                            | ✅ 已有   |
+| `node wails/scripts/sync-version.mjs --check` | 版本号单一来源（改 ldflags 目标必须三处同步，见 §4.1）                            | ✅ 已有   |
 
-CLI golden 测试的写法约定：测试只 `exec` 编译出的 `dg`，在 `t.TempDir()` 里构造 `HOME`，
+CLI 契约测试的写法约定：直接调 `run(args, &stdout, &stderr)`（它不调 `os.Exit`，
+可测），用 `t.Setenv` 把 `HOME`/`USERPROFILE`/`APPDATA`/`LOCALAPPDATA` 指到 `t.TempDir()`
+（`t.Setenv` 会在用例结束时还原，而 `run(--home …)` 自己改的环境靠它兜底）；
 断言「stdout JSON + exit code + 落盘文件内容」三者，**不 mock service**（那是 service 单测的事）。
+不用 `exec` 编译出的二进制：进程内调用覆盖同一代码路径，且省掉测试期的 build。
+
+> 为什么必须有 `cli-headless`：`internal/app` **无法**交叉编译到 linux
+> （`wails/v3/pkg/application` 拉进 gtk 绑定），而 `cmd/dg` + `service` + `core` 可以。
+> 这个 job 就是 R3 的可执行证明——它一旦变红，说明 CLI 拽进了 GUI 依赖。
 
 ---
 
 ## 8. 实施顺序
 
-| 期  | 内容                                                   | 完成判据                                                    |
-| --- | ------------------------------------------------------ | ----------------------------------------------------------- |
-| 0   | 本文件落库；`internal/version` 提取；分层门禁脚本骨架  | 文档索引更新，门禁脚本在现有代码上「预期失败」也不会误伤 CI |
-| 1   | `internal/service` 抽取（B1 → B2 → B3 → B4）           | §3.5 全绿；app 层签名/JSON 不变                             |
-| 2   | `cmd/dg` 骨架 + T1 命令（paths/channels/export/codex） | golden 测试 + `dg doctor` 在容器镜像（无 WebKit）里跑通     |
-| 3   | `dg` 覆盖 T1 全量 + T2 只读面                          | §4.5 对照表无缺口（或有豁免记录）                           |
-| 4   | TUI 决策（§6）或删除 `src-tauri`（§0 规则 4）          | 独立 ADR/任务，不在本期承诺                                 |
+| 期  | 内容                                          | 状态 / 完成判据                                         |
+| --- | --------------------------------------------- | ------------------------------------------------------- |
+| 0   | `internal/version` 提取；分层门禁脚本         | ✅ 已完成（ldflags 三处同步，门禁接入 `wails.yml`）     |
+| 1   | `internal/service` 抽取（B1 → B2 → B3 → B4）  | 🚧 B1（paths/channels/export）已完成；B2–B4 待做        |
+| 2   | `cmd/dg` 骨架 + T1 命令                       | 🚧 骨架 + paths/channels/export 已完成；codex/pi/… 待做 |
+| 3   | `dg` 覆盖 T1 全量 + T2 只读面                 | ⏳ 未开始（§4.5 对照表无缺口或有豁免记录）              |
+| 4   | TUI 决策（§6）或删除 `src-tauri`（§0 规则 4） | ⏳ 未开始（独立 ADR/任务，不在本期承诺）                |
 
 ---
 
@@ -380,3 +408,28 @@ CLI golden 测试的写法约定：测试只 `exec` 编译出的 `dg`，在 `t.T
 - 新增 GUI 写操作时，先补 `internal/service` 方法与 `dg` 子命令，再写前端调用；
   `PORTING.md`「CLI contract」与本文件冲突时，以本文件为准并回写 `PORTING.md`。
 - 「豁免」必须写进 `wails/PORTING.md` 的豁免清单（含理由与日期），口头豁免无效。
+- **改 `internal/app` 方法的参数名会弄红 CI**：生成的 bindings 按参数名与 shim 对齐
+  （`check-command-surface.mjs` 报 `参数名不一致`）。service 内部用什么名字随意，
+  但 app 转发层的签名（含参数名）是前端契约——必要时像 `app/channels.go` 那样
+  给 service 包起别名（`svc "…/service/channels"`）来腾出参数名。
+
+---
+
+## 10. 落地状态（本分支当前进度）
+
+| 模块                                                                         | 状态 |
+| ---------------------------------------------------------------------------- | ---- |
+| `internal/version`（GUI/CLI 共用 ldflags 目标）                              | ✅   |
+| `scripts/check-go-layering.mjs` + `wails.yml` 两个 CI job                    | ✅   |
+| `internal/service/paths`（九个路径键 + WSL）                                 | ✅   |
+| `internal/service/channels`（列表/凭据/token/模型/类型探测 + `ErrUpstream`） | ✅   |
+| `internal/service/export`（模板 CRUD + 运行引擎 + dry-run 预览与打码）       | ✅   |
+| `cmd/dg`：`version` `doctor` `path` `channels` `export`                      | ✅   |
+| 测试：`service/*` 15 条 + `cmd/dg` 13 条契约测试（合计 253 条）              | ✅   |
+| `internal/service/{codex,pi,hermes,omp,opencode,openclaw,…}`（B2/B3）        | ⏳   |
+| `dg` 的 codex/pi/… 子命令（期 2 剩余）                                       | ⏳   |
+| `--force` + `beforeHash` 冲突检测（exit 3）                                  | ⏳   |
+| TUI（§6 决策点）/ 删除 `src-tauri`                                           | ⏳   |
+
+下一批建议顺序：B2 的 `codex`（profile CRUD + apply，headless 需求最高）→
+`dg codex profiles …` → 再回来补冲突检测（那时 `--force` 才有真实语义）。

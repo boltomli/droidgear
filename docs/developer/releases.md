@@ -230,7 +230,7 @@ cannot do that on macOS (`.app`/`.dmg` only), so it keeps using `release.yml`.
 `wails3 generate bindings` → `vite build --config wails/vite.config.ts`
 (creates `wails/frontend/dist` for the embed) → `wails3 generate syso`
 (Windows icon/version resource only) → `go build -tags "<tags>" -trimpath
--ldflags "-w -s … -X droidgear-wails/internal/app.appVersion=$APP_VERSION"`.
+-ldflags "-w -s … -X droidgear-wails/internal/version.Version=$APP_VERSION"`.
 The version comes from `wails/scripts/sync-version.mjs`, i.e. `package.json`.
 
 Build tags per platform: `production` on Windows/macOS, `production,gtk3` on

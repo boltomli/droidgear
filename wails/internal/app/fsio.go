@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"droidgear-wails/internal/core"
 )
 
 func validateIOPath(path string) error {
@@ -42,5 +44,5 @@ func (a *App) WriteTextFile(path string, contents string) error {
 			return fmt.Errorf("Failed to create directory: %w", err)
 		}
 	}
-	return writeAtomicText(path, contents)
+	return core.AtomicWrite(path, []byte(contents))
 }

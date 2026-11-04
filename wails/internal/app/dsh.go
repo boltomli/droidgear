@@ -206,8 +206,7 @@ func dshCredentialsPath() (string, error) {
 // ---------------------------------------------------------------------------
 
 func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.Mode().IsRegular()
+	return core.FileExists(path)
 }
 
 // resolveDshProfile resolves the official profile DroidGear manages.

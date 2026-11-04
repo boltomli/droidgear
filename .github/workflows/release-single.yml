@@ -238,7 +238,7 @@ jobs:
           mkdir -p out
           cd wails
           go build -tags "${{ matrix.build_tags }}" -trimpath -buildvcs=false \
-            -ldflags "-w -s ${{ matrix.ldflags }} -X droidgear-wails/internal/app.appVersion=${APP_VERSION}" \
+            -ldflags "-w -s ${{ matrix.ldflags }} -X droidgear-wails/internal/version.Version=${APP_VERSION}" \
             -o "../out/${{ matrix.asset }}" .
           cd ..
           rm -f wails/*.syso

@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"runtime"
 
+	"droidgear-wails/internal/version"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -108,7 +110,7 @@ func (a *App) BuildAppMenu(lang string) error {
 			SetTitle("DroidGear").
 			SetMessage(fmt.Sprintf(
 				"DroidGear\n\nVersion: %s\n\nBuilt with Wails v3 + React + Go",
-				appVersion,
+				version.Version,
 			)).
 			Show()
 	})

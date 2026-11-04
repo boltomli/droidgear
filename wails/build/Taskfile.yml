@@ -120,7 +120,7 @@ tasks:
       # package.json and feeds the -X ldflags injection.
       APP_VERSION:
         sh: node "{{.ROOT_DIR}}/scripts/sync-version.mjs"
-      BUILD_FLAGS: '-tags server{{if eq .DEV "true"}}{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -buildvcs=false -gcflags=all="-l"{{else}},production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -X droidgear-wails/internal/app.appVersion={{.APP_VERSION}}"{{end}}'
+      BUILD_FLAGS: '-tags server{{if eq .DEV "true"}}{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -buildvcs=false -gcflags=all="-l"{{else}},production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -X droidgear-wails/internal/version.Version={{.APP_VERSION}}"{{end}}'
 
   run:server:
     summary: Builds and runs a development server (DEV=true)

@@ -10,6 +10,14 @@ import (
 
 var tempCounter atomic.Uint64
 
+// FileExists reports whether path is an existing regular file (directories
+// and dangling symlinks are not files). Shared by internal/app and
+// internal/service so both layers agree on what "exists" means.
+func FileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular()
+}
+
 // AtomicWrite replaces path with the given bytes.
 //
 // A sibling temp file with a unique suffix is written first, then renamed

@@ -15,7 +15,7 @@
 // `-X ...appVersion=` injection, which is what About/General panes display.
 //
 // The Go binary picks the version up at link time via
-// `-ldflags "-X droidgear-wails/internal/app.appVersion=<version>"` (see
+// `-ldflags "-X droidgear-wails/internal/version.Version=<version>"` (see
 // build/windows/Taskfile.yml and build/Taskfile.yml), which invokes this
 // script to capture the value. `GetAppVersion` therefore reports the same
 // version as the Tauri app (About/General panes).

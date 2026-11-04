@@ -83,10 +83,12 @@ steps **must** follow the frontend build because of `//go:embed`.
 ## Validation checklist
 
 ```bash
-node scripts/check-command-surface.mjs    # command surface
+node scripts/check-command-surface.mjs    # command surface (names + arg order)
+node scripts/check-go-layering.mjs        # service must not import wails; cmd/dg must not import internal/app
 node wails/scripts/sync-version.mjs --check
 cmp src/lib/model-registry-data.json wails/internal/core/registrydata/model-registry-data.json  # shared data
 npm run typecheck && npm run lint && npm run test:run
+cd wails && go vet ./... && go test ./...   # includes cmd/dg contract tests
 ```
 
 Note: `npm run check:all` does **not** cover the Wails frontend build or the

@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"droidgear-wails/internal/core"
 )
 
 // ---------------------------------------------------------------------------
@@ -164,7 +166,7 @@ func connectivityProbeEndpoint(provider, baseURL, apiKey string, timeout time.Du
 		request.Header.Set("Authorization", "Bearer "+apiKey)
 	}
 
-	client := newHTTPClient(timeout)
+	client := core.NewHTTPClient(timeout)
 	response, err := client.Do(request)
 	if err != nil {
 		if connectivityIsTimeout(err) {
@@ -182,7 +184,7 @@ func connectivityProbeEndpoint(provider, baseURL, apiKey string, timeout time.Du
 		body = []byte("Unable to read response body")
 	}
 	return errString(fmt.Sprintf("HTTP %d %s: %s",
-		response.StatusCode, connectivityStatusText(response.StatusCode), truncateBody(string(body))))
+		response.StatusCode, connectivityStatusText(response.StatusCode), core.TruncateBody(string(body))))
 }
 
 // connectivityRunInference mirrors connectivity::ModelTester::run_inference:
@@ -212,7 +214,7 @@ func connectivityRunInference(provider, baseURL, apiKey, modelID, prompt string,
 		request.Header.Set("Authorization", "Bearer "+apiKey)
 	}
 
-	client := newHTTPClient(timeout)
+	client := core.NewHTTPClient(timeout)
 	response, err := client.Do(request)
 	if err != nil {
 		if connectivityIsTimeout(err) {
@@ -228,7 +230,7 @@ func connectivityRunInference(provider, baseURL, apiKey, modelID, prompt string,
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return "", errString(fmt.Sprintf("Inference HTTP %d %s: %s",
-			response.StatusCode, connectivityStatusText(response.StatusCode), truncateBody(string(responseBody))))
+			response.StatusCode, connectivityStatusText(response.StatusCode), core.TruncateBody(string(responseBody))))
 	}
 
 	var data any

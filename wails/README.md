@@ -141,6 +141,41 @@ Porting conventions for adding further command surfaces live in
 through unchanged. The `DSH_CONFIG_CONFLICT` / `DSH_CONFIG_SHADOWED`
 prefixes are preserved verbatim because the store matches them.
 
+## Headless CLI (`dg`)
+
+`cmd/dg` is the non-GUI consumer required by AGENTS.md rule 9: it shares
+`internal/service` + `internal/core` with the GUI and links **no** Wails
+runtime, so it runs over SSH or in a container (`CGO_ENABLED=0 go build -o
+dg ./cmd/dg` — no WebKit/Cocoa needed; CI job `wails.yml → cli-headless`
+builds and tests it on Ubuntu with no GUI toolchain installed).
+
+```bash
+cd wails
+go run ./cmd/dg help
+
+go run ./cmd/dg --json doctor          # effective paths, WSL, config files (read-only)
+go run ./cmd/dg path show              # the nine config paths
+go run ./cmd/dg path set codex /srv/codex
+go run ./cmd/dg channels list --json
+go run ./cmd/dg channels tokens ch1    # keys redacted unless --reveal
+go run ./cmd/dg export run t1 --dry-run  # ChangeSet preview, nothing written
+go run ./cmd/dg export run t1           # writes the output file
+```
+
+Contract: **`--json` is the machine interface** (one JSON document on
+stdout, error envelope on stderr, camelCase fields identical to the
+bindings), `--dry-run` never touches the filesystem, secrets are redacted
+unless `--reveal`. Exit codes: `0` ok · `1` runtime/not-found · `2` usage ·
+`3` conflict (pending) · `4` upstream/provider. Full specification, the
+layering rules (service must not import Wails, `dg` must not import
+`internal/app`) and the batch plan live in
+[`../developer/wails-tui-cli-design.zh.md`](../developer/wails-tui-cli-design.zh.md);
+the gate is `node scripts/check-go-layering.mjs`.
+
+Covered today: `version`, `doctor`, `path`, `channels`, `export`. Profile
+tools (`codex`, `pi`, `hermes`, …) follow once their domains move into
+`internal/service`.
+
 ## Building
 
 Prerequisites: Go ≥ 1.26, Node (repo-root `node_modules` installed via
@@ -164,7 +199,7 @@ The build pipeline (`build/Taskfile.yml`):
 (same value the Tauri build embeds). `scripts/sync-version.mjs` syncs it into
 `build/config.yml`, `build/windows/info.json` and the NSIS/MSIX installer
 assets, and prints it for the `-ldflags "-X
-droidgear-wails/internal/app.appVersion=…"` injection, so `GetAppVersion`
+droidgear-wails/internal/version.Version=…"` injection, so `GetAppVersion`
 (About / General panes) reports the same version everywhere. Drift check (CI):
 `node wails/scripts/sync-version.mjs --check`.
 

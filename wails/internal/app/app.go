@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/version"
 )
 
 // App is the Wails service root. It holds no state; every method resolves
@@ -42,19 +43,12 @@ type AppPreferences struct {
 	DroidRun             *DroidRunPreferences `json:"droid_run"`
 }
 
-// appVersion is shown in the About/General panes. The value is injected at
-// link time via
-// `-ldflags "-X droidgear-wails/internal/app.appVersion=<version>"` in the
-// Taskfiles; the version itself comes from the repo-root package.json through
-// scripts/sync-version.mjs (single source of truth shared with the Tauri
-// build). The "dev" fallback covers `wails3 dev` / `go test`, which build
-// without the ldflags.
-var appVersion = "dev"
-
 // GetAppVersion returns the application version string (mirrors the Tauri
-// `get_app_version` command, which also returns a bare string).
+// `get_app_version` command, which also returns a bare string). The value
+// lives in internal/version so the `dg` CLI reports the same build version
+// as the GUI (see the ldflags note there).
 func (a *App) GetAppVersion() string {
-	return appVersion
+	return version.Version
 }
 
 func defaultPreferences() AppPreferences {

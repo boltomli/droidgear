@@ -65,7 +65,7 @@ tasks:
       # via `go run` without ldflags and reports the "dev" fallback.
       APP_VERSION:
         sh: node "{{.ROOT_DIR}}/scripts/sync-version.mjs"
-      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l" -ldflags="-X droidgear-wails/internal/app.appVersion={{.APP_VERSION}}"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -H windowsgui -X droidgear-wails/internal/app.appVersion={{.APP_VERSION}}"{{end}}'
+      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l" -ldflags="-X droidgear-wails/internal/version.Version={{.APP_VERSION}}"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -H windowsgui -X droidgear-wails/internal/version.Version={{.APP_VERSION}}"{{end}}'
     env:
       GOOS: windows
       CGO_ENABLED: '{{.CGO_ENABLED | default "0"}}'

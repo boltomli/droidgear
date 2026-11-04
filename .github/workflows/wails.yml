@@ -16,6 +16,7 @@ on:
       - 'wails/**'
       - 'src/**'
       - 'scripts/check-command-surface.mjs'
+      - 'scripts/check-go-layering.mjs'
       - 'locales/**'
       - '.github/workflows/wails.yml'
   workflow_dispatch:
@@ -88,9 +89,36 @@ jobs:
       - name: Command surface drift
         run: node scripts/check-command-surface.mjs
 
+      # docs/developer/wails-tui-cli-design.zh.md §2: internal/service must
+      # stay free of Wails, cmd/dg must not import internal/app.
+      - name: Go layering gate
+        run: node scripts/check-go-layering.mjs
+
       - name: Version source drift
         run: node wails/scripts/sync-version.mjs --check
 
       - name: Shared registry data drift
         shell: bash
         run: cmp src/lib/model-registry-data.json wails/internal/core/registrydata/model-registry-data.json
+
+  # The `dg` CLI must build and test with no GUI toolchain: no wails3, no
+  # npm, no WebKitGTK/Cocoa. internal/app cannot cross-compile to linux
+  # (it pulls in wails/v3's gtk bindings), so a green job here is the
+  # executable proof of layering rule R3 — see
+  # docs/developer/wails-tui-cli-design.zh.md §4.1/§7.
+  cli-headless:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wails/go.mod
+
+      - name: Build dg (CGO off, no WebKit installed)
+        working-directory: wails
+        run: CGO_ENABLED=0 go build -o dg ./cmd/dg
+
+      - name: Headless tests (CLI, service, core)
+        working-directory: wails
+        run: go test ./cmd/... ./internal/service/... ./internal/core/...
