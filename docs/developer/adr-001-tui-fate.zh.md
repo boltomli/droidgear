@@ -3,7 +3,7 @@
 - **状态**：已接受
 - **日期**：2026-11
 - **决策人**：维护者
-- **关联**：[`wails-port-guidelines.zh.md`](./wails-port-guidelines.zh.md) §5、[`wails-round2-layout-and-gaps.zh.md`](./wails-round2-layout-and-gaps.zh.md) B11、[`wails-tui-cli-design.zh.md`](./wails-tui-cli-design.zh.md)（**执行细则**）、AGENTS.md 规则 9、[`wails/PORTING.md`](../../wails/PORTING.md)「CLI 契约」
+- **关联**：[`wails-port-guidelines.zh.md`](./wails-port-guidelines.zh.md) §5、[`wails-round2-layout-and-gaps.zh.md`](./wails-round2-layout-and-gaps.zh.md) B11、[`wails-tui-cli-design.zh.md`](./wails-tui-cli-design.zh.md)（**执行细则**）、[`tauri-removal-design.zh.md`](./tauri-removal-design.zh.md) + [`tauri-removal-tasks.zh.md`](./tauri-removal-tasks.zh.md)（期 4「删除 `src-tauri`」的设计与任务书）、AGENTS.md 规则 9、[`wails/PORTING.md`](../../wails/PORTING.md)「CLI 契约」
 
 ## 背景
 
@@ -77,6 +77,8 @@ Go:   internal/core  ──► internal/app（Wails service）──► React GU
 2. **本分支（`spike/wails-v3-minimal`）的 Tauri 壳与 Rust TUI 一律冻结**：
    不加命令/插件/shim，新能力只进 Go service；彻底删除 `src-tauri` 作为独立任务
    （含 `package.json` 的 `tauri:*`/`rust:*`/`tui:*` 脚本与 `release.yml` 的 Tauri/TUI 发布项）。
+   该独立任务的设计与任务书：[`tauri-removal-design.zh.md`](./tauri-removal-design.zh.md)、
+   [`tauri-removal-tasks.zh.md`](./tauri-removal-tasks.zh.md)。
 
 ## 未决问题
 

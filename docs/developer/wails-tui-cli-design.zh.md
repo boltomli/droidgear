@@ -11,6 +11,8 @@ Go TUI」这条路线拆成可验收的步骤，并固定 CLI/TUI 的对外契�
   - [`tui-design.md`](./tui-design.md) — ChangeSet（Plan → Preview → Apply）的历史设计，仍是契约来源
   - [`../../wails/PORTING.md`](../../wails/PORTING.md)「CLI contract」— GUI 侧的移植规则
   - [`../agents/wails-port.md`](../agents/wails-port.md) — 面向 agent 的 Wails 速查
+  - [`tauri-removal-design.zh.md`](./tauri-removal-design.zh.md) — **去 Tauri 化**（前端去壳 + 删除 `src-tauri`）设计方案
+  - [`tauri-removal-tasks.zh.md`](./tauri-removal-tasks.zh.md) — 上述方案的执行任务书
 
 ---
 
@@ -36,6 +38,9 @@ Go TUI」这条路线拆成可验收的步骤，并固定 CLI/TUI 的对外契�
 4. **彻底删除 `src-tauri` 是独立任务**（含 `package.json` 的 `tauri:*`/`rust:*`/`tui:*` 脚本、
    `.github/workflows/release.yml` 的 `publish-tauri` 与 `droidgear-tui` 打包、`AGENTS.md` 规则），
    不在本文件范围内；在此之前「冻结」即满足本分支定义。
+   该独立任务的设计与执行清单见 [`tauri-removal-design.zh.md`](./tauri-removal-design.zh.md)
+   与 [`tauri-removal-tasks.zh.md`](./tauri-removal-tasks.zh.md)（A 前端去壳 → B 删 Rust 工具链 →
+   C 能力补齐；与本文的分期不冲突，C 阶段即本文的 B3/B4 与期 4）。
 
 > 结论：本分支的「非 GUI 消费者」只有 `cmd/dg`（当前）与未来的 Go TUI。
 > 规则 9 的 parity 对象从「Tauri + Wails + TUI」收窄为「Wails GUI ↔ `dg`」。
@@ -405,13 +410,13 @@ CLI 契约测试的写法约定：直接调 `run(args, &stdout, &stderr)`（它�
 
 ## 8. 实施顺序
 
-| 期  | 内容                                          | 状态 / 完成判据                                         |
-| --- | --------------------------------------------- | ------------------------------------------------------- |
-| 0   | `internal/version` 提取；分层门禁脚本         | ✅ 已完成（ldflags 三处同步，门禁接入 `wails.yml`）     |
-| 1   | `internal/service` 抽取（B1 → B2 → B3 → B4）  | 🚧 B1（paths/channels/export）已完成；B2–B4 待做        |
-| 2   | `cmd/dg` 骨架 + T1 命令                       | 🚧 骨架 + paths/channels/export 已完成；codex/pi/… 待做 |
-| 3   | `dg` 覆盖 T1 全量 + T2 只读面                 | ⏳ 未开始（§4.5 对照表无缺口或有豁免记录）              |
-| 4   | TUI 决策（§6）或删除 `src-tauri`（§0 规则 4） | ⏳ 未开始（独立 ADR/任务，不在本期承诺）                |
+| 期  | 内容                                          | 状态 / 完成判据                                                                            |
+| --- | --------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 0   | `internal/version` 提取；分层门禁脚本         | ✅ 已完成（ldflags 三处同步，门禁接入 `wails.yml`）                                        |
+| 1   | `internal/service` 抽取（B1 → B2 → B3 → B4）  | 🚧 B1（paths/channels/export）已完成；B2–B4 待做                                           |
+| 2   | `cmd/dg` 骨架 + T1 命令                       | 🚧 骨架 + paths/channels/export 已完成；codex/pi/… 待做                                    |
+| 3   | `dg` 覆盖 T1 全量 + T2 只读面                 | ⏳ 未开始（§4.5 对照表无缺口或有豁免记录）                                                 |
+| 4   | TUI 决策（§6）或删除 `src-tauri`（§0 规则 4） | 🚧 设计稿已出（`tauri-removal-design.zh.md`），待评审后按 `tauri-removal-tasks.zh.md` 执行 |
 
 ---
 

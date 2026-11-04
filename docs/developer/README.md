@@ -13,6 +13,8 @@ Technical documentation for building and extending this app. These docs describe
 | [TUI Design](./tui-design.md)                             | Headless TUI architecture (core extraction + tests)                                                           |
 | [ADR-001: TUI/CLI Fate](./adr-001-tui-fate.zh.md)         | Decision: rewrite the TUI in Go (freeze Rust TUI), phased `internal/service` + `cmd/dg`                       |
 | [Wails CLI/TUI Design](./wails-tui-cli-design.zh.md)      | Execution spec: service layering, `dg` CLI contract, headless rules, TUI deferred, Wails-only branch boundary |
+| [Tauri Removal Design](./tauri-removal-design.zh.md)      | Plan to drop Tauri entirely: shell abstraction, deletion order, CI/release merge, risks                       |
+| [Tauri Removal Tasks](./tauri-removal-tasks.zh.md)        | Execution checklist for the above: per-task files, verification commands, definition of done                  |
 | [State Management](./state-management.md)                 | Three-layer state onion, Zustand, TanStack Query                                                              |
 | [Error Handling](./error-handling.md)                     | Error propagation, user feedback, retry patterns                                                              |
 
