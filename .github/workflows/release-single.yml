@@ -25,9 +25,11 @@ name: 'Release single binaries'
 # Linux needs GTK3 + WebKitGTK 4.1 (built with the `gtk3` tag, see the matrix),
 # macOS uses the system WebKit.
 #
-# Future CLI/TUI binaries (ADR-001: Go internal/service layer) slot in as extra
+# Future TUI binaries (ADR-001: Go internal/service layer) slot in as extra
 # matrix entries or an extra `go build ./cmd/<name>` step — same runner matrix,
-# same single-file upload, zero packaging.
+# same single-file upload, zero packaging. The `dg` CLI already ships this way
+# (see the matrix's `cli_asset`): it is CGO-free, so it needs none of the
+# webview/GTK toolchain the GUI build installs.
 
 on:
   push:
@@ -107,6 +109,17 @@ jobs:
           | macOS arm64 | `droidgear-wails-macos-arm64` | none (system WebKit); ad-hoc signed |
           | Linux x64 | `droidgear-wails-linux-x64` | GTK3 + WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`) |
 
+          ### Headless CLI / 无头命令行
+
+          `dg` is the same build on all three platforms: pure Go, `CGO_ENABLED=0`,
+          no WebView2/GTK/WebKit required — copy it onto a server and run it.
+
+          | Platform | Asset |
+          | --- | --- |
+          | Windows x64 | `dg-windows-x64.exe` |
+          | macOS arm64 | `dg-macos-arm64` |
+          | Linux x64 | `dg-linux-x64` |
+
           macOS: the binary is ad-hoc signed, not notarized. After downloading,
           run `chmod +x droidgear-wails-macos-arm64` and, if Gatekeeper blocks
           it, `xattr -d com.apple.quarantine droidgear-wails-macos-arm64`.
@@ -158,6 +171,7 @@ jobs:
             goflags: ''
             build_tags: production
             asset: droidgear-wails-windows-x64.exe
+            cli_asset: dg-windows-x64.exe
             ldflags: '-H windowsgui'
           # macos-15 is an arm64 runner; building natively keeps cgo/WebKit
           # framework linking honest (no cross-compile, no lipo step).
@@ -168,6 +182,7 @@ jobs:
             goflags: ''
             build_tags: production
             asset: droidgear-wails-macos-arm64
+            cli_asset: dg-macos-arm64
             ldflags: ''
           - os: ubuntu-22.04
             goos: linux
@@ -176,6 +191,7 @@ jobs:
             goflags: '-tags=gtk3'
             build_tags: production,gtk3
             asset: droidgear-wails-linux-x64
+            cli_asset: dg-linux-x64
             ldflags: ''
     steps:
       - uses: actions/checkout@v6
@@ -244,30 +260,53 @@ jobs:
           rm -f wails/*.syso
           ls -l "out/${{ matrix.asset }}"
 
+      # The CLI ships next to the GUI from the same job, but with its own link
+      # flags: `-H windowsgui` would give dg a windowed (console-less)
+      # subsystem, and CGO stays off — that is exactly what the layering gate
+      # guarantees (cmd/dg imports no Wails, so no WebView2/GTK/WebKit).
+      # It needs no bindings and no frontend bundle either.
+      - name: Build dg CLI
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: |
+          set -euo pipefail
+          cd wails
+          go build -tags "${{ matrix.build_tags }}" -trimpath -buildvcs=false \
+            -ldflags "-w -s -X droidgear-wails/internal/version.Version=${APP_VERSION}" \
+            -o "../out/${{ matrix.cli_asset }}" ./cmd/dg
+          cd ..
+          ls -l "out/${{ matrix.cli_asset }}"
+
       # Go already emits an ad-hoc signature for darwin/arm64, but be explicit:
       # a stripped/copied binary must still launch on Apple Silicon.
       - name: Ad-hoc sign (macOS)
         if: matrix.goos == 'darwin'
         run: |
-          codesign --force --sign - "out/${{ matrix.asset }}"
-          codesign --verify --verbose "out/${{ matrix.asset }}"
+          for file in "out/${{ matrix.asset }}" "out/${{ matrix.cli_asset }}"; do
+            codesign --force --sign - "$file"
+            codesign --verify --verbose "$file"
+          done
 
       - name: Record checksum
         shell: bash
         run: |
-          file="out/${{ matrix.asset }}"
-          if command -v sha256sum >/dev/null 2>&1; then
-            sum="$(sha256sum "$file" | cut -d' ' -f1)"
-          else
-            sum="$(shasum -a 256 "$file" | cut -d' ' -f1)"
-          fi
-          {
-            echo "### \`${{ matrix.asset }}\`"
-            echo
-            echo "- platform: ${{ matrix.goos }}/${{ matrix.goarch }}"
-            echo "- size: $(wc -c < "$file") bytes"
-            echo "- sha256: \`$sum\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          for file in "out/${{ matrix.asset }}" "out/${{ matrix.cli_asset }}"; do
+            if command -v sha256sum >/dev/null 2>&1; then
+              sum="$(sha256sum "$file" | cut -d' ' -f1)"
+            else
+              sum="$(shasum -a 256 "$file" | cut -d' ' -f1)"
+            fi
+            {
+              echo "### \`$(basename "$file")\`"
+              echo
+              echo "- platform: ${{ matrix.goos }}/${{ matrix.goarch }}"
+              echo "- size: $(wc -c < "$file") bytes"
+              echo "- sha256: \`$sum\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
 
       - name: Upload to the release
         shell: bash
@@ -275,4 +314,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release.outputs.tag }}
-        run: gh release upload "$TAG" "out/${{ matrix.asset }}" --clobber
+        run: gh release upload "$TAG" "out/${{ matrix.asset }}" "out/${{ matrix.cli_asset }}" --clobber

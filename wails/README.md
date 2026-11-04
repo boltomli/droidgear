@@ -176,6 +176,14 @@ Covered today: `version`, `doctor`, `path`, `channels`, `export`. Profile
 tools (`codex`, `pi`, `hermes`, …) follow once their domains move into
 `internal/service`.
 
+**Release builds** ship `dg` next to the GUI single-file executable:
+`release-single.yml` produces `dg-windows-x64.exe` / `dg-macos-arm64` /
+`dg-linux-x64` alongside the three `droidgear-wails-*` assets, and the
+Windows `publish-wails` job in `release.yml` uploads `dg_windows_x64.exe`
+next to the exe and the NSIS installer. Both build it with `CGO_ENABLED=0`
+and **without** `-H windowsgui` — the CLI is a console binary that needs
+none of the GUI's WebView2/GTK/WebKit runtime.
+
 ## Building
 
 Prerequisites: Go ≥ 1.26, Node (repo-root `node_modules` installed via

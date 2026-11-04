@@ -268,6 +268,22 @@ jobs:
         working-directory: wails
         run: wails3 task package
 
+      # The headless CLI ships next to the GUI. It shares the runner, not the
+      # link flags: no `-H windowsgui` (dg is a console tool) and CGO stays off,
+      # so it needs neither WebView2 nor any of the GUI's toolchain — see
+      # docs/developer/wails-tui-cli-design.zh.md §4.1. It also needs no
+      # bindings and no frontend bundle, so it is built after `task package`.
+      - name: Build dg CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_VERSION="$(node wails/scripts/sync-version.mjs)"
+          cd wails
+          go build -trimpath -buildvcs=false \
+            -ldflags "-w -s -X droidgear-wails/internal/version.Version=${APP_VERSION}" \
+            -o bin/dg.exe ./cmd/dg
+          ls -l bin/dg.exe
+
       - name: Upload Wails assets
         shell: pwsh
         env:
@@ -275,12 +291,14 @@ jobs:
         run: |
           $exe = 'wails\bin\droidgear-minimal.exe'
           $installer = 'wails\bin\minimal-gui-amd64-installer.exe'
-          foreach ($f in @($exe, $installer)) {
+          $cli = 'wails\bin\dg.exe'
+          foreach ($f in @($exe, $installer, $cli)) {
             if (-not (Test-Path $f)) { Write-Error "Missing build output: $f"; exit 1 }
           }
           Copy-Item $exe 'droidgear-wails_windows_x64.exe' -Force
           Copy-Item $installer 'droidgear-wails_windows_x64-setup.exe' -Force
-          gh release upload "$env:RELEASE_TAG" 'droidgear-wails_windows_x64.exe' 'droidgear-wails_windows_x64-setup.exe' --clobber
+          Copy-Item $cli 'dg_windows_x64.exe' -Force
+          gh release upload "$env:RELEASE_TAG" 'droidgear-wails_windows_x64.exe' 'droidgear-wails_windows_x64-setup.exe' 'dg_windows_x64.exe' --clobber
 
   generate-updater-json:
     needs: [create-release, publish-tauri]
