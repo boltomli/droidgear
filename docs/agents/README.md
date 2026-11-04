@@ -12,6 +12,7 @@ Detailed coding guidelines for AI agents working on this codebase. These docs ar
 | [State Management](./state-management.md)                 | Working with Zustand, TanStack Query, or state  |
 | [Architecture](./architecture.md)                         | Understanding system design, Tauri bridge, i18n |
 | [UI Components](./ui-components.md)                       | Working with Radix UI, shadcn/ui, dialogs       |
+| [Dependencies](./dependencies.md)                         | Updating npm/cargo dependencies, Tauri alphas   |
 
 ## Relationship to Other Docs
 

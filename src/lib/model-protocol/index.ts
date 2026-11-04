@@ -99,9 +99,7 @@ export function providerToModelProtocol(provider: Provider): ModelProtocol {
 
 /** 客户端 API 类型（openclaw / dsh 使用的命名） */
 export type ClientApiType =
-  | 'anthropic-messages'
-  | 'openai-responses'
-  | 'openai-completions'
+  'anthropic-messages' | 'openai-responses' | 'openai-completions'
 
 /**
  * 用户显式选择的 Provider 对应的客户端 API 类型

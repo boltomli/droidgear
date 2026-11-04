@@ -14,6 +14,7 @@ This file contains only core rules. Detailed guidelines live in `docs/agents/`.
 | Zustand / state management    | `docs/agents/state-management.md`      |
 | Architecture patterns         | `docs/agents/architecture.md`          |
 | UI components (Radix, shadcn) | `docs/agents/ui-components.md`         |
+| Dependency updates            | `docs/agents/dependencies.md`          |
 
 For deep-dive topics, see `docs/developer/README.md`.
 
