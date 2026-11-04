@@ -14,6 +14,7 @@ import (
 	"droidgear-wails/internal/service/channels"
 	"droidgear-wails/internal/service/codex"
 	"droidgear-wails/internal/service/export"
+	"droidgear-wails/internal/service/hermes"
 	"droidgear-wails/internal/service/paths"
 	"droidgear-wails/internal/version"
 )
@@ -671,6 +672,255 @@ func presentOr(exists bool) string {
 		return "present"
 	}
 	return "missing"
+}
+
+// ---------------------------------------------------------------------------
+// dg hermes
+// ---------------------------------------------------------------------------
+
+func (c *cli) hermes(args []string) error {
+	if len(args) == 0 {
+		return c.usage("hermes needs a subcommand: profiles | status")
+	}
+	switch args[0] {
+	case "profiles":
+		return c.hermesProfiles(args[1:])
+	case "status":
+		return c.hermesStatus(args[1:])
+	default:
+		return c.usage("unknown hermes subcommand %q (want profiles | status)", args[0])
+	}
+}
+
+func (c *cli) hermesProfiles(args []string) error {
+	if len(args) == 0 {
+		return c.usage("hermes profiles needs a subcommand: list | show | active | apply | save | delete")
+	}
+	switch args[0] {
+	case "list":
+		return c.hermesProfilesList(args[1:])
+	case "show":
+		return c.hermesProfilesShow(args[1:])
+	case "active":
+		return c.hermesProfilesActive(args[1:])
+	case "apply":
+		return c.hermesProfilesApply(args[1:])
+	case "save":
+		return c.hermesProfilesSave(args[1:])
+	case "delete":
+		return c.hermesProfilesDelete(args[1:])
+	default:
+		return c.usage("unknown hermes profiles subcommand %q (want list | show | active | apply | save | delete)", args[0])
+	}
+}
+
+func (c *cli) requireHermesProfile(id string) error {
+	profiles, err := hermes.ListProfiles()
+	if err != nil {
+		return err
+	}
+	for _, profile := range profiles {
+		if profile.ID == id {
+			return nil
+		}
+	}
+	return fmt.Errorf("%w: hermes profile %q", errNotFound, id)
+}
+
+// redactHermesProfile masks the per-model API keys a hermes profile carries
+// (each entry of Models[] may hold one, §5.3).
+func redactHermesProfile(profile hermes.HermesProfile) hermes.HermesProfile {
+	if profile.Models == nil {
+		return profile
+	}
+	models := make([]hermes.HermesModelConfig, len(profile.Models))
+	for i, model := range profile.Models {
+		if model.APIKey != nil {
+			masked := core.RedactSecret(*model.APIKey)
+			model.APIKey = &masked
+		}
+		models[i] = model
+	}
+	profile.Models = models
+	return profile
+}
+
+func (c *cli) hermesProfilesList(args []string) error {
+	if len(args) != 0 {
+		return c.usage("hermes profiles list takes no arguments")
+	}
+	profiles, err := hermes.ListProfiles()
+	if err != nil {
+		return err
+	}
+	if !c.opts.reveal {
+		for i := range profiles {
+			profiles[i] = redactHermesProfile(profiles[i])
+		}
+	}
+	return emit(c.opts, c.stdout, profiles, func(w io.Writer) error {
+		if len(profiles) == 0 {
+			_, err := fmt.Fprintln(w, "no hermes profiles")
+			return err
+		}
+		for _, profile := range profiles {
+			fmt.Fprintf(w, "%-24s %-20s %d model(s)\n", profile.ID, profile.Name, len(profile.Models))
+		}
+		return nil
+	})
+}
+
+func (c *cli) hermesProfilesShow(args []string) error {
+	if len(args) != 1 {
+		return c.usage("hermes profiles show needs <id>")
+	}
+	if err := c.requireHermesProfile(args[0]); err != nil {
+		return err
+	}
+	profile, err := hermes.GetProfile(args[0])
+	if err != nil {
+		return err
+	}
+	if !c.opts.reveal {
+		profile = redactHermesProfile(profile)
+	}
+	return emit(c.opts, c.stdout, profile, func(w io.Writer) error {
+		fmt.Fprintf(w, "id:     %s\n", profile.ID)
+		fmt.Fprintf(w, "name:   %s\n", profile.Name)
+		for _, model := range profile.Models {
+			key := ""
+			if model.APIKey != nil {
+				key = " (api key set)"
+			}
+			name := ""
+			if model.Name != nil {
+				name = *model.Name
+			}
+			fmt.Fprintf(w, "model:  %s%s\n", name, key)
+		}
+		return nil
+	})
+}
+
+func (c *cli) hermesProfilesActive(args []string) error {
+	if len(args) != 0 {
+		return c.usage("hermes profiles active takes no arguments")
+	}
+	active, err := hermes.GetActiveProfileID()
+	if err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, active, func(w io.Writer) error {
+		if active == nil {
+			_, err := fmt.Fprintln(w, "(none)")
+			return err
+		}
+		_, err := fmt.Fprintln(w, *active)
+		return err
+	})
+}
+
+func (c *cli) hermesProfilesApply(args []string) error {
+	if len(args) != 1 {
+		return c.usage("hermes profiles apply needs <id>")
+	}
+	id := args[0]
+	if err := c.requireNoDryRun("hermes profiles apply"); err != nil {
+		return err
+	}
+	if err := c.requireHermesProfile(id); err != nil {
+		return err
+	}
+	if err := hermes.ApplyProfile(id); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "id": id}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "applied hermes profile %s\n", id)
+		return err
+	})
+}
+
+func (c *cli) hermesProfilesSave(args []string) error {
+	fs := c.newFlagSet("hermes profiles save")
+	file := fs.String("file", "", "path to a profile document (JSON, same shape as the GUI)")
+	if err := fs.Parse(args); err != nil {
+		return c.usage("%v", err)
+	}
+	if fs.NArg() != 0 {
+		return c.usage("hermes profiles save takes no positional arguments")
+	}
+	if strings.TrimSpace(*file) == "" {
+		return c.usage("hermes profiles save needs --file <json>")
+	}
+	if err := c.requireNoDryRun("hermes profiles save"); err != nil {
+		return err
+	}
+
+	raw, err := os.ReadFile(filepath.Clean(*file)) // #nosec G304 -- user-supplied profile file
+	if err != nil {
+		return fmt.Errorf("Failed to read profile file: %w", err)
+	}
+	var profile hermes.HermesProfile
+	if err := json.Unmarshal(raw, &profile); err != nil {
+		return c.usage("invalid profile JSON: %v", err)
+	}
+	if strings.TrimSpace(profile.Name) == "" {
+		return c.usage("profile needs a non-empty \"name\"")
+	}
+	if err := hermes.SaveProfile(profile); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "name": profile.Name}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "saved hermes profile %q\n", profile.Name)
+		return err
+	})
+}
+
+func (c *cli) hermesProfilesDelete(args []string) error {
+	if len(args) != 1 {
+		return c.usage("hermes profiles delete needs <id>")
+	}
+	id := args[0]
+	if err := c.requireNoDryRun("hermes profiles delete"); err != nil {
+		return err
+	}
+	if err := c.requireHermesProfile(id); err != nil {
+		return err
+	}
+	if err := hermes.DeleteProfile(id); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "id": id}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "deleted hermes profile %s\n", id)
+		return err
+	})
+}
+
+func (c *cli) hermesStatus(args []string) error {
+	if len(args) != 0 {
+		return c.usage("hermes status takes no arguments")
+	}
+	status, err := hermes.GetConfigStatus()
+	if err != nil {
+		return err
+	}
+	active, err := hermes.GetActiveProfileID()
+	if err != nil {
+		return err
+	}
+	report := struct {
+		hermes.HermesConfigStatus
+		ActiveProfileID *string `json:"activeProfileId"`
+	}{HermesConfigStatus: status, ActiveProfileID: active}
+	return emit(c.opts, c.stdout, report, func(w io.Writer) error {
+		fmt.Fprintf(w, "config: %s (%s)\n", status.ConfigPath, presentOr(status.ConfigExists))
+		if active == nil {
+			fmt.Fprintln(w, "active: (none)")
+		} else {
+			fmt.Fprintf(w, "active: %s\n", *active)
+		}
+		return nil
+	})
 }
 
 // ---------------------------------------------------------------------------

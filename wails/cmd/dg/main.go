@@ -100,6 +100,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		runErr = c.channels(cmdArgs)
 	case "codex":
 		runErr = c.codex(cmdArgs)
+	case "hermes":
+		runErr = c.hermes(cmdArgs)
 	case "export":
 		runErr = c.export(cmdArgs)
 	default:
@@ -293,6 +295,8 @@ Commands:
   codex profiles save --file <json>  create or replace a profile from JSON
   codex profiles delete <id>    delete a profile
   codex status                  report live config/auth paths and the active profile
+  hermes profiles list|show|active|apply|save|delete  manage hermes profiles
+  hermes status                 report the live config path and active profile
   export list                   list export templates
   export save --file <json>     create or replace a template from a JSON document
   export delete <name>          delete a template

@@ -1,4 +1,4 @@
-package app
+package hermes
 
 import (
 	"os"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/testutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -39,8 +40,7 @@ func mustHome(t *testing.T) string {
 // matching entry, the loaded entry must still carry the model section's
 // base_url/api_key.
 func TestHermesReadCurrentKeepsEndpointForUnknownNamedProvider(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	writeHermesTestConfig(t, `
 model:
@@ -50,7 +50,7 @@ model:
   api_key: sk-ghost
 `)
 
-	current, err := a.ReadHermesCurrentConfig()
+	current, err := ReadCurrentConfig()
 	if err != nil {
 		t.Fatalf("ReadHermesCurrentConfig: %v", err)
 	}
@@ -74,8 +74,7 @@ model:
 // the endpoint into custom_providers instead of stripping base_url/api_key
 // from the model section (which left Hermes with no endpoint at all).
 func TestHermesLoadThenApplyDoesNotStripEndpoint(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	configPath := writeHermesTestConfig(t, `
 model:
@@ -86,7 +85,7 @@ model:
 `)
 
 	// Mirror the GUI flow: load from live config, then apply the profile.
-	current, err := a.ReadHermesCurrentConfig()
+	current, err := ReadCurrentConfig()
 	if err != nil {
 		t.Fatalf("ReadHermesCurrentConfig: %v", err)
 	}
@@ -97,14 +96,14 @@ model:
 		UpdatedAt: core.NowRFC3339(),
 		Models:    current.Models,
 	}
-	if err := a.SaveHermesProfile(profile); err != nil {
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveHermesProfile: %v", err)
 	}
-	if err := a.ApplyHermesProfile("p1"); err != nil {
+	if err := ApplyProfile("p1"); err != nil {
 		t.Fatalf("ApplyHermesProfile: %v", err)
 	}
 
-	after, err := a.ReadHermesCurrentConfig()
+	after, err := ReadCurrentConfig()
 	if err != nil {
 		t.Fatalf("ReadHermesCurrentConfig (after): %v", err)
 	}
@@ -113,17 +112,17 @@ model:
 	}
 	got := after.Models[0]
 	if got.BaseURL == nil || *got.BaseURL != "https://ghost.example.com/v1" {
-		t.Fatalf("apply stripped base_url: %+v (config: %s)", got, mustRead(t, configPath))
+		t.Fatalf("apply stripped base_url: %+v (config: %s)", got, testutil.MustRead(t, configPath))
 	}
 	if got.APIKey == nil || *got.APIKey != "sk-ghost" {
-		t.Fatalf("apply stripped api_key: %+v (config: %s)", got, mustRead(t, configPath))
+		t.Fatalf("apply stripped api_key: %+v (config: %s)", got, testutil.MustRead(t, configPath))
 	}
 	if got.Default == nil || *got.Default != "gpt-ghost" {
 		t.Fatalf("apply lost model.default: %+v", got)
 	}
 	root := mustParseConfig(t, configPath)
 	if core.MappingGetMap(core.MappingGetMap(root, "providers"), "ghost") == nil {
-		t.Fatalf("ghost should be upserted into the providers dict: %s", mustRead(t, configPath))
+		t.Fatalf("ghost should be upserted into the providers dict: %s", testutil.MustRead(t, configPath))
 	}
 }
 
@@ -132,17 +131,16 @@ model:
 // A premature dir at a priority location changes what the next resolution
 // picks, which is how read paths used to "configure themselves".
 func TestHermesReadCommandsDoNotCreateConfigDir(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
-	status, err := a.GetHermesConfigStatus()
+	status, err := GetConfigStatus()
 	if err != nil {
 		t.Fatalf("GetHermesConfigStatus: %v", err)
 	}
 	if status.ConfigExists {
 		t.Fatalf("config should not exist in a fresh home: %+v", status)
 	}
-	if _, err := a.ReadHermesCurrentConfig(); err != nil {
+	if _, err := ReadCurrentConfig(); err != nil {
 		t.Fatalf("ReadHermesCurrentConfig: %v", err)
 	}
 
@@ -152,18 +150,9 @@ func TestHermesReadCommandsDoNotCreateConfigDir(t *testing.T) {
 	}
 }
 
-func mustRead(t *testing.T, path string) string {
-	t.Helper()
-	data, err := os.ReadFile(path) // #nosec G304 -- test fixture
-	if err != nil {
-		t.Fatalf("read %s: %v", path, err)
-	}
-	return string(data)
-}
-
 func mustParseConfig(t *testing.T, path string) *yaml.Node {
 	t.Helper()
-	root, err := core.ParseYAML(mustRead(t, path))
+	root, err := core.ParseYAML(testutil.MustRead(t, path))
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
@@ -174,8 +163,7 @@ func mustParseConfig(t *testing.T, path string) *yaml.Node {
 // providers dictionary is primary, endpoint-less catalog overrides are
 // skipped, and a bare-name model.provider matches a dict key.
 func TestHermesReadCurrentConfigFromProvidersDict(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	writeHermesTestConfig(t, `
 model:
@@ -196,7 +184,7 @@ providers:
     default_model: mimo-v2.6-flash
 `)
 
-	current, err := a.ReadHermesCurrentConfig()
+	current, err := ReadCurrentConfig()
 	if err != nil {
 		t.Fatalf("ReadHermesCurrentConfig: %v", err)
 	}
@@ -229,8 +217,7 @@ providers:
 // TestHermesApplyUpsertsProvidersDictPreservingFields: apply updates only
 // api/api_key/default_model and keeps discover_models/models intact.
 func TestHermesApplyUpsertsProvidersDictPreservingFields(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	configPath := writeHermesTestConfig(t, `
 providers:
@@ -250,17 +237,17 @@ providers:
 			IsDefault: true,
 		}},
 	}
-	if err := a.SaveHermesProfile(profile); err != nil {
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveHermesProfile: %v", err)
 	}
-	if err := a.ApplyHermesProfile("p1"); err != nil {
+	if err := ApplyProfile("p1"); err != nil {
 		t.Fatalf("ApplyHermesProfile: %v", err)
 	}
 
 	root := mustParseConfig(t, configPath)
 	mine := core.MappingGetMap(core.MappingGetMap(root, "providers"), "mine")
 	if mine == nil {
-		t.Fatalf("providers.mine missing: %s", mustRead(t, configPath))
+		t.Fatalf("providers.mine missing: %s", testutil.MustRead(t, configPath))
 	}
 	if got := core.MappingGetString(mine, "api"); got != "https://new.example.com/v1" {
 		t.Fatalf("api not updated: %q", got)
@@ -287,8 +274,7 @@ providers:
 // custom_providers entries move into the providers dict and the (emptied)
 // key disappears.
 func TestHermesApplyMigratesLegacyCustomProvidersEntry(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	configPath := writeHermesTestConfig(t, `
 model:
@@ -309,20 +295,20 @@ custom_providers:
 			IsDefault: true,
 		}},
 	}
-	if err := a.SaveHermesProfile(profile); err != nil {
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveHermesProfile: %v", err)
 	}
-	if err := a.ApplyHermesProfile("p1"); err != nil {
+	if err := ApplyProfile("p1"); err != nil {
 		t.Fatalf("ApplyHermesProfile: %v", err)
 	}
 
 	root := mustParseConfig(t, configPath)
 	if core.MappingGet(root, "custom_providers") != nil {
-		t.Fatalf("legacy custom_providers should be removed: %s", mustRead(t, configPath))
+		t.Fatalf("legacy custom_providers should be removed: %s", testutil.MustRead(t, configPath))
 	}
 	wududu := core.MappingGetMap(core.MappingGetMap(root, "providers"), "wududu")
 	if wududu == nil {
-		t.Fatalf("providers.wududu missing: %s", mustRead(t, configPath))
+		t.Fatalf("providers.wududu missing: %s", testutil.MustRead(t, configPath))
 	}
 	if got := core.MappingGetString(wududu, "api"); got != "https://new.example.com/v1" {
 		t.Fatalf("api wrong: %q", got)

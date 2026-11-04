@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/testutil"
 )
 
 // ---------------------------------------------------------------------------
@@ -21,7 +22,7 @@ import (
 // duplicate → apply (merging into the live config) → delete clearing the
 // active marker.
 func TestOpencodeProfileCRUDAndApplyRoundTrip(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 	a := &App{}
 
 	created, err := a.CreateDefaultProfile()
@@ -99,7 +100,7 @@ func TestOpencodeProfileCRUDAndApplyRoundTrip(t *testing.T) {
 		t.Fatalf("ApplyOpencodeProfile: %v", err)
 	}
 
-	config := mustRead(t, status.ConfigPath)
+	config := testutil.MustRead(t, status.ConfigPath)
 	if strings.Contains(config, "jsonc comment") {
 		// Rust strips comments on read and rewrites the document.
 		t.Fatalf("comments should be stripped on apply: %s", config)
@@ -109,7 +110,7 @@ func TestOpencodeProfileCRUDAndApplyRoundTrip(t *testing.T) {
 			t.Fatalf("apply lost %s: %s", want, config)
 		}
 	}
-	auth := mustRead(t, status.AuthPath)
+	auth := testutil.MustRead(t, status.AuthPath)
 	if !strings.Contains(auth, "sk-from-auth") || !strings.Contains(auth, "sk-live") {
 		t.Fatalf("auth merge lost entries: %s", auth)
 	}
@@ -161,7 +162,7 @@ func TestOpencodeProfileCRUDAndApplyRoundTrip(t *testing.T) {
 // TestOpencodeCreateDefaultOnlyWhenEmpty pins the "Profiles already exist"
 // guard used by the store's loadProfiles fallback.
 func TestOpencodeCreateDefaultOnlyWhenEmpty(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 	a := &App{}
 
 	if _, err := a.CreateDefaultProfile(); err != nil {
@@ -176,7 +177,7 @@ func TestOpencodeCreateDefaultOnlyWhenEmpty(t *testing.T) {
 // TestOpencodeInvalidProfileIDRejected covers the shared id validator: ids
 // are ascii alphanumerics plus '-' and '_', non-empty.
 func TestOpencodeInvalidProfileIDRejected(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 	a := &App{}
 
 	if _, err := a.GetOpencodeProfile("../evil"); err == nil || err.Error() != "Invalid profile id" {
@@ -199,7 +200,7 @@ func TestOpencodeInvalidProfileIDRejected(t *testing.T) {
 // configPaths.opencode / configPaths.opencodeAuth in ~/.droidgear/settings.json
 // must redirect the status paths, and the .jsonc file wins over .json.
 func TestOpencodeConfigStatusHonoursPathOverride(t *testing.T) {
-	home := isolatedHome(t)
+	home := testutil.IsolatedHome(t)
 	a := &App{}
 
 	customConfig := filepath.Join(t.TempDir(), "oc-config")

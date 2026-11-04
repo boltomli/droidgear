@@ -12,12 +12,18 @@ import (
 // sandbox points every home-ish root at a temp directory and restores it
 // after the test (run() also overrides these when --home is passed, so the
 // restore here is what keeps the process clean for the next test).
+//
+// PATH moves too: HermesHome's Windows priority chain falls back to the
+// default WSL distro, and with wsl.exe resolvable that would write into the
+// developer's REAL \\wsl$ profile (the same trap testutil.IsolatedHome
+// documents for internal/app's tests).
 func sandbox(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
 	for _, key := range []string{"HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA"} {
 		t.Setenv(key, home)
 	}
+	t.Setenv("PATH", filepath.Join(home, "empty-bin"))
 	return home
 }
 
@@ -553,6 +559,114 @@ func TestCodexProfilesLifecycle(t *testing.T) {
 		t.Fatalf("delete exit = %d, stderr = %s", code, errOut)
 	}
 	code, _, errOut = runCLI(t, "--json", "codex", "profiles", "show", "p1")
+	if code != exitRuntime || decode(t, errOut)["error"].(map[string]any)["code"] != "not_found" {
+		t.Errorf("show after delete: exit=%d stderr=%s", code, errOut)
+	}
+}
+
+func TestHermesProfilesLifecycle(t *testing.T) {
+	home := sandbox(t)
+
+	code, out, errOut := runCLI(t, "--json", "hermes", "profiles", "list")
+	if code != 0 {
+		t.Fatalf("list exit = %d, stderr = %s", code, errOut)
+	}
+	if got := decodeList(t, out); len(got) != 0 {
+		t.Errorf("expected no profiles, got %v", got)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "hermes", "status")
+	if code != 0 {
+		t.Fatalf("status exit = %d, stderr = %s", code, errOut)
+	}
+	if status := decode(t, out); status["configExists"] != false {
+		t.Errorf("fresh status = %v", status)
+	}
+
+	profilePath := writeFile(t, home, "hermes-profile.json", `{
+	  "id": "h1",
+	  "name": "Hermes One",
+	  "models": [
+	    {
+	      "name": "DeepSeek",
+	      "provider": "deepseek",
+	      "baseUrl": "https://api.deepseek.com/v1",
+	      "apiKey": "sk-hermes-1234",
+	      "isDefault": true
+	    }
+	  ],
+	  "reasoningEffort": "high"
+	}`)
+	code, out, errOut = runCLI(t, "--json", "hermes", "profiles", "save", "--file", profilePath)
+	if code != 0 {
+		t.Fatalf("save exit = %d, stderr = %s", code, errOut)
+	}
+	if receipt := decode(t, out); receipt["applied"] != true || receipt["name"] != "Hermes One" {
+		t.Errorf("save receipt = %v", receipt)
+	}
+
+	// The per-model apiKey is redacted by default, revealed on demand.
+	code, out, errOut = runCLI(t, "--json", "hermes", "profiles", "list")
+	if code != 0 {
+		t.Fatalf("list exit = %d, stderr = %s", code, errOut)
+	}
+	list := decodeList(t, out)
+	if len(list) != 1 {
+		t.Fatalf("profiles = %v", list)
+	}
+	models, _ := list[0].(map[string]any)["models"].([]any)
+	first, _ := models[0].(map[string]any)
+	if first["apiKey"] != "****1234" {
+		t.Errorf("model.apiKey = %v, want ****1234", first["apiKey"])
+	}
+
+	code, out, errOut = runCLI(t, "--json", "--reveal", "hermes", "profiles", "list")
+	if code != 0 {
+		t.Fatalf("reveal exit = %d, stderr = %s", code, errOut)
+	}
+	models, _ = decodeList(t, out)[0].(map[string]any)["models"].([]any)
+	if key, _ := models[0].(map[string]any)["apiKey"].(string); key != "sk-hermes-1234" {
+		t.Errorf("--reveal apiKey = %v", key)
+	}
+
+	// Unknown id → not_found.
+	code, _, errOut = runCLI(t, "--json", "hermes", "profiles", "show", "ghost")
+	if code != exitRuntime || decode(t, errOut)["error"].(map[string]any)["code"] != "not_found" {
+		t.Errorf("show ghost: exit=%d stderr=%s", code, errOut)
+	}
+
+	// Apply writes ~/.hermes/config.yaml (PATH is isolated, so the WSL
+	// fallback in HermesHome's Windows priority chain cannot fire).
+	code, out, errOut = runCLI(t, "--json", "hermes", "profiles", "apply", "h1")
+	if code != 0 {
+		t.Fatalf("apply exit = %d, stderr = %s", code, errOut)
+	}
+	if applied := decode(t, out)["applied"]; applied != true {
+		t.Errorf("apply receipt = %s", out)
+	}
+	configPath := filepath.Join(home, ".hermes", "config.yaml")
+	raw, err := os.ReadFile(configPath) // #nosec G304 -- temp fixture
+	if err != nil {
+		t.Fatalf("read live config: %v", err)
+	}
+	if !strings.Contains(string(raw), "deepseek") {
+		t.Errorf("live config missing the provider: %s", raw)
+	}
+	if _, err := os.Stat(filepath.Join(home, "wsl")); !os.IsNotExist(err) {
+		t.Error("apply escaped the sandbox into a WSL path")
+	}
+
+	// --dry-run is rejected rather than silently ignored.
+	code, _, errOut = runCLI(t, "--json", "--dry-run", "hermes", "profiles", "apply", "h1")
+	if code != exitUsage || !strings.Contains(errOut, "not supported") {
+		t.Errorf("dry-run: exit=%d stderr=%s", code, errOut)
+	}
+
+	code, _, errOut = runCLI(t, "--json", "hermes", "profiles", "delete", "h1")
+	if code != 0 {
+		t.Fatalf("delete exit = %d, stderr = %s", code, errOut)
+	}
+	code, _, errOut = runCLI(t, "--json", "hermes", "profiles", "show", "h1")
 	if code != exitRuntime || decode(t, errOut)["error"].(map[string]any)["code"] != "not_found" {
 		t.Errorf("show after delete: exit=%d stderr=%s", code, errOut)
 	}

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/testutil"
 )
 
 // ---------------------------------------------------------------------------
@@ -92,7 +93,7 @@ func TestCopilotRenderEnvFileMatchesRustTemplate(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCopilotProfileCRUDAndApplyRoundTrip(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 	a := &App{}
 
 	if err := a.SaveCopilotProfile(copilotFixtureProfile("one", "One")); err != nil {
@@ -138,17 +139,17 @@ func TestCopilotProfileCRUDAndApplyRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetCopilotConfigStatus: %v", err)
 	}
-	liveBefore := mustRead(t, status.ConfigPath)
+	liveBefore := testutil.MustRead(t, status.ConfigPath)
 	updated := copilotFixtureProfile("one", "One")
 	updated.Model = core.StrPtr("another-model")
 	if err := a.SaveCopilotProfile(updated); err != nil {
 		t.Fatalf("SaveCopilotProfile (update): %v", err)
 	}
-	if live := mustRead(t, status.ConfigPath); live != liveBefore {
+	if live := testutil.MustRead(t, status.ConfigPath); live != liveBefore {
 		t.Fatalf("save must not change live config:\nbefore=%q\nafter=%q", liveBefore, live)
 	}
 	// The profile env file follows the update.
-	if env := mustRead(t, envPath); !strings.Contains(env, "COPILOT_MODEL=another-model") {
+	if env := testutil.MustRead(t, envPath); !strings.Contains(env, "COPILOT_MODEL=another-model") {
 		t.Fatalf("profile env not updated: %s", env)
 	}
 
@@ -172,7 +173,7 @@ func TestCopilotProfileCRUDAndApplyRoundTrip(t *testing.T) {
 // TestCopilotCreateDefaultOnlyWhenEmpty pins the store's loadProfiles
 // fallback and the Chinese default name from the Rust core.
 func TestCopilotCreateDefaultOnlyWhenEmpty(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 	a := &App{}
 
 	created, err := a.CreateDefaultCopilotProfile()
@@ -195,7 +196,7 @@ func TestCopilotCreateDefaultOnlyWhenEmpty(t *testing.T) {
 // TestCopilotListSortsAndSkipsMismatches: sorted by (name.lower, id), and a
 // file whose stem disagrees with its embedded id is skipped.
 func TestCopilotListSortsAndSkipsMismatches(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 	a := &App{}
 
 	for _, p := range []CopilotProfile{
@@ -231,7 +232,7 @@ func TestCopilotListSortsAndSkipsMismatches(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCopilotOfficialConfigRemovesStoredCredentials(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 	a := &App{}
 
 	profile := copilotFixtureProfile("one", "One")
@@ -258,7 +259,7 @@ func TestCopilotOfficialConfigRemovesStoredCredentials(t *testing.T) {
 		t.Fatalf("official config must drop BYOK credentials: %+v", current)
 	}
 	status, _ := a.GetCopilotConfigStatus()
-	contents := mustRead(t, status.ConfigPath)
+	contents := testutil.MustRead(t, status.ConfigPath)
 	if strings.Contains(contents, "sk-test") {
 		t.Fatalf("live config must not contain stored credentials: %s", contents)
 	}
@@ -309,7 +310,7 @@ func TestCopilotReadEnvConfig(t *testing.T) {
 // TestCopilotReadCurrentConfigMissingFile: a missing live config.env reports
 // "everything unset" instead of failing (store treats it as optional).
 func TestCopilotReadCurrentConfigMissingFile(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 	a := &App{}
 
 	current, err := a.ReadCopilotCurrentConfig()
@@ -417,7 +418,7 @@ func TestCopilotBuildRunPlanRejectsIncompleteProfile(t *testing.T) {
 	}
 
 	// apply_copilot_profile runs the same validation before writing.
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 	a := &App{}
 	if err := a.SaveCopilotProfile(profile); err != nil {
 		t.Fatalf("SaveCopilotProfile: %v", err)
