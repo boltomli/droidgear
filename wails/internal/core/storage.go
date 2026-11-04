@@ -36,6 +36,10 @@ func AtomicWritePrivate(path string, data []byte) error {
 }
 
 func atomicWriteWithMode(path string, data []byte, private bool) error {
+	if InDryRun() {
+		recordIfDryRun(Change{Path: path, Kind: KindOf(path), After: string(data)})
+		return nil
+	}
 	parent := filepath.Dir(path)
 	if err := EnsureDir(parent); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)

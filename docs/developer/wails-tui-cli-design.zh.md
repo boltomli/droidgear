@@ -165,11 +165,11 @@ func (a *App) ApplyCodexProfile(id string) (CodexConfigStatus, error) {
 
 分期落地（重要：不要一次把 GUI 改成「先预览再应用」）：
 
-| 阶段 | 内容                                                                                       |
-| ---- | ------------------------------------------------------------------------------------------ |
-| 3a   | service 内部把「读 → 算 → 写」拆成 Plan/Apply 两步，`app` 仍调用一次性 `Apply`（行为不变） |
-| 3b   | CLI 用 `--dry-run` 暴露 Plan，`--apply`（默认）执行 Apply                                  |
-| 3c   | 需要时再让 GUI 消费 Plan 做 diff 面板（可选，非本期承诺）                                  |
+| 阶段 | 内容                                                                                                                                                                 |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3a   | ✅ **用「录制」代替拆分**：`core.BeginDryRun()` 让真实写路径照常执行，只把 `AtomicWrite`/`EnsureDir`/`RemoveFile` 录下来（§4.2）—— 预览与写入同源，不存在第二套 plan |
+| 3b   | ✅ `dg --dry-run` 对所有写操作生效，输出 ChangeSet（`applied:false` + 每个文件的 `after`/`removed`）                                                                 |
+| 3c   | 需要时再让 GUI 消费 ChangeSet 做 diff 面板（可选，非本期承诺）                                                                                                       |
 
 ### 3.4 迁移批次（按「headless 价值 ÷ 风险」排序）
 
@@ -227,8 +227,12 @@ dg spec list|cat <name>                       # T2    B4（只读，写走 $EDIT
 
 ✅ = 本仓库已实现并有测试（`cmd/dg/dg_test.go` + `service/*_test.go`）；其余按 §3.4 的批次推进。
 
-`--dry-run` 目前只对 `path set/reset` 与 `export run` 生效；其它写操作（如 `codex profiles apply`）
-会**明确拒绝**该 flag 而不是静默忽略——没有 plan/apply 拆分之前，一个不干活的 flag 就是假 shim（§4.3）。
+`--dry-run` 对**所有写操作**生效（`path set/reset`、`export …`、四个 profile 域的
+`apply/save/delete`）。它不维护第二份 plan，而是 `core.BeginDryRun()` 让**真实代码路径照常执行、
+只把落盘动作录下来**（钩子在 `AtomicWrite`/`AtomicWritePrivate`、`EnsureDir`、`RemoveFile`），
+所以预览与实际写入永远同源，也就不会出现「两套实现漂移」。输出是一份 ChangeSet
+（`applied:false` + 每个文件的 `after`/`removed`），默认用 `core.RedactSensitiveText` 打码，
+`--reveal` 才出明文；`export run` 自带计数与 warnings，用 `cli.previewedOwn` 保留它自己的输出。
 
 覆盖面分级（`PORTING.md` 的 `T1/T2/T3` 含义，沿用本文件）：
 
@@ -243,7 +247,7 @@ dg spec list|cat <name>                       # T2    B4（只读，写走 $EDIT
 | flag            | 语义                                                                   | 状态                                                                      |
 | --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `--json`        | stdout 输出**单个 JSON 文档**；人读文本不出现在 stdout                 | ✅                                                                        |
-| `--dry-run`     | 只计算并输出 ChangeSet（`applied:false`），不落盘                      | ✅（`path set/reset`、`export run`）                                      |
+| `--dry-run`     | 真实写路径照常执行、只把落盘动作录下来，输出 ChangeSet 不写盘          | ✅（所有写操作）                                                          |
 | `--apply`       | 默认行为；显式写出便于脚本自解释（与 `--dry-run` 互斥，同给则 exit 2） | ✅                                                                        |
 | `--home DIR`    | 重定向整个 profile（见下）；等价于 Rust TUI 的全局 `--home`            | ✅                                                                        |
 | `--force`       | 忽略陈旧冲突（`changeSet.conflicts` 非空时才允许写）                   | ⏳ 随冲突检测（§5.2）落地，**尚未定义**                                   |
@@ -379,7 +383,7 @@ TUI 的唯一复用面是 **service + ChangeSet**：TUI 不得绕过 service 直
 
 | 门禁                                          | 覆盖                                                                              | 状态      |
 | --------------------------------------------- | --------------------------------------------------------------------------------- | --------- |
-| `go vet ./... && go test ./...`               | service/app/CLI 单测（251 条，含 26 条新增）                                      | ✅ 已引入 |
+| `go vet ./... && go test ./...`               | service/app/CLI 单测                                                              | ✅ 已引入 |
 | 分层门禁 `scripts/check-go-layering.mjs`      | R1/R3：`go list -deps` 里不得出现 `wailsapp`（service）、`internal/app`（cmd/dg） | ✅ 已引入 |
 | CI job `wails.yml → cli-headless`（ubuntu）   | `CGO_ENABLED=0 go build ./cmd/dg` + service/core/cmd 测试；**不装 wails3/npm**    | ✅ 已引入 |
 | CI job `wails.yml → build-test`（windows）    | 前端 + Go 全量 + 分层门禁 + 命令面 + 版本/registry 漂移                           | ✅ 已引入 |
@@ -436,7 +440,7 @@ CLI 契约测试的写法约定：直接调 `run(args, &stdout, &stderr)`（它�
 | `cmd/dg`：`version` `doctor` `path` `channels` `codex` `hermes` `pi` `omp` `export` | ✅   |
 | `internal/service/{codex,hermes,pi,omp}`（B2 四个域）                               | ✅   |
 | 发布构建：`release-single.yml` 三端 GUI+CLI 各一个单文件                            | ✅   |
-| 测试：`service/*` 48 条 + `cmd/dg` 17 条契约测试（合计 257 条）                     | ✅   |
+| 测试：`service/*` 与 `cmd/dg` 的契约测试全绿                                        | ✅   |
 | `internal/service/{opencode,openclaw,…}`（B2 暂缓）+ B3                             | ⏳   |
 | `dg` 的 opencode/openclaw/… 子命令（期 2 剩余）                                     | ⏳   |
 | `--force` + `beforeHash` 冲突检测（exit 3）                                         | ⏳   |
@@ -456,7 +460,7 @@ factory/mcp）→ 再回来补冲突检测（那时 `--force` 才有真实语义
   所以放 core 不破坏可移植性；`internal/app` 不能交叉编译的问题也因此没有变严重）。
 - **GUI 侧只留偏好项**：`LaunchCodex` 读 `preferences.json` 的首选终端，其余
   （runtime home 快照 + 终端启动）是 `codex.LaunchTemporaryRun(id, cwd, preferred)`。
-- **测试随代码下沉**：`codex_test.go` + `codex_auth_profiles_test.go`（27 条）整体搬到
+- **测试随代码下沉**：`codex_test.go` + `codex_auth_profiles_test.go` 整体搬到
   `service/codex`；跨包只共享 `testutil.IsolatedHome`。**codex 的 profile fixture 不能进
   testutil** —— 那会造成 `testutil → codex` 与 `codex 测试 → testutil` 的 import cycle（Go 拒绝），
   所以 app 侧的 sessions 测试就地构造它需要的那份 profile。
@@ -483,5 +487,3 @@ factory/mcp）→ 再回来补冲突检测（那时 `--force` 才有真实语义
   provider 有（profile 本身无 secrets）。
 - **测试沙箱必须连 `PATH` 一起隔离**（`cmd/dg` 的 `sandbox()`）：`HermesHome` 的 Windows
   优先级链会回退到默认 WSL 发行版，不隔离就会把 `dg hermes apply` 的输出写进真实 `\\wsl$`。
-- **`--dry-run` 仍未实现**：这四个工具的 apply/save/delete 都直接拒绝该 flag（exit 2），
-  等 plan/apply 拆分（§3.3 3a）落地后再放开。

@@ -201,6 +201,9 @@ func DirExists(path string) bool {
 
 // EnsureDir creates dir (and parents) when missing.
 func EnsureDir(path string) error {
+	if InDryRun() {
+		return nil // creating a directory is a write too
+	}
 	if DirExists(path) {
 		return nil
 	}

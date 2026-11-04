@@ -251,7 +251,7 @@ func codexWriteJSONObject(path string, obj map[string]any) error {
 func codexWriteAuthOrDeleteIfEmpty(path string, auth map[string]any) error {
 	if len(auth) == 0 {
 		if PathExists(path) {
-			if err := os.Remove(path); err != nil {
+			if err := core.RemoveFile(path); err != nil {
 				return fmt.Errorf("Failed to delete auth.json: %w", err)
 			}
 		}
@@ -562,7 +562,7 @@ func SyncModelCatalog(model string) error {
 	}
 	legacy := filepath.Join(codexDir, "models.json")
 	if PathExists(legacy) {
-		if err := os.Remove(legacy); err != nil {
+		if err := core.RemoveFile(legacy); err != nil {
 			return fmt.Errorf("Failed to remove legacy codex models.json: %w", err)
 		}
 	}
@@ -770,13 +770,13 @@ func DeleteProfile(id string) error {
 		return err
 	}
 	if PathExists(path) {
-		if err := os.Remove(path); err != nil {
+		if err := core.RemoveFile(path); err != nil {
 			return fmt.Errorf("Failed to delete profile: %w", err)
 		}
 	}
 	if active, err := GetActiveProfileID(); err == nil && active != nil && *active == id {
 		if activePath, err := codexActiveProfilePath(); err == nil {
-			_ = os.Remove(activePath)
+			_ = core.RemoveFile(activePath)
 		}
 	}
 	return nil

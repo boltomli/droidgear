@@ -898,13 +898,13 @@ func DeleteProfile(id string) error {
 		return err
 	}
 	if core.FileExists(path) {
-		if err := os.Remove(path); err != nil {
+		if err := core.RemoveFile(path); err != nil {
 			return fmt.Errorf("Failed to delete profile: %w", err)
 		}
 	}
 	if active, err := GetActiveProfileID(); err == nil && active != nil && *active == id {
 		if activePath, err := ompActiveProfilePath(); err == nil {
-			_ = os.Remove(activePath)
+			_ = core.RemoveFile(activePath)
 		}
 	}
 	return nil

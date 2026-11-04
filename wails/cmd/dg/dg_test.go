@@ -544,13 +544,26 @@ func TestCodexProfilesLifecycle(t *testing.T) {
 		t.Errorf("active = %s, want \"p1\"", active)
 	}
 
-	// --dry-run is rejected instead of silently doing nothing.
-	code, _, errOut = runCLI(t, "--json", "--dry-run", "codex", "profiles", "apply", "p1")
-	if code != exitUsage {
-		t.Errorf("dry-run exit = %d, want %d", code, exitUsage)
+	// --dry-run records the writes instead of performing them: the ChangeSet
+	// replaces the receipt, the profile is still in the store, and no API key
+	// from the document being deleted leaks into the preview.
+	code, out, errOut = runCLI(t, "--json", "--dry-run", "codex", "profiles", "delete", "p1")
+	if code != 0 {
+		t.Fatalf("dry-run exit = %d, stderr = %s", code, errOut)
 	}
-	if !strings.Contains(errOut, "not supported") {
-		t.Errorf("dry-run stderr = %s", errOut)
+	preview := decode(t, out)
+	if preview["applied"] != false {
+		t.Errorf("dry-run applied = %v, want false", preview["applied"])
+	}
+	if changes, _ := preview["changes"].([]any); len(changes) == 0 {
+		t.Errorf("dry run recorded no changes: %s", out)
+	}
+	if strings.Contains(out, "sk-secret-1234") || strings.Contains(out, "sk-provider-5678") {
+		t.Error("dry-run preview leaked a profile API key")
+	}
+	code, out, errOut = runCLI(t, "--json", "codex", "profiles", "list")
+	if code != 0 || len(decodeList(t, out)) != 1 {
+		t.Errorf("dry-run delete changed the store: exit=%d out=%s", code, out)
 	}
 
 	// Delete, then the profile is gone.
@@ -656,10 +669,26 @@ func TestHermesProfilesLifecycle(t *testing.T) {
 		t.Error("apply escaped the sandbox into a WSL path")
 	}
 
-	// --dry-run is rejected rather than silently ignored.
-	code, _, errOut = runCLI(t, "--json", "--dry-run", "hermes", "profiles", "apply", "h1")
-	if code != exitUsage || !strings.Contains(errOut, "not supported") {
-		t.Errorf("dry-run: exit=%d stderr=%s", code, errOut)
+	// --dry-run records the writes instead of performing them: the ChangeSet
+	// replaces the receipt, the profile survives, and the model API key never
+	// reaches stdout.
+	code, out, errOut = runCLI(t, "--json", "--dry-run", "hermes", "profiles", "delete", "h1")
+	if code != 0 {
+		t.Fatalf("dry-run exit = %d, stderr = %s", code, errOut)
+	}
+	preview := decode(t, out)
+	if preview["applied"] != false {
+		t.Errorf("dry-run applied = %v, want false", preview["applied"])
+	}
+	if changes, _ := preview["changes"].([]any); len(changes) == 0 {
+		t.Errorf("dry run recorded no changes: %s", out)
+	}
+	if strings.Contains(out, "sk-hermes-1234") {
+		t.Error("dry-run preview leaked the model API key")
+	}
+	code, out, errOut = runCLI(t, "--json", "hermes", "profiles", "list")
+	if code != 0 || len(decodeList(t, out)) != 1 {
+		t.Errorf("dry-run delete changed the store: exit=%d out=%s", code, out)
 	}
 
 	code, _, errOut = runCLI(t, "--json", "hermes", "profiles", "delete", "h1")
@@ -756,6 +785,27 @@ func TestPiProfilesLifecycle(t *testing.T) {
 	}
 	if active := strings.TrimSpace(out); active != `"p1"` {
 		t.Errorf("active = %s, want \"p1\"", active)
+	}
+
+	// --dry-run records instead of writing: a ChangeSet replaces the receipt,
+	// the profile survives, and the provider's apiKey/oauth never reach stdout.
+	code, out, errOut = runCLI(t, "--json", "--dry-run", "pi", "profiles", "delete", "p1")
+	if code != 0 {
+		t.Fatalf("dry-run exit = %d, stderr = %s", code, errOut)
+	}
+	preview := decode(t, out)
+	if preview["applied"] != false {
+		t.Errorf("dry-run applied = %v, want false", preview["applied"])
+	}
+	if changes, _ := preview["changes"].([]any); len(changes) == 0 {
+		t.Errorf("dry run recorded no changes: %s", out)
+	}
+	if strings.Contains(out, "sk-pi-1234") || strings.Contains(out, "oauth-blob-5678") {
+		t.Error("dry-run preview leaked a provider secret")
+	}
+	code, out, errOut = runCLI(t, "--json", "pi", "profiles", "list")
+	if code != 0 || len(decodeList(t, out)) != 1 {
+		t.Errorf("dry-run delete changed the store: exit=%d out=%s", code, out)
 	}
 
 	code, _, errOut = runCLI(t, "--json", "pi", "profiles", "delete", "p1")
@@ -859,6 +909,24 @@ func TestOmpProfilesAndProvidersLifecycle(t *testing.T) {
 	code, _, errOut = runCLI(t, "--json", "omp", "providers", "delete", "deepseek")
 	if code != exitRuntime || decode(t, errOut)["error"].(map[string]any)["code"] != "not_found" {
 		t.Errorf("second provider delete: exit=%d stderr=%s", code, errOut)
+	}
+
+	// --dry-run records instead of writing: a ChangeSet replaces the receipt
+	// and the profile is still there afterwards.
+	code, out, errOut = runCLI(t, "--json", "--dry-run", "omp", "profiles", "delete", "o1")
+	if code != 0 {
+		t.Fatalf("dry-run exit = %d, stderr = %s", code, errOut)
+	}
+	preview := decode(t, out)
+	if preview["applied"] != false {
+		t.Errorf("dry-run applied = %v, want false", preview["applied"])
+	}
+	if changes, _ := preview["changes"].([]any); len(changes) == 0 {
+		t.Errorf("dry run recorded no changes: %s", out)
+	}
+	code, out, errOut = runCLI(t, "--json", "omp", "profiles", "list")
+	if code != 0 || len(decodeList(t, out)) != 1 {
+		t.Errorf("dry-run delete changed the store: exit=%d out=%s", code, out)
 	}
 
 	code, _, errOut = runCLI(t, "--json", "omp", "profiles", "delete", "o1")

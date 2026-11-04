@@ -10,6 +10,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -21,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"droidgear-wails/internal/core"
 	"droidgear-wails/internal/service/channels"
 )
 
@@ -57,7 +59,7 @@ func (e usageError) Error() string { return e.message }
 
 // run executes one CLI invocation and returns the process exit code.
 // It is separated from main so tests can drive it without forking.
-func run(args []string, stdout, stderr io.Writer) int {
+func run(args []string, stdout, stderr io.Writer) (exit int) {
 	opts, rest, err := splitGlobalFlags(args)
 	if err != nil {
 		return fail(stderr, opts, exitUsage, "usage", err.Error(), "")
@@ -87,7 +89,42 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 
 	cmd, cmdArgs := rest[0], rest[1:]
-	c := &cli{opts: opts, stdout: stdout, stderr: stderr}
+
+	// A dry run executes the real code path with every write recorded instead
+	// of performed (core.BeginDryRun), so the preview can never drift from
+	// what `apply` would actually do. stdout is buffered for the duration: the
+	// command's own receipt must not compete with the ChangeSet that answers
+	// `--dry-run` (commands with a richer preview of their own — export run —
+	// set cli.previewedOwn and keep theirs).
+	var (
+		endDryRun func() *core.ChangeSet
+		buffered  bytes.Buffer
+	)
+	out := stdout
+	if opts.dryRun {
+		out = &buffered
+		endDryRun = core.BeginDryRun()
+	}
+	c := &cli{opts: opts, stdout: out, stderr: stderr}
+	if endDryRun != nil {
+		defer func() {
+			cs := endDryRun()
+			switch {
+			case exit != exitOK:
+				// The command failed: its error already went to stderr, and any
+				// partial output stays where the caller expects it.
+				_, _ = io.Copy(stdout, &buffered)
+			case len(cs.Changes) > 0 && !c.previewedOwn:
+				// The receipt in the buffer claims the write happened; the
+				// ChangeSet is the honest answer, so it replaces it.
+				c.stdout = stdout
+				exit = c.printChangeSet(cs)
+			default:
+				_, _ = io.Copy(stdout, &buffered)
+			}
+		}()
+	}
+
 	var runErr error
 	switch cmd {
 	case "version":
@@ -132,6 +169,44 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 // errNotFound marks "the target does not exist" (exit 1, code not_found).
 var errNotFound = errors.New("not found")
+
+// printChangeSet renders the recorded writes as the answer to --dry-run:
+// one JSON document with --json, a `would write/remove` list otherwise.
+// Secrets are masked here (unless --reveal) — the preview shows the very
+// document that would land on disk, so it must not leak what it previews.
+func (c *cli) printChangeSet(cs *core.ChangeSet) int {
+	if !c.opts.reveal {
+		for i := range cs.Changes {
+			if cs.Changes[i].Removed {
+				continue
+			}
+			redacted := core.RedactSensitiveText(cs.Changes[i].After)
+			if redacted != cs.Changes[i].After {
+				cs.Changes[i].After = redacted
+				cs.Changes[i].Redacted = true
+			}
+		}
+	}
+	if c.opts.jsonOut {
+		if err := writeJSON(c.stdout, cs); err != nil {
+			return fail(c.stderr, c.opts, exitRuntime, "runtime", err.Error(), "")
+		}
+		return exitOK
+	}
+	for _, change := range cs.Changes {
+		if change.Removed {
+			fmt.Fprintf(c.stdout, "would remove %s\n", change.Path)
+			continue
+		}
+		redacted := ""
+		if change.Redacted {
+			redacted = ", redacted"
+		}
+		fmt.Fprintf(c.stdout, "would write %s (%s, %d bytes%s)\n",
+			change.Path, change.Kind, len(change.After), redacted)
+	}
+	return exitOK
+}
 
 // fail writes the error envelope (or a human line) and returns the code.
 func fail(w io.Writer, opts options, code int, errCode string, message string, hint string) int {

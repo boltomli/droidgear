@@ -26,6 +26,10 @@ type cli struct {
 	opts   options
 	stdout io.Writer
 	stderr io.Writer
+	// previewedOwn marks a command that produced its own dry-run preview
+	// (export run carries counts and warnings a bare ChangeSet would lose),
+	// so run() keeps that output instead of substituting the ChangeSet.
+	previewedOwn bool
 }
 
 // newFlagSet parses a subcommand's own flags. Global flags were already
@@ -223,36 +227,34 @@ func (c *cli) requirePathKey(key string) error {
 	return c.usage("unknown path key %q (want one of: %s)", key, strings.Join(paths.Keys(), ", "))
 }
 
-// applyPathChange shares the --dry-run / receipt handling of path set|reset.
+// applyPathChange shares the receipt handling of path set|reset. In a dry run
+// the write is still issued — core records it instead of performing it — and
+// run() replaces this receipt with the ChangeSet, so `applied` reflects what
+// really happened rather than what was asked for.
 func (c *cli) applyPathChange(key string, value string, write func(context.Context) error) error {
-	receipt := func(applied bool) map[string]any {
-		return map[string]any{"applied": applied, "key": key, "path": value}
-	}
-	human := func(applied bool) func(io.Writer) error {
-		return func(w io.Writer) error {
-			verb := "set"
-			if !applied {
-				verb = "would set"
-			}
-			if value == "" {
-				verb = strings.Replace(verb, "set", "reset", 1)
-				_, err := fmt.Fprintf(w, "%s %s\n", verb, key)
-				return err
-			}
-			_, err := fmt.Fprintf(w, "%s %s = %s\n", verb, key, value)
-			return err
-		}
-	}
-
-	if c.opts.dryRun {
-		return emit(c.opts, c.stdout, receipt(false), human(false))
-	}
 	ctx, cancel := c.opts.commandContext()
 	defer cancel()
 	if err := write(ctx); err != nil {
 		return err
 	}
-	return emit(c.opts, c.stdout, receipt(true), human(true))
+	applied := !c.opts.dryRun
+	receipt := map[string]any{"applied": applied, "key": key, "path": value}
+	human := func(w io.Writer) error {
+		verb := "set"
+		if value == "" {
+			verb = "reset"
+		}
+		if !applied {
+			verb = "would " + verb
+		}
+		if value == "" {
+			_, err := fmt.Fprintf(w, "%s %s\n", verb, key)
+			return err
+		}
+		_, err := fmt.Fprintf(w, "%s %s = %s\n", verb, key, value)
+		return err
+	}
+	return emit(c.opts, c.stdout, receipt, human)
 }
 
 // ---------------------------------------------------------------------------
@@ -405,16 +407,6 @@ func channelAuthKind(ctx context.Context, id string) (string, error) {
 		return "credentials", nil
 	}
 	return "none", nil
-}
-
-// requireNoDryRun rejects --dry-run for commands whose domain has no
-// plan/apply split yet. Silently ignoring the flag would make it a fake
-// shim (design doc §3.3: the ChangeSet preview lands with the batch).
-func (c *cli) requireNoDryRun(command string) error {
-	if c.opts.dryRun {
-		return c.usage("--dry-run is not supported by %s yet (plan/apply split pending, design doc §3.3)", command)
-	}
-	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -570,9 +562,6 @@ func (c *cli) codexProfilesApply(args []string) error {
 		return c.usage("codex profiles apply needs <id>")
 	}
 	id := args[0]
-	if err := c.requireNoDryRun("codex profiles apply"); err != nil {
-		return err
-	}
 	if err := c.requireCodexProfile(id); err != nil {
 		return err
 	}
@@ -596,9 +585,6 @@ func (c *cli) codexProfilesSave(args []string) error {
 	}
 	if strings.TrimSpace(*file) == "" {
 		return c.usage("codex profiles save needs --file <json>")
-	}
-	if err := c.requireNoDryRun("codex profiles save"); err != nil {
-		return err
 	}
 
 	raw, err := os.ReadFile(filepath.Clean(*file)) // #nosec G304 -- user-supplied profile file
@@ -626,9 +612,6 @@ func (c *cli) codexProfilesDelete(args []string) error {
 		return c.usage("codex profiles delete needs <id>")
 	}
 	id := args[0]
-	if err := c.requireNoDryRun("codex profiles delete"); err != nil {
-		return err
-	}
 	if err := c.requireCodexProfile(id); err != nil {
 		return err
 	}
@@ -827,9 +810,6 @@ func (c *cli) hermesProfilesApply(args []string) error {
 		return c.usage("hermes profiles apply needs <id>")
 	}
 	id := args[0]
-	if err := c.requireNoDryRun("hermes profiles apply"); err != nil {
-		return err
-	}
 	if err := c.requireHermesProfile(id); err != nil {
 		return err
 	}
@@ -853,9 +833,6 @@ func (c *cli) hermesProfilesSave(args []string) error {
 	}
 	if strings.TrimSpace(*file) == "" {
 		return c.usage("hermes profiles save needs --file <json>")
-	}
-	if err := c.requireNoDryRun("hermes profiles save"); err != nil {
-		return err
 	}
 
 	raw, err := os.ReadFile(filepath.Clean(*file)) // #nosec G304 -- user-supplied profile file
@@ -883,9 +860,6 @@ func (c *cli) hermesProfilesDelete(args []string) error {
 		return c.usage("hermes profiles delete needs <id>")
 	}
 	id := args[0]
-	if err := c.requireNoDryRun("hermes profiles delete"); err != nil {
-		return err
-	}
 	if err := c.requireHermesProfile(id); err != nil {
 		return err
 	}
@@ -1078,9 +1052,6 @@ func (c *cli) piProfilesApply(args []string) error {
 		return c.usage("pi profiles apply needs <id>")
 	}
 	id := args[0]
-	if err := c.requireNoDryRun("pi profiles apply"); err != nil {
-		return err
-	}
 	if err := c.requirePiProfile(id); err != nil {
 		return err
 	}
@@ -1104,9 +1075,6 @@ func (c *cli) piProfilesSave(args []string) error {
 	}
 	if strings.TrimSpace(*file) == "" {
 		return c.usage("pi profiles save needs --file <json>")
-	}
-	if err := c.requireNoDryRun("pi profiles save"); err != nil {
-		return err
 	}
 
 	raw, err := os.ReadFile(filepath.Clean(*file)) // #nosec G304 -- user-supplied profile file
@@ -1134,9 +1102,6 @@ func (c *cli) piProfilesDelete(args []string) error {
 		return c.usage("pi profiles delete needs <id>")
 	}
 	id := args[0]
-	if err := c.requireNoDryRun("pi profiles delete"); err != nil {
-		return err
-	}
 	if err := c.requirePiProfile(id); err != nil {
 		return err
 	}
@@ -1322,9 +1287,6 @@ func (c *cli) ompProfilesApply(args []string) error {
 		return c.usage("omp profiles apply needs <id>")
 	}
 	id := args[0]
-	if err := c.requireNoDryRun("omp profiles apply"); err != nil {
-		return err
-	}
 	if err := c.requireOmpProfile(id); err != nil {
 		return err
 	}
@@ -1359,9 +1321,6 @@ func (c *cli) ompProfilesDelete(args []string) error {
 		return c.usage("omp profiles delete needs <id>")
 	}
 	id := args[0]
-	if err := c.requireNoDryRun("omp profiles delete"); err != nil {
-		return err
-	}
 	if err := c.requireOmpProfile(id); err != nil {
 		return err
 	}
@@ -1423,9 +1382,6 @@ func (c *cli) ompProvidersDelete(args []string) error {
 		return c.usage("omp providers delete needs <provider-id>")
 	}
 	id := args[0]
-	if err := c.requireNoDryRun("omp providers delete"); err != nil {
-		return err
-	}
 	list, err := omp.ReadCustomProviders()
 	if err != nil {
 		return err
@@ -1491,9 +1447,6 @@ func (c *cli) saveJSON(what string, args []string, help string, write func([]byt
 	}
 	if strings.TrimSpace(*file) == "" {
 		return c.usage("%s save needs --file <json>", what)
-	}
-	if err := c.requireNoDryRun(what + " save"); err != nil {
-		return err
 	}
 	raw, err := os.ReadFile(filepath.Clean(*file)) // #nosec G304 -- user-supplied document
 	if err != nil {
@@ -1624,6 +1577,9 @@ func (c *cli) exportRun(args []string) error {
 
 	if err := requireTemplate(ctx, name); err != nil {
 		return err
+	}
+	if c.opts.dryRun {
+		c.previewedOwn = true
 	}
 	outcome, err := export.Run(ctx, name, export.RunOptions{
 		DryRun: c.opts.dryRun,
