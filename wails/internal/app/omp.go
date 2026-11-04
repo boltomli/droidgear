@@ -348,7 +348,7 @@ func ompModelsYMLPath() (string, error) {
 }
 
 func ompProfilePath(id string) (string, error) {
-	if err := validateProfileID(id); err != nil {
+	if err := core.ValidateProfileID(id); err != nil {
 		return "", err
 	}
 	dir, err := ompProfilesDir()
@@ -883,16 +883,16 @@ func (a *App) GetOmpProfile(id string) (OmpProfile, error) {
 // SaveOmpProfile creates or updates a profile.
 func (a *App) SaveOmpProfile(profile OmpProfile) error {
 	if strings.TrimSpace(profile.ID) == "" {
-		profile.ID = newUUID()
-		profile.CreatedAt = nowRFC3339()
+		profile.ID = core.NewUUID()
+		profile.CreatedAt = core.NowRFC3339()
 	} else {
 		if existing, err := a.GetOmpProfile(profile.ID); err == nil {
 			profile.CreatedAt = existing.CreatedAt
 		} else if strings.TrimSpace(profile.CreatedAt) == "" {
-			profile.CreatedAt = nowRFC3339()
+			profile.CreatedAt = core.NowRFC3339()
 		}
 	}
-	profile.UpdatedAt = nowRFC3339()
+	profile.UpdatedAt = core.NowRFC3339()
 	return writeOmpProfileFile(profile)
 }
 
@@ -921,9 +921,9 @@ func (a *App) DuplicateOmpProfile(id string, newName string) (OmpProfile, error)
 	if err != nil {
 		return OmpProfile{}, err
 	}
-	profile.ID = newUUID()
+	profile.ID = core.NewUUID()
 	profile.Name = newName
-	profile.CreatedAt = nowRFC3339()
+	profile.CreatedAt = core.NowRFC3339()
 	profile.UpdatedAt = profile.CreatedAt
 	if err := writeOmpProfileFile(profile); err != nil {
 		return OmpProfile{}, err

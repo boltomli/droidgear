@@ -333,7 +333,7 @@ func claudePickAvailableFileName(dir string, base string) string {
 			return next
 		}
 	}
-	return fmt.Sprintf("%s-%s", base, newUUID())
+	return fmt.Sprintf("%s-%s", base, core.NewUUID())
 }
 
 // claudeBuildSettingsFromProfile converts a legacy profile document into a
@@ -869,7 +869,7 @@ func claudeNextRuntimeDirPath() (string, error) {
 		return "", err
 	}
 	stamp := time.Now().UTC().Format("20060102T150405.000Z")
-	return filepath.Join(root, claudeRuntimePrefix+stamp+"-"+newUUID()), nil
+	return filepath.Join(root, claudeRuntimePrefix+stamp+"-"+core.NewUUID()), nil
 }
 
 // claudeCleanupStaleRuntimeDirs removes temporary-run-* directories older than
@@ -910,7 +910,7 @@ func claudeConfigDirOverride() (string, error) {
 			return trimmed, nil
 		}
 	}
-	if inherited := claudeNormalizeOptionalString(strPtr(os.Getenv("CLAUDE_CONFIG_DIR"))); inherited != nil {
+	if inherited := claudeNormalizeOptionalString(core.StrPtr(os.Getenv("CLAUDE_CONFIG_DIR"))); inherited != nil {
 		return *inherited, nil
 	}
 	return "", nil
@@ -920,7 +920,7 @@ func claudeConfigDirOverride() (string, error) {
 // pushing a warning when the file cannot be read (mirrors
 // check_inherited_env_file_source).
 func claudeCheckInheritedEnvFile(warnings *[]string) *string {
-	source := claudeNormalizeOptionalString(strPtr(os.Getenv("CLAUDE_ENV_FILE")))
+	source := claudeNormalizeOptionalString(core.StrPtr(os.Getenv("CLAUDE_ENV_FILE")))
 	if source == nil {
 		return nil
 	}
@@ -1419,7 +1419,7 @@ func claudeLaunchWindowsCmdPayload(payload string, cwd *string) error {
 	args = append(args, "cmd", "/k", payload)
 
 	cmd := exec.Command("cmd", args...) // #nosec G204 -- static hop, user cwd only
-	hideConsoleWindow(cmd)
+	core.HideConsoleWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch cmd: %w", err)
 	}
@@ -1438,7 +1438,7 @@ func claudeLaunchWindowsPowerShellPayload(shell string, command string, cwd *str
 	args = append(args, "-Command", command)
 
 	cmd := exec.Command(shell, args...) // #nosec G204 -- resolved shell
-	useNewConsole(cmd)
+	core.UseNewConsole(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch PowerShell: %w", err)
 	}

@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"time"
 
 	"droidgear-wails/internal/core"
 	"droidgear-wails/internal/version"
@@ -121,27 +120,4 @@ func (a *App) SavePreferences(preferences AppPreferences) error {
 		return err
 	}
 	return core.AtomicWrite(path, data)
-}
-
-// ---------------------------------------------------------------------------
-// Small helpers shared by the tool modules
-// ---------------------------------------------------------------------------
-
-func nowRFC3339() string {
-	return time.Now().UTC().Format(time.RFC3339)
-}
-
-// validateProfileID accepts the same ids as the Rust core: non-empty,
-// alphanumeric plus '-' and '_'.
-func validateProfileID(id string) error {
-	if id == "" {
-		return errors.New("Invalid profile id")
-	}
-	for _, r := range id {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
-			continue
-		}
-		return errors.New("Invalid profile id")
-	}
-	return nil
 }

@@ -261,7 +261,7 @@ func piConfigPath() (string, error) {
 }
 
 func piProfilePath(id string) (string, error) {
-	if err := validateProfileID(id); err != nil {
+	if err := core.ValidateProfileID(id); err != nil {
 		return "", err
 	}
 	dir, err := piProfilesDir()
@@ -347,16 +347,16 @@ func (a *App) GetPiProfile(id string) (PiProfile, error) {
 // SavePiProfile creates or updates a profile.
 func (a *App) SavePiProfile(profile PiProfile) error {
 	if strings.TrimSpace(profile.ID) == "" {
-		profile.ID = newUUID()
-		profile.CreatedAt = nowRFC3339()
+		profile.ID = core.NewUUID()
+		profile.CreatedAt = core.NowRFC3339()
 	} else {
 		if existing, err := a.GetPiProfile(profile.ID); err == nil {
 			profile.CreatedAt = existing.CreatedAt
 		} else if strings.TrimSpace(profile.CreatedAt) == "" {
-			profile.CreatedAt = nowRFC3339()
+			profile.CreatedAt = core.NowRFC3339()
 		}
 	}
-	profile.UpdatedAt = nowRFC3339()
+	profile.UpdatedAt = core.NowRFC3339()
 	return writePiProfileFile(profile)
 }
 
@@ -385,9 +385,9 @@ func (a *App) DuplicatePiProfile(id string, newName string) (PiProfile, error) {
 	if err != nil {
 		return PiProfile{}, err
 	}
-	profile.ID = newUUID()
+	profile.ID = core.NewUUID()
 	profile.Name = newName
-	profile.CreatedAt = nowRFC3339()
+	profile.CreatedAt = core.NowRFC3339()
 	profile.UpdatedAt = profile.CreatedAt
 	if err := writePiProfileFile(profile); err != nil {
 		return PiProfile{}, err
@@ -404,9 +404,9 @@ func (a *App) CreateDefaultPiProfile() (PiProfile, error) {
 	if len(profiles) > 0 {
 		return PiProfile{}, errors.New("Profiles already exist")
 	}
-	now := nowRFC3339()
+	now := core.NowRFC3339()
 	profile := PiProfile{
-		ID:        newUUID(),
+		ID:        core.NewUUID(),
 		Name:      "Default",
 		CreatedAt: now,
 		UpdatedAt: now,

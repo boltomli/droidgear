@@ -1,4 +1,4 @@
-package app
+package codex
 
 import (
 	"os"
@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/testutil"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -46,26 +49,31 @@ func codexTestParseConfig(t *testing.T) map[string]any {
 	return config
 }
 
+// codexTestCustomProfile is the canned "custom provider" profile the codex
+// tests save before exercising apply, status and provider aggregation.
+// The app-level sessions test builds the (much smaller) profile it needs
+// inline — a shared fixture would need a helper package that imports this
+// one, which Go rejects as an import cycle in tests.
 func codexTestCustomProfile(id string, name string) CodexProfile {
 	return CodexProfile{
 		ID:     id,
 		Name:   name,
-		APIKey: strPtr("sk-provider"),
+		APIKey: core.StrPtr("sk-provider"),
 		Providers: map[string]CodexProviderConfig{
 			"custom": {
-				Name:                 strPtr("Custom"),
-				BaseURL:              strPtr("https://api.example.com/v1"),
-				WireAPI:              strPtr("responses"),
+				Name:                 core.StrPtr("Custom"),
+				BaseURL:              core.StrPtr("https://api.example.com/v1"),
+				WireAPI:              core.StrPtr("responses"),
 				RequiresOpenaiAuth:   codexPtr(false),
-				Model:                strPtr("gpt-5.5"),
-				ModelReasoningEffort: strPtr("high"),
-				APIKey:               strPtr("sk-provider"),
-				EnvKey:               strPtr("EXAMPLE_API_KEY"),
+				Model:                core.StrPtr("gpt-5.5"),
+				ModelReasoningEffort: core.StrPtr("high"),
+				APIKey:               core.StrPtr("sk-provider"),
+				EnvKey:               core.StrPtr("EXAMPLE_API_KEY"),
 			},
 		},
 		ModelProvider:        "custom",
 		Model:                "gpt-5.5",
-		ModelReasoningEffort: strPtr("medium"),
+		ModelReasoningEffort: core.StrPtr("medium"),
 		APIKeyModelDiscovery: true,
 	}
 }
@@ -79,10 +87,9 @@ func codexTestCustomProfile(id string, name string) CodexProfile {
 // TestCodexCreateDefaultProfile covers the first-run seed and the
 // "Profiles already exist" guard.
 func TestCodexCreateDefaultProfile(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
-	profile, err := a.CreateDefaultCodexProfile()
+	profile, err := CreateDefaultProfile()
 	if err != nil {
 		t.Fatalf("CreateDefaultCodexProfile: %v", err)
 	}
@@ -92,7 +99,7 @@ func TestCodexCreateDefaultProfile(t *testing.T) {
 	if _, ok := profile.Providers["custom"]; !ok {
 		t.Fatalf("missing custom provider: %+v", profile.Providers)
 	}
-	if _, err := a.CreateDefaultCodexProfile(); err == nil || err.Error() != "Profiles already exist" {
+	if _, err := CreateDefaultProfile(); err == nil || err.Error() != "Profiles already exist" {
 		t.Fatalf("second create: %v", err)
 	}
 }
@@ -101,8 +108,7 @@ func TestCodexCreateDefaultProfile(t *testing.T) {
 // contract: applying a profile rewrites only the model-related keys while
 // unknown top-level keys, sibling feature flags and table structure survive.
 func TestCodexApplyPreservesUnknownConfigKeys(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteConfig(t, `
 network_access = "restricted"
@@ -116,10 +122,10 @@ trust_level = "trusted"
 `)
 
 	profile := codexTestCustomProfile("p1", "P1")
-	if err := a.SaveCodexProfile(profile); err != nil {
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveCodexProfile: %v", err)
 	}
-	if err := a.ApplyCodexProfile("p1"); err != nil {
+	if err := ApplyProfile("p1"); err != nil {
 		t.Fatalf("ApplyCodexProfile: %v", err)
 	}
 
@@ -168,11 +174,11 @@ trust_level = "trusted"
 	}
 
 	// Active profile recorded; read_current backfills the active provider.
-	active, err := a.GetActiveCodexProfileId()
+	active, err := GetActiveProfileID()
 	if err != nil || active == nil || *active != "p1" {
 		t.Fatalf("active: %v %v", err, active)
 	}
-	current, err := a.ReadCodexCurrentConfig()
+	current, err := ReadCurrentConfig()
 	if err != nil {
 		t.Fatalf("ReadCodexCurrentConfig: %v", err)
 	}
@@ -188,8 +194,7 @@ trust_level = "trusted"
 // custom providers never reach live config, and OPENAI_API_KEY is stripped
 // from auth.json (deleting it when nothing else remains — Codex rejects `{}`).
 func TestCodexApplyOpenAIModeStripsProvidersAndAuthKey(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteConfig(t, "model_provider = \"custom\"\n\n[model_providers.custom]\nname = \"Custom\"\n")
 
@@ -203,10 +208,10 @@ func TestCodexApplyOpenAIModeStripsProvidersAndAuthKey(t *testing.T) {
 	}
 
 	profile := CodexProfile{ID: "official", Name: "Official", ModelProvider: "openai", Model: "gpt-5"}
-	if err := a.SaveCodexProfile(profile); err != nil {
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveCodexProfile: %v", err)
 	}
-	if err := a.ApplyCodexProfile("official"); err != nil {
+	if err := ApplyProfile("official"); err != nil {
 		t.Fatalf("ApplyCodexProfile: %v", err)
 	}
 
@@ -225,8 +230,7 @@ func TestCodexApplyOpenAIModeStripsProvidersAndAuthKey(t *testing.T) {
 // TestCodexApplyOpenAIKeepsOfficialAuthFields: official auth (auth_mode …)
 // survives the key strip without being deleted.
 func TestCodexApplyOpenAIKeepsOfficialAuthFields(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	authPath, err := codexAuthPath()
 	if err != nil {
@@ -238,10 +242,10 @@ func TestCodexApplyOpenAIKeepsOfficialAuthFields(t *testing.T) {
 	}
 
 	profile := CodexProfile{ID: "official", Name: "Official", ModelProvider: "openai", Model: "gpt-5"}
-	if err := a.SaveCodexProfile(profile); err != nil {
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveCodexProfile: %v", err)
 	}
-	if err := a.ApplyCodexProfile("official"); err != nil {
+	if err := ApplyProfile("official"); err != nil {
 		t.Fatalf("ApplyCodexProfile: %v", err)
 	}
 
@@ -261,8 +265,7 @@ func TestCodexApplyOpenAIKeepsOfficialAuthFields(t *testing.T) {
 // top-level model_context_window / model_auto_compact_token_limit land in the
 // active provider entry, and OPENAI_API_KEY from auth.json backfills apiKey.
 func TestCodexReadCurrentConfigBackfillsContextWindow(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteConfig(t, `model_provider = "custom"
 model = "gpt-5.6-sol"
@@ -282,7 +285,7 @@ wire_api = "responses"
 		t.Fatalf("write auth: %v", err)
 	}
 
-	current, err := a.ReadCodexCurrentConfig()
+	current, err := ReadCurrentConfig()
 	if err != nil {
 		t.Fatalf("ReadCodexCurrentConfig: %v", err)
 	}
@@ -310,7 +313,7 @@ wire_api = "responses"
 	if err := os.Remove(authPath); err != nil {
 		t.Fatalf("remove auth: %v", err)
 	}
-	current, err = a.ReadCodexCurrentConfig()
+	current, err = ReadCurrentConfig()
 	if err != nil {
 		t.Fatalf("ReadCodexCurrentConfig(empty): %v", err)
 	}
@@ -321,10 +324,9 @@ wire_api = "responses"
 
 // TestCodexGetConfigStatus reports existence + paths for both live files.
 func TestCodexGetConfigStatus(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
-	status, err := a.GetCodexConfigStatus()
+	status, err := GetConfigStatus()
 	if err != nil {
 		t.Fatalf("GetCodexConfigStatus: %v", err)
 	}
@@ -336,7 +338,7 @@ func TestCodexGetConfigStatus(t *testing.T) {
 	}
 
 	codexTestWriteConfig(t, "model = \"gpt-5\"\n")
-	status, err = a.GetCodexConfigStatus()
+	status, err = GetConfigStatus()
 	if err != nil || !status.ConfigExists || status.AuthExists {
 		t.Fatalf("after write: %v %+v", err, status)
 	}
@@ -346,10 +348,10 @@ func TestCodexGetConfigStatus(t *testing.T) {
 // straight from the Rust unit tests.
 func TestCodexProviderToTOML(t *testing.T) {
 	// Missing/blank name falls back to the provider id (Codex rejects "").
-	for _, name := range []*string{nil, strPtr(""), strPtr("   ")} {
+	for _, name := range []*string{nil, core.StrPtr(""), core.StrPtr("   ")} {
 		table := codexProviderToTOML("custom", CodexProviderConfig{
 			Name:    name,
-			BaseURL: strPtr("https://example.com"),
+			BaseURL: core.StrPtr("https://example.com"),
 		})
 		if table["name"] != "custom" {
 			t.Fatalf("name fallback for %v: %v", name, table["name"])
@@ -360,16 +362,16 @@ func TestCodexProviderToTOML(t *testing.T) {
 	}
 
 	// Non-blank name is kept.
-	table := codexProviderToTOML("custom", CodexProviderConfig{Name: strPtr("My Provider")})
+	table := codexProviderToTOML("custom", CodexProviderConfig{Name: core.StrPtr("My Provider")})
 	if table["name"] != "My Provider" {
 		t.Fatalf("name: %v", table["name"])
 	}
 
 	// Bearer token wins over env_key (they must not coexist).
 	table = codexProviderToTOML("custom", CodexProviderConfig{
-		EnvKey:             strPtr("EXAMPLE_API_KEY"),
-		EnvKeyInstructions: strPtr("Set EXAMPLE_API_KEY"),
-		APIKey:             strPtr("  sk-test  "),
+		EnvKey:             core.StrPtr("EXAMPLE_API_KEY"),
+		EnvKeyInstructions: core.StrPtr("Set EXAMPLE_API_KEY"),
+		APIKey:             core.StrPtr("  sk-test  "),
 	})
 	if table["experimental_bearer_token"] != "sk-test" {
 		t.Fatalf("trimmed bearer token: %v", table["experimental_bearer_token"])
@@ -380,9 +382,9 @@ func TestCodexProviderToTOML(t *testing.T) {
 
 	// Empty/whitespace key → omitted, env_key kept.
 	table = codexProviderToTOML("custom", CodexProviderConfig{
-		EnvKey:  strPtr("EXAMPLE_API_KEY"),
-		APIKey:  strPtr("   "),
-		WireAPI: strPtr("responses"),
+		EnvKey:  core.StrPtr("EXAMPLE_API_KEY"),
+		APIKey:  core.StrPtr("   "),
+		WireAPI: core.StrPtr("responses"),
 	})
 	if _, ok := table["experimental_bearer_token"]; ok {
 		t.Fatalf("empty bearer token must be omitted: %+v", table)
@@ -420,8 +422,7 @@ func TestCodexResolveActiveProviderKeepsOpenAI(t *testing.T) {
 // TestCodexModelCatalogSync covers the DeepSeek/MiMo catalog files plus the
 // legacy models.json cleanup, and that non-catalog models reference nothing.
 func TestCodexModelCatalogSync(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	// Legacy single-file catalog written by an older release.
 	codexDir, err := codexConfigDir()
@@ -435,13 +436,13 @@ func TestCodexModelCatalogSync(t *testing.T) {
 
 	profile := codexTestCustomProfile("deepseek", "DS")
 	provider := profile.Providers["custom"]
-	provider.Model = strPtr("deepseek-v4-flash")
+	provider.Model = core.StrPtr("deepseek-v4-flash")
 	profile.Providers["custom"] = provider
 	profile.Model = "deepseek-v4-flash"
-	if err := a.SaveCodexProfile(profile); err != nil {
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveCodexProfile: %v", err)
 	}
-	if err := a.ApplyCodexProfile("deepseek"); err != nil {
+	if err := ApplyProfile("deepseek"); err != nil {
 		t.Fatalf("ApplyCodexProfile: %v", err)
 	}
 
@@ -467,13 +468,13 @@ func TestCodexModelCatalogSync(t *testing.T) {
 	// MiMo writes its own catalog and disables web search.
 	mimo := codexTestCustomProfile("mimo", "MiMo")
 	mimoProvider := mimo.Providers["custom"]
-	mimoProvider.Model = strPtr("mimo-v2.5")
+	mimoProvider.Model = core.StrPtr("mimo-v2.5")
 	mimo.Providers["custom"] = mimoProvider
 	mimo.Model = "mimo-v2.5"
-	if err := a.SaveCodexProfile(mimo); err != nil {
+	if err := SaveProfile(mimo); err != nil {
 		t.Fatalf("SaveCodexProfile(mimo): %v", err)
 	}
-	if err := a.ApplyCodexProfile("mimo"); err != nil {
+	if err := ApplyProfile("mimo"); err != nil {
 		t.Fatalf("ApplyCodexProfile(mimo): %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(codexDir, "model-catalogs", "mimo.json")); err != nil {
@@ -487,13 +488,13 @@ func TestCodexModelCatalogSync(t *testing.T) {
 	// Plain model: catalog reference removed, family catalogs kept on disk.
 	plain := codexTestCustomProfile("plain", "Plain")
 	plainProvider := plain.Providers["custom"]
-	plainProvider.Model = strPtr("gpt-5")
+	plainProvider.Model = core.StrPtr("gpt-5")
 	plain.Providers["custom"] = plainProvider
 	plain.Model = "gpt-5"
-	if err := a.SaveCodexProfile(plain); err != nil {
+	if err := SaveProfile(plain); err != nil {
 		t.Fatalf("SaveCodexProfile(plain): %v", err)
 	}
-	if err := a.ApplyCodexProfile("plain"); err != nil {
+	if err := ApplyProfile("plain"); err != nil {
 		t.Fatalf("ApplyCodexProfile(plain): %v", err)
 	}
 	config = codexTestParseConfig(t)
@@ -565,18 +566,17 @@ func TestCodexCliCapabilityParsing(t *testing.T) {
 // launch plan: runtime CODEX_HOME with the live config merged, CODEX_HOME
 // env, sorted unset env, and no auth snapshot for custom providers.
 func TestCodexBuildTemporaryRunPlanSnapshotsRuntimeHome(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteConfig(t, "network_access = \"restricted\"\n")
 
 	profile := codexTestCustomProfile("p1", "P1")
-	if err := a.SaveCodexProfile(profile); err != nil {
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveCodexProfile: %v", err)
 	}
-	plan, err := codexBuildTemporaryRunPlan(profile)
+	plan, err := BuildTemporaryRunPlan(profile)
 	if err != nil {
-		t.Fatalf("codexBuildTemporaryRunPlan: %v", err)
+		t.Fatalf("BuildTemporaryRunPlan: %v", err)
 	}
 
 	if plan.program != "codex" || len(plan.args) != 0 {
@@ -636,7 +636,7 @@ func TestCodexBuildTemporaryRunPlanSnapshotsRuntimeHome(t *testing.T) {
 // snapshot: portable auth is copied (minus OPENAI_API_KEY), keyring-only
 // auth fails with the exact Rust message.
 func TestCodexRuntimeSnapshotOfficialAuth(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 
 	authPath, err := codexAuthPath()
 	if err != nil {
@@ -648,7 +648,7 @@ func TestCodexRuntimeSnapshotOfficialAuth(t *testing.T) {
 		t.Fatalf("write auth: %v", err)
 	}
 	profile := CodexProfile{ID: "official", Name: "Official", ModelProvider: "openai", Model: "gpt-5"}
-	plan, err := codexBuildTemporaryRunPlan(profile)
+	plan, err := BuildTemporaryRunPlan(profile)
 	if err != nil {
 		t.Fatalf("plan(portable): %v", err)
 	}
@@ -664,7 +664,7 @@ func TestCodexRuntimeSnapshotOfficialAuth(t *testing.T) {
 	if err := os.WriteFile(authPath, []byte(`{"OPENAI_API_KEY":"sk-live"}`), 0o644); err != nil {
 		t.Fatalf("write auth: %v", err)
 	}
-	_, err = codexBuildTemporaryRunPlan(profile)
+	_, err = BuildTemporaryRunPlan(profile)
 	if err == nil || !strings.Contains(err.Error(), "could not snapshot official auth") {
 		t.Fatalf("keyring auth must fail, got: %v", err)
 	}
@@ -672,7 +672,7 @@ func TestCodexRuntimeSnapshotOfficialAuth(t *testing.T) {
 
 // TestCodexCleanupStaleRuntimeHomes removes only old temporary-run dirs.
 func TestCodexCleanupStaleRuntimeHomes(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 
 	runtimeDir, err := codexRuntimeDir()
 	if err != nil {
@@ -691,7 +691,7 @@ func TestCodexCleanupStaleRuntimeHomes(t *testing.T) {
 		t.Fatalf("chtimes: %v", err)
 	}
 
-	codexCleanupStaleRuntimeHomes()
+	CleanupStaleRuntimeHomes()
 
 	if _, err := os.Stat(stale); !os.IsNotExist(err) {
 		t.Fatalf("stale dir must be removed, err=%v", err)
@@ -709,7 +709,7 @@ func TestCodexCleanupStaleRuntimeHomes(t *testing.T) {
 func TestCodexLaunchWrappersCoverEnvUnsetCwd(t *testing.T) {
 	supportDir := t.TempDir()
 	cwd := filepath.Join(t.TempDir(), "work tree")
-	spec := codexLaunchSpec{
+	spec := LaunchSpec{
 		program:    "codex.exe",
 		args:       []string{"resume"},
 		env:        [][2]string{{"CODEX_HOME", filepath.Join(supportDir, "runtime")}},

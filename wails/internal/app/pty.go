@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"droidgear-wails/internal/core"
+
 	ptylib "github.com/aymanbagabas/go-pty"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -281,7 +283,7 @@ func (m *ptyManager) Kill(id int) error {
 	_ = session.pty.Close()
 	if runtime.GOOS == "windows" && session.cmd.Process != nil {
 		taskkill := exec.Command("taskkill", "/PID", fmt.Sprint(session.cmd.Process.Pid), "/T", "/F") // #nosec G204 -- pid from our own process
-		hideConsoleWindow(taskkill)
+		core.HideConsoleWindow(taskkill)
 		if err := taskkill.Run(); err != nil && session.cmd.Process != nil {
 			_ = session.cmd.Process.Kill()
 		}

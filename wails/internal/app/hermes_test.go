@@ -93,8 +93,8 @@ model:
 	profile := HermesProfile{
 		ID:        "p1",
 		Name:      "ghost",
-		CreatedAt: nowRFC3339(),
-		UpdatedAt: nowRFC3339(),
+		CreatedAt: core.NowRFC3339(),
+		UpdatedAt: core.NowRFC3339(),
 		Models:    current.Models,
 	}
 	if err := a.SaveHermesProfile(profile); err != nil {
@@ -243,10 +243,10 @@ providers:
 `)
 
 	profile := HermesProfile{
-		ID: "p1", Name: "Profile 1", CreatedAt: nowRFC3339(), UpdatedAt: nowRFC3339(),
+		ID: "p1", Name: "Profile 1", CreatedAt: core.NowRFC3339(), UpdatedAt: core.NowRFC3339(),
 		Models: []HermesModelConfig{{
-			Name: strPtr("mine"), Default: strPtr("gpt-4"),
-			BaseURL: strPtr("https://new.example.com/v1"), APIKey: strPtr("sk-new"),
+			Name: core.StrPtr("mine"), Default: core.StrPtr("gpt-4"),
+			BaseURL: core.StrPtr("https://new.example.com/v1"), APIKey: core.StrPtr("sk-new"),
 			IsDefault: true,
 		}},
 	}
@@ -302,10 +302,10 @@ custom_providers:
 `)
 
 	profile := HermesProfile{
-		ID: "p1", Name: "Profile 1", CreatedAt: nowRFC3339(), UpdatedAt: nowRFC3339(),
+		ID: "p1", Name: "Profile 1", CreatedAt: core.NowRFC3339(), UpdatedAt: core.NowRFC3339(),
 		Models: []HermesModelConfig{{
-			Name: strPtr("wududu"), Default: strPtr("gpt-new"),
-			BaseURL: strPtr("https://new.example.com/v1"), APIKey: strPtr("sk-new"),
+			Name: core.StrPtr("wududu"), Default: core.StrPtr("gpt-new"),
+			BaseURL: core.StrPtr("https://new.example.com/v1"), APIKey: core.StrPtr("sk-new"),
 			IsDefault: true,
 		}},
 	}

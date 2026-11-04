@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"droidgear-wails/internal/core"
 )
 
 // TestMarshalDoesNotRecurse guards against the stack-overflow panic that
@@ -12,7 +14,7 @@ import (
 // marshals a method-less alias type instead.
 func TestMarshalDoesNotRecurse(t *testing.T) {
 	provider := PiProviderConfig{
-		BaseURL: strPtr("https://api.example.com/v1"),
+		BaseURL: core.StrPtr("https://api.example.com/v1"),
 		Models: []PiModel{{
 			ID:    "gpt-5.2",
 			Input: []string{"text"},

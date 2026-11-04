@@ -86,7 +86,7 @@ func TestClaudeSettingsListIncludesGlobalAndCustom(t *testing.T) {
 	claudeTestWrite(t, filepath.Join(home, ".claude", "settings.json"), "{}")
 	claudeTestWrite(t, filepath.Join(home, ".droidgear", "claude-settings", "work.json"), "{}")
 
-	if _, err := a.SetActiveClaudeSettingsFile(strPtr("work")); err != nil {
+	if _, err := a.SetActiveClaudeSettingsFile(core.StrPtr("work")); err != nil {
 		t.Fatalf("SetActiveClaudeSettingsFile: %v", err)
 	}
 
@@ -132,13 +132,13 @@ func TestClaudeSettingsSetActiveFallsBackAndValidates(t *testing.T) {
 	}
 
 	// Empty string → Global too.
-	info, err = a.SetActiveClaudeSettingsFile(strPtr(""))
+	info, err = a.SetActiveClaudeSettingsFile(core.StrPtr(""))
 	if err != nil || !info.IsGlobal {
 		t.Fatalf("expected Global for empty name: %+v (err=%v)", info, err)
 	}
 
 	// Unknown custom file → the Rust error string.
-	_, err = a.SetActiveClaudeSettingsFile(strPtr("ghost"))
+	_, err = a.SetActiveClaudeSettingsFile(core.StrPtr("ghost"))
 	if err == nil || err.Error() != "Settings file 'ghost' does not exist" {
 		t.Fatalf("expected missing-file error, got %v", err)
 	}
@@ -946,10 +946,10 @@ func claudeTestProfile(id string, name string) ClaudeCodeProfile {
 	return ClaudeCodeProfile{
 		ID:              id,
 		Name:            name,
-		Description:     strPtr("A test profile"),
-		BaseURL:         strPtr("https://example.com/v1"),
-		BearerToken:     strPtr("secret-token"),
-		Model:           strPtr("claude-sonnet-4-5"),
+		Description:     core.StrPtr("A test profile"),
+		BaseURL:         core.StrPtr("https://example.com/v1"),
+		BearerToken:     core.StrPtr("secret-token"),
+		Model:           core.StrPtr("claude-sonnet-4-5"),
 		ReasoningEffort: func() *ClaudeReasoningEffort { e := ClaudeReasoningEffortHigh; return &e }(),
 		ThinkingMode:    ClaudeThinkingModeOn,
 		CreatedAt:       "2026-01-01T00:00:00Z",

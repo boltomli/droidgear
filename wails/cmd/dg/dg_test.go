@@ -421,3 +421,139 @@ func mustJSON(t *testing.T, value string) string {
 	}
 	return string(encoded)
 }
+
+func TestCodexProfilesLifecycle(t *testing.T) {
+	home := sandbox(t)
+
+	// Fresh home: no profiles, no live config, no active pointer.
+	code, out, errOut := runCLI(t, "--json", "codex", "profiles", "list")
+	if code != 0 {
+		t.Fatalf("list exit = %d, stderr = %s", code, errOut)
+	}
+	if got := decodeList(t, out); len(got) != 0 {
+		t.Errorf("expected no profiles, got %v", got)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "codex", "status")
+	if code != 0 {
+		t.Fatalf("status exit = %d, stderr = %s", code, errOut)
+	}
+	status := decode(t, out)
+	if status["configExists"] != false || status["authExists"] != false {
+		t.Errorf("fresh status should report missing files: %v", status)
+	}
+	if status["activeProfileId"] != nil {
+		t.Errorf("fresh status should have no active profile: %v", status)
+	}
+
+	// Save a profile from a JSON document (two API keys to check redaction).
+	profilePath := writeFile(t, home, "profile.json", `{
+	  "id": "p1",
+	  "name": "One",
+	  "modelProvider": "custom",
+	  "model": "gpt-5.5",
+	  "modelReasoningEffort": "medium",
+	  "apiKey": "sk-secret-1234",
+	  "apiKeyModelDiscovery": true,
+	  "providers": {
+	    "custom": {
+	      "name": "Custom",
+	      "baseUrl": "https://api.example.com/v1",
+	      "wireApi": "responses",
+	      "requiresOpenaiAuth": false,
+	      "model": "gpt-5.5",
+	      "modelReasoningEffort": "high",
+	      "apiKey": "sk-provider-5678",
+	      "envKey": "EXAMPLE_API_KEY"
+	    }
+	  }
+	}`)
+	code, out, errOut = runCLI(t, "--json", "codex", "profiles", "save", "--file", profilePath)
+	if code != 0 {
+		t.Fatalf("save exit = %d, stderr = %s", code, errOut)
+	}
+	if receipt := decode(t, out); receipt["applied"] != true || receipt["name"] != "One" {
+		t.Errorf("save receipt = %v", receipt)
+	}
+
+	// API keys are redacted by default, at both levels of the document.
+	code, out, errOut = runCLI(t, "--json", "codex", "profiles", "list")
+	if code != 0 {
+		t.Fatalf("list exit = %d, stderr = %s", code, errOut)
+	}
+	list := decodeList(t, out)
+	if len(list) != 1 {
+		t.Fatalf("profiles = %v", list)
+	}
+	profile, _ := list[0].(map[string]any)
+	if profile["apiKey"] != "****1234" {
+		t.Errorf("profile.apiKey = %v, want ****1234", profile["apiKey"])
+	}
+	providers, _ := profile["providers"].(map[string]any)
+	custom, _ := providers["custom"].(map[string]any)
+	if custom["apiKey"] != "****5678" {
+		t.Errorf("provider.apiKey = %v, want ****5678", custom["apiKey"])
+	}
+
+	code, out, errOut = runCLI(t, "--json", "--reveal", "codex", "profiles", "list")
+	if code != 0 {
+		t.Fatalf("reveal list exit = %d, stderr = %s", code, errOut)
+	}
+	revealed, _ := decodeList(t, out)[0].(map[string]any)
+	if revealed["apiKey"] != "sk-secret-1234" {
+		t.Errorf("--reveal apiKey = %v", revealed["apiKey"])
+	}
+
+	// Unknown id is not_found, not a usage error.
+	code, _, errOut = runCLI(t, "--json", "codex", "profiles", "show", "ghost")
+	if code != exitRuntime {
+		t.Errorf("show ghost exit = %d, want %d", code, exitRuntime)
+	}
+	if decode(t, errOut)["error"].(map[string]any)["code"] != "not_found" {
+		t.Errorf("error = %s", errOut)
+	}
+
+	// Apply writes the live config and pins the active profile.
+	code, out, errOut = runCLI(t, "--json", "codex", "profiles", "apply", "p1")
+	if code != 0 {
+		t.Fatalf("apply exit = %d, stderr = %s", code, errOut)
+	}
+	if applied := decode(t, out)["applied"]; applied != true {
+		t.Errorf("apply receipt = %v", out)
+	}
+	configPath := filepath.Join(home, ".codex", "config.toml")
+	raw, err := os.ReadFile(configPath) // #nosec G304 -- temp fixture
+	if err != nil {
+		t.Fatalf("read live config: %v", err)
+	}
+	if !strings.Contains(string(raw), "gpt-5.5") {
+		t.Errorf("live config missing the model: %s", raw)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "codex", "profiles", "active")
+	if code != 0 {
+		t.Fatalf("active exit = %d, stderr = %s", code, errOut)
+	}
+	if active := strings.TrimSpace(out); active != `"p1"` {
+		t.Errorf("active = %s, want \"p1\"", active)
+	}
+
+	// --dry-run is rejected instead of silently doing nothing.
+	code, _, errOut = runCLI(t, "--json", "--dry-run", "codex", "profiles", "apply", "p1")
+	if code != exitUsage {
+		t.Errorf("dry-run exit = %d, want %d", code, exitUsage)
+	}
+	if !strings.Contains(errOut, "not supported") {
+		t.Errorf("dry-run stderr = %s", errOut)
+	}
+
+	// Delete, then the profile is gone.
+	code, _, errOut = runCLI(t, "--json", "codex", "profiles", "delete", "p1")
+	if code != 0 {
+		t.Fatalf("delete exit = %d, stderr = %s", code, errOut)
+	}
+	code, _, errOut = runCLI(t, "--json", "codex", "profiles", "show", "p1")
+	if code != exitRuntime || decode(t, errOut)["error"].(map[string]any)["code"] != "not_found" {
+		t.Errorf("show after delete: exit=%d stderr=%s", code, errOut)
+	}
+}

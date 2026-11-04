@@ -23,6 +23,7 @@ import (
 	"unicode"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/service/codex"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -106,7 +107,7 @@ const (
 
 // codexSessionsDir returns <codex home>/sessions (no side effects).
 func codexSessionsDir() (string, error) {
-	dir, err := codexConfigDirNoCreate()
+	dir, err := codex.ConfigDirNoCreate()
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +124,7 @@ func codexSessionWithin(dir string, path string) bool {
 	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return false
 	}
-	return codexPathExists(path)
+	return codex.PathExists(path)
 }
 
 // ---------------------------------------------------------------------------
@@ -416,7 +417,7 @@ func (a *App) ListCodexSessions() ([]CodexSessionSummary, error) {
 	if !core.DirExists(sessionsDir) {
 		return []CodexSessionSummary{}, nil
 	}
-	codexHome, err := codexConfigDirNoCreate()
+	codexHome, err := codex.ConfigDirNoCreate()
 	if err != nil {
 		return nil, err
 	}
@@ -494,7 +495,7 @@ func codexProviderDisplayName(id string, name *string) string {
 // each profile contributes its model_provider plus its providers map;
 // openai lists first, then everything sorted by lowercased display name.
 func (a *App) ListCodexSessionProviders() ([]CodexSessionProvider, error) {
-	profiles, err := codexListProfiles()
+	profiles, err := codex.ListProfiles()
 	if err != nil {
 		return nil, err
 	}
@@ -592,7 +593,7 @@ func codexReasoningSummaryTexts(payload map[string]any) []string {
 // GetCodexSessionDetail parses one rollout file into chat messages, token
 // usage and title (first real user message, truncated).
 func (a *App) GetCodexSessionDetail(sessionPath string) (CodexSessionDetail, error) {
-	if !codexPathExists(sessionPath) {
+	if !codex.PathExists(sessionPath) {
 		return CodexSessionDetail{}, errString("Session file not found")
 	}
 	modifiedAt := codexModifiedAtMs(sessionPath)
@@ -844,7 +845,7 @@ func (a *App) SetCodexSessionProvider(sessionPath string, providerID string) err
 	// Update the authoritative thread index first; if it fails, the session
 	// file stays untouched so the change is all-or-nothing.
 	if sessionID != "" {
-		codexHome, err := codexConfigDirNoCreate()
+		codexHome, err := codex.ConfigDirNoCreate()
 		if err != nil {
 			return err
 		}

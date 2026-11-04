@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"droidgear-wails/internal/core"
 )
 
 // ---------------------------------------------------------------------------
@@ -41,9 +43,9 @@ func TestOpencodeProfileCRUDAndApplyRoundTrip(t *testing.T) {
 
 	// Update: createdAt must survive, updatedAt must advance.
 	created.Name = "Renamed"
-	created.Description = strPtr("desc")
+	created.Description = core.StrPtr("desc")
 	created.Providers = map[string]OpenCodeProviderConfig{
-		"anthropic": {NPM: strPtr("@ai-sdk/anthropic")},
+		"anthropic": {NPM: core.StrPtr("@ai-sdk/anthropic")},
 	}
 	if err := a.SaveOpencodeProfile(created); err != nil {
 		t.Fatalf("SaveOpencodeProfile: %v", err)
@@ -87,7 +89,7 @@ func TestOpencodeProfileCRUDAndApplyRoundTrip(t *testing.T) {
 
 	applyProfile := loaded
 	applyProfile.Providers = map[string]OpenCodeProviderConfig{
-		"anthropic": {NPM: strPtr("@ai-sdk/anthropic"), Options: &OpenCodeProviderOptions{BaseURL: strPtr("https://api.anthropic.com/v1")}},
+		"anthropic": {NPM: core.StrPtr("@ai-sdk/anthropic"), Options: &OpenCodeProviderOptions{BaseURL: core.StrPtr("https://api.anthropic.com/v1")}},
 	}
 	applyProfile.Auth = map[string]any{"anthropic": map[string]any{"type": "api", "key": "sk-live"}}
 	if err := a.SaveOpencodeProfile(applyProfile); err != nil {

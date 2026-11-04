@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"droidgear-wails/internal/core"
 )
 
 // ---------------------------------------------------------------------------
@@ -19,10 +21,10 @@ func TestCopilotRenderEnvFileMatchesRustTemplate(t *testing.T) {
 	profile := CopilotProfile{
 		ID:              "id",
 		Name:            "name",
-		BaseURL:         strPtr("https://example.test/v1"),
-		ProviderType:    strPtr("anthropic"),
-		APIKey:          strPtr("sk-test"),
-		Model:           strPtr("model"),
+		BaseURL:         core.StrPtr("https://example.test/v1"),
+		ProviderType:    core.StrPtr("anthropic"),
+		APIKey:          core.StrPtr("sk-test"),
+		Model:           core.StrPtr("model"),
 		MaxPromptTokens: uint64Ptr(100),
 		MaxOutputTokens: uint64Ptr(50),
 	}
@@ -138,7 +140,7 @@ func TestCopilotProfileCRUDAndApplyRoundTrip(t *testing.T) {
 	}
 	liveBefore := mustRead(t, status.ConfigPath)
 	updated := copilotFixtureProfile("one", "One")
-	updated.Model = strPtr("another-model")
+	updated.Model = core.StrPtr("another-model")
 	if err := a.SaveCopilotProfile(updated); err != nil {
 		t.Fatalf("SaveCopilotProfile (update): %v", err)
 	}
@@ -329,7 +331,7 @@ func TestCopilotReadCurrentConfigMissingFile(t *testing.T) {
 
 func TestCopilotBuildRunPlanSeparatesSecretsAndClearsInheritedKeys(t *testing.T) {
 	profile := copilotFixtureProfile("id", "name")
-	profile.Model = strPtr("  provider/custom-model  ")
+	profile.Model = core.StrPtr("  provider/custom-model  ")
 	plan, err := copilotBuildRunPlan(profile)
 	if err != nil {
 		t.Fatalf("copilotBuildRunPlan: %v", err)
@@ -401,7 +403,7 @@ func TestCopilotBuildRunPlanOfficialMode(t *testing.T) {
 
 func TestCopilotBuildRunPlanRejectsIncompleteProfile(t *testing.T) {
 	profile := copilotFixtureProfile("id", "name")
-	profile.Model = strPtr("   ")
+	profile.Model = core.StrPtr("   ")
 	_, err := copilotBuildRunPlan(profile)
 	if err == nil || !strings.Contains(err.Error(), "Model") {
 		t.Fatalf("incomplete profile must be rejected naming Model, got %v", err)
@@ -439,10 +441,10 @@ func copilotFixtureProfile(id string, name string) CopilotProfile {
 		Name:         name,
 		CreatedAt:    "2026-01-01T00:00:00Z",
 		UpdatedAt:    "2026-01-01T00:00:00Z",
-		BaseURL:      strPtr("https://example.test/v1"),
-		ProviderType: strPtr("openai"),
-		APIKey:       strPtr("sk-test"),
-		Model:        strPtr("model"),
+		BaseURL:      core.StrPtr("https://example.test/v1"),
+		ProviderType: core.StrPtr("openai"),
+		APIKey:       core.StrPtr("sk-test"),
+		Model:        core.StrPtr("model"),
 		// MaxPrompt/MaxOutput stay nil unless a test sets them.
 	}
 }

@@ -98,6 +98,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		runErr = c.path(cmdArgs)
 	case "channels":
 		runErr = c.channels(cmdArgs)
+	case "codex":
+		runErr = c.codex(cmdArgs)
 	case "export":
 		runErr = c.export(cmdArgs)
 	default:
@@ -284,6 +286,13 @@ Commands:
   channels list                 list configured channels
   channels show <id>            show one channel plus its auth kind (redacted)
   channels tokens <id>          list a channel's tokens (keys redacted unless --reveal)
+  codex profiles list           list codex profiles (API keys redacted unless --reveal)
+  codex profiles show <id>      show one profile
+  codex profiles active         print the active profile id
+  codex profiles apply <id>     write a profile into the live ~/.codex config
+  codex profiles save --file <json>  create or replace a profile from JSON
+  codex profiles delete <id>    delete a profile
+  codex status                  report live config/auth paths and the active profile
   export list                   list export templates
   export save --file <json>     create or replace a template from a JSON document
   export delete <name>          delete a template

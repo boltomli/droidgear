@@ -154,7 +154,7 @@ func copilotActiveProfilePath() (string, error) {
 }
 
 func copilotProfilePath(id string) (string, error) {
-	if err := validateProfileID(id); err != nil {
+	if err := core.ValidateProfileID(id); err != nil {
 		return "", err
 	}
 	dir, err := copilotProfilesDir()
@@ -165,7 +165,7 @@ func copilotProfilePath(id string) (string, error) {
 }
 
 func copilotProfileEnvPath(id string) (string, error) {
-	if err := validateProfileID(id); err != nil {
+	if err := core.ValidateProfileID(id); err != nil {
 		return "", err
 	}
 	dir, err := copilotProfilesDir()
@@ -457,8 +457,8 @@ func (a *App) SaveCopilotProfile(profile CopilotProfile) error {
 		return err
 	}
 	if strings.TrimSpace(profile.ID) == "" {
-		profile.ID = newUUID()
-		profile.CreatedAt = nowRFC3339()
+		profile.ID = core.NewUUID()
+		profile.CreatedAt = core.NowRFC3339()
 	} else {
 		path, err := copilotProfilePath(profile.ID)
 		if err != nil {
@@ -469,10 +469,10 @@ func (a *App) SaveCopilotProfile(profile CopilotProfile) error {
 				profile.CreatedAt = old.CreatedAt
 			}
 		} else if strings.TrimSpace(profile.CreatedAt) == "" {
-			profile.CreatedAt = nowRFC3339()
+			profile.CreatedAt = core.NowRFC3339()
 		}
 	}
-	profile.UpdatedAt = nowRFC3339()
+	profile.UpdatedAt = core.NowRFC3339()
 	return copilotWriteProfileAndEnv(profile)
 }
 
@@ -524,9 +524,9 @@ func (a *App) DuplicateCopilotProfile(id string, newName string) (CopilotProfile
 	if err != nil {
 		return CopilotProfile{}, err
 	}
-	profile.ID = newUUID()
+	profile.ID = core.NewUUID()
 	profile.Name = newName
-	profile.CreatedAt = nowRFC3339()
+	profile.CreatedAt = core.NowRFC3339()
 	profile.UpdatedAt = profile.CreatedAt
 	if err := copilotWriteProfileAndEnv(profile); err != nil {
 		return CopilotProfile{}, err
@@ -544,10 +544,10 @@ func (a *App) CreateDefaultCopilotProfile() (CopilotProfile, error) {
 	if len(profiles) > 0 {
 		return CopilotProfile{}, errString("Profiles already exist")
 	}
-	now := nowRFC3339()
+	now := core.NowRFC3339()
 	openai := "openai"
 	profile := CopilotProfile{
-		ID:           newUUID(),
+		ID:           core.NewUUID(),
 		Name:         "默认",
 		CreatedAt:    now,
 		UpdatedAt:    now,
@@ -1232,7 +1232,7 @@ func copilotSearchProgramInPathValue(pathValue string, candidates []string) (str
 func copilotWindowsEnvironmentPath(scope string) string {
 	cmd := exec.Command("powershell", "-NoLogo", "-NoProfile", "-Command",
 		"[Environment]::GetEnvironmentVariable('Path','"+scope+"')") // #nosec G204 -- fixed scope from a two-item list
-	hideConsoleWindow(cmd)
+	core.HideConsoleWindow(cmd)
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -1297,7 +1297,7 @@ func copilotResolveWindowsPowershellShell() string {
 
 func copilotLaunchWindowsCmdPayload(payload string, cwd *string) error {
 	cmd := exec.Command("cmd", copilotWindowsCmdStartArgs(payload, cwd)...) // #nosec G204 -- launch payload
-	hideConsoleWindow(cmd)
+	core.HideConsoleWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch cmd: %w", err)
 	}
@@ -1307,7 +1307,7 @@ func copilotLaunchWindowsCmdPayload(payload string, cwd *string) error {
 
 func copilotLaunchWindowsPowershellPayload(shell string, command string, cwd *string) error {
 	cmd := exec.Command(shell, copilotWindowsPowershellArgs(command, cwd)...) // #nosec G204 -- launch payload
-	useNewConsole(cmd)
+	core.UseNewConsole(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("Failed to launch PowerShell: %w", err)
 	}

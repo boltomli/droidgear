@@ -7,7 +7,7 @@
 // package fail to compile on macOS/Linux, which the single-binary release
 // workflow builds (three platforms, one binary each). The flags are therefore
 // applied reflectively — identical behaviour on Windows, a no-op elsewhere.
-package app
+package core
 
 import (
 	"os/exec"
@@ -51,12 +51,12 @@ func setProcessCreationFlags(cmd *exec.Cmd, hide bool, creationFlags uint32) {
 
 // hideConsoleWindow runs cmd without a console window (CREATE_NO_WINDOW).
 // Used for short-lived helper probes that must stay invisible in a GUI app.
-func hideConsoleWindow(cmd *exec.Cmd) {
+func HideConsoleWindow(cmd *exec.Cmd) {
 	setProcessCreationFlags(cmd, true, processCreateNoWindow)
 }
 
 // useNewConsole gives cmd its own console window (CREATE_NEW_CONSOLE), used
 // when a GUI process launches an interactive shell the user must see.
-func useNewConsole(cmd *exec.Cmd) {
+func UseNewConsole(cmd *exec.Cmd) {
 	setProcessCreationFlags(cmd, false, processCreateNewConsole)
 }

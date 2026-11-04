@@ -11,6 +11,8 @@ import (
 	"path"
 	"runtime"
 	"strings"
+
+	"droidgear-wails/internal/core"
 )
 
 // OpenUrl opens a URL in the user's default handler (browser / mail client).
@@ -92,7 +94,7 @@ func startDetached(name string, args ...string) error {
 	// #nosec G204 -- fixed launcher binaries; the target is passed as a
 	// single argument, never evaluated by a shell.
 	cmd := exec.Command(name, args...)
-	hideConsoleWindow(cmd)
+	core.HideConsoleWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return err
 	}

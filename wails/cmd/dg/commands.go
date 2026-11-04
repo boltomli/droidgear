@@ -12,6 +12,7 @@ import (
 
 	"droidgear-wails/internal/core"
 	"droidgear-wails/internal/service/channels"
+	"droidgear-wails/internal/service/codex"
 	"droidgear-wails/internal/service/export"
 	"droidgear-wails/internal/service/paths"
 	"droidgear-wails/internal/version"
@@ -401,6 +402,275 @@ func channelAuthKind(ctx context.Context, id string) (string, error) {
 		return "credentials", nil
 	}
 	return "none", nil
+}
+
+// requireNoDryRun rejects --dry-run for commands whose domain has no
+// plan/apply split yet. Silently ignoring the flag would make it a fake
+// shim (design doc §3.3: the ChangeSet preview lands with the batch).
+func (c *cli) requireNoDryRun(command string) error {
+	if c.opts.dryRun {
+		return c.usage("--dry-run is not supported by %s yet (plan/apply split pending, design doc §3.3)", command)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// dg codex
+// ---------------------------------------------------------------------------
+
+func (c *cli) codex(args []string) error {
+	if len(args) == 0 {
+		return c.usage("codex needs a subcommand: profiles | status")
+	}
+	switch args[0] {
+	case "profiles":
+		return c.codexProfiles(args[1:])
+	case "status":
+		return c.codexStatus(args[1:])
+	default:
+		return c.usage("unknown codex subcommand %q (want profiles | status)", args[0])
+	}
+}
+
+func (c *cli) codexProfiles(args []string) error {
+	if len(args) == 0 {
+		return c.usage("codex profiles needs a subcommand: list | show | active | apply | save | delete")
+	}
+	switch args[0] {
+	case "list":
+		return c.codexProfilesList(args[1:])
+	case "show":
+		return c.codexProfilesShow(args[1:])
+	case "active":
+		return c.codexProfilesActive(args[1:])
+	case "apply":
+		return c.codexProfilesApply(args[1:])
+	case "save":
+		return c.codexProfilesSave(args[1:])
+	case "delete":
+		return c.codexProfilesDelete(args[1:])
+	default:
+		return c.usage("unknown codex profiles subcommand %q (want list | show | active | apply | save | delete)", args[0])
+	}
+}
+
+// requireCodexProfile turns "profile missing" into the not_found exit path
+// instead of a generic runtime error.
+func (c *cli) requireCodexProfile(id string) error {
+	profiles, err := codex.ListProfiles()
+	if err != nil {
+		return err
+	}
+	for _, profile := range profiles {
+		if profile.ID == id {
+			return nil
+		}
+	}
+	return fmt.Errorf("%w: codex profile %q", errNotFound, id)
+}
+
+// redactCodexProfile masks the API keys a profile carries. Profiles are the
+// one codex surface where secrets travel in the document itself (top-level
+// apiKey plus a per-provider apiKey), so both need masking (§5.3).
+func redactCodexProfile(profile codex.CodexProfile) codex.CodexProfile {
+	if profile.APIKey != nil {
+		masked := core.RedactSecret(*profile.APIKey)
+		profile.APIKey = &masked
+	}
+	if profile.Providers == nil {
+		return profile
+	}
+	providers := make(map[string]codex.CodexProviderConfig, len(profile.Providers))
+	for id, provider := range profile.Providers {
+		if provider.APIKey != nil {
+			masked := core.RedactSecret(*provider.APIKey)
+			provider.APIKey = &masked
+		}
+		providers[id] = provider
+	}
+	profile.Providers = providers
+	return profile
+}
+
+func (c *cli) codexProfilesList(args []string) error {
+	if len(args) != 0 {
+		return c.usage("codex profiles list takes no arguments")
+	}
+	profiles, err := codex.ListProfiles()
+	if err != nil {
+		return err
+	}
+	if !c.opts.reveal {
+		for i := range profiles {
+			profiles[i] = redactCodexProfile(profiles[i])
+		}
+	}
+	return emit(c.opts, c.stdout, profiles, func(w io.Writer) error {
+		if len(profiles) == 0 {
+			_, err := fmt.Fprintln(w, "no codex profiles")
+			return err
+		}
+		for _, profile := range profiles {
+			fmt.Fprintf(w, "%-24s %-20s %s\n", profile.ID, profile.Name, profile.Model)
+		}
+		return nil
+	})
+}
+
+func (c *cli) codexProfilesShow(args []string) error {
+	if len(args) != 1 {
+		return c.usage("codex profiles show needs <id>")
+	}
+	if err := c.requireCodexProfile(args[0]); err != nil {
+		return err
+	}
+	profile, err := codex.GetProfile(args[0])
+	if err != nil {
+		return err
+	}
+	if !c.opts.reveal {
+		profile = redactCodexProfile(profile)
+	}
+	return emit(c.opts, c.stdout, profile, func(w io.Writer) error {
+		fmt.Fprintf(w, "id:        %s\n", profile.ID)
+		fmt.Fprintf(w, "name:      %s\n", profile.Name)
+		fmt.Fprintf(w, "provider:  %s\n", profile.ModelProvider)
+		fmt.Fprintf(w, "model:     %s\n", profile.Model)
+		fmt.Fprintf(w, "providers: %d\n", len(profile.Providers))
+		if profile.APIKey != nil {
+			fmt.Fprintf(w, "apiKey:    %s\n", *profile.APIKey)
+		}
+		return nil
+	})
+}
+
+func (c *cli) codexProfilesActive(args []string) error {
+	if len(args) != 0 {
+		return c.usage("codex profiles active takes no arguments")
+	}
+	active, err := codex.GetActiveProfileID()
+	if err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, active, func(w io.Writer) error {
+		if active == nil {
+			_, err := fmt.Fprintln(w, "(none)")
+			return err
+		}
+		_, err := fmt.Fprintln(w, *active)
+		return err
+	})
+}
+
+func (c *cli) codexProfilesApply(args []string) error {
+	if len(args) != 1 {
+		return c.usage("codex profiles apply needs <id>")
+	}
+	id := args[0]
+	if err := c.requireNoDryRun("codex profiles apply"); err != nil {
+		return err
+	}
+	if err := c.requireCodexProfile(id); err != nil {
+		return err
+	}
+	if err := codex.ApplyProfile(id); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "id": id}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "applied codex profile %s\n", id)
+		return err
+	})
+}
+
+func (c *cli) codexProfilesSave(args []string) error {
+	fs := c.newFlagSet("codex profiles save")
+	file := fs.String("file", "", "path to a profile document (JSON, same shape as the GUI)")
+	if err := fs.Parse(args); err != nil {
+		return c.usage("%v", err)
+	}
+	if fs.NArg() != 0 {
+		return c.usage("codex profiles save takes no positional arguments")
+	}
+	if strings.TrimSpace(*file) == "" {
+		return c.usage("codex profiles save needs --file <json>")
+	}
+	if err := c.requireNoDryRun("codex profiles save"); err != nil {
+		return err
+	}
+
+	raw, err := os.ReadFile(filepath.Clean(*file)) // #nosec G304 -- user-supplied profile file
+	if err != nil {
+		return fmt.Errorf("Failed to read profile file: %w", err)
+	}
+	var profile codex.CodexProfile
+	if err := json.Unmarshal(raw, &profile); err != nil {
+		return c.usage("invalid profile JSON: %v", err)
+	}
+	if strings.TrimSpace(profile.Name) == "" {
+		return c.usage("profile needs a non-empty \"name\"")
+	}
+	if err := codex.SaveProfile(profile); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "name": profile.Name}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "saved codex profile %q\n", profile.Name)
+		return err
+	})
+}
+
+func (c *cli) codexProfilesDelete(args []string) error {
+	if len(args) != 1 {
+		return c.usage("codex profiles delete needs <id>")
+	}
+	id := args[0]
+	if err := c.requireNoDryRun("codex profiles delete"); err != nil {
+		return err
+	}
+	if err := c.requireCodexProfile(id); err != nil {
+		return err
+	}
+	if err := codex.DeleteProfile(id); err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, map[string]any{"applied": true, "id": id}, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "deleted codex profile %s\n", id)
+		return err
+	})
+}
+
+func (c *cli) codexStatus(args []string) error {
+	if len(args) != 0 {
+		return c.usage("codex status takes no arguments")
+	}
+	status, err := codex.GetConfigStatus()
+	if err != nil {
+		return err
+	}
+	active, err := codex.GetActiveProfileID()
+	if err != nil {
+		return err
+	}
+	report := struct {
+		codex.CodexConfigStatus
+		ActiveProfileID *string `json:"activeProfileId"`
+	}{CodexConfigStatus: status, ActiveProfileID: active}
+	return emit(c.opts, c.stdout, report, func(w io.Writer) error {
+		fmt.Fprintf(w, "config: %s (%s)\n", status.ConfigPath, presentOr(status.ConfigExists))
+		fmt.Fprintf(w, "auth:   %s (%s)\n", status.AuthPath, presentOr(status.AuthExists))
+		if active == nil {
+			fmt.Fprintln(w, "active: (none)")
+		} else {
+			fmt.Fprintf(w, "active: %s\n", *active)
+		}
+		return nil
+	})
+}
+
+func presentOr(exists bool) string {
+	if exists {
+		return "present"
+	}
+	return "missing"
 }
 
 // ---------------------------------------------------------------------------

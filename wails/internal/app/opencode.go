@@ -265,7 +265,7 @@ func opencodeMarshalJSON(value any) ([]byte, error) {
 // ---------------------------------------------------------------------------
 
 func opencodeProfilePath(id string) (string, error) {
-	if err := validateProfileID(id); err != nil {
+	if err := core.ValidateProfileID(id); err != nil {
 		return "", err
 	}
 	dir, err := opencodeProfilesDir()
@@ -361,8 +361,8 @@ func (a *App) GetOpencodeProfile(id string) (OpenCodeProfile, error) {
 // core: new ids get a fresh created_at; updates keep the stored created_at).
 func (a *App) SaveOpencodeProfile(profile OpenCodeProfile) error {
 	if strings.TrimSpace(profile.ID) == "" {
-		profile.ID = newUUID()
-		profile.CreatedAt = nowRFC3339()
+		profile.ID = core.NewUUID()
+		profile.CreatedAt = core.NowRFC3339()
 	} else {
 		path, err := opencodeProfilePath(profile.ID)
 		if err != nil {
@@ -373,10 +373,10 @@ func (a *App) SaveOpencodeProfile(profile OpenCodeProfile) error {
 				profile.CreatedAt = old.CreatedAt
 			}
 		} else if strings.TrimSpace(profile.CreatedAt) == "" {
-			profile.CreatedAt = nowRFC3339()
+			profile.CreatedAt = core.NowRFC3339()
 		}
 	}
-	profile.UpdatedAt = nowRFC3339()
+	profile.UpdatedAt = core.NowRFC3339()
 	if profile.Providers == nil {
 		profile.Providers = map[string]OpenCodeProviderConfig{}
 	}
@@ -411,9 +411,9 @@ func (a *App) DuplicateOpencodeProfile(id string, newName string) (OpenCodeProfi
 	if err != nil {
 		return OpenCodeProfile{}, err
 	}
-	profile.ID = newUUID()
+	profile.ID = core.NewUUID()
 	profile.Name = newName
-	profile.CreatedAt = nowRFC3339()
+	profile.CreatedAt = core.NowRFC3339()
 	profile.UpdatedAt = profile.CreatedAt
 	if err := opencodeWriteProfileFile(profile); err != nil {
 		return OpenCodeProfile{}, err
@@ -431,9 +431,9 @@ func (a *App) CreateDefaultProfile() (OpenCodeProfile, error) {
 	if len(profiles) > 0 {
 		return OpenCodeProfile{}, errString("Profiles already exist")
 	}
-	now := nowRFC3339()
+	now := core.NowRFC3339()
 	profile := OpenCodeProfile{
-		ID:        newUUID(),
+		ID:        core.NewUUID(),
 		Name:      "Default",
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -586,17 +586,17 @@ func (a *App) GetOpencodeProviderTemplates() ([]ProviderTemplate, error) {
 	return []ProviderTemplate{
 		{
 			ID: "anthropic", Name: "Anthropic",
-			NPM: strPtr("@ai-sdk/anthropic"), DefaultBaseURL: strPtr("https://api.anthropic.com/v1"),
+			NPM: core.StrPtr("@ai-sdk/anthropic"), DefaultBaseURL: core.StrPtr("https://api.anthropic.com/v1"),
 			RequiresAPIKey: true,
 		},
 		{
 			ID: "openai", Name: "OpenAI",
-			NPM: strPtr("@ai-sdk/openai"), DefaultBaseURL: strPtr("https://api.openai.com/v1"),
+			NPM: core.StrPtr("@ai-sdk/openai"), DefaultBaseURL: core.StrPtr("https://api.openai.com/v1"),
 			RequiresAPIKey: true,
 		},
 		{
 			ID: "gemini", Name: "Gemini",
-			NPM: strPtr("@ai-sdk/google"), DefaultBaseURL: strPtr("https://generativelanguage.googleapis.com/v1beta"),
+			NPM: core.StrPtr("@ai-sdk/google"), DefaultBaseURL: core.StrPtr("https://generativelanguage.googleapis.com/v1beta"),
 			RequiresAPIKey: true,
 		},
 	}, nil

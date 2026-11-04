@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"droidgear-wails/internal/core"
 )
 
 // ---------------------------------------------------------------------------
@@ -60,10 +62,10 @@ func TestConnectivityPromptOrDefault(t *testing.T) {
 	if got := connectivityPromptOrDefault(nil); got != "Hi" {
 		t.Errorf("nil prompt → %q, want %q", got, "Hi")
 	}
-	if got := connectivityPromptOrDefault(strPtr("")); got != "" {
+	if got := connectivityPromptOrDefault(core.StrPtr("")); got != "" {
 		t.Errorf("empty prompt → %q, want empty (Option::Some is preserved)", got)
 	}
-	if got := connectivityPromptOrDefault(strPtr("custom")); got != "custom" {
+	if got := connectivityPromptOrDefault(core.StrPtr("custom")); got != "custom" {
 		t.Errorf("custom prompt → %q, want %q", got, "custom")
 	}
 }

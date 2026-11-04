@@ -180,6 +180,10 @@ func (a *App) ApplyCodexProfile(id string) (CodexConfigStatus, error) {
 | B3  | `claude`、`copilot`、`droid`、`dsh`、`factory`、`mcp`、`legacy_config` | 写面复杂（settings/凭据/DB），需要 B1–B2 的 ChangeSet 收敛        |
 | B4  | `sessions`、`specs`（只读）                                            | 纯读 + watcher；watcher 留在 GUI 适配层                           |
 
+状态（2026-11）：**B1 ✅**；**B2 进行中 —— `codex` ✅**（`service/codex` + `dg codex …`），
+pi/hermes/omp/opencode/openclaw 待做；B3/B4 未开始。codex 的边界划法（为什么是
+`codex.go` + `codex_auth_profiles.go` 整体下沉、而 launch 的偏好项留在 app）见 §10 的迁移备注。
+
 ### 3.5 期 1 验收
 
 - `go vet ./... && go test ./...`（`wails/`）通过，`npm run check:all` 零错误。
@@ -209,8 +213,8 @@ dg doctor                                     # T2 ✅（只读：不加载 chan
 dg path show|set <key> <path>|reset <key>     # T1 ✅（set/reset 支持 --dry-run）
 dg channels list|show <id>|tokens <id>        # T1/T2 ✅（tokens 默认打码，--reveal 才出明文）
 dg export list|save --file <json>|delete <name>|run <name>  # T1/T2 ✅（run 支持 --dry-run）
-dg codex profiles list|show <id>|apply <id>   # T1    期 2 下一批（依赖 B2 的 profile 域下沉）
-dg codex status                               # T2    同上（对应 GetCodexConfigStatus）
+dg codex profiles list|show <id>|active|apply <id>|save --file <json>|delete <id>  # T1/T2 ✅
+dg codex status                               # T2 ✅（config/auth 路径 + active profile）
 dg pi|hermes|omp|opencode|openclaw|claude|copilot ...  # 同上形态
 dg droid models list|apply                    # T1    B3
 dg dsh providers list|apply [--profile desktop|web]     # T1    B3
@@ -220,6 +224,9 @@ dg spec list|cat <name>                       # T2    B4（只读，写走 $EDIT
 ```
 
 ✅ = 本仓库已实现并有测试（`cmd/dg/dg_test.go` + `service/*_test.go`）；其余按 §3.4 的批次推进。
+
+`--dry-run` 目前只对 `path set/reset` 与 `export run` 生效；其它写操作（如 `codex profiles apply`）
+会**明确拒绝**该 flag 而不是静默忽略——没有 plan/apply 拆分之前，一个不干活的 flag 就是假 shim（§4.3）。
 
 覆盖面分级（`PORTING.md` 的 `T1/T2/T3` 含义，沿用本文件）：
 
@@ -424,13 +431,32 @@ CLI 契约测试的写法约定：直接调 `run(args, &stdout, &stderr)`（它�
 | `internal/service/paths`（九个路径键 + WSL）                                 | ✅   |
 | `internal/service/channels`（列表/凭据/token/模型/类型探测 + `ErrUpstream`） | ✅   |
 | `internal/service/export`（模板 CRUD + 运行引擎 + dry-run 预览与打码）       | ✅   |
-| `cmd/dg`：`version` `doctor` `path` `channels` `export`                      | ✅   |
+| `cmd/dg`：`version` `doctor` `path` `channels` `codex` `export`              | ✅   |
+| `internal/service/codex`（profile + auth profile + 临时运行启动）            | ✅   |
 | 发布构建：`release-single.yml` 三端 GUI+CLI 各一个单文件                     | ✅   |
-| 测试：`service/*` 15 条 + `cmd/dg` 13 条契约测试（合计 253 条）              | ✅   |
-| `internal/service/{codex,pi,hermes,omp,opencode,openclaw,…}`（B2/B3）        | ⏳   |
-| `dg` 的 codex/pi/… 子命令（期 2 剩余）                                       | ⏳   |
+| 测试：`service/*` 42 条 + `cmd/dg` 14 条契约测试（合计 254 条）              | ✅   |
+| `internal/service/{pi,hermes,omp,opencode,openclaw,…}`（B2 剩余 + B3）       | ⏳   |
+| `dg` 的 pi/hermes/… 子命令（期 2 剩余）                                      | ⏳   |
 | `--force` + `beforeHash` 冲突检测（exit 3）                                  | ⏳   |
 | TUI（§6 决策点）/ 删除 `src-tauri`                                           | ⏳   |
 
-下一批建议顺序：B2 的 `codex`（profile CRUD + apply，headless 需求最高）→
-`dg codex profiles …` → 再回来补冲突检测（那时 `--force` 才有真实语义）。
+下一批建议顺序：B2 的剩余工具（pi → hermes → opencode → openclaw → omp，
+按测试覆盖厚薄排序）→ 再回来补冲突检测（那时 `--force` 才有真实语义）。
+
+### codex 迁移备注（B2 第一批）
+
+- **边界**：`codex.go` 对其它 app 文件只有两个向上依赖（`codexRestoreAuthFile` /
+  `codexClearActiveAuthProfile`，都在 auth_profiles.go），所以 `codex.go` +
+  `codex_auth_profiles.go` **整体下沉**；`codex_sessions.go`（B4）留在 app，改为
+  `codex.ListProfiles()` 这样的限定调用（3 个函数）。
+- **共享工具随之下沉到 `core`**：`NowRFC3339` / `ValidateProfileID` / `NewUUID` /
+  `StrPtr`，以及 `procattr.go`（`HideConsoleWindow` / `UseNewConsole` —— 它本来就用反射写，
+  所以放 core 不破坏可移植性；`internal/app` 不能交叉编译的问题也因此没有变严重）。
+- **GUI 侧只留偏好项**：`LaunchCodex` 读 `preferences.json` 的首选终端，其余
+  （runtime home 快照 + 终端启动）是 `codex.LaunchTemporaryRun(id, cwd, preferred)`。
+- **测试随代码下沉**：`codex_test.go` + `codex_auth_profiles_test.go`（27 条）整体搬到
+  `service/codex`；跨包只共享 `testutil.IsolatedHome`。**codex 的 profile fixture 不能进
+  testutil** —— 那会造成 `testutil → codex` 与 `codex 测试 → testutil` 的 import cycle（Go 拒绝），
+  所以 app 侧的 sessions 测试就地构造它需要的那份 profile。
+- **profile 自带 secrets**：顶层 `apiKey` 与每个 provider 的 `apiKey` 都是文档字段，
+  因此 `dg codex profiles list/show` 默认两处都打码，`--reveal` 才出明文。

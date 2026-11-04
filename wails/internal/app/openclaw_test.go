@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"droidgear-wails/internal/core"
 )
 
 // ---------------------------------------------------------------------------
@@ -184,7 +186,7 @@ func TestOpenclawRoundtripDefaultModelAndFailovers(t *testing.T) {
 	isolatedHome(t)
 
 	profile := openclawTestProfile()
-	profile.DefaultModel = strPtr("anthropic/claude-opus-4-6")
+	profile.DefaultModel = core.StrPtr("anthropic/claude-opus-4-6")
 	fallbacks := []string{"minimax/MiniMax-M2.7", "openai/gpt-5.4-mini"}
 	profile.FailoverModels = &fallbacks
 
@@ -252,23 +254,23 @@ func openclawTestToPlain(value any) any {
 func TestOpenclawRoundtripProvidersWithModels(t *testing.T) {
 	isolatedHome(t)
 	profile := openclawTestProfile()
-	profile.DefaultModel = strPtr("custom/my-model")
+	profile.DefaultModel = core.StrPtr("custom/my-model")
 	profile.Providers = map[string]OpenClawProviderConfig{
 		"custom": {
-			BaseURL: strPtr("http://localhost:4000/v1"),
-			APIKey:  strPtr("sk-test-key"),
-			API:     strPtr("openai-completions"),
+			BaseURL: core.StrPtr("http://localhost:4000/v1"),
+			APIKey:  core.StrPtr("sk-test-key"),
+			API:     core.StrPtr("openai-completions"),
 			Models: []OpenClawModel{
 				{
 					ID:            "my-model",
-					Name:          strPtr("My Model"),
+					Name:          core.StrPtr("My Model"),
 					Input:         []string{"text"},
 					ContextWindow: uint32Ptr(128000),
 					MaxTokens:     uint32Ptr(32000),
 				},
 				{
 					ID:            "vision-model",
-					Name:          strPtr("Vision Model"),
+					Name:          core.StrPtr("Vision Model"),
 					Reasoning:     true,
 					Input:         []string{"text", "image"},
 					ContextWindow: uint32Ptr(200000),
@@ -614,12 +616,12 @@ func TestOpenclawApplyUpdatesOwnedKeysOnly(t *testing.T) {
 		t.Fatalf("CreateDefaultOpenclawProfile: %v", err)
 	}
 	// Change the owned values, then apply.
-	profile.DefaultModel = strPtr("wududu/m2")
+	profile.DefaultModel = core.StrPtr("wududu/m2")
 	profile.Providers["wududu"] = OpenClawProviderConfig{
-		BaseURL: strPtr("https://changed.example"),
-		APIKey:  strPtr("k2"),
-		API:     strPtr("openai-completions"),
-		Models:  []OpenClawModel{{ID: "m2", Name: strPtr("M2"), Input: []string{"text"}}},
+		BaseURL: core.StrPtr("https://changed.example"),
+		APIKey:  core.StrPtr("k2"),
+		API:     core.StrPtr("openai-completions"),
+		Models:  []OpenClawModel{{ID: "m2", Name: core.StrPtr("M2"), Input: []string{"text"}}},
 	}
 	if err := a.ApplyOpenclawProfile(profile); err != nil {
 		t.Fatalf("ApplyOpenclawProfile: %v", err)

@@ -5,27 +5,17 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/testutil"
 )
 
 // isolatedHome points the app's path resolution at a throwaway home
 // directory so smoke tests never touch the real ~/.droidgear, ~/.pi, etc.
-//
-// LOCALAPPDATA and PATH are isolated as well: HermesHome's Windows
-// priority chain reads %LOCALAPPDATA% directly (bypassing USERPROFILE),
-// and the final fallback probes the default WSL distro via `wsl.exe`.
-// Without these two, TestHermesAndOmpMountSequenceSmoke's ApplyHermesProfile
-// rewrote the developer's REAL %LOCALAPPDATA%\hermes\config.yaml — or
-// created \\wsl$\...\.hermes inside the real distro — on every `go test`.
+// The implementation (and the reason LOCALAPPDATA/PATH have to move too)
+// lives in testutil, shared with the service layer's tests.
 func isolatedHome(t *testing.T) string {
-	t.Helper()
-	home := t.TempDir()
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("HOME", home)
-	t.Setenv("LOCALAPPDATA", filepath.Join(home, "AppData", "Local"))
-	// Empty PATH: `wsl.exe` can't be resolved, so defaultHermesHomeWSL
-	// skips the WSL branch and falls back to the (isolated) ~/.hermes.
-	t.Setenv("PATH", filepath.Join(home, "empty-bin"))
-	return home
+	return testutil.IsolatedHome(t)
 }
 
 // TestPiMountSequenceSmoke mirrors exactly what the Pi tab runs on mount
@@ -54,9 +44,9 @@ func TestPiMountSequenceSmoke(t *testing.T) {
 	profile := profiles[0]
 	profile.Providers = map[string]PiProviderConfig{
 		"openrouter": {
-			BaseURL: strPtr("https://openrouter.ai/api/v1"),
-			API:     strPtr("openai-completions"),
-			APIKey:  strPtr("sk-test"),
+			BaseURL: core.StrPtr("https://openrouter.ai/api/v1"),
+			API:     core.StrPtr("openai-completions"),
+			APIKey:  core.StrPtr("sk-test"),
 			Models:  []PiModel{{ID: "openai/gpt-5.2", Input: []string{"text"}}},
 		},
 	}
@@ -118,10 +108,10 @@ func TestHermesAndOmpMountSequenceSmoke(t *testing.T) {
 		t.Fatalf("CreateDefaultHermesProfile: %v", err)
 	}
 	hermesProfile.Models = []HermesModelConfig{{
-		Name:      strPtr("custom1"),
-		Default:   strPtr("gpt-5.2"),
-		BaseURL:   strPtr("https://x/v1"),
-		APIKey:    strPtr("k"),
+		Name:      core.StrPtr("custom1"),
+		Default:   core.StrPtr("gpt-5.2"),
+		BaseURL:   core.StrPtr("https://x/v1"),
+		APIKey:    core.StrPtr("k"),
 		IsDefault: true,
 	}}
 	if err := a.SaveHermesProfile(hermesProfile); err != nil {
@@ -146,16 +136,16 @@ func TestHermesAndOmpMountSequenceSmoke(t *testing.T) {
 	// The default-profile command was removed with the dead Claude/OMP
 	// command surface; build the equivalent default inline.
 	ompProfile := OmpProfile{
-		ID:         newUUID(),
+		ID:         core.NewUUID(),
 		Name:       "Default",
-		CreatedAt:  nowRFC3339(),
-		UpdatedAt:  nowRFC3339(),
+		CreatedAt:  core.NowRFC3339(),
+		UpdatedAt:  core.NowRFC3339(),
 		ModelRoles: OmpModelRoles{},
 	}
 	if err := writeOmpProfileFile(ompProfile); err != nil {
 		t.Fatalf("writeOmpProfileFile: %v", err)
 	}
-	ompProfile.ModelRoles = OmpModelRoles{Default: strPtr("anthropic/claude-sonnet-4-5")}
+	ompProfile.ModelRoles = OmpModelRoles{Default: core.StrPtr("anthropic/claude-sonnet-4-5")}
 	if err := a.SaveOmpProfile(ompProfile); err != nil {
 		t.Fatalf("SaveOmpProfile: %v", err)
 	}
@@ -199,10 +189,10 @@ func TestDshProviderSaveToPatchProfile(t *testing.T) {
 	}
 
 	provider := DshProviderConfig{
-		DisplayName: strPtr("wududu"),
-		BaseURL:     strPtr("https://sub.example.com/v1"),
-		APIKeyEnv:   strPtr("WUDUDU_API_KEY"),
-		API:         strPtr("openai-completions"),
+		DisplayName: core.StrPtr("wududu"),
+		BaseURL:     core.StrPtr("https://sub.example.com/v1"),
+		APIKeyEnv:   core.StrPtr("WUDUDU_API_KEY"),
+		API:         core.StrPtr("openai-completions"),
 		Models:      []DshModel{{ID: "deepseek-v4-pro"}},
 	}
 	if err := a.SaveDshProvider(&profile, "wududu", provider); err != nil {

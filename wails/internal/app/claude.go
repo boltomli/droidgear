@@ -221,7 +221,7 @@ func claudeSettingsPath() (string, error) {
 
 // claudeProfilePath resolves profiles/<id>.json after validating the id.
 func claudeProfilePath(id string) (string, error) {
-	if err := validateProfileID(id); err != nil {
+	if err := core.ValidateProfileID(id); err != nil {
 		return "", err
 	}
 	dir, err := claudeProfilesDir()
@@ -650,7 +650,7 @@ func claudeSetActiveProfileID(id string) error {
 		}
 		return nil
 	}
-	if err := validateProfileID(trimmed); err != nil {
+	if err := core.ValidateProfileID(trimmed); err != nil {
 		return err
 	}
 	return core.AtomicWrite(path, []byte(trimmed))

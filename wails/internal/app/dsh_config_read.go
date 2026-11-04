@@ -221,7 +221,7 @@ func buildWarnings(entries []composedEntry, homePatch string, schema *schemaDoc,
 	if entry := find("tools"); entry != nil {
 		if object, ok := entry.Config.(map[string]any); ok && object["mode"] == "both" {
 			warnings = append(warnings, DshMigrationWarning{
-				Code: "DSH_CONFIG_TOOLS_MODE_BOTH", Severity: "error", EntryID: strPtr(entry.ID),
+				Code: "DSH_CONFIG_TOOLS_MODE_BOTH", Severity: "error", EntryID: core.StrPtr(entry.ID),
 				Message: `tools.mode = "both" is no longer accepted by DSH 0.2`,
 				Hint:    "Use `native` or `ptc`.",
 			})
@@ -236,7 +236,7 @@ func buildWarnings(entries []composedEntry, homePatch string, schema *schemaDoc,
 		if object, ok := entry.Config.(map[string]any); ok {
 			if _, present := object["backgroundMode"]; present {
 				warnings = append(warnings, DshMigrationWarning{
-					Code: "DSH_CONFIG_SUBAGENT_BACKGROUND_MODE", Severity: "warning", EntryID: strPtr(entry.ID),
+					Code: "DSH_CONFIG_SUBAGENT_BACKGROUND_MODE", Severity: "warning", EntryID: core.StrPtr(entry.ID),
 					Message: "subagent backgroundMode was removed in DSH 0.2",
 					Hint:    "Remove the field; use the subagent tool's own background controls.",
 				})
@@ -250,7 +250,7 @@ func buildWarnings(entries []composedEntry, homePatch string, schema *schemaDoc,
 			continue
 		}
 		warnings = append(warnings, DshMigrationWarning{
-			Code: "DSH_CONFIG_PRESET_ONLY_ROW", Severity: "warning", EntryID: strPtr(entry.ID),
+			Code: "DSH_CONFIG_PRESET_ONLY_ROW", Severity: "warning", EntryID: core.StrPtr(entry.ID),
 			Message: fmt.Sprintf("The profile patch configures `%s`, but the Web/desktop composition disables that host row", entry.ID),
 			Hint:    "Agent-plane rows moved into the agent presets; edit preset-standard/ptc/minimal/cordis instead.",
 		})
@@ -261,7 +261,7 @@ func buildWarnings(entries []composedEntry, homePatch string, schema *schemaDoc,
 			if providers, ok := object["providers"].(map[string]any); ok {
 				if _, present := providers["azure-openai-responses"]; present {
 					warnings = append(warnings, DshMigrationWarning{
-						Code: "DSH_CONFIG_AZURE_ROUTE_KEY", Severity: "warning", EntryID: strPtr(entry.ID),
+						Code: "DSH_CONFIG_AZURE_ROUTE_KEY", Severity: "warning", EntryID: core.StrPtr(entry.ID),
 						Message: "The Azure pi-ai route key was renamed to `azure` in DSH 0.2.1",
 						Hint:    "Rename providers.azure-openai-responses to providers.azure; the `api` identifier stays azure-openai-responses.",
 					})
@@ -290,7 +290,7 @@ func buildWarnings(entries []composedEntry, homePatch string, schema *schemaDoc,
 			}
 			if _, present := model["imageDetail"]; present {
 				warnings = append(warnings, DshMigrationWarning{
-					Code: "DSH_CONFIG_IMAGE_DETAIL", Severity: "warning", EntryID: strPtr(entry.ID),
+					Code: "DSH_CONFIG_IMAGE_DETAIL", Severity: "warning", EntryID: core.StrPtr(entry.ID),
 					Message: "Model field `imageDetail` was removed in DSH 0.2",
 					Hint:    "Replace it with `imagePixelBudget`.",
 				})
@@ -311,7 +311,7 @@ func buildWarnings(entries []composedEntry, homePatch string, schema *schemaDoc,
 		entry := &entries[i]
 		if entry.HomeConfig != nil && entry.ProfileConfig != nil {
 			warnings = append(warnings, DshMigrationWarning{
-				Code: "DSH_CONFIG_HOME_SHADOW", Severity: "warning", EntryID: strPtr(entry.ID),
+				Code: "DSH_CONFIG_HOME_SHADOW", Severity: "warning", EntryID: core.StrPtr(entry.ID),
 				Message: fmt.Sprintf("%s is configured in both the profile patch and the home overlay; the home overlay wins", entry.ID),
 				Hint:    fmt.Sprintf("Move the setting into the profile patch, or clear it from %s first; DroidGear refuses to write a shadowed entry.", homePatch),
 			})

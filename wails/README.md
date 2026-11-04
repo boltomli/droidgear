@@ -172,9 +172,9 @@ layering rules (service must not import Wails, `dg` must not import
 [`../developer/wails-tui-cli-design.zh.md`](../developer/wails-tui-cli-design.zh.md);
 the gate is `node scripts/check-go-layering.mjs`.
 
-Covered today: `version`, `doctor`, `path`, `channels`, `export`. Profile
-tools (`codex`, `pi`, `hermes`, …) follow once their domains move into
-`internal/service`.
+Covered today: `version`, `doctor`, `path`, `channels`, `codex`, `export`.
+Profile tools (`pi`, `hermes`, `omp`, `openclaw`, …) follow once their
+domains move into `internal/service`.
 
 **Release builds** ship `dg` next to the GUI single-file executable:
 `release-single.yml` produces `dg-windows-x64.exe` / `dg-macos-arm64` /

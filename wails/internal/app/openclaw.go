@@ -416,7 +416,7 @@ func openclawConfigPath() (string, error) {
 }
 
 func openclawProfilePath(id string) (string, error) {
-	if err := validateProfileID(id); err != nil {
+	if err := core.ValidateProfileID(id); err != nil {
 		return "", err
 	}
 	dir, err := openclawProfilesDir()
@@ -1069,8 +1069,8 @@ func (a *App) ListOpenclawProfiles() ([]OpenClawProfile, error) {
 // SaveOpenclawProfile creates or updates a profile.
 func (a *App) SaveOpenclawProfile(profile OpenClawProfile) error {
 	if strings.TrimSpace(profile.ID) == "" {
-		profile.ID = newUUID()
-		profile.CreatedAt = nowRFC3339()
+		profile.ID = core.NewUUID()
+		profile.CreatedAt = core.NowRFC3339()
 	} else {
 		path, err := openclawProfilePath(profile.ID)
 		if err != nil {
@@ -1081,10 +1081,10 @@ func (a *App) SaveOpenclawProfile(profile OpenClawProfile) error {
 				profile.CreatedAt = existing.CreatedAt
 			}
 		} else if strings.TrimSpace(profile.CreatedAt) == "" {
-			profile.CreatedAt = nowRFC3339()
+			profile.CreatedAt = core.NowRFC3339()
 		}
 	}
-	profile.UpdatedAt = nowRFC3339()
+	profile.UpdatedAt = core.NowRFC3339()
 	return openclawWriteProfileFile(profile)
 }
 
@@ -1118,9 +1118,9 @@ func (a *App) DuplicateOpenclawProfile(id string, newName string) (OpenClawProfi
 	if err != nil {
 		return OpenClawProfile{}, err
 	}
-	profile.ID = newUUID()
+	profile.ID = core.NewUUID()
 	profile.Name = newName
-	profile.CreatedAt = nowRFC3339()
+	profile.CreatedAt = core.NowRFC3339()
 	profile.UpdatedAt = profile.CreatedAt
 	if err := openclawWriteProfileFile(profile); err != nil {
 		return OpenClawProfile{}, err
@@ -1154,11 +1154,11 @@ func (a *App) CreateDefaultOpenclawProfile() (OpenClawProfile, error) {
 		defaultModel = &fresh
 	}
 
-	now := nowRFC3339()
+	now := core.NowRFC3339()
 	profile := OpenClawProfile{
-		ID:             newUUID(),
+		ID:             core.NewUUID(),
 		Name:           "Default",
-		Description:    strPtr("Default OpenClaw profile"),
+		Description:    core.StrPtr("Default OpenClaw profile"),
 		CreatedAt:      now,
 		UpdatedAt:      now,
 		DefaultModel:   defaultModel,

@@ -182,7 +182,7 @@ func droidSaveCurrentAuthProfile(home string, name string, label string) error {
 		manifest.Profiles = append(manifest.Profiles, AuthProfile{
 			Name:      name,
 			Label:     label,
-			CreatedAt: nowRFC3339(),
+			CreatedAt: core.NowRFC3339(),
 		})
 	}
 	if manifest.Active == nil {

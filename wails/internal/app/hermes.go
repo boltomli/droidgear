@@ -104,7 +104,7 @@ func hermesConfigPath() (string, error) {
 }
 
 func hermesProfilePath(id string) (string, error) {
-	if err := validateProfileID(id); err != nil {
+	if err := core.ValidateProfileID(id); err != nil {
 		return "", err
 	}
 	dir, err := hermesProfilesDir()
@@ -260,16 +260,16 @@ func (a *App) GetHermesProfile(id string) (HermesProfile, error) {
 // SaveHermesProfile creates or updates a profile.
 func (a *App) SaveHermesProfile(profile HermesProfile) error {
 	if strings.TrimSpace(profile.ID) == "" {
-		profile.ID = newUUID()
-		profile.CreatedAt = nowRFC3339()
+		profile.ID = core.NewUUID()
+		profile.CreatedAt = core.NowRFC3339()
 	} else {
 		if existing, err := a.GetHermesProfile(profile.ID); err == nil {
 			profile.CreatedAt = existing.CreatedAt
 		} else if strings.TrimSpace(profile.CreatedAt) == "" {
-			profile.CreatedAt = nowRFC3339()
+			profile.CreatedAt = core.NowRFC3339()
 		}
 	}
-	profile.UpdatedAt = nowRFC3339()
+	profile.UpdatedAt = core.NowRFC3339()
 	profile.Models = normalizeHermesModels(profile.Models)
 	return writeHermesProfileFile(profile)
 }
@@ -299,9 +299,9 @@ func (a *App) DuplicateHermesProfile(id string, newName string) (HermesProfile, 
 	if err != nil {
 		return HermesProfile{}, err
 	}
-	profile.ID = newUUID()
+	profile.ID = core.NewUUID()
 	profile.Name = newName
-	profile.CreatedAt = nowRFC3339()
+	profile.CreatedAt = core.NowRFC3339()
 	profile.UpdatedAt = profile.CreatedAt
 	if err := writeHermesProfileFile(profile); err != nil {
 		return HermesProfile{}, err
@@ -318,9 +318,9 @@ func (a *App) CreateDefaultHermesProfile() (HermesProfile, error) {
 	if len(profiles) > 0 {
 		return HermesProfile{}, errors.New("Profiles already exist")
 	}
-	now := nowRFC3339()
+	now := core.NowRFC3339()
 	profile := HermesProfile{
-		ID:        newUUID(),
+		ID:        core.NewUUID(),
 		Name:      "默认",
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -679,7 +679,7 @@ func (a *App) ReadHermesCurrentConfig() (HermesCurrentConfig, error) {
 		}
 	case liveProvider == "custom":
 		models = append(models, HermesModelConfig{
-			Default: ptrIfSet(liveDefault), Provider: strPtr("custom"),
+			Default: ptrIfSet(liveDefault), Provider: core.StrPtr("custom"),
 			BaseURL: ptrIfSet(liveBaseURL), APIKey: ptrIfSet(liveAPIKey), IsDefault: true,
 		})
 	case liveProvider != "":
@@ -740,9 +740,5 @@ func ptrIfSet(value string) *string {
 	if value == "" {
 		return nil
 	}
-	return &value
-}
-
-func strPtr(value string) *string {
 	return &value
 }

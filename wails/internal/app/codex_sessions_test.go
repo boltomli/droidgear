@@ -330,11 +330,20 @@ func TestCodexSessionProvidersAggregateAcrossProfiles(t *testing.T) {
 	if err := a.SaveCodexProfile(openaiProfile); err != nil {
 		t.Fatalf("save openai: %v", err)
 	}
-	custom := codexTestCustomProfile("p-custom", "Custom")
-	custom.ModelProvider = "deepseek"
-	custom.Providers = map[string]CodexProviderConfig{
-		"deepseek": {Name: strPtr("DeepSeek")},
-		"mimo":     {Name: nil},
+	// Built inline: the shared fixture lives in service/codex's tests, and a
+	// helper package importing it would be an import cycle in tests.
+	custom := CodexProfile{
+		ID:                   "p-custom",
+		Name:                 "Custom",
+		APIKey:               core.StrPtr("sk-provider"),
+		ModelProvider:        "deepseek",
+		Model:                "gpt-5.5",
+		ModelReasoningEffort: core.StrPtr("medium"),
+		APIKeyModelDiscovery: true,
+		Providers: map[string]CodexProviderConfig{
+			"deepseek": {Name: core.StrPtr("DeepSeek")},
+			"mimo":     {Name: nil},
+		},
 	}
 	if err := a.SaveCodexProfile(custom); err != nil {
 		t.Fatalf("save custom: %v", err)

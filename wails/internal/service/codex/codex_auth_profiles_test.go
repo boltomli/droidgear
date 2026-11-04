@@ -1,10 +1,13 @@
-package app
+package codex
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/testutil"
 )
 
 // codexTestWriteLiveAuth drops an auth.json into the isolated ~/.codex.
@@ -40,11 +43,10 @@ const codexTestOfficialAuth = `{
 
 // TestCodexAuthSaveRejectsBYOK: only official login credentials can be saved.
 func TestCodexAuthSaveRejectsBYOK(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteLiveAuth(t, `{"OPENAI_API_KEY":"sk-byok"}`)
-	err := a.SaveCurrentCodexAuthProfile("test", "Test")
+	err := SaveCurrentAuthProfile("test", "Test")
 	if err == nil {
 		t.Fatal("BYOK save must fail")
 	}
@@ -53,10 +55,10 @@ func TestCodexAuthSaveRejectsBYOK(t *testing.T) {
 	}
 
 	// Invalid names are rejected before any I/O.
-	if err := a.SaveCurrentCodexAuthProfile("", "x"); err == nil || err.Error() != "Profile name cannot be empty" {
+	if err := SaveCurrentAuthProfile("", "x"); err == nil || err.Error() != "Profile name cannot be empty" {
 		t.Fatalf("empty name: %v", err)
 	}
-	if err := a.SaveCurrentCodexAuthProfile("bad name", "x"); err == nil ||
+	if err := SaveCurrentAuthProfile("bad name", "x"); err == nil ||
 		err.Error() != "Profile name can only contain alphanumeric characters, hyphens, and underscores" {
 		t.Fatalf("invalid name: %v", err)
 	}
@@ -65,15 +67,14 @@ func TestCodexAuthSaveRejectsBYOK(t *testing.T) {
 // TestCodexAuthSaveAndListOfficial covers the happy path: save → manifest
 // entry with official flag + active marker + live state flags.
 func TestCodexAuthSaveAndListOfficial(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteLiveAuth(t, codexTestOfficialAuth)
-	if err := a.SaveCurrentCodexAuthProfile("acct-1", "Account 1"); err != nil {
+	if err := SaveCurrentAuthProfile("acct-1", "Account 1"); err != nil {
 		t.Fatalf("SaveCurrentCodexAuthProfile: %v", err)
 	}
 
-	state, err := a.ListCodexAuthProfiles()
+	state, err := ListAuthProfiles()
 	if err != nil {
 		t.Fatalf("ListCodexAuthProfiles: %v", err)
 	}
@@ -106,9 +107,9 @@ func TestCodexAuthSaveAndListOfficial(t *testing.T) {
 
 func mustCodexAuthProfileFile(t *testing.T, name string) string {
 	t.Helper()
-	path, err := codexAuthProfileFile(name)
+	path, err := AuthProfileFile(name)
 	if err != nil {
-		t.Fatalf("codexAuthProfileFile: %v", err)
+		t.Fatalf("AuthProfileFile: %v", err)
 	}
 	return path
 }
@@ -116,23 +117,22 @@ func mustCodexAuthProfileFile(t *testing.T, name string) string {
 // TestCodexAuthSaveSnapshotsModelAndProfileID: the active CodexProfile id and
 // the live config.toml model are snapshotted into the auth profile.
 func TestCodexAuthSaveSnapshotsModelAndProfileID(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteLiveAuth(t, codexTestOfficialAuth)
 	codexTestWriteConfig(t, "model_provider = \"openai\"\nmodel = \"gpt-5.4\"\nmodel_reasoning_effort = \"high\"\n")
-	profile := CodexProfile{ID: "codex-p1", Name: "P1", ModelProvider: "openai", Model: "gpt-5.4", ModelReasoningEffort: strPtr("high")}
-	if err := a.SaveCodexProfile(profile); err != nil {
+	profile := CodexProfile{ID: "codex-p1", Name: "P1", ModelProvider: "openai", Model: "gpt-5.4", ModelReasoningEffort: core.StrPtr("high")}
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveCodexProfile: %v", err)
 	}
-	if err := a.ApplyCodexProfile("codex-p1"); err != nil {
+	if err := ApplyProfile("codex-p1"); err != nil {
 		t.Fatalf("ApplyCodexProfile: %v", err)
 	}
 
-	if err := a.SaveCurrentCodexAuthProfile("acct-1", "Account 1"); err != nil {
+	if err := SaveCurrentAuthProfile("acct-1", "Account 1"); err != nil {
 		t.Fatalf("SaveCurrentCodexAuthProfile: %v", err)
 	}
-	state, err := a.ListCodexAuthProfiles()
+	state, err := ListAuthProfiles()
 	if err != nil || len(state.Profiles) != 1 {
 		t.Fatalf("list: %v %+v", err, state)
 	}
@@ -152,23 +152,22 @@ func TestCodexAuthSaveSnapshotsModelAndProfileID(t *testing.T) {
 // second profile backs up the mutated live auth into the first, and switching
 // restores the target's auth + marks it active.
 func TestCodexAuthSwitchBacksUpAndRestores(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteLiveAuth(t, codexTestOfficialAuth)
-	if err := a.SaveCurrentCodexAuthProfile("acct-1", "Account 1"); err != nil {
+	if err := SaveCurrentAuthProfile("acct-1", "Account 1"); err != nil {
 		t.Fatalf("save acct-1: %v", err)
 	}
 
 	// Mutate live auth (another login) and save it as acct-2.
 	mutated := `{"auth_mode":"chatgpt","OPENAI_API_KEY":"sk-account-2","tokens":{"access_token":"a2"}}`
 	authPath := codexTestWriteLiveAuth(t, mutated)
-	if err := a.SaveCurrentCodexAuthProfile("acct-2", "Account 2"); err != nil {
+	if err := SaveCurrentAuthProfile("acct-2", "Account 2"); err != nil {
 		t.Fatalf("save acct-2: %v", err)
 	}
 
 	// Switch back to acct-1: live auth restored, acct-2 holds the backup.
-	if err := a.SwitchCodexAuthProfile("acct-1"); err != nil {
+	if err := SwitchAuthProfile("acct-1"); err != nil {
 		t.Fatalf("SwitchCodexAuthProfile: %v", err)
 	}
 	live, err := os.ReadFile(authPath)
@@ -186,7 +185,7 @@ func TestCodexAuthSwitchBacksUpAndRestores(t *testing.T) {
 		t.Fatalf("backup missing: %q", backup)
 	}
 
-	state, err := a.ListCodexAuthProfiles()
+	state, err := ListAuthProfiles()
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -198,18 +197,17 @@ func TestCodexAuthSwitchBacksUpAndRestores(t *testing.T) {
 // TestCodexAuthSwitchAppliesModelSnapshot: after wiping the live model, a
 // switch restores the snapshotted model + effort into config.toml.
 func TestCodexAuthSwitchAppliesModelSnapshot(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteLiveAuth(t, codexTestOfficialAuth)
 	codexTestWriteConfig(t, "model_provider = \"openai\"\nmodel = \"gpt-5.4\"\nmodel_reasoning_effort = \"high\"\n")
-	if err := a.SaveCurrentCodexAuthProfile("acct-1", "Account 1"); err != nil {
+	if err := SaveCurrentAuthProfile("acct-1", "Account 1"); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 
 	// Wipe the live model.
 	codexTestWriteConfig(t, "model_provider = \"openai\"\nmodel = \"\"\n")
-	if err := a.SwitchCodexAuthProfile("acct-1"); err != nil {
+	if err := SwitchAuthProfile("acct-1"); err != nil {
 		t.Fatalf("switch: %v", err)
 	}
 
@@ -223,18 +221,17 @@ func TestCodexAuthSwitchAppliesModelSnapshot(t *testing.T) {
 // codexProfileId re-applies that profile's config.toml on switch (auth.json
 // untouched by that apply).
 func TestCodexAuthSwitchAppliesAssociatedProfile(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteLiveAuth(t, codexTestOfficialAuth)
 	profile := codexTestCustomProfile("p1", "P1")
-	if err := a.SaveCodexProfile(profile); err != nil {
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("save profile: %v", err)
 	}
-	if err := a.ApplyCodexProfile("p1"); err != nil {
+	if err := ApplyProfile("p1"); err != nil {
 		t.Fatalf("apply profile: %v", err)
 	}
-	if err := a.SaveCurrentCodexAuthProfile("acct-1", "Account 1"); err != nil {
+	if err := SaveCurrentAuthProfile("acct-1", "Account 1"); err != nil {
 		t.Fatalf("save auth: %v", err)
 	}
 
@@ -242,7 +239,7 @@ func TestCodexAuthSwitchAppliesAssociatedProfile(t *testing.T) {
 	codexTestWriteConfig(t, "model_provider = \"ghost\"\nmodel = \"drifted\"\n")
 
 	// auth.json after the switch is the saved official one.
-	if err := a.SwitchCodexAuthProfile("acct-1"); err != nil {
+	if err := SwitchAuthProfile("acct-1"); err != nil {
 		t.Fatalf("switch: %v", err)
 	}
 	config := codexTestParseConfig(t)
@@ -261,28 +258,27 @@ func TestCodexAuthSwitchAppliesAssociatedProfile(t *testing.T) {
 // TestCodexAuthDeleteAndRename covers label updates and the active-profile
 // protection.
 func TestCodexAuthDeleteAndRename(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteLiveAuth(t, codexTestOfficialAuth)
-	if err := a.SaveCurrentCodexAuthProfile("acct-1", "Old Label"); err != nil {
+	if err := SaveCurrentAuthProfile("acct-1", "Old Label"); err != nil {
 		t.Fatalf("save acct-1: %v", err)
 	}
 	// Second profile (current live auth) so acct-1 is no longer the only one.
-	if err := a.SaveCurrentCodexAuthProfile("acct-2", "Second"); err != nil {
+	if err := SaveCurrentAuthProfile("acct-2", "Second"); err != nil {
 		t.Fatalf("save acct-2: %v", err)
 	}
 
 	// The first saved profile owns the active marker (save only fills it when
 	// unset) — deleting it must fail; the inactive one deletes fine.
-	if err := a.DeleteCodexAuthProfile("acct-1"); err == nil || err.Error() != "Cannot delete the currently active profile" {
+	if err := DeleteAuthProfile("acct-1"); err == nil || err.Error() != "Cannot delete the currently active profile" {
 		t.Fatalf("delete active: %v", err)
 	}
 
-	if err := a.RenameCodexAuthProfile("acct-2", "New Label"); err != nil {
+	if err := RenameAuthProfile("acct-2", "New Label"); err != nil {
 		t.Fatalf("rename: %v", err)
 	}
-	state, err := a.ListCodexAuthProfiles()
+	state, err := ListAuthProfiles()
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -292,10 +288,10 @@ func TestCodexAuthDeleteAndRename(t *testing.T) {
 		}
 	}
 
-	if err := a.DeleteCodexAuthProfile("acct-2"); err != nil {
+	if err := DeleteAuthProfile("acct-2"); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
-	state, err = a.ListCodexAuthProfiles()
+	state, err = ListAuthProfiles()
 	if err != nil || len(state.Profiles) != 1 || state.Profiles[0].Name != "acct-1" {
 		t.Fatalf("after delete: %v %+v", err, state)
 	}
@@ -305,10 +301,10 @@ func TestCodexAuthDeleteAndRename(t *testing.T) {
 	}
 
 	// Unknown profile errors match Rust.
-	if err := a.DeleteCodexAuthProfile("ghost"); err == nil || err.Error() != "Profile 'ghost' not found" {
+	if err := DeleteAuthProfile("ghost"); err == nil || err.Error() != "Profile 'ghost' not found" {
 		t.Fatalf("delete ghost: %v", err)
 	}
-	if err := a.RenameCodexAuthProfile("ghost", "x"); err == nil || err.Error() != "Profile 'ghost' not found" {
+	if err := RenameAuthProfile("ghost", "x"); err == nil || err.Error() != "Profile 'ghost' not found" {
 		t.Fatalf("rename ghost: %v", err)
 	}
 }
@@ -325,8 +321,7 @@ func mustCodexAuthProfilesDir(t *testing.T) string {
 // TestCodexAuthConflictDetection: official→byok (and back) is a conflict;
 // same-mode switches are not.
 func TestCodexAuthConflictDetection(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	// Live auth is BYOK; the saved profile is official.
 	codexTestWriteLiveAuth(t, `{"OPENAI_API_KEY":"sk-byok"}`)
@@ -338,13 +333,13 @@ func TestCodexAuthConflictDetection(t *testing.T) {
 		t.Fatalf("write profile auth: %v", err)
 	}
 	manifest := codexAuthProfilesManifest{
-		Profiles: []CodexAuthProfile{{Name: "official-prof", Label: "Official", CreatedAt: nowRFC3339(), IsOfficial: true}},
+		Profiles: []CodexAuthProfile{{Name: "official-prof", Label: "Official", CreatedAt: core.NowRFC3339(), IsOfficial: true}},
 	}
-	if err := codexWriteAuthManifest(manifest); err != nil {
+	if err := WriteAuthManifest(manifest); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
 
-	conflict, err := a.DetectCodexAuthConflict("official-prof")
+	conflict, err := DetectAuthConflict("official-prof")
 	if err != nil {
 		t.Fatalf("DetectCodexAuthConflict: %v", err)
 	}
@@ -354,10 +349,10 @@ func TestCodexAuthConflictDetection(t *testing.T) {
 
 	// Same mode → no conflict.
 	codexTestWriteLiveAuth(t, codexTestOfficialAuth)
-	if err := a.SaveCurrentCodexAuthProfile("acct-1", "Account 1"); err != nil {
+	if err := SaveCurrentAuthProfile("acct-1", "Account 1"); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	conflict, err = a.DetectCodexAuthConflict("acct-1")
+	conflict, err = DetectAuthConflict("acct-1")
 	if err != nil || conflict.HasConflict {
 		t.Fatalf("same mode: %v %+v", err, conflict)
 	}
@@ -366,20 +361,19 @@ func TestCodexAuthConflictDetection(t *testing.T) {
 // TestCodexApplyAuthConflictDetection covers the apply-direction check:
 // official target with BYOK live auth conflicts; custom targets never do.
 func TestCodexApplyAuthConflictDetection(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	codexTestWriteLiveAuth(t, `{"OPENAI_API_KEY":"sk-byok"}`)
 	official := CodexProfile{ID: "official", Name: "Official", ModelProvider: "openai", Model: "gpt-5"}
-	if err := a.SaveCodexProfile(official); err != nil {
+	if err := SaveProfile(official); err != nil {
 		t.Fatalf("save official: %v", err)
 	}
 	custom := codexTestCustomProfile("custom", "Custom")
-	if err := a.SaveCodexProfile(custom); err != nil {
+	if err := SaveProfile(custom); err != nil {
 		t.Fatalf("save custom: %v", err)
 	}
 
-	conflict, err := a.DetectCodexApplyAuthConflict("official")
+	conflict, err := DetectApplyAuthConflict("official")
 	if err != nil {
 		t.Fatalf("DetectCodexApplyAuthConflict(official): %v", err)
 	}
@@ -387,7 +381,7 @@ func TestCodexApplyAuthConflictDetection(t *testing.T) {
 		t.Fatalf("official conflict: %+v", conflict)
 	}
 
-	conflict, err = a.DetectCodexApplyAuthConflict("custom")
+	conflict, err = DetectApplyAuthConflict("custom")
 	if err != nil {
 		t.Fatalf("DetectCodexApplyAuthConflict(custom): %v", err)
 	}
@@ -397,7 +391,7 @@ func TestCodexApplyAuthConflictDetection(t *testing.T) {
 
 	// Live official + official target → no conflict.
 	codexTestWriteLiveAuth(t, codexTestOfficialAuth)
-	conflict, err = a.DetectCodexApplyAuthConflict("official")
+	conflict, err = DetectApplyAuthConflict("official")
 	if err != nil || conflict.HasConflict {
 		t.Fatalf("official/official: %v %+v", err, conflict)
 	}
@@ -406,8 +400,7 @@ func TestCodexApplyAuthConflictDetection(t *testing.T) {
 // TestCodexApplyRestoresNamedAuthProfile: applying an openai CodexProfile
 // with auth_profile_name restores that saved auth into the live location.
 func TestCodexApplyRestoresNamedAuthProfile(t *testing.T) {
-	isolatedHome(t)
-	a := &App{}
+	testutil.IsolatedHome(t)
 
 	// Saved official auth profile (no codexProfileId → config-only apply skipped).
 	profileDir := filepath.Join(mustCodexAuthProfilesDir(t), "saved-login")
@@ -418,8 +411,8 @@ func TestCodexApplyRestoresNamedAuthProfile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(profileDir, "auth.json"), []byte(savedAuth), 0o644); err != nil {
 		t.Fatalf("write profile auth: %v", err)
 	}
-	if err := codexWriteAuthManifest(codexAuthProfilesManifest{
-		Profiles: []CodexAuthProfile{{Name: "saved-login", Label: "Saved", CreatedAt: nowRFC3339(), IsOfficial: true}},
+	if err := WriteAuthManifest(codexAuthProfilesManifest{
+		Profiles: []CodexAuthProfile{{Name: "saved-login", Label: "Saved", CreatedAt: core.NowRFC3339(), IsOfficial: true}},
 	}); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
@@ -432,12 +425,12 @@ func TestCodexApplyRestoresNamedAuthProfile(t *testing.T) {
 		Name:            "Official",
 		ModelProvider:   "openai",
 		Model:           "gpt-5",
-		AuthProfileName: strPtr("saved-login"),
+		AuthProfileName: core.StrPtr("saved-login"),
 	}
-	if err := a.SaveCodexProfile(profile); err != nil {
+	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("save profile: %v", err)
 	}
-	if err := a.ApplyCodexProfile("official"); err != nil {
+	if err := ApplyProfile("official"); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
 
@@ -448,7 +441,7 @@ func TestCodexApplyRestoresNamedAuthProfile(t *testing.T) {
 	if !strings.Contains(string(live), "restored") || strings.Contains(string(live), "OPENAI_API_KEY") {
 		t.Fatalf("auth not restored/stripped: %q", live)
 	}
-	state, err := a.ListCodexAuthProfiles()
+	state, err := ListAuthProfiles()
 	if err != nil || state.Active == nil || *state.Active != "saved-login" {
 		t.Fatalf("active marker: %v %+v", err, state)
 	}
@@ -457,7 +450,7 @@ func TestCodexApplyRestoresNamedAuthProfile(t *testing.T) {
 // TestCodexRestoreAuthFileRejectsUnsavedOrBYOK mirrors the guard rails of
 // restore_auth_file_for_home.
 func TestCodexRestoreAuthFileRejectsUnsavedOrBYOK(t *testing.T) {
-	isolatedHome(t)
+	testutil.IsolatedHome(t)
 
 	if err := codexRestoreAuthFile("ghost"); err == nil || err.Error() != "Auth profile 'ghost' not found" {
 		t.Fatalf("unknown profile: %v", err)
@@ -470,8 +463,8 @@ func TestCodexRestoreAuthFileRejectsUnsavedOrBYOK(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(profileDir, "auth.json"), []byte(`{"OPENAI_API_KEY":"sk"}`), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	if err := codexWriteAuthManifest(codexAuthProfilesManifest{
-		Profiles: []CodexAuthProfile{{Name: "byok-prof", Label: "BYOK", CreatedAt: nowRFC3339(), IsOfficial: false}},
+	if err := WriteAuthManifest(codexAuthProfilesManifest{
+		Profiles: []CodexAuthProfile{{Name: "byok-prof", Label: "BYOK", CreatedAt: core.NowRFC3339(), IsOfficial: false}},
 	}); err != nil {
 		t.Fatalf("manifest: %v", err)
 	}
@@ -481,8 +474,8 @@ func TestCodexRestoreAuthFileRejectsUnsavedOrBYOK(t *testing.T) {
 	}
 
 	// Declared official but the auth file is missing.
-	if err := codexWriteAuthManifest(codexAuthProfilesManifest{
-		Profiles: []CodexAuthProfile{{Name: "byok-prof", Label: "BYOK", CreatedAt: nowRFC3339(), IsOfficial: true}},
+	if err := WriteAuthManifest(codexAuthProfilesManifest{
+		Profiles: []CodexAuthProfile{{Name: "byok-prof", Label: "BYOK", CreatedAt: core.NowRFC3339(), IsOfficial: true}},
 	}); err != nil {
 		t.Fatalf("manifest: %v", err)
 	}

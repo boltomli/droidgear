@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"droidgear-wails/internal/core"
 )
 
 // --- path helper semantics --------------------------------------------------
@@ -350,7 +352,7 @@ func TestDroidSettingsValuesDefaultsAndRoundTrip(t *testing.T) {
 
 	// Mission model settings round-trip; nil fields stay omitted on write.
 	if err := a.SaveMissionModelSettings(MissionModelSettings{
-		WorkerModel: strPtr("worker-1"),
+		WorkerModel: core.StrPtr("worker-1"),
 	}); err != nil {
 		t.Fatalf("save mission settings: %v", err)
 	}
