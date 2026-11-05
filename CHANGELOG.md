@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.3.9.8
+
+**New Features / 新功能**
+
+- OMP provider-level channel import (GUI): pick a channel and one of its tokens, select the models to import and write the provider entry into `~/.omp/agent/models.yml`. The API protocol (Chat Completions / Anthropic Messages / Gemini), the base URL and the per-model specs (name, reasoning, input modality, context / max tokens) are inferred from the channel platform and the local registry, and re-importing an existing provider only refreshes credentials, protocol and models / OMP 渠道导入 Provider（GUI）：选择渠道及其令牌、勾选要导入的模型，向 `~/.omp/agent/models.yml` 写入 provider 条目。API 协议（Chat Completions / Anthropic Messages / Gemini）、base URL 与模型参数（名称、推理、输入类型、上下文/最大输出）由渠道平台与本地注册表推断；重新导入已有 provider 只刷新凭据、协议与模型
+
+**Bug Fixes / 问题修复**
+
+- OMP `models.yml` no longer fails OMP's schema validation: nil optional provider and model keys (`headers`, `compat`, `authHeader`, `thinking`, `input`, `cost`, `modelOverrides`, `discovery`, `transport`, guardrails) were written as explicit YAML `null`, which OMP's `omptype` schema rejects (`must be an object (was null)`) — every custom provider was disabled and the default-model warning appeared. Absent fields are now omitted, and saving or deleting any provider repairs a file that is already broken / 应用写出的 OMP `models.yml` 不再被 OMP 的 schema 校验拒绝：可选的 provider 与模型字段（`headers`、`compat`、`authHeader`、`thinking`、`input`、`cost`、`modelOverrides`、`discovery`、`transport`、guardrails）为 nil 时此前会写成显式 YAML `null`，而 OMP 的 `omptype` 校验拒绝 null（`must be an object (was null)`），导致全部自定义 provider 被禁用并出现默认模型告警。现在缺省字段直接省略，且保存或删除任一 provider 都会顺带修复已损坏的文件
+- Generated YAML keeps whole numbers in integer form: numbers read back from JSON are float64, so large values were rewritten in exponent notation (`contextWindow: 1.024e+06` instead of `1024000`); integral values are normalised back to integers before serialisation / 生成的 YAML 保留整数形式：从 JSON 读回的数字是 float64，大数值会被写成指数形式（`contextWindow: 1.024e+06` 而非 `1024000`）；序列化前会把整数值归一化回整数
+
 ## v1.3.9.7
 
 **Bug Fixes / 问题修复**
