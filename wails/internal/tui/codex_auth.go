@@ -80,6 +80,40 @@ func (codexAuthSource) Actions() []ListAction {
 	}
 }
 
+// InputActions wires 's' = snapshot the live auth under a new name and 'n' =
+// rename the selected profile's label.
+func (codexAuthSource) InputActions() []InputAction {
+	return []InputAction{
+		{
+			Key: "s", Label: "save current as",
+			Hint: "name [label] - snapshots the live ~/.codex/auth.json",
+			Submit: func(_ context.Context, row ListRow, value string) writeAction {
+				return writeAction{
+					title: "save current auth as " + value,
+					run: func() error {
+						name, label := splitFirstSpace(value)
+						if label == "" {
+							label = name
+						}
+						return codex.SaveCurrentAuthProfile(name, label)
+					},
+				}
+			},
+		},
+		{
+			Key: "n", Label: "rename",
+			Hint:    "new display label",
+			Initial: func(row ListRow) string { return strings.TrimSuffix(row.Label, officialSuffix) },
+			Submit: func(_ context.Context, row ListRow, value string) writeAction {
+				return writeAction{
+					title: "rename auth " + row.ID,
+					run:   func() error { return codex.RenameAuthProfile(row.ID, value) },
+				}
+			},
+		},
+	}
+}
+
 func (codexAuthSource) Summary(rows []ListRow) string {
 	active := "none"
 	official := 0

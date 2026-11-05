@@ -29,6 +29,8 @@ func keyMsg(name string) tea.KeyMsg {
 		return tea.KeyMsg{Type: tea.KeyTab}
 	case "ctrl+c":
 		return tea.KeyMsg{Type: tea.KeyCtrlC}
+	case "backspace":
+		return tea.KeyMsg{Type: tea.KeyBackspace}
 	default:
 		return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(name)}
 	}
@@ -472,7 +474,7 @@ func TestDefaultModulesMatchParityMatrix(t *testing.T) {
 	// The P0 set is deliberately small; this pins the module keys so the
 	// parity matrix (docs/developer/tui-parity.zh.md) and the sidebar cannot
 	// drift apart silently.
-	want := []string{"droid", "channels", "codex", "claude", "hermes", "pi", "omp", "copilot", "dsh", "paths", "settings"}
+	want := []string{"droid", "channels", "codex", "claude", "hermes", "pi", "omp", "copilot", "dsh", "settings", "registry", "paths"}
 	modules := DefaultModules()
 	if len(modules) != len(want) {
 		t.Fatalf("got %d modules, want %d", len(modules), len(want))

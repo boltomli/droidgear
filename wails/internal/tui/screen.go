@@ -59,8 +59,9 @@ func DefaultModules() []Module {
 		{"omp", "OMP", newOmpScreen},
 		{"copilot", "Copilot", list(CopilotSource)},
 		{"dsh", "Dsh", newDshScreen},
-		{"paths", "Paths", newPathsScreen},
 		{"settings", "Settings", newSettingsScreen},
+		{"registry", "Registry", list(RegistrySource)},
+		{"paths", "Paths", newPathsScreen},
 	}
 
 	modules := make([]Module, 0, len(specs))

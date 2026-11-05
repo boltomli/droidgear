@@ -159,6 +159,8 @@ func run(args []string, stdout, stderr io.Writer) (exit int) {
 		runErr = c.sessions(cmdArgs)
 	case "spec":
 		runErr = c.spec(cmdArgs)
+	case "connectivity":
+		runErr = c.connectivity(cmdArgs)
 	case "factory":
 		runErr = c.factory(cmdArgs)
 	case "tui":
@@ -411,6 +413,7 @@ Commands:
   dsh providers list|save --file <json>|delete [--profile desktop|web] + status
   sessions projects|list [project]|show <path>   read-only session store
   spec list|cat <name>|delete <name>             specs (edit via $EDITOR)
+  connectivity test <modelId>|all [--mode ping|inference] [--prompt <text>]
   tui                           open the interactive terminal UI (needs a TTY)
 
 Global flags (accepted before or after the command):

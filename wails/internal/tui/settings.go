@@ -27,9 +27,9 @@ func settingsRows(prefs preferences.AppPreferences) []kvRow {
 	return rows
 }
 
-// newSettingsScreen renders the app preferences — the terminal counterpart
-// of Preferences → General / Appearance (theme, language, terminal).
-// Writing is part of the preview phase (tui-parity P2); read-only for now.
+// newSettingsScreen renders the app preferences — Preferences → General /
+// Appearance (theme, language, terminal, updates), every value editable
+// through the preview flow.
 func newSettingsScreen(context.Context) (Screen, error) {
 	prefs, err := preferences.Load()
 	if err != nil {
@@ -45,24 +45,118 @@ func newSettingsScreen(context.Context) (Screen, error) {
 	}
 	return newKVScreen("Preferences", settingsRows(prefs)).
 		withRebuild(rowsFn).
-		withActions(kvAction{
-			key: "t", label: "cycle theme",
-			run: func() error {
-				current, err := preferences.Load()
-				if err != nil {
-					return err
-				}
-				switch current.Theme {
-				case "system":
-					current.Theme = "light"
-				case "light":
-					current.Theme = "dark"
-				default:
-					current.Theme = "system"
-				}
-				return preferences.Save(current)
+		withActions(
+			kvAction{
+				key: "t", label: "cycle theme",
+				run: func(kvRow) error {
+					current, err := preferences.Load()
+					if err != nil {
+						return err
+					}
+					switch current.Theme {
+					case "system":
+						current.Theme = "light"
+					case "light":
+						current.Theme = "dark"
+					default:
+						current.Theme = "system"
+					}
+					return preferences.Save(current)
+				},
 			},
-		}).
+			kvAction{
+				key: "l", label: "cycle language",
+				run: func(kvRow) error {
+					current, err := preferences.Load()
+					if err != nil {
+						return err
+					}
+					switch {
+					case current.Language == nil:
+						current.Language = strPtrOrNil("en")
+					case *current.Language == "en":
+						current.Language = strPtrOrNil("zh")
+					default:
+						current.Language = nil // system default, like the GUI
+					}
+					return preferences.Save(current)
+				},
+			},
+			kvAction{
+				key: "u", label: "toggle auto update",
+				run: func(kvRow) error {
+					current, err := preferences.Load()
+					if err != nil {
+						return err
+					}
+					disabled := current.DisableAutoUpdate != nil && *current.DisableAutoUpdate
+					current.DisableAutoUpdate = boolPtr(!disabled)
+					return preferences.Save(current)
+				},
+			},
+			promptAction("f", "set terminal font", kvPrompt{
+				title:      "terminal font",
+				hint:       "font family name - empty resets to the terminal default",
+				allowEmpty: true,
+				initial: func(kvRow) string {
+					value, _ := preferences.Load()
+					return pointerValue(value.TerminalFontFamily, "")
+				},
+				submit: func(_ kvRow, entered string) writeAction {
+					return writeAction{title: "set terminal font", run: func() error {
+						current, err := preferences.Load()
+						if err != nil {
+							return err
+						}
+						current.TerminalFontFamily = strPtrOrNil(entered)
+						return preferences.Save(current)
+					}}
+				},
+			}),
+			promptAction("h", "set terminal shell", kvPrompt{
+				title:      "terminal shell command",
+				hint:       "e.g. C:\\Windows\\System32\\bash.exe - empty resets to the terminal default",
+				allowEmpty: true,
+				initial: func(kvRow) string {
+					value, _ := preferences.Load()
+					return pointerValue(value.TerminalShellCommand, "")
+				},
+				submit: func(_ kvRow, entered string) writeAction {
+					return writeAction{title: "set terminal shell", run: func() error {
+						current, err := preferences.Load()
+						if err != nil {
+							return err
+						}
+						current.TerminalShellCommand = strPtrOrNil(entered)
+						return preferences.Save(current)
+					}}
+				},
+			}),
+			promptAction("e", "set preferred terminal", kvPrompt{
+				title:      "preferred terminal",
+				hint:       "auto | system-default | terminal | iterm2 | ghostty | gnome-terminal | konsole | cmd | powershell - empty = auto detect",
+				allowEmpty: true,
+				initial: func(kvRow) string {
+					value, _ := preferences.Load()
+					return pointerValue(value.PreferredTerminal, "")
+				},
+				submit: func(_ kvRow, entered string) writeAction {
+					return writeAction{title: "set preferred terminal", run: func() error {
+						current, err := preferences.Load()
+						if err != nil {
+							return err
+						}
+						switch entered {
+						case "auto", "system-default":
+							current.PreferredTerminal = nil
+						default:
+							current.PreferredTerminal = strPtrOrNil(entered)
+						}
+						return preferences.Save(current)
+					}}
+				},
+			}),
+		).
 		withTrailing("preferences file: " + path), nil
 }
 
@@ -83,3 +177,13 @@ func boolValue(v *bool, fallback bool) string {
 	}
 	return "off"
 }
+
+// strPtrOrNil maps "" to nil (the GUI stores absence, not empty strings).
+func strPtrOrNil(value string) *string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return &value
+}
+
+func boolPtr(value bool) *bool { return &value }

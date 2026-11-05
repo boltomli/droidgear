@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/service/dsh"
+	"droidgear-wails/internal/service/export"
 	"droidgear-wails/internal/service/paths"
 	"droidgear-wails/internal/testutil"
 )
@@ -271,5 +273,167 @@ func TestPathsScreenEditAndResetThroughPreview(t *testing.T) {
 	row = findPathRow(t, effective.List(), refreshed.selectedRowKey())
 	if !row.IsDefault {
 		t.Fatalf("override not reset: %+v", row)
+	}
+}
+
+// --- batch 1: previously unwired service writes ----------------------------
+
+func TestExportRunThroughPreview(t *testing.T) {
+	home := testutil.IsolatedHome(t)
+	ctx := context.Background()
+	out := filepath.Join(home, "export-out.json")
+	if err := export.SaveTemplate(ctx, export.ExportTemplate{
+		Name:       "t1",
+		Format:     "json",
+		OutputPath: out,
+	}); err != nil {
+		t.Fatalf("SaveTemplate: %v", err)
+	}
+
+	screen, err := newListScreen(ctx, ExportSource())
+	if err != nil {
+		t.Fatalf("newListScreen: %v", err)
+	}
+	if !strings.Contains(screen.Status(), "x run") {
+		t.Fatalf("status = %q, want the run hint", screen.Status())
+	}
+
+	next, _ := screen.Update(keyMsg("x"))
+	flow, ok := next.(*writeFlow)
+	if !ok {
+		t.Fatalf("x returned %T, want the preview flow", next)
+	}
+	view := flow.View(100, 24)
+	if !strings.Contains(view, "export-out") {
+		t.Fatalf("preview does not list the output file:\n%s", view)
+	}
+	if _, err := os.Stat(out); err == nil {
+		t.Fatal("preview wrote the export output")
+	}
+
+	next, _ = flow.Update(keyMsg("y"))
+	if !strings.Contains(next.Status(), "applied") {
+		t.Fatalf("status = %q, want applied", next.Status())
+	}
+	if _, err := os.Stat(out); err != nil {
+		t.Fatalf("output file missing after apply: %v", err)
+	}
+}
+
+func TestDshToggleEntryThroughPreview(t *testing.T) {
+	testutil.DshTestHome(t)
+	ctx := context.Background()
+	profile := "desktop"
+
+	snapshot, err := dsh.ReadConfigSnapshot(&profile)
+	if err != nil {
+		t.Fatalf("ReadConfigSnapshot: %v", err)
+	}
+	if len(snapshot.Entries) == 0 {
+		t.Fatal("fixture has no config entries")
+	}
+	// Toggle a schema-ENABLED entry: enabling a schema-disabled one is a
+	// documented no-op (the patch can only add disables, dsh_config_write).
+	idx := -1
+	for i, entry := range snapshot.Entries {
+		if !entry.Disabled {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		t.Fatal("fixture has no enabled config entry to toggle")
+	}
+	entryID := snapshot.Entries[idx].ID
+
+	screen, err := newListScreen(ctx, DshDesktopSource())
+	if err != nil {
+		t.Fatalf("newListScreen: %v", err)
+	}
+	if !strings.Contains(screen.Status(), "t toggle") {
+		t.Fatalf("status = %q, want the toggle hint", screen.Status())
+	}
+	// Rows follow the snapshot order: walk down to the enabled entry.
+	for i := 0; i < idx; i++ {
+		next, _ := screen.Update(keyMsg("down"))
+		screen = next
+	}
+
+	next, _ := screen.Update(keyMsg("t"))
+	flow, ok := next.(*writeFlow)
+	if !ok {
+		t.Fatalf("t returned %T, want the preview flow", next)
+	}
+	next, _ = flow.Update(keyMsg("y"))
+	if !strings.Contains(next.Status(), "applied") {
+		t.Fatalf("status = %q, want applied", next.Status())
+	}
+
+	snapshot, err = dsh.ReadConfigSnapshot(&profile)
+	if err != nil {
+		t.Fatalf("ReadConfigSnapshot after toggle: %v", err)
+	}
+	for _, entry := range snapshot.Entries {
+		if entry.ID != entryID {
+			continue
+		}
+		if !entry.Disabled {
+			t.Fatalf("toggle did not disable %s", entryID)
+		}
+		return
+	}
+	t.Fatalf("entry %s missing after toggle", entryID)
+}
+
+// --- view actions (masked fetch-and-display) --------------------------------
+
+type viewFakeSource struct {
+	fakeSource
+}
+
+func (s *viewFakeSource) ViewActions() []ViewAction {
+	return []ViewAction{{
+		Key: "f", Label: "tokens",
+		Run: func(context.Context, ListRow) (string, []byte, []byte, error) {
+			return "Tokens · Fake",
+				[]byte(`[{"key":"****abcd"}]`),
+				[]byte(`[{"key":"sk-real-token-5678"}]`),
+				nil
+		},
+	}}
+}
+
+func TestViewActionShowsMaskedTokensThenReveal(t *testing.T) {
+	source := &viewFakeSource{}
+	source.rows = []ListRow{{ID: "ch1", Label: "Alpha"}}
+	screen, err := newListScreen(context.Background(), source)
+	if err != nil {
+		t.Fatalf("newListScreen: %v", err)
+	}
+	if !strings.Contains(screen.Status(), "f tokens") {
+		t.Fatalf("status = %q, want the tokens hint", screen.Status())
+	}
+
+	next, _ := screen.Update(keyMsg("f"))
+	view, ok := next.(*viewScreen)
+	if !ok {
+		t.Fatalf("f returned %T, want the view screen", next)
+	}
+	rendered := view.View(100, 24)
+	if strings.Contains(rendered, "sk-real-token-5678") {
+		t.Fatalf("view leaked the token:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "****abcd") {
+		t.Fatalf("view missing the masked key:\n%s", rendered)
+	}
+
+	next, _ = view.Update(keyMsg("r"))
+	if rendered = next.View(100, 24); !strings.Contains(rendered, "sk-real-token-5678") {
+		t.Fatalf("reveal did not show the token:\n%s", rendered)
+	}
+
+	next, _ = view.Update(keyMsg("esc"))
+	if _, ok := next.(*listScreen); !ok {
+		t.Fatalf("esc returned %T, want the list screen", next)
 	}
 }

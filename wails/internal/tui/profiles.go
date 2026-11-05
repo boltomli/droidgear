@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"droidgear-wails/internal/service/codex"
 	"droidgear-wails/internal/service/copilot"
@@ -24,6 +26,33 @@ type profileSource struct {
 	// source read-only.
 	apply  func(id string) error
 	delete func(id string) error
+	// createFrom implements the "save a new profile from a JSON document"
+	// input action ('n'), the TUI twin of `… profiles save --file`.
+	createFrom func(raw []byte) error
+}
+
+// InputActions exposes profile creation from a JSON file.
+func (p *profileSource) InputActions() []InputAction {
+	if p.createFrom == nil {
+		return nil
+	}
+	create := p.createFrom
+	return []InputAction{{
+		Key: "n", Label: "new from file",
+		Hint: "path to a profile JSON document (same shape as `dg … profiles save --file`)",
+		Submit: func(_ context.Context, row ListRow, value string) writeAction {
+			return writeAction{
+				title: "create profile from " + value,
+				run: func() error {
+					raw, err := os.ReadFile(filepath.Clean(value)) // #nosec G304 -- user-supplied profile file
+					if err != nil {
+						return fmt.Errorf("read profile file: %w", err)
+					}
+					return create(raw)
+				},
+			}
+		},
+	}}
 }
 
 // Actions exposes apply/delete through the preview flow.
@@ -91,6 +120,13 @@ func CodexSource() ListSource {
 		active: codex.GetActiveProfileID,
 		apply:  codex.ApplyProfile,
 		delete: codex.DeleteProfile,
+		createFrom: func(raw []byte) error {
+			var profile codex.CodexProfile
+			if err := json.Unmarshal(raw, &profile); err != nil {
+				return err
+			}
+			return codex.SaveProfile(profile)
+		},
 		list: func() ([]ListRow, error) {
 			profiles, err := codex.ListProfiles()
 			if err != nil {
@@ -115,6 +151,13 @@ func HermesSource() ListSource {
 		active: hermes.GetActiveProfileID,
 		apply:  hermes.ApplyProfile,
 		delete: hermes.DeleteProfile,
+		createFrom: func(raw []byte) error {
+			var profile hermes.HermesProfile
+			if err := json.Unmarshal(raw, &profile); err != nil {
+				return err
+			}
+			return hermes.SaveProfile(profile)
+		},
 		list: func() ([]ListRow, error) {
 			profiles, err := hermes.ListProfiles()
 			if err != nil {
@@ -139,6 +182,13 @@ func PiSource() ListSource {
 		active: pi.GetActiveProfileID,
 		apply:  pi.ApplyProfile,
 		delete: pi.DeleteProfile,
+		createFrom: func(raw []byte) error {
+			var profile pi.PiProfile
+			if err := json.Unmarshal(raw, &profile); err != nil {
+				return err
+			}
+			return pi.SaveProfile(profile)
+		},
 		list: func() ([]ListRow, error) {
 			profiles, err := pi.ListProfiles()
 			if err != nil {
@@ -163,6 +213,13 @@ func OmpSource() ListSource {
 		active: omp.GetActiveProfileID,
 		apply:  omp.ApplyProfile,
 		delete: omp.DeleteProfile,
+		createFrom: func(raw []byte) error {
+			var profile omp.OmpProfile
+			if err := json.Unmarshal(raw, &profile); err != nil {
+				return err
+			}
+			return omp.SaveProfile(profile)
+		},
 		list: func() ([]ListRow, error) {
 			profiles, err := omp.ListProfiles()
 			if err != nil {
@@ -187,6 +244,13 @@ func CopilotSource() ListSource {
 		active: copilot.GetActiveCopilotProfileId,
 		apply:  copilot.ApplyCopilotProfile,
 		delete: copilot.DeleteCopilotProfile,
+		createFrom: func(raw []byte) error {
+			var profile copilot.CopilotProfile
+			if err := json.Unmarshal(raw, &profile); err != nil {
+				return err
+			}
+			return copilot.SaveCopilotProfile(profile)
+		},
 		list: func() ([]ListRow, error) {
 			profiles, err := copilot.ListCopilotProfiles()
 			if err != nil {

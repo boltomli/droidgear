@@ -36,6 +36,11 @@ var (
 	registryModels []RegistryModel
 )
 
+// RegistryModels returns every model in the vendored registry (the
+// Preferences → Models pane and the TUI Registry screen browse the same
+// static data; connectivity tests target BYOK custom models).
+func RegistryModels() []RegistryModel { return registry() }
+
 func registry() []RegistryModel {
 	registryOnce.Do(func() {
 		if err := json.Unmarshal(registryJSON, &registryModels); err != nil {

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 
 	"droidgear-wails/internal/service/droid"
 	"droidgear-wails/internal/service/legacy"
@@ -28,10 +30,14 @@ func droidSections() []screenSection {
 	}
 	return []screenSection{
 		{key: "settings", title: "Settings", open: func(ctx context.Context) (Screen, error) {
-			return newKVScreen("Droid Settings", droidSettingsRows()), nil
+			return newKVScreen("Droid Settings", droidSettingsRows()).
+				withRebuild(droidSettingsRows).
+				withActions(droidSettingsActions()...), nil
 		}},
 		{key: "missions", title: "Missions", open: func(ctx context.Context) (Screen, error) {
-			return newKVScreen("Droid Missions", droidMissionRows()), nil
+			return newKVScreen("Droid Missions", droidMissionRows()).
+				withRebuild(droidMissionRows).
+				withActions(droidMissionActions()...), nil
 		}},
 		{key: "trusted", title: "Trusted", open: list(DroidTrustedSource)},
 		{key: "auth", title: "Auth", open: list(DroidAuthSource)},
@@ -44,7 +50,7 @@ func droidSections() []screenSection {
 				withRebuild(droidLegacyRows).
 				withActions(kvAction{
 					key: "d", label: "delete legacy config",
-					run: func() error { return legacy.Delete() },
+					run: func(kvRow) error { return legacy.Delete() },
 				}), nil
 		}},
 	}
@@ -58,6 +64,21 @@ func droidSections() []screenSection {
 // compaction, every value read through internal/service/droid.
 func droidSettingsRows() []kvRow {
 	rows := []kvRow{}
+
+	// Files section: every managed settings file (use/delete act on the
+	// selected "file:<name>" row).
+	if files, err := droid.ListSettingsFiles(); err == nil {
+		for _, file := range files {
+			value := file.Path
+			if file.IsActive {
+				value += "  (active)"
+			}
+			if !file.Exists {
+				value += "  (missing)"
+			}
+			rows = append(rows, kvRow{section: "Files", key: "file:" + file.Name, value: value})
+		}
+	}
 
 	files, err := droid.ListSettingsFiles()
 	active := "(unknown)"
@@ -121,6 +142,126 @@ func droidSettingsRows() []kvRow {
 	return rows
 }
 
+// droidSettingsActions is the write surface of the Settings section: file
+// use/delete (row-scoped), boolean toggles, enum cycles and the two
+// numeric/per-model prompts — all through the preview flow.
+func droidSettingsActions() []kvAction {
+	toggleBool := func(label string, key string, get func() (bool, error), save func(bool) error) kvAction {
+		return kvAction{key: key, label: label, run: func(kvRow) error {
+			current, err := get()
+			if err != nil {
+				return err
+			}
+			return save(!current)
+		}}
+	}
+	cycleEnum := func(label string, key string, values []string, get func() (string, error), save func(string) error) kvAction {
+		return kvAction{key: key, label: label, run: func(kvRow) error {
+			current, err := get()
+			if err != nil {
+				return err
+			}
+			return save(nextChoice(values, current))
+		}}
+	}
+
+	return []kvAction{
+		{key: "u", label: "use file", onPrefix: "file:", run: func(row kvRow) error {
+			name := strings.TrimPrefix(row.key, "file:")
+			_, err := droid.SetActiveSettingsFile(&name)
+			return err
+		}},
+		{key: "D", label: "delete file", onPrefix: "file:", run: func(row kvRow) error {
+			return droid.DeleteSettingsFile(strings.TrimPrefix(row.key, "file:"))
+		}},
+		toggleBool("toggle cloud session sync", "c",
+			droid.GetCloudSessionSync, droid.SaveCloudSessionSync),
+		toggleBool("toggle co-authored-by", "a",
+			droid.GetIncludeCoAuthoredByDroid, droid.SaveIncludeCoAuthoredByDroid),
+		toggleBool("toggle show thinking", "s",
+			droid.GetShowThinkingInMainView, droid.SaveShowThinkingInMainView),
+		cycleEnum("cycle diff mode", "d", []string{"github", "unified"},
+			droid.GetDiffMode, droid.SaveDiffMode),
+		cycleEnum("cycle todo display", "o", []string{"pinned", "inline"},
+			droid.GetTodoDisplayMode, droid.SaveTodoDisplayMode),
+		{key: "r", label: "cycle reasoning effort", run: func(kvRow) error {
+			current, err := droid.GetReasoningEffort()
+			if err != nil {
+				return err
+			}
+			value := ""
+			if current != nil {
+				value = *current
+			}
+			return droid.SaveReasoningEffort(nextChoice(
+				[]string{"", "off", "low", "medium", "high", "max"}, value))
+		}},
+		cycleEnum("cycle compaction mode", "m", []string{"current-model", "factory-default"},
+			droid.GetCompactionModelMode, droid.SaveCompactionModelMode),
+		promptAction("l", "set compaction limit", kvPrompt{
+			title: "compaction token limit",
+			hint:  "positive integer",
+			initial: func(kvRow) string {
+				value, err := droid.GetCompactionTokenLimit()
+				if err != nil {
+					return ""
+				}
+				return fmt.Sprintf("%d", value)
+			},
+			submit: func(_ kvRow, entered string) writeAction {
+				return writeAction{title: "set compaction token limit", run: func() error {
+					parsed, err := strconv.ParseInt(strings.TrimSpace(entered), 10, 32)
+					if err != nil || parsed <= 0 {
+						return fmt.Errorf("expected a positive integer, got %q", entered)
+					}
+					return droid.SaveCompactionTokenLimit(int32(parsed))
+				}}
+			},
+		}),
+		promptAction("p", "per-model compaction limit", kvPrompt{
+			title: "per-model compaction limit",
+			hint:  "modelId [limit] - leave the limit empty to remove that model's override",
+			submit: func(_ kvRow, entered string) writeAction {
+				return writeAction{title: "set per-model compaction limit", run: func() error {
+					model, limit := splitFirstSpace(entered)
+					if model == "" {
+						return fmt.Errorf("expected: modelId [limit]")
+					}
+					current, err := droid.GetCompactionTokenLimitPerModel()
+					if err != nil {
+						return err
+					}
+					if current == nil {
+						current = map[string]int32{}
+					}
+					if limit == "" {
+						delete(current, model)
+						return droid.SaveCompactionTokenLimitPerModel(current)
+					}
+					parsed, err := strconv.ParseInt(strings.TrimSpace(limit), 10, 32)
+					if err != nil || parsed <= 0 {
+						return fmt.Errorf("expected a positive integer for the limit, got %q", limit)
+					}
+					current[model] = int32(parsed)
+					return droid.SaveCompactionTokenLimitPerModel(current)
+				}}
+			},
+		}),
+	}
+}
+
+// nextChoice cycles through values (the current value not being listed
+// starts the cycle from the first entry, so an unset field joins its own
+// cycle as "").
+func nextChoice(values []string, current string) string {
+	for i, value := range values {
+		if value == current {
+			return values[(i+1)%len(values)]
+		}
+	}
+	return values[0]
+}
+
 // droidMissionRows mirrors MissionsPage (mission worker model settings).
 func droidMissionRows() []kvRow {
 	settings, err := droid.GetMissionModelSettings()
@@ -151,6 +292,62 @@ func droidLegacyRows() []kvRow {
 	}
 	return []kvRow{
 		{section: "Legacy", key: "legacy config", value: value},
+	}
+}
+
+// droidMissionActions edits the four mission model fields: free-text prompts
+// for the model ids, enum cycles for the efforts (GUI option set: unset /
+// none / low / medium / high).
+func droidMissionActions() []kvAction {
+	pickModel := func(label string, key string, get func(droid.MissionModelSettings) *string, set func(*droid.MissionModelSettings, *string)) kvAction {
+		return promptAction(key, label, kvPrompt{
+			title:      label,
+			hint:       "model id - empty clears the field (GUI: not set)",
+			allowEmpty: true,
+			initial: func(kvRow) string {
+				settings, err := droid.GetMissionModelSettings()
+				if err != nil {
+					return ""
+				}
+				return pointerValue(get(settings), "")
+			},
+			submit: func(_ kvRow, entered string) writeAction {
+				return writeAction{title: label, run: func() error {
+					settings, err := droid.GetMissionModelSettings()
+					if err != nil {
+						return err
+					}
+					set(&settings, strPtrOrNil(entered))
+					return droid.SaveMissionModelSettings(settings)
+				}}
+			},
+		})
+	}
+	cycleEffort := func(label string, key string, get func(droid.MissionModelSettings) *string, set func(*droid.MissionModelSettings, *string)) kvAction {
+		return kvAction{key: key, label: label, run: func(kvRow) error {
+			settings, err := droid.GetMissionModelSettings()
+			if err != nil {
+				return err
+			}
+			current := pointerValue(get(settings), "")
+			set(&settings, strPtrOrNil(nextChoice([]string{"", "none", "low", "medium", "high"}, current)))
+			return droid.SaveMissionModelSettings(settings)
+		}}
+	}
+
+	return []kvAction{
+		pickModel("worker model", "w",
+			func(s droid.MissionModelSettings) *string { return s.WorkerModel },
+			func(s *droid.MissionModelSettings, v *string) { s.WorkerModel = v }),
+		pickModel("validation model", "v",
+			func(s droid.MissionModelSettings) *string { return s.ValidationWorkerModel },
+			func(s *droid.MissionModelSettings, v *string) { s.ValidationWorkerModel = v }),
+		cycleEffort("cycle worker effort", "e",
+			func(s droid.MissionModelSettings) *string { return s.WorkerReasoningEffort },
+			func(s *droid.MissionModelSettings, v *string) { s.WorkerReasoningEffort = v }),
+		cycleEffort("cycle validation effort", "r",
+			func(s droid.MissionModelSettings) *string { return s.ValidationWorkerReasoningEffort },
+			func(s *droid.MissionModelSettings, v *string) { s.ValidationWorkerReasoningEffort = v }),
 	}
 }
 
@@ -274,6 +471,40 @@ func (droidTrustedSource) Actions() []ListAction {
 	}}
 }
 
+// InputActions wires 's' = snapshot the live Factory auth under a new name
+// and 'n' = rename the selected profile's label.
+func (droidAuthSource) InputActions() []InputAction {
+	return []InputAction{
+		{
+			Key: "s", Label: "save current as",
+			Hint: "name [label] - snapshots the live ~/.factory auth files",
+			Submit: func(_ context.Context, row ListRow, value string) writeAction {
+				return writeAction{
+					title: "save current Factory auth as " + value,
+					run: func() error {
+						name, label := splitFirstSpace(value)
+						if label == "" {
+							label = name
+						}
+						return droid.SaveCurrentAuthProfile(name, label)
+					},
+				}
+			},
+		},
+		{
+			Key: "n", Label: "rename",
+			Hint:    "new display label",
+			Initial: func(row ListRow) string { return row.Label },
+			Submit: func(_ context.Context, row ListRow, value string) writeAction {
+				return writeAction{
+					title: "rename auth " + row.ID,
+					run:   func() error { return droid.RenameAuthProfile(row.ID, value) },
+				}
+			},
+		},
+	}
+}
+
 func (droidAuthSource) Summary(rows []ListRow) string {
 	active := "none"
 	for _, row := range rows {
@@ -329,6 +560,25 @@ func (specsSource) Actions() []ListAction {
 		Key: "d", Label: "delete",
 		Run: func(_ context.Context, row ListRow) error {
 			return specs.Delete(row.ID)
+		},
+	}}
+}
+
+// InputActions wires 'n' = rename the selected spec (the .md suffix is
+// appended by the service, like the GUI).
+func (specsSource) InputActions() []InputAction {
+	return []InputAction{{
+		Key: "n", Label: "rename",
+		Hint:    "new file name (.md optional)",
+		Initial: func(row ListRow) string { return strings.TrimSuffix(row.Label, ".md") },
+		Submit: func(_ context.Context, row ListRow, value string) writeAction {
+			return writeAction{
+				title: "rename spec " + row.Label,
+				run: func() error {
+					_, err := specs.Rename(row.ID, value)
+					return err
+				},
+			}
 		},
 	}}
 }

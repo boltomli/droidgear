@@ -231,6 +231,7 @@ dg dsh providers list|save --file <json>|delete [--profile] + status  # T1 ✅
 dg mcp list|toggle <id>|apply                 # T1/T2 B3
 dg sessions projects|list [project]|show <path>          # T2 ✅（只读）
 dg spec list|cat <name>|delete <name>         # T2 ✅（delete 支持 --dry-run）
+dg connectivity test <modelId>|all            # T2 ✅（--mode ping|inference，网络只读）
 ```
 
 ✅ = 本仓库已实现并有测试（`cmd/dg/dg_test.go` + `service/*_test.go`）；其余按 §3.4 的批次推进。

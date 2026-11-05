@@ -394,3 +394,39 @@ func TestSpecCommandsListCatDelete(t *testing.T) {
 		t.Fatalf("cat after delete exit = %d stderr = %s", code, errOut)
 	}
 }
+
+func TestConnectivityCommandsUsageAndNotFound(t *testing.T) {
+	sandbox(t)
+
+	// Missing subcommand → usage error.
+	if code, _, _ := runCLI(t, "--json", "connectivity"); code != exitUsage {
+		t.Fatalf("no subcommand exit = %d, want %d", code, exitUsage)
+	}
+	// Unknown model ids fail before any network I/O (connectivity_test in
+	// service/connectivity owns the probe logic with httptest servers).
+	code, out, errOut := runCLI(t, "--json", "connectivity", "test", "no-such-model")
+	if code != exitRuntime {
+		t.Fatalf("missing model exit = %d, want %d (%s)", code, exitRuntime, errOut)
+	}
+	if !contains(errOut, "not found") {
+		t.Fatalf("stderr = %s", errOut)
+	}
+	_ = out
+
+	// Unknown modes are rejected the way the Tauri layer rejects them.
+	code, _, errOut = runCLI(t, "--json", "connectivity", "test", "some-model", "--mode", "warp")
+	if code == 0 || !contains(errOut, "unknown variant") {
+		t.Fatalf("bad mode exit = %d stderr = %s", code, errOut)
+	}
+
+	// all over an empty BYOK list is a clean empty result.
+	code, out, errOut = runCLI(t, "--json", "connectivity", "all")
+	if code != 0 {
+		t.Fatalf("connectivity all exit = %d, stderr = %s", code, errOut)
+	}
+	_ = out
+}
+
+func contains(haystack string, needle string) bool {
+	return strings.Contains(haystack, needle)
+}

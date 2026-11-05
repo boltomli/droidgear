@@ -1,4 +1,4 @@
-package app
+package connectivity
 
 import (
 	"encoding/json"

@@ -14,12 +14,33 @@ type kvRow struct {
 	value   string
 }
 
-// kvAction is a previewable write bound to one rune key of a kv screen
-// (the Legacy section's delete). kv screens without actions stay read-only.
+// kvAction is a previewable write bound to one rune key of a kv screen.
+// Actions are row-aware: onPrefix restricts them to selected rows whose key
+// starts with it ("" = any row), and run receives that row — that is how the
+// Droid settings-file rows get use/delete while the value rows get cycles
+// and prompts. kv screens without actions stay read-only.
 type kvAction struct {
-	key   string
-	label string
-	run   func() error
+	key      string
+	label    string
+	onPrefix string
+	// run executes the write directly; nil when prompt is set.
+	run func(row kvRow) error
+	// prompt asks for a value first (input-class writes).
+	prompt *kvPrompt
+}
+
+// promptAction is the compact constructor for an input-class kvAction.
+func promptAction(key string, label string, prompt kvPrompt) kvAction {
+	return kvAction{key: key, label: label, prompt: &prompt}
+}
+
+// kvPrompt is the input-class variant of a kvAction (see promptSpec).
+type kvPrompt struct {
+	title      string
+	hint       string
+	allowEmpty bool
+	initial    func(row kvRow) string
+	submit     func(row kvRow, value string) writeAction
 }
 
 // kvScreen is the shared read-only key/value pane (Preferences, Droid
@@ -60,7 +81,12 @@ func (s *kvScreen) withStatus(status string) *kvScreen {
 func (s *kvScreen) withActions(actions ...kvAction) *kvScreen {
 	s.actions = actions
 	parts := make([]string, 0, len(actions))
+	seen := map[string]bool{}
 	for _, action := range actions {
+		if seen[action.label] {
+			continue // one hint per label (per-row actions repeat it)
+		}
+		seen[action.label] = true
 		parts = append(parts, action.key+" "+action.label)
 	}
 	hint := strings.Join(parts, " · ")
@@ -97,6 +123,14 @@ func (s *kvScreen) Title() string { return s.title }
 
 func (s *kvScreen) Status() string { return s.status }
 
+// selectedRow returns the highlighted row ("" when the pane is empty).
+func (s *kvScreen) selectedRow() (kvRow, bool) {
+	if s.selected < 0 || s.selected >= len(s.rows) {
+		return kvRow{}, false
+	}
+	return s.rows[s.selected], true
+}
+
 func (s *kvScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 	key, ok := msg.(tea.KeyMsg)
 	if !ok {
@@ -105,12 +139,39 @@ func (s *kvScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 	name := key.String()
 	if len(name) == 1 {
 		for _, action := range s.actions {
-			if action.key == name {
-				return newWriteFlow(s, writeAction{
-					title: action.label,
-					run:   action.run,
+			if action.key != name {
+				continue
+			}
+			row, has := s.selectedRow()
+			if action.onPrefix != "" && (!has || !strings.HasPrefix(row.key, action.onPrefix)) {
+				continue
+			}
+			title := action.label
+			if action.onPrefix != "" {
+				title += " · " + strings.TrimPrefix(row.key, action.onPrefix)
+			}
+			if action.prompt != nil {
+				initial := ""
+				if action.prompt.initial != nil {
+					initial = action.prompt.initial(row)
+				}
+				return newPromptScreen(s, promptSpec{
+					title:      action.prompt.title,
+					hint:       action.prompt.hint,
+					allowEmpty: action.prompt.allowEmpty,
+					initial:    initial,
+					submit: func(value string) writeAction {
+						return action.prompt.submit(row, value)
+					},
 				}, s.Refresh), nil
 			}
+			target := row
+			return newWriteFlow(s, writeAction{
+				title: title,
+				run: func() error {
+					return action.run(target)
+				},
+			}, s.Refresh), nil
 		}
 	}
 	switch name {

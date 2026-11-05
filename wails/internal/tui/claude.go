@@ -49,8 +49,9 @@ func (claudeSource) Detail(_ context.Context, name string) ([]byte, error) {
 	return json.MarshalIndent(contents, "", "  ")
 }
 
-// Actions wires 'a' = make the selected settings file active and 'd' = delete
-// it (the live Global file is never deletable, like in the GUI).
+// Actions wires 'a' = make the selected settings file active, 'd' = delete it
+// (the live Global file is never deletable, like in the GUI) and 'm' = merge
+// it into the global settings file.
 func (claudeSource) Actions() []ListAction {
 	return []ListAction{
 		{
@@ -68,6 +69,51 @@ func (claudeSource) Actions() []ListAction {
 					return fmt.Errorf("cannot delete the global settings file")
 				}
 				return claude.DeleteSettingsFile(row.ID)
+			},
+		},
+		{
+			Key: "m", Label: "merge to global",
+			Run: func(_ context.Context, row ListRow) error {
+				if strings.EqualFold(row.ID, "Global") {
+					return fmt.Errorf("Global is already the global settings file")
+				}
+				return claude.MergeSettingsToGlobal(row.ID)
+			},
+		},
+	}
+}
+
+// InputActions wire the name-taking writes: create ('n'), create seeded from
+// the active file ('c') and duplicate the selected file ('u').
+func (claudeSource) InputActions() []InputAction {
+	newCreate := func(key string, copyActive bool) InputAction {
+		label := "create"
+		if copyActive {
+			label = "create from active"
+		}
+		return InputAction{
+			Key: key, Label: label,
+			Hint: "new settings file name",
+			Submit: func(_ context.Context, row ListRow, value string) writeAction {
+				return writeAction{
+					title: "create claude settings " + value,
+					run:   func() error { _, err := claude.CreateSettingsFile(value, copyActive); return err },
+				}
+			},
+		}
+	}
+	return []InputAction{
+		newCreate("n", false),
+		newCreate("c", true),
+		{
+			Key: "u", Label: "duplicate",
+			Hint:    "new name for the copy",
+			Initial: func(row ListRow) string { return row.ID + "-copy" },
+			Submit: func(_ context.Context, row ListRow, value string) writeAction {
+				return writeAction{
+					title: "duplicate " + row.ID,
+					run:   func() error { _, err := claude.DuplicateSettingsFile(row.ID, value); return err },
+				}
 			},
 		},
 	}

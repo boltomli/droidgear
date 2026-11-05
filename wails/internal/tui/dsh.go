@@ -60,6 +60,61 @@ func (s *dshSource) Detail(ctx context.Context, id string) ([]byte, error) {
 	return s.detail(ctx, id, false)
 }
 
+// Actions wires 't' = flip the entry's disabled flag through the preview
+// flow; expectedHash comes from the snapshot the row was listed from, so an
+// external edit between preview and confirm fails as a service conflict.
+func (s *dshSource) Actions() []ListAction {
+	return []ListAction{
+		{
+			Key: "t", Label: "toggle",
+			Run: func(_ context.Context, row ListRow) error {
+				snapshot, err := dsh.ReadConfigSnapshot(&s.profile)
+				if err != nil {
+					return err
+				}
+				for _, entry := range snapshot.Entries {
+					if entry.ID != row.ID {
+						continue
+					}
+					hash := snapshot.PatchHash
+					_, err := dsh.SetConfigEntryDisabled(&s.profile, row.ID, !entry.Disabled, &hash)
+					return err
+				}
+				return fmt.Errorf("Dsh entry %q not found in profile %s", row.ID, s.profile)
+			},
+		},
+		s.restoreAction(),
+	}
+}
+
+// ScreenActions wires 'e' = the field editor (per-field writes with the
+// entry's expectedHash, the GUI settings-card equivalent).
+func (s *dshSource) ScreenActions() []ScreenAction {
+	return []ScreenAction{{
+		Key: "e", Label: "edit config",
+		Open: func(ctx context.Context, back Screen, row ListRow) (Screen, error) {
+			return newDshFieldsScreen(ctx, back, s.profile, row.ID)
+		},
+	}}
+}
+
+// Actions also carries 'R' = restore the entry's defaults (drops the
+// profile-layer config so the schema values show through again).
+func (s *dshSource) restoreAction() ListAction {
+	return ListAction{
+		Key: "R", Label: "restore defaults",
+		Run: func(_ context.Context, row ListRow) error {
+			snapshot, err := dsh.ReadConfigSnapshot(&s.profile)
+			if err != nil {
+				return err
+			}
+			hash := snapshot.PatchHash
+			_, err = dsh.SaveConfigEntry(&s.profile, row.ID, nil, &hash)
+			return err
+		},
+	}
+}
+
 // DetailFor is the reveal-aware variant: Dsh secrets sit under generic
 // `value` keys (the field itself carries `secret: true`), so render-time
 // redaction cannot recognise them — the masking happens here instead and

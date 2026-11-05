@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/service/connectivity"
 	"droidgear-wails/internal/service/factory"
 )
 
@@ -72,7 +74,43 @@ func (factorySource) Summary(rows []ListRow) string {
 		}
 	}
 	return fmt.Sprintf(
-		"Models · %d custom · %d favorites · r toggle secrets",
+		"Models · %d custom · %d favorites · c test · i test inference · r secrets",
 		len(rows), favorites,
 	)
+}
+
+// ViewActions wire the connectivity tests (Preferences → Models): 'c' probes
+// the selected BYOK model in ping mode, 'i' runs a full inference round trip.
+// The result is a diagnostic document — masked by default like everything
+// else (the response text can quote credentials from the endpoint).
+func (factorySource) ViewActions() []ViewAction {
+	test := func(key string, label string, run func(string) (connectivity.ModelTestResult, error)) ViewAction {
+		return ViewAction{
+			Key: key, Label: label,
+			Run: func(_ context.Context, row ListRow) (string, []byte, []byte, error) {
+				result, err := run(row.ID)
+				if err != nil {
+					return "", nil, nil, err
+				}
+				full, err := json.MarshalIndent(result, "", "  ")
+				if err != nil {
+					return "", nil, nil, err
+				}
+				masked, err := json.MarshalIndent(result, "", "  ")
+				if err != nil {
+					return "", nil, nil, err
+				}
+				return "Connection test · " + row.Label,
+					[]byte(core.RedactSensitiveText(string(masked))), full, nil
+			},
+		}
+	}
+	return []ViewAction{
+		test("c", "test ping", func(id string) (connectivity.ModelTestResult, error) {
+			return connectivity.TestModelConnection(id)
+		}),
+		test("i", "test inference", func(id string) (connectivity.ModelTestResult, error) {
+			return connectivity.TestModelConnectionWithMode(id, "inference", nil)
+		}),
+	}
 }

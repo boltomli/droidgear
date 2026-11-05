@@ -11,8 +11,8 @@ import (
 // exportSource adapts internal/service/export — the export-template half of
 // the Channels view (`export-templates` sub-view in the GUI).
 //
-// Listing and inspecting templates is read-only; running one writes a file
-// and joins the write phase (tui-parity P2, ChangeSet preview).
+// Listing and inspecting templates is read-only; 'x' runs one through the
+// write preview (tui-parity P2): the output file lands in the ChangeSet.
 type exportSource struct{}
 
 // ExportSource exposes the export templates to the generic screen.
@@ -46,9 +46,20 @@ func (exportSource) Detail(ctx context.Context, name string) ([]byte, error) {
 	return nil, fmt.Errorf("export template %q not found", name)
 }
 
+// Actions wires 'x' = run the template (writes its output file).
+func (exportSource) Actions() []ListAction {
+	return []ListAction{{
+		Key: "x", Label: "run",
+		Run: func(ctx context.Context, row ListRow) error {
+			_, err := export.Run(ctx, row.ID, export.RunOptions{})
+			return err
+		},
+	}}
+}
+
 func (exportSource) Summary(rows []ListRow) string {
 	return fmt.Sprintf(
-		"Export · %d templates · running one is a write (preview phase)",
+		"Export · %d templates · x run (preview first) · r toggle secrets",
 		len(rows),
 	)
 }

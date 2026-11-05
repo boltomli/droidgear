@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"droidgear-wails/internal/core"
@@ -53,6 +54,60 @@ type ListAction struct {
 // sources without it stay read-only.
 type ActionSource interface {
 	Actions() []ListAction
+}
+
+// ViewAction is a fetch-and-display action bound to one rune key (channel
+// tokens …): it produces two documents so the screen can reveal secrets
+// without hitting the network again. Run owns the masking — it knows the
+// shape, exactly like `dg channels tokens` does.
+type ViewAction struct {
+	// Key is a single lowercase rune ("f").
+	Key string
+	// Label is the status-hint word ("tokens").
+	Label string
+	Run   func(ctx context.Context, row ListRow) (title string, masked []byte, full []byte, err error)
+}
+
+// ViewActionSource is the optional ListSource extension carrying view actions.
+type ViewActionSource interface {
+	ViewActions() []ViewAction
+}
+
+// InputAction is an input-class write bound to one rune key: the screen
+// opens a promptScreen first, and the entered value becomes a writeFlow
+// action (save an auth profile under a name, point at a JSON file, …).
+type InputAction struct {
+	// Key is a single lowercase rune (not "j"/"k"/"r").
+	Key string
+	// Label is the status-hint word ("rename", "new from file").
+	Label string
+	// Initial pre-fills the prompt (nil = empty).
+	Initial func(row ListRow) string
+	// Hint guides the input (format, valid values).
+	Hint string
+	// Submit builds the write action for the entered value.
+	Submit func(ctx context.Context, row ListRow, value string) writeAction
+}
+
+// ScreenAction opens another screen instead of running a write (the Dsh
+// field editor behind 'e'). The origin screen is passed in so the opened
+// screen can hand control back to it.
+type ScreenAction struct {
+	// Key is a single lowercase rune (not "j"/"k"/"r").
+	Key string
+	// Label is the status-hint word ("edit config").
+	Label string
+	Open  func(ctx context.Context, back Screen, row ListRow) (Screen, error)
+}
+
+// ScreenActionSource is the optional ListSource extension carrying screen actions.
+type ScreenActionSource interface {
+	ScreenActions() []ScreenAction
+}
+
+// InputActionSource is the optional ListSource extension carrying input actions.
+type InputActionSource interface {
+	InputActions() []InputAction
 }
 
 // listScreen is the shared list/detail pane.
@@ -109,9 +164,24 @@ func (s *listScreen) actions() []ListAction {
 }
 
 func (s *listScreen) actionHints() string {
-	parts := make([]string, 0, 2)
+	parts := make([]string, 0, 4)
 	for _, action := range s.actions() {
 		parts = append(parts, action.Key+" "+action.Label)
+	}
+	if src, ok := s.source.(ViewActionSource); ok {
+		for _, action := range src.ViewActions() {
+			parts = append(parts, action.Key+" "+action.Label)
+		}
+	}
+	if src, ok := s.source.(InputActionSource); ok {
+		for _, action := range src.InputActions() {
+			parts = append(parts, action.Key+" "+action.Label)
+		}
+	}
+	if src, ok := s.source.(ScreenActionSource); ok {
+		for _, action := range src.ScreenActions() {
+			parts = append(parts, action.Key+" "+action.Label)
+		}
 	}
 	return strings.Join(parts, " · ")
 }
@@ -157,12 +227,19 @@ func (s *listScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 
 	// Write actions open the preview flow (P2); only meaningful with a row.
 	name := key.String()
-	if len(name) == 1 {
+	// Row-scoped actions need a selection; row-free ones (create the first
+	// profile, save the Baizhi preset) still work on an empty list with a
+	// zero row — the service reports a clean error for anything else.
+	hasRow := s.selected >= 0 && s.selected < len(s.rows)
+	if len(name) == 1 && (hasRow || len(s.rows) == 0) {
+		row := ListRow{}
+		if hasRow {
+			row = s.rows[s.selected]
+		}
 		for _, action := range s.actions() {
-			if action.Key != name || s.selected < 0 || s.selected >= len(s.rows) {
+			if action.Key != name {
 				continue
 			}
-			row := s.rows[s.selected]
 			flow := newWriteFlow(s, writeAction{
 				title: action.Label + " " + row.Label,
 				run: func() error {
@@ -170,6 +247,53 @@ func (s *listScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 				},
 			}, s.reload)
 			return flow, nil
+		}
+		if src, ok := s.source.(ViewActionSource); ok {
+			for _, action := range src.ViewActions() {
+				if action.Key != name {
+					continue
+				}
+				title, masked, full, err := action.Run(s.ctx, row)
+				if err != nil {
+					s.err = err
+					s.status = fmt.Sprintf("%s failed: %v", action.Label, err)
+					return s, nil
+				}
+				return newViewScreen(s, title, masked, full), nil
+			}
+		}
+		if src, ok := s.source.(InputActionSource); ok {
+			for _, action := range src.InputActions() {
+				if action.Key != name {
+					continue
+				}
+				initial := ""
+				if action.Initial != nil {
+					initial = action.Initial(row)
+				}
+				return newPromptScreen(s, promptSpec{
+					title:   action.Label + " · " + row.Label,
+					hint:    action.Hint,
+					initial: initial,
+					submit: func(value string) writeAction {
+						return action.Submit(s.ctx, row, value)
+					},
+				}, s.reload), nil
+			}
+		}
+		if src, ok := s.source.(ScreenActionSource); ok {
+			for _, action := range src.ScreenActions() {
+				if action.Key != name {
+					continue
+				}
+				screen, err := action.Open(s.ctx, s, row)
+				if err != nil {
+					s.err = err
+					s.status = fmt.Sprintf("%s failed: %v", action.Label, err)
+					return s, nil
+				}
+				return screen, nil
+			}
 		}
 	}
 
