@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.3.9.5
+
+**Bug Fixes / 问题修复**
+
+- The built exe version now matches its release tag: `package.json` is bumped and synced before the `wails-v*` tag is created, the single-binary rebuild counter moved into a 4th version part (`x.y.z.w`, e.g. `1.3.9.5` instead of `wails-v1.3.9-4`), and `sync-version.mjs` writes correct 4-part Windows metadata (NSIS `VIProductVersion`, MSIX `Version`) instead of appending a fifth part / 构建出的 exe 版本号现在与 release tag 一致：打 `wails-v*` tag 前先更新并同步 `package.json` 版本，单文件重建计数移入第 4 段版本号（`x.y.z.w`，如 `1.3.9.5` 取代 `wails-v1.3.9-4`），`sync-version.mjs` 为 NSIS `VIProductVersion`、MSIX `Version` 写入合法的 4 段 Windows 元数据而不再拼出 5 段非法版本
+- Single-binary release notes are extracted again: the workflow strips the `wails-` tag prefix before matching CHANGELOG headings / 单文件发版的 release notes 恢复可用：工作流在匹配 CHANGELOG 标题前先去掉 `wails-` tag 前缀
+- DroidGear icon and branding are embedded in the Wails exe / DroidGear 图标与品牌资源嵌入 Wails exe
+- Vite/Vitest config no longer triggers `configLoader: 'native'` warnings (JSON import attributes, no `__dirname`) / Vite/Vitest 配置不再触发 `configLoader: 'native'` 警告（JSON import attributes、移除 `__dirname`）
+
 ## v1.3.9
 
 **New Features / 新功能**
