@@ -20,6 +20,7 @@ build/android/gen
 frontend/bindings
 *.syso
 
-# local `go build ./cmd/dg` output
-dg
-dg.exe
+# local `go build ./cmd/dg` output (anchored: a bare `dg` also matches the
+# cmd/dg/ directory and would silently swallow new files added there)
+/dg
+/dg.exe
