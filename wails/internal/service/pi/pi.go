@@ -34,75 +34,75 @@ type PiModelCost struct {
 	Output     float64                    `json:"output"`
 	CacheRead  float64                    `json:"cacheRead"`
 	CacheWrite float64                    `json:"cacheWrite"`
-	Tiers      *[]PiModelCostTier         `json:"tiers"`
+	Tiers      *[]PiModelCostTier         `json:"tiers,omitempty"`
 	Extra      map[string]json.RawMessage `json:"-"`
 }
 
 // PiCompatConfig mirrors pi::PiCompatConfig.
 type PiCompatConfig struct {
-	SupportsStore                               *bool                      `json:"supportsStore"`
-	SupportsDeveloperRole                       *bool                      `json:"supportsDeveloperRole"`
-	SupportsReasoningEffort                     *bool                      `json:"supportsReasoningEffort"`
-	ReasoningEffortMap                          map[string]any             `json:"reasoningEffortMap"`
-	SupportsUsageInStreaming                    *bool                      `json:"supportsUsageInStreaming"`
-	MaxTokensField                              *string                    `json:"maxTokensField"`
-	RequiresToolResultName                      *bool                      `json:"requiresToolResultName"`
-	RequiresAssistantAfterToolResult            *bool                      `json:"requiresAssistantAfterToolResult"`
-	RequiresThinkingAsText                      *bool                      `json:"requiresThinkingAsText"`
-	RequiresReasoningContentOnAssistantMessages *bool                      `json:"requiresReasoningContentOnAssistantMessages"`
-	ThinkingFormat                              *string                    `json:"thinkingFormat"`
-	CacheControlFormat                          *string                    `json:"cacheControlFormat"`
-	SupportsStrictMode                          *bool                      `json:"supportsStrictMode"`
-	SupportsLongCacheRetention                  *bool                      `json:"supportsLongCacheRetention"`
-	SupportsEagerToolInputStreaming             *bool                      `json:"supportsEagerToolInputStreaming"`
-	ForceAdaptiveThinking                       *bool                      `json:"forceAdaptiveThinking"`
-	OpenRouterRouting                           any                        `json:"openRouterRouting"`
-	VercelGatewayRouting                        any                        `json:"vercelGatewayRouting"`
+	SupportsStore                               *bool                      `json:"supportsStore,omitempty"`
+	SupportsDeveloperRole                       *bool                      `json:"supportsDeveloperRole,omitempty"`
+	SupportsReasoningEffort                     *bool                      `json:"supportsReasoningEffort,omitempty"`
+	ReasoningEffortMap                          map[string]any             `json:"reasoningEffortMap,omitempty"`
+	SupportsUsageInStreaming                    *bool                      `json:"supportsUsageInStreaming,omitempty"`
+	MaxTokensField                              *string                    `json:"maxTokensField,omitempty"`
+	RequiresToolResultName                      *bool                      `json:"requiresToolResultName,omitempty"`
+	RequiresAssistantAfterToolResult            *bool                      `json:"requiresAssistantAfterToolResult,omitempty"`
+	RequiresThinkingAsText                      *bool                      `json:"requiresThinkingAsText,omitempty"`
+	RequiresReasoningContentOnAssistantMessages *bool                      `json:"requiresReasoningContentOnAssistantMessages,omitempty"`
+	ThinkingFormat                              *string                    `json:"thinkingFormat,omitempty"`
+	CacheControlFormat                          *string                    `json:"cacheControlFormat,omitempty"`
+	SupportsStrictMode                          *bool                      `json:"supportsStrictMode,omitempty"`
+	SupportsLongCacheRetention                  *bool                      `json:"supportsLongCacheRetention,omitempty"`
+	SupportsEagerToolInputStreaming             *bool                      `json:"supportsEagerToolInputStreaming,omitempty"`
+	ForceAdaptiveThinking                       *bool                      `json:"forceAdaptiveThinking,omitempty"`
+	OpenRouterRouting                           any                        `json:"openRouterRouting,omitempty"`
+	VercelGatewayRouting                        any                        `json:"vercelGatewayRouting,omitempty"`
 	Extra                                       map[string]json.RawMessage `json:"-"`
 }
 
 // PiModel mirrors pi::PiModel.
 type PiModel struct {
 	ID               string                     `json:"id"`
-	Name             *string                    `json:"name"`
-	API              *string                    `json:"api"`
+	Name             *string                    `json:"name,omitempty"`
+	API              *string                    `json:"api,omitempty"`
 	Reasoning        bool                       `json:"reasoning"`
-	ThinkingLevelMap map[string]*string         `json:"thinkingLevelMap"`
-	Input            []string                   `json:"input"`
-	ContextWindow    uint32                     `json:"contextWindow"`
-	MaxTokens        uint32                     `json:"maxTokens"`
-	Cost             *PiModelCost               `json:"cost"`
-	Headers          map[string]string          `json:"headers"`
-	Compat           *PiCompatConfig            `json:"compat"`
+	ThinkingLevelMap map[string]*string         `json:"thinkingLevelMap,omitempty"`
+	Input            []string                   `json:"input,omitempty"`
+	ContextWindow    uint32                     `json:"contextWindow,omitempty"`
+	MaxTokens        uint32                     `json:"maxTokens,omitempty"`
+	Cost             *PiModelCost               `json:"cost,omitempty"`
+	Headers          map[string]string          `json:"headers,omitempty"`
+	Compat           *PiCompatConfig            `json:"compat,omitempty"`
 	Extra            map[string]json.RawMessage `json:"-"`
 }
 
 // PiModelOverride mirrors pi::PiModelOverride.
 type PiModelOverride struct {
-	Name             *string                    `json:"name"`
-	API              *string                    `json:"api"`
-	Reasoning        *bool                      `json:"reasoning"`
-	ThinkingLevelMap map[string]*string         `json:"thinkingLevelMap"`
-	Input            *[]string                  `json:"input"`
-	ContextWindow    *uint32                    `json:"contextWindow"`
-	MaxTokens        *uint32                    `json:"maxTokens"`
-	Cost             *PiModelCost               `json:"cost"`
-	Headers          map[string]string          `json:"headers"`
-	Compat           *PiCompatConfig            `json:"compat"`
+	Name             *string                    `json:"name,omitempty"`
+	API              *string                    `json:"api,omitempty"`
+	Reasoning        *bool                      `json:"reasoning,omitempty"`
+	ThinkingLevelMap map[string]*string         `json:"thinkingLevelMap,omitempty"`
+	Input            *[]string                  `json:"input,omitempty"`
+	ContextWindow    *uint32                    `json:"contextWindow,omitempty"`
+	MaxTokens        *uint32                    `json:"maxTokens,omitempty"`
+	Cost             *PiModelCost               `json:"cost,omitempty"`
+	Headers          map[string]string          `json:"headers,omitempty"`
+	Compat           *PiCompatConfig            `json:"compat,omitempty"`
 	Extra            map[string]json.RawMessage `json:"-"`
 }
 
 // PiProviderConfig mirrors pi::PiProviderConfig.
 type PiProviderConfig struct {
-	BaseURL        *string                    `json:"baseUrl"`
-	API            *string                    `json:"api"`
-	APIKey         *string                    `json:"apiKey"`
-	OAuth          *string                    `json:"oauth"`
-	Headers        map[string]string          `json:"headers"`
-	AuthHeader     *bool                      `json:"authHeader"`
+	BaseURL        *string                    `json:"baseUrl,omitempty"`
+	API            *string                    `json:"api,omitempty"`
+	APIKey         *string                    `json:"apiKey,omitempty"`
+	OAuth          *string                    `json:"oauth,omitempty"`
+	Headers        map[string]string          `json:"headers,omitempty"`
+	AuthHeader     *bool                      `json:"authHeader,omitempty"`
 	Models         []PiModel                  `json:"models"`
-	ModelOverrides map[string]PiModelOverride `json:"modelOverrides"`
-	Compat         *PiCompatConfig            `json:"compat"`
+	ModelOverrides map[string]PiModelOverride `json:"modelOverrides,omitempty"`
+	Compat         *PiCompatConfig            `json:"compat,omitempty"`
 	Extra          map[string]json.RawMessage `json:"-"`
 }
 
@@ -203,7 +203,13 @@ func (m *PiModelOverride) UnmarshalJSON(data []byte) error {
 
 func (p PiProviderConfig) MarshalJSON() ([]byte, error) {
 	type alias PiProviderConfig
-	return core.MarshalJSONWithExtra(alias(p), p.Extra)
+	a := alias(p)
+	// pi's models.json schema requires `models` to be an array. A nil slice
+	// would marshal as null and fail validation, so normalize it to [].
+	if a.Models == nil {
+		a.Models = []PiModel{}
+	}
+	return core.MarshalJSONWithExtra(a, p.Extra)
 }
 
 func (p *PiProviderConfig) UnmarshalJSON(data []byte) error {
