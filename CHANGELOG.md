@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.9.7
+
+**Bug Fixes / 问题修复**
+
+- The `dg connectivity` command ships again: `wails/cmd/dg/connectivity.go` had been silently skipped by a bare `dg` ignore rule that also matched the `cmd/dg/` directory, so `1.3.9.6` built a `dg` binary failing with `c.connectivity undefined` — the rule is now anchored to `/dg` and the file is committed / `dg connectivity` 命令恢复随包发布：`wails/cmd/dg/connectivity.go` 此前被裸 `dg` 忽略规则（它同时匹配 `cmd/dg/` 目录）静默跳过，导致 `1.3.9.6` 构建的 `dg` 报 `c.connectivity undefined` 编译失败——该规则已锚定为 `/dg` 并补交该文件
+
 ## v1.3.9.6
 
 **New Features / 新功能**
