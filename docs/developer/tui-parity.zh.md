@@ -1,4 +1,4 @@
-# Go TUI 对齐（parity）设计 —— 成为默认终端体验并退役 `dg`
+# Go TUI 对齐（parity）设计 —— 成为默认终端体验，`dg` 保留为脚本化 CLI
 
 - **状态**：设计稿（**决策已确认**，见 §0）
 - **日期**：2026-11
@@ -18,12 +18,16 @@
    GUI-only 的部分（窗口、菜单、通知、PTY、更新、字体等）显式豁免（§1）。
 2. **对齐完成后，TUI 成为默认终端体验**：README/文档把 TUI 放在首位，
    `dg tui` 是终端里打开 DroidGear 的入口。
-3. **完全对齐后移除 `dg`**：`dg` 的子命令（`dg codex profiles …` 等）全部退役，
-   非 GUI 消费者只剩 TUI 一个；二进制名沿用 `droidgear-tui`（接替被停发的 Rust 版）。
+3. **`dg` 保留，不退役（2026-11 修订，维护者确认）**：原Q4.3「对齐后移除
+   `dg`」**作废**。终端分工为两层：`dg tui` = 交互入口（TUI），`dg <子命令>` =
+   可脚本化 headless 层（`--json` / `--dry-run` / exit code，SSH 脚本与 CI
+   `cli-headless` 验收的载体，TUI 无法替代）。命令树按
+   [`wails-tui-cli-design.zh.md`](./wails-tui-cli-design.zh.md) §4.2 补齐到与
+   TUI 屏同域（见 §5 P4）。
 4. **推进顺序**：`opencode` / `openclaw` 可以后置（维护者指定），其余按矩阵推进。
 
-> 与 ADR-001 的关系：路线 B 不变，只是验收标准从「CLI 覆盖 T1」提高为
-> 「TUI 与 GUI 对齐 + CLI 退役」。ADR-001 期 4 的验收相应改为本文 §5。
+> 与 ADR-001 的关系：路线 B 不变，验收标准 =「TUI 与 GUI 对齐 + `dg` 命令树
+> 补齐」（原「CLI 退役」已作废）。ADR-001 期 4 的验收相应改为本文 §5。
 
 ---
 
@@ -111,7 +115,7 @@ B1–B4 批次是同一条工作流的两个视角：`dg` 期看命令覆盖，T
 | **P1** | service B3（claude/copilot/droid/dsh/factory/mcp/preferences）→ 对应屏；Channels/Export 屏 | 每域 service 测试 + TUI 屏测试 + 矩阵更新        |
 | **P2** | 写路径：apply/save/delete → ChangeSet 预览 → 确认；冲突（beforeHash）与 `--force` 等价     | 预览与实际写盘同源（`core.BeginDryRun`）         |
 | **P3** | Sessions/Specs 只读屏；`opencode` / `openclaw`（后置项）                                   | 矩阵无 `⏳`（除 GUI-only）                       |
-| **P4** | 对齐验收 → 默认终端体验 → 退役 `dg`                                                        | §5 的三个动作                                    |
+| **P4** | 对齐验收 → 默认终端体验（TUI 优先） → `dg` 命令树补齐                                      | §5 的三个动作                                    |
 
 **P1 进度（2026-11）**：Channels / Export / MCP / Models（factory）/ Copilot / Claude /
 Droid（Settings·Missions·Trusted·Auth·Specs·Legacy·Sessions，MCP 与 Models 已并入其
@@ -138,25 +142,29 @@ claude/read），保证预览不漏文件。
 
 ---
 
-## 5. P4：默认终端体验与 `dg` 退役
+## 5. P4：默认终端体验与 `dg` 命令树补齐
 
-达到对齐（矩阵除 GUI-only 外全 `✅`）后，按顺序执行：
+达到对齐（矩阵除 GUI-only 外全 `✅`）后，按顺序执行（原「移除 `dg`」条款
+已随 Q4.3 修订作废，见 §0）：
 
 1. **默认终端体验**
-   - `README.md` / `README_EN.md` / `docs/agents/commands.md`：终端章节改为 TUI 优先，
-     CLI 一节标记为「过渡期，对齐后移除」。
-   - `wails-tui-cli-design.zh.md` §4 标记为已退役。
-2. **移除 `dg`**
-   - 删除 `wails/cmd/dg` 的子命令与 golden 测试；`cmd/dg` 整体删除。
-   - 新增 `wails/cmd/droidgear-tui`（或 `dg tui` 直接改名），只跑 TUI。
-   - CI `cli-headless` job 改为：`CGO_ENABLED=0 go build ./cmd/droidgear-tui` +
-     `go test ./internal/tui ./internal/service/... ./internal/core/...`。
-   - `check-go-layering.mjs` 的 R3 从 `cmd/dg` 改为 `cmd/droidgear-tui`。
-3. **记录**：ADR-001 期 4 验收改为「GUI 与 TUI 对齐 + `dg` 已移除」，
-   `PORTING.md` 的 CLI contract 段落改为 TUI contract。
+   - `README.md` / `README_EN.md` / `docs/agents/commands.md`：终端章节改为 TUI
+     优先（`dg tui` 是入口），CLI 一节标为「脚本化 headless 层（保留）」。
+2. **`dg` 命令树补齐**（形态见 `wails-tui-cli-design.zh.md` §4.2，与 TUI 屏同域；
+   写操作支持 `--dry-run`，只读命令输出 `--json`）
+   - 已有 ✅：`version` `doctor` `path` `channels` `export` `codex`(+`status`) /
+     `pi` `hermes` `omp` `mcp` `factory` `tui`
+   - ✅ 已补齐（2026-11）：`dg claude settings …`、`dg copilot profiles …`、
+     `dg droid {settings,trusted,auth,missions,legacy}`、`dg dsh providers … + status`、
+     `dg sessions projects|list|show`、`dg spec list|cat|delete`（golden 见
+     `cmd/dg/parity_test.go`；`droid models` = `dg factory models`）
+   - 后置：`dg opencode` / `dg openclaw`（随 §0.4 的两域后置）
+   - 每条命令配 `dg_test.go` golden 断言（含 dry-run 不落盘）
+3. **记录**：ADR-001 期 4 验收 =「GUI 与 TUI 对齐 + `dg` 命令树补齐」；
+   `PORTING.md` 的 CLI contract 保留（不再改为 TUI contract）。
 
-> 退役前 `dg` 仍然是 headless 的验收载体（CI 的 `cli-headless`、`--dry-run` golden），
-> 所以 P4 是**最后一步**，不在对齐过程中途删除。
+> `dg` 全程保留：CI 的 `cli-headless` job 与 `--dry-run` golden 继续作为
+> headless 验收载体（TUI 是交互式的，无法进脚本）。
 
 ---
 
@@ -175,10 +183,10 @@ claude/read），保证预览不漏文件。
 
 ## 7. 风险
 
-| 风险                               | 缓解                                                        |
-| ---------------------------------- | ----------------------------------------------------------- |
-| bubbletea/lipgloss 为新增三方依赖  | 已在 `wails/go.mod` 放行；`PORTING.md` 记录理由与版本       |
-| TUI 与 GUI 行为漂移（两套交互）    | 共用 service + ChangeSet；矩阵门禁防止「GUI 加了 TUI 没加」 |
-| 中文/宽字符渲染错位                | 用 `lipgloss.Width` 计算宽度；CI 跑一条含中文的视图测试     |
-| 80×24 下布局溢出                   | 屏幕测试用最小尺寸断言；超长行截断而不是换行错乱            |
-| 退役 `dg` 过早导致 headless 无载体 | P4 是最后一步；`dg` 的测试在退役时整体迁到 TUI/service      |
+| 风险                              | 缓解                                                            |
+| --------------------------------- | --------------------------------------------------------------- |
+| bubbletea/lipgloss 为新增三方依赖 | 已在 `wails/go.mod` 放行；`PORTING.md` 记录理由与版本           |
+| TUI 与 GUI 行为漂移（两套交互）   | 共用 service + ChangeSet；矩阵门禁防止「GUI 加了 TUI 没加」     |
+| 中文/宽字符渲染错位               | 用 `lipgloss.Width` 计算宽度；CI 跑一条含中文的视图测试         |
+| 80×24 下布局溢出                  | 屏幕测试用最小尺寸断言；超长行截断而不是换行错乱                |
+| `dg` 命令树与 TUI 屏不同步        | P4 第 2 步逐域补齐；`dg` 的 golden 测试继续当 headless 验收载体 |

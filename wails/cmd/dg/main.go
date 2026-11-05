@@ -147,6 +147,18 @@ func run(args []string, stdout, stderr io.Writer) (exit int) {
 		runErr = c.export(cmdArgs)
 	case "mcp":
 		runErr = c.mcp(cmdArgs)
+	case "claude":
+		runErr = c.claude(cmdArgs)
+	case "copilot":
+		runErr = c.copilot(cmdArgs)
+	case "droid":
+		runErr = c.droid(cmdArgs)
+	case "dsh":
+		runErr = c.dsh(cmdArgs)
+	case "sessions":
+		runErr = c.sessions(cmdArgs)
+	case "spec":
+		runErr = c.spec(cmdArgs)
 	case "factory":
 		runErr = c.factory(cmdArgs)
 	case "tui":
@@ -393,6 +405,12 @@ Commands:
   export run <name>             run a template and write its output file
   mcp list|show <name>|toggle <name>|save --file <json>|delete <name>|preset
   factory path|reset|models list|save --file <json>|favorites list|save|defaults show|save
+  claude settings list|show|active|use|delete|save --file <json>
+  copilot profiles list|show|active|apply|save --file <json>|delete + status
+  droid settings list|use|delete|values | trusted list|add|remove | auth list|save-current|switch|delete|rename | missions show | legacy check|delete
+  dsh providers list|save --file <json>|delete [--profile desktop|web] + status
+  sessions projects|list [project]|show <path>   read-only session store
+  spec list|cat <name>|delete <name>             specs (edit via $EDITOR)
   tui                           open the interactive terminal UI (needs a TTY)
 
 Global flags (accepted before or after the command):

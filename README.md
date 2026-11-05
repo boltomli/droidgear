@@ -169,65 +169,59 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 
 ## TUI 版本（无头终端）
 
-DroidGear TUI 是专为 SSH 和无桌面环境设计的终端界面版本，与桌面版共享相同的配置文件和核心功能。
+DroidGear TUI 是专为 SSH 和无桌面环境设计的终端界面，与桌面版共享同一套
+`internal/service` 配置逻辑（同一份读写实现，行为一致）。功能对齐进度以
+[docs/developer/tui-parity.zh.md](docs/developer/tui-parity.zh.md) §2 的对齐矩阵为准。
 
 ### 安装
 
-从 [Releases](https://github.com/Sunshow/droidgear/releases) 下载对应平台的 `droidgear-tui` 二进制文件：
+从 [Releases](https://github.com/Sunshow/droidgear/releases) 的 `wails-v*` 版本下载
+`dg` 二进制——`dg` 同时承载交互式 TUI 与可脚本化的 CLI 子命令：
 
-- macOS (Apple Silicon): `droidgear-tui-*-aarch64-apple-darwin.tar.gz`
-- macOS (Intel): `droidgear-tui-*-x86_64-apple-darwin.tar.gz`
-- Linux: `droidgear-tui-*-x86_64-unknown-linux-gnu.tar.gz`
-- Windows: `droidgear-tui-*-x86_64-pc-windows-msvc.zip`
+- Windows x64: `dg-windows-x64.exe`
+- macOS arm64: `dg-macos-arm64`
+- Linux x64: `dg-linux-x64`
 
-解压后将二进制文件放到 PATH 路径下（如 `/usr/local/bin`）。
+或从源码构建（纯 Go，无桌面依赖）：
+
+```bash
+cd wails && CGO_ENABLED=0 go build ./cmd/dg
+```
 
 ### 运行
 
 ```bash
-# 使用默认配置（读取 ~/.factory 和 ~/.droidgear）
-droidgear-tui
+# 打开交互式 TUI（终端默认入口）
+dg tui
 
-# 指定自定义 HOME 路径（容器/测试场景）
-droidgear-tui --home /path/to/custom/home
-
-# 一次性运行 Codex profile（当前终端直接接管运行）
-droidgear-tui run codex <profile-id>
+# 可脚本化 headless 层：--json 输出、--dry-run 预览、exit code 契约
+dg path show
+dg codex profiles list
+dg mcp list
 ```
 
-### 功能支持
+### 模块（与 GUI 左栏对应）
 
-TUI 版本支持以下配置管理功能：
-
-- **分组导航**：与 GUI 两级侧边栏对应的分组导航，支持功能列表界面、面包屑标题与模块选择器标签
-- **Factory 配置**：自定义模型管理、默认模型设置
-- **MCP 服务器**：增删改查、启用/禁用、导入导出
-- **Claude 设置文件**：多设置文件管理、结构化字段编辑、合并应用、设为活动、跳过权限运行、脏状态跟踪、临时单次运行、模型拉取、自动压缩窗口
-- **Codex Profile**：配置文件管理、变更预览、一键应用
-- **OpenCode Profile**：Provider/Auth 配置管理
-- **OpenClaw Profile**：配置管理与应用（含 Subagents/Helpers 导航入口）
-- **Hermes Profile**：配置管理与应用
-- **Pi Profile**：Provider/Model 配置管理与应用
-- **Dsh**：Profile 可视化配置（按 `c`）、`llm-pi-ai.providers` 与凭据管理（含渠道导入、模型拉取、官方 DeepSeek API Key、默认思考强度与默认模型）
-- **Copilot Profile**：BYOK Profile 配置管理与应用（含渠道导入、临时运行）
-- **OMP**：自定义 Provider（`models.yml`）增删改与渠道导入，以及 `config.yml` 模型角色
-- **Sessions**：会话浏览与管理
-- **Paths**：路径覆盖配置（适配服务器环境）
-- **Channels**：代理平台与凭据管理
+- **Droid**：Settings · Missions · Trusted · Auth · Specs · MCP · Models · Sessions · Legacy
+- **Channels**：渠道详情 + Export templates（分节）
+- **Codex**：Providers · Auth · Sessions（分节）
+- **Claude / Hermes / Copilot**：设置文件 / Model / Profile 列表
+- **Pi / OMP**：Providers·Config + Sessions（分节）
+- **Dsh**：Desktop · Web · Sessions（分节）
+- **Paths / Settings**：Preferences 的路径覆盖与通用/外观项
 
 ### 基本操作
 
-- `↑/↓` 或 `j/k`：上下移动
-- `Enter`：进入/确认
-- `Esc`：返回/取消
-- `Tab`：切换焦点区域
-- `Ctrl+S`：预览变更（编辑页面）
-- `y/N`：确认应用变更
-- `q`：退出（主界面）
+- `↑↓` / `jk`：移动 · `Enter` 打开 · `Esc` / `q` 返回 · `Ctrl+C` 退出
+- `Tab` / `Shift+Tab` / `1..9`：切换分节
+- `r`：显示/隐藏 secrets（默认打码）
+- 写操作（先进入 ChangeSet 预览，与写盘同源）：`e` 编辑路径、`a` 应用/切换/激活、
+  `d` 删除、`t` 开关/循环主题；`y` 确认写入、`n` 取消；若预览后文件被外部修改会
+  提示冲突，冲突下再按 `y` 为强制写入（`--force` 等价）
 
 ### 配置文件
 
-TUI 版本与桌面版共享配置文件：
+TUI 与桌面版共享配置文件：
 
 - Factory 配置：`~/.factory/settings.json`
 - MCP 配置：`~/.factory/mcp.json`
@@ -238,7 +232,9 @@ TUI 版本与桌面版共享配置文件：
 - Hermes 配置：`~/.hermes/`
 - Pi 配置：`~/.pi/agent/`
 
-详细设计文档见 [docs/developer/tui-design.md](docs/developer/tui-design.md)
+详细设计文档见 [docs/developer/tui-parity.zh.md](docs/developer/tui-parity.zh.md) 与
+[docs/developer/wails-tui-cli-design.zh.md](docs/developer/wails-tui-cli-design.zh.md)
+（历史 ChangeSet 草案见 [docs/developer/tui-design.md](docs/developer/tui-design.md)）。
 
 ## 配置说明
 

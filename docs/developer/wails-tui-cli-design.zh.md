@@ -13,7 +13,7 @@ Go TUI」这条路线拆成可验收的步骤，并固定 CLI/TUI 的对外契�
   - [`../agents/wails-port.md`](../agents/wails-port.md) — 面向 agent 的 Wails 速查
   - [`tauri-removal-design.zh.md`](./tauri-removal-design.zh.md) — **去 Tauri 化**（前端去壳 + 删除 `src-tauri`）设计方案
   - [`tauri-removal-tasks.zh.md`](./tauri-removal-tasks.zh.md) — 上述方案的执行任务书
-  - [`tui-parity.zh.md`](./tui-parity.zh.md) — **TUI 对齐 GUI** 的设计（豁免清单、对齐矩阵、分期与 `dg` 退役）
+  - [`tui-parity.zh.md`](./tui-parity.zh.md) — **TUI 对齐 GUI** 的设计（豁免清单、对齐矩阵、分期与 `dg` 命令树补齐）
 
 ---
 
@@ -183,8 +183,12 @@ func (a *App) ApplyCodexProfile(id string) (CodexConfigStatus, error) {
 | B3  | `claude`、`copilot`、`droid`、`dsh`、`factory`、`mcp`、`legacy_config` | 写面复杂（settings/凭据/DB），需要 B1–B2 的 ChangeSet 收敛        |
 | B4  | `sessions`、`specs`（只读）                                            | 纯读 + watcher；watcher 留在 GUI 适配层                           |
 
-状态（2026-11）：**B1 ✅**；**B2 ✅（`codex`、`hermes`、`pi`、`omp` 四个域已下沉并接上 CLI；
-`openclaw` / `opencode` 暂缓）**；B3/B4 未开始。codex 的边界划法（为什么是
+状态（2026-11 修订）：**B1 ✅**；**B2 ✅（`codex`、`hermes`、`pi`、`omp`；`openclaw` /
+`opencode` 暂缓）**；**B3 ✅（`claude` `copilot` `droid` `dsh` `factory` `mcp`
+`legacy_config` `preferences` 全部下沉，app 只留转发）**；**B4 ✅（sessions 五域进
+`internal/service/read`、specs 进 `internal/service/specs`；watcher 留在 app）**——
+但 B3/B4 各域的 `dg` 子命令还没接（TUI 屏已接，命令树补齐见 tui-parity §5 P4）。
+codex 的边界划法（为什么是
 `codex.go` + `codex_auth_profiles.go` 整体下沉、而 launch 的偏好项留在 app）见 §10 的迁移备注，
 hermes/pi/omp 三批的共同做法也一并记在那里。
 
@@ -220,12 +224,13 @@ dg export list|save --file <json>|delete <name>|run <name>  # T1/T2 ✅（run �
 dg codex profiles list|show <id>|active|apply <id>|save --file <json>|delete <id>  # T1/T2 ✅
 dg codex status                               # T2 ✅（config/auth 路径 + active profile）
 dg pi|hermes|omp profiles ...                   # T1/T2 ✅（与 codex 同形态；omp 另有 providers）
-dg opencode|openclaw|claude|copilot ...          # 同上形态（未做）
-dg droid models list|apply                    # T1    B3
-dg dsh providers list|apply [--profile desktop|web]     # T1    B3
+dg claude settings ... | dg copilot profiles ... # 同上形态 ✅
+dg opencode|openclaw ...                        # 同上形态  B2 暂缓（维护者指定后置）
+dg droid settings|trusted|auth|missions|legacy # T1    ✅（models = dg factory models）
+dg dsh providers list|save --file <json>|delete [--profile] + status  # T1 ✅
 dg mcp list|toggle <id>|apply                 # T1/T2 B3
-dg sessions projects|list|show <id>           # T2    B4（只读）
-dg spec list|cat <name>                       # T2    B4（只读，写走 $EDITOR 手工路径）
+dg sessions projects|list [project]|show <path>          # T2 ✅（只读）
+dg spec list|cat <name>|delete <name>         # T2 ✅（delete 支持 --dry-run）
 ```
 
 ✅ = 本仓库已实现并有测试（`cmd/dg/dg_test.go` + `service/*_test.go`）；其余按 §3.4 的批次推进。
@@ -360,7 +365,8 @@ exit 3 依赖 §5.2 的 `beforeHash` 冲突检测，随 `--force` 一起落地�
 
 **决策已更新（2026-11，Q2-A + Q4）**：TUI 现在启动（bubbletea + lipgloss 已在
 `wails/go.mod` 放行），并且验收标准从「CLI 覆盖 T1」提高为
-**「TUI 与 GUI 完全对齐」**——对齐后 TUI 成为默认终端体验、`dg` 退役。
+**「TUI 与 GUI 完全对齐」**——对齐后 TUI 成为默认终端体验；`dg` 保留为
+可脚本化 headless 层（**Q4.3 修订：原「`dg` 退役」条款作废**，命令树按 §4.2 补齐）。
 豁免清单、对齐矩阵与分期见 [`tui-parity.zh.md`](./tui-parity.zh.md)。
 `internal/tui` 已落地（P0：Paths + codex/hermes/pi/omp 四个 profile 域只读），
 分层门禁 R4 已接入 `scripts/check-go-layering.mjs`。
@@ -412,13 +418,13 @@ CLI 契约测试的写法约定：直接调 `run(args, &stdout, &stderr)`（它�
 
 ## 8. 实施顺序
 
-| 期  | 内容                                          | 状态 / 完成判据                                                                            |
-| --- | --------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 0   | `internal/version` 提取；分层门禁脚本         | ✅ 已完成（ldflags 三处同步，门禁接入 `wails.yml`）                                        |
-| 1   | `internal/service` 抽取（B1 → B2 → B3 → B4）  | 🚧 B1（paths/channels/export）已完成；B2–B4 待做                                           |
-| 2   | `cmd/dg` 骨架 + T1 命令                       | 🚧 骨架 + paths/channels/export 已完成；codex/pi/… 待做                                    |
-| 3   | `dg` 覆盖 T1 全量 + T2 只读面                 | ⏳ 未开始（§4.5 对照表无缺口或有豁免记录）                                                 |
-| 4   | TUI 决策（§6）或删除 `src-tauri`（§0 规则 4） | 🚧 设计稿已出（`tauri-removal-design.zh.md`），待评审后按 `tauri-removal-tasks.zh.md` 执行 |
+| 期  | 内容                                          | 状态 / 完成判据                                                                      |
+| --- | --------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 0   | `internal/version` 提取；分层门禁脚本         | ✅ 已完成（ldflags 三处同步，门禁接入 `wails.yml`）                                  |
+| 1   | `internal/service` 抽取（B1 → B2 → B3 → B4）  | ✅ B1–B4 全部下沉（B2 的 openclaw/opencode 暂缓；watcher 留 app）                    |
+| 2   | `cmd/dg` 骨架 + T1 命令                       | ✅ 骨架 + paths/channels/export/codex/hermes/pi/omp/mcp/factory/tui                  |
+| 3   | `dg` 覆盖 T1 全量 + T2 只读面                 | 🚧 claude/copilot/droid/dsh/sessions/spec 子命令待补（P4 命令树补齐，tui-parity §5） |
+| 4   | TUI 决策（§6）或删除 `src-tauri`（§0 规则 4） | ✅ `src-tauri` 已删除（`fe22c57`）；TUI 按 tui-parity 对齐（P1/P2 主体已落地）       |
 
 ---
 
@@ -448,15 +454,22 @@ CLI 契约测试的写法约定：直接调 `run(args, &stdout, &stderr)`（它�
 | `internal/service/{codex,hermes,pi,omp}`（B2 四个域）                               | ✅   |
 | 发布构建：`release-single.yml` 三端 GUI+CLI 各一个单文件                            | ✅   |
 | 测试：`service/*` 与 `cmd/dg` 的契约测试全绿                                        | ✅   |
-| `internal/service/{opencode,openclaw,…}`（B2 暂缓）+ B3                             | ⏳   |
-| `dg` 的 opencode/openclaw/… 子命令（期 2 剩余）                                     | ⏳   |
-| `--force` + `beforeHash` 冲突检测（exit 3）                                         | ⏳   |
+| `internal/service/{opencode,openclaw}`（B2 暂缓，维护者指定后置）                   | ⏳   |
+| `internal/service/{claude,copilot,droid,dsh,factory,mcp,legacy,preferences}`（B3）  | ✅   |
+| `internal/service/read` + `internal/service/specs`（B4，watcher 留 app）            | ✅   |
+| `dg` 的 claude/copilot/droid/dsh/sessions/spec 子命令（P4 命令树补齐）              | ⏳   |
+| `dg` 的 opencode/openclaw 子命令（随 B2 暂缓）                                      | ⏳   |
+| TUI 预览流冲突检测（beforeHash/after 双次 dry-run + y 强制写入）                    | ✅   |
+| CLI `--force` + `beforeHash` 冲突检测（exit 3）                                     | ⏳   |
 | 删除 `src-tauri`（tauri-removal 阶段 A/B）                                          | ✅   |
 | TUI P0（`internal/tui` + `dg tui`，Paths + 四个 profile 域只读）                    | ✅   |
+| TUI P2 写路径（ChangeSet 预览 → 确认 → 冲突/force，`tui/write.go`）                 | ✅   |
+| `scripts/check-tui-parity.mjs` 矩阵门禁（接入 `check:all` + CI）                    | ✅   |
 | TUI 对齐 GUI（矩阵见 tui-parity.zh.md）                                             | 🚧   |
 
-下一批：`openclaw` / `opencode`（B2 暂缓，等维护者安排）→ B3（claude/copilot/droid/dsh/
-factory/mcp）→ 再回来补冲突检测（那时 `--force` 才有真实语义）。
+下一批：`openclaw` / `opencode`（B2 暂缓，等维护者安排）→ P2 输入类原语
+（TUI 侧 profile save 建档、claude create、specs rename 等需要文本输入的操作）
+→ 矩阵收尾（GUI-only 与豁免行核对）。
 
 ### codex 迁移备注（B2 第一批）
 

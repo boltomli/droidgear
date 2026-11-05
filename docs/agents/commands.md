@@ -52,13 +52,17 @@ npm run test:run -- -t "should detect macOS"                 # Single test by na
 npm run test:coverage    # Run with coverage
 ```
 
-## CLI (`dg`)
+## CLI + TUI（`dg`）
 
-The Go CLI is the primary non-GUI consumer of the service layer (ADR-001):
+`dg` 是非 GUI 消费者（ADR-001）的单一二进制，承载两层（tui-parity §0.3 修订：**保留，不退役**）：
+
+- **`dg tui`** —— 交互式 TUI，终端默认入口（与 GUI 对齐的屏见 `docs/developer/tui-parity.zh.md` §2）
+- **`dg <子命令>`** —— 可脚本化 headless 层：`--json`、`--dry-run`、exit code 契约（CI `cli-headless` 的验收载体）
 
 ```bash
 cd wails && go run ./cmd/dg version     # e.g. prints the build version
 cd wails && go build ./cmd/dg           # build the dg binary
+cd wails && go run ./cmd/dg tui         # open the interactive TUI (needs a TTY)
 ```
 
 ## Wails (Go shell)

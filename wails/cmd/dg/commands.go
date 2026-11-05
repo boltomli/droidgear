@@ -45,6 +45,41 @@ func (c *cli) usage(format string, args ...any) error {
 	return usageError{fmt.Sprintf(format, args...)}
 }
 
+// parseMixed lets flags travel after positionals (`save <name> --file x`):
+// Go's flag package stops parsing at the first positional, so the tokens are
+// split here — flags first, positionals handed back in their original order.
+func parseMixed(fs *flag.FlagSet, args []string) ([]string, error) {
+	var flags, rest []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if !strings.HasPrefix(arg, "--") {
+			rest = append(rest, arg)
+			continue
+		}
+		flags = append(flags, arg)
+		name := strings.TrimPrefix(arg, "--")
+		if strings.Contains(name, "=") {
+			continue
+		}
+		def := fs.Lookup(name)
+		if def == nil {
+			continue // let fs.Parse report "flag provided but not defined"
+		}
+		if bf, ok := def.Value.(interface{ IsBoolFlag() bool }); ok && bf.IsBoolFlag() {
+			continue
+		}
+		if i+1 >= len(args) {
+			return nil, fmt.Errorf("flag --%s needs a value", name)
+		}
+		i++
+		flags = append(flags, args[i])
+	}
+	if err := fs.Parse(flags); err != nil {
+		return nil, err
+	}
+	return rest, nil
+}
+
 // ---------------------------------------------------------------------------
 // dg version
 // ---------------------------------------------------------------------------

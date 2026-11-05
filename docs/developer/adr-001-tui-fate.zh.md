@@ -3,7 +3,7 @@
 - **状态**：已接受
 - **日期**：2026-11
 - **决策人**：维护者
-- **关联**：[`wails-port-guidelines.zh.md`](./wails-port-guidelines.zh.md) §5、[`wails-round2-layout-and-gaps.zh.md`](./wails-round2-layout-and-gaps.zh.md) B11、[`wails-tui-cli-design.zh.md`](./wails-tui-cli-design.zh.md)（**执行细则**）、[`tauri-removal-design.zh.md`](./tauri-removal-design.zh.md) + [`tauri-removal-tasks.zh.md`](./tauri-removal-tasks.zh.md)（期 4「删除 `src-tauri`」的设计与任务书）、[`tui-parity.zh.md`](./tui-parity.zh.md)（TUI 与 GUI 对齐、成为默认终端体验并退役 `dg`）、AGENTS.md 规则 9、[`wails/PORTING.md`](../../wails/PORTING.md)「CLI 契约」
+- **关联**：[`wails-port-guidelines.zh.md`](./wails-port-guidelines.zh.md) §5、[`wails-round2-layout-and-gaps.zh.md`](./wails-round2-layout-and-gaps.zh.md) B11、[`wails-tui-cli-design.zh.md`](./wails-tui-cli-design.zh.md)（**执行细则**）、[`tauri-removal-design.zh.md`](./tauri-removal-design.zh.md) + [`tauri-removal-tasks.zh.md`](./tauri-removal-tasks.zh.md)（期 4「删除 `src-tauri`」的设计与任务书）、[`tui-parity.zh.md`](./tui-parity.zh.md)（TUI 与 GUI 对齐、成为默认终端体验；`dg` 保留为脚本化 CLI —— Q4.3 已修订）、AGENTS.md 规则 9、[`wails/PORTING.md`](../../wails/PORTING.md)「CLI 契约」
 
 ## 背景
 

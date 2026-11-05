@@ -19,3 +19,7 @@ build/android/overlay.json
 build/android/gen
 frontend/bindings
 *.syso
+
+# local `go build ./cmd/dg` output
+dg
+dg.exe

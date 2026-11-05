@@ -169,66 +169,63 @@ Configuration remains ordinary `~/.factory/mcp.json`: this preset stores a nonse
 
 ## TUI Version (Headless Terminal)
 
-DroidGear TUI is a terminal interface version designed for SSH and headless environments, sharing the same configuration files and core functionality with the desktop version.
+The DroidGear TUI is a terminal interface designed for SSH and headless
+environments. It shares the exact same `internal/service` configuration layer
+with the desktop app (one implementation, identical behavior). Feature parity
+is tracked by the matrix in
+[docs/developer/tui-parity.zh.md](docs/developer/tui-parity.zh.md) §2.
 
 ### Installation
 
-Download the `droidgear-tui` binary for your platform from [Releases](https://github.com/Sunshow/droidgear/releases):
+Download the `dg` binary from the `wails-v*` releases on
+[Releases](https://github.com/Sunshow/droidgear/releases) — `dg` carries both
+the interactive TUI and the scriptable CLI subcommands:
 
-- macOS (Apple Silicon): `droidgear-tui-*-aarch64-apple-darwin.tar.gz`
-- macOS (Intel): `droidgear-tui-*-x86_64-apple-darwin.tar.gz`
-- Linux: `droidgear-tui-*-x86_64-unknown-linux-gnu.tar.gz`
-- Windows: `droidgear-tui-*-x86_64-pc-windows-msvc.zip`
-- Windows: `droidgear-tui-*-x86_64-pc-windows-msvc.zip`
+- Windows x64: `dg-windows-x64.exe`
+- macOS arm64: `dg-macos-arm64`
+- Linux x64: `dg-linux-x64`
 
-Extract and place the binary in your PATH (e.g., `/usr/local/bin`).
+Or build from source (pure Go, no desktop dependencies):
+
+```bash
+cd wails && CGO_ENABLED=0 go build ./cmd/dg
+```
 
 ### Running
 
 ```bash
-# Use default configuration (reads from ~/.factory and ~/.droidgear)
-droidgear-tui
+# Open the interactive TUI (the default terminal entry point)
+dg tui
 
-# Specify custom HOME path (for containers/testing)
-droidgear-tui --home /path/to/custom/home
-
-# Run a Codex profile once (hands off execution to the current terminal)
-droidgear-tui run codex <profile-id>
+# Scriptable headless layer: --json output, --dry-run previews, exit codes
+dg path show
+dg codex profiles list
+dg mcp list
 ```
 
-### Supported Features
+### Modules (mirroring the GUI sidebar)
 
-The TUI version supports the following configuration management features:
+- **Droid**: Settings · Missions · Trusted · Auth · Specs · MCP · Models · Sessions · Legacy
+- **Channels**: channel detail + Export templates (sections)
+- **Codex**: Providers · Auth · Sessions (sections)
+- **Claude / Hermes / Copilot**: settings files / model / profile lists
+- **Pi / OMP**: providers·config + sessions (sections)
+- **Dsh**: Desktop · Web · Sessions (sections)
+- **Paths / Settings**: Preferences path overrides and general/appearance items
 
-- **Grouped Navigation**: Two-level navigation mirroring the GUI sidebar, with feature-list screens, breadcrumb titles, and module picker labels
-- **Factory Configuration**: Custom model management, default model settings
-- **MCP Servers**: CRUD operations, enable/disable, import/export
-- **Claude Settings Files**: Multi-settings-file management, structured field editing, merge apply, set active, skip-permissions run, dirty tracking, one-off temporary run, model fetching, auto-compact window
-- **Codex Profiles**: Configuration file management, change preview, one-click apply
-- **OpenCode Profiles**: Provider/Auth configuration management
-- **OpenClaw Profiles**: Configuration management and apply (with Subagents/Helpers nav entries)
-- **Hermes Profiles**: Configuration management and apply
-- **Pi Profiles**: Provider/Model configuration management and apply
-- **Dsh**: Visual profile configuration (`c`), plus `llm-pi-ai.providers` and credential management (channel import, model fetching, the official DeepSeek API key, default reasoning, and the default model)
-- **Copilot Profiles**: BYOK profile configuration and apply (with channel import and temporary run)
-- **OMP**: Custom provider CRUD and channel import (`models.yml`), plus model roles in `config.yml`
-- **Sessions**: Session browsing and management
-- **Paths**: Path override configuration (for server environments)
-- **Channels**: Proxy platform and credential management
+### Basic Keys
 
-### Basic Operations
-
-- `↑/↓` or `j/k`: Move up/down
-- `Enter`: Enter/Confirm
-- `Esc`: Back/Cancel
-- `Tab`: Switch focus area
-- `Ctrl+S`: Preview changes (edit page)
-- `y/N`: Confirm apply changes
-- `q`: Quit (main screen)
+- `↑↓` / `jk`: move · `Enter`: open · `Esc` / `q`: back · `Ctrl+C`: quit
+- `Tab` / `Shift+Tab` / `1..9`: switch sections
+- `r`: reveal/hide secrets (redacted by default)
+- Writes (always through a ChangeSet preview that shares the write path):
+  `e` edit path, `a` apply/switch/activate, `d` delete, `t` toggle/cycle;
+  `y` confirms, `n` cancels — if a file changed since the preview you get a
+  conflict prompt, where `y` forces the write (`--force` equivalent)
 
 ### Configuration Files
 
-The TUI version shares configuration files with the desktop version:
+The TUI shares configuration files with the desktop version:
 
 - Factory config: `~/.factory/settings.json`
 - MCP config: `~/.factory/mcp.json`
@@ -239,7 +236,11 @@ The TUI version shares configuration files with the desktop version:
 - Hermes config: `~/.hermes/`
 - Pi config: `~/.pi/agent/`
 
-For detailed design documentation, see [docs/developer/tui-design.md](docs/developer/tui-design.md)
+For design documentation see
+[docs/developer/tui-parity.zh.md](docs/developer/tui-parity.zh.md) and
+[docs/developer/wails-tui-cli-design.zh.md](docs/developer/wails-tui-cli-design.zh.md)
+(the historical ChangeSet draft lives in
+[docs/developer/tui-design.md](docs/developer/tui-design.md)).
 
 ## Configuration
 
