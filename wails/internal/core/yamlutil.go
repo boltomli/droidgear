@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -165,7 +166,7 @@ func NodeToAny(node *yaml.Node) (any, error) {
 
 // AnyToNode wraps generic values back into a node tree.
 func AnyToNode(value any) (*yaml.Node, error) {
-	data, err := yaml.Marshal(value)
+	data, err := yaml.Marshal(normalizeYAMLNumbers(value))
 	if err != nil {
 		return nil, err
 	}
@@ -174,6 +175,65 @@ func AnyToNode(value any) (*yaml.Node, error) {
 		return nil, err
 	}
 	return documentRoot(&node), nil
+}
+
+// normalizeYAMLNumbers renders integral float64/float32 values as int64.
+// Generic trees decoded from JSON carry every number as float64, and
+// yaml.Marshal switches to exponent notation once a whole number needs more
+// digits than %g keeps (1024000 → "1.024e+06"). Rewriting a user-facing
+// integer such as OMP's contextWindow in exponent form is a needless,
+// confusing diff, so whole numbers are normalised back to integers.
+func normalizeYAMLNumbers(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(typed))
+		for key, item := range typed {
+			out[key] = normalizeYAMLNumbers(item)
+		}
+		return out
+	case map[any]any:
+		out := make(map[string]any, len(typed))
+		for key, item := range typed {
+			out[fmt.Sprint(key)] = normalizeYAMLNumbers(item)
+		}
+		return out
+	case []any:
+		out := make([]any, len(typed))
+		for i, item := range typed {
+			out[i] = normalizeYAMLNumbers(item)
+		}
+		return out
+	case float64:
+		if whole, ok := wholeNumberFloat64(typed); ok {
+			return int64(whole)
+		}
+		return typed
+	case float32:
+		if whole, ok := wholeNumberFloat64(float64(typed)); ok {
+			return int64(whole)
+		}
+		return typed
+	default:
+		return value
+	}
+}
+
+// wholeNumberFloat64 reports whether value is a finite integer that fits an
+// int64, and returns it unchanged for the caller to convert.
+func wholeNumberFloat64(value float64) (float64, bool) {
+	// 2^63 is the first float64 magnitude outside the int64 range; the
+	// constants stay untagged so they compare exactly at this precision.
+	const int64Limit = 9223372036854775808
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return 0, false
+	}
+	if value != math.Trunc(value) {
+		return 0, false
+	}
+	if value < -int64Limit || value >= int64Limit {
+		return 0, false
+	}
+	return value, true
 }
 
 // NodeToJSON converts a YAML node tree into its JSON equivalent by decoding
