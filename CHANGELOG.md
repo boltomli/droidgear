@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.3.9.6
+
+**New Features / 新功能**
+
+- TUI parity screens (P1–P3): Claude settings, Copilot profiles, Droid (settings / missions / trusted / auth / specs / MCP / models / sessions / legacy), Dsh desktop / web / sessions, Codex providers / auth / sessions, Pi / OMP sessions, Channels + Export sections, Paths editing, Preferences settings and the model Registry screen — the sidebar now mirrors the GUI, plus sectioned screens with Tab / 1..9 switching / TUI 对齐屏（P1–P3）：Claude 设置、Copilot Profile、Droid（设置/Missions/信任/鉴权/Specs/MCP/模型/会话/旧版本）、Dsh desktop·web·会话、Codex Providers·鉴权·会话、Pi/OMP 会话、Channels+Export 分节、路径编辑、偏好设置与模型注册表屏——侧栏与 GUI 完全对应，分节屏支持 Tab / 1..9 切换
+- ChangeSet write flow: every TUI write runs the real code path under the dry-run recorder to produce a preview, re-plans on confirm and compares beforeHash/after per file, stops on external changes with a conflict prompt (`y` = `--force` equivalent), and reveals secrets only on explicit request / TUI 写预览流：所有写操作先在录制器上跑真实代码路径生成 ChangeSet 预览，确认时重新规划并逐文件比对 beforeHash/after，检测到外部改动即冲突提示（`y` 为 `--force` 等价），secrets 仅在显式揭示时显示
+- Text input primitives and a revealable result view now drive the input-class writes: auth save-current / rename, Claude create / duplicate, profile import from a JSON file, channel credentials and JSON upsert, preference language / font / shell / terminal, Droid settings values and Missions models, spec rename / 文本输入原语与结果查看屏承载输入类写入：鉴权 save-current/rename、Claude create/duplicate、JSON 文件导入建档、渠道凭据与 JSON 建档、偏好语言/字体/shell/终端、Droid 设置值与 Missions 模型、Specs 重命名
+- Dsh field editor: per-field writes (boolean and enum cycles, string / number / json prompts) carry the entry's expectedHash so an external edit fails as a service conflict, and `R` restores an entry to its defaults / Dsh 字段编辑器：按字段写入（布尔与枚举循环、文本/数值/JSON 输入）携带条目 expectedHash，外部改动会以 service 冲突报错；`R` 恢复条目默认值
+- `dg` command tree completed for the parity domains: `dg claude settings`, `dg copilot profiles`, `dg droid settings|trusted|auth|missions|legacy`, `dg dsh providers|status`, `dg sessions`, `dg spec` (with `--dry-run` goldens) / `dg` 命令树补齐对齐域：`dg claude settings`、`dg copilot profiles`、`dg droid settings|trusted|auth|missions|legacy`、`dg dsh providers|status`、`dg sessions`、`dg spec`（含 `--dry-run` golden 测试）
+- Model connectivity tests moved to `service/connectivity` and wired to both consumers: `c` / `i` on the TUI's Droid → Models section and the new `dg connectivity test|all [--mode ping|inference]`, with the model Registry browsable in its own TUI screen / 模型连通性测试下沉为 `service/connectivity` 并接入两个消费者：TUI Droid → Models 分节按 `c` / `i`，以及新增的 `dg connectivity test|all [--mode ping|inference]`；模型注册表新增独立 TUI 屏浏览
+- TUI parity gate `check-tui-parity.mjs` added to `check:all` and CI: a GUI sub-view without a matrix row (aligned or GUI-only exempt) fails the build / 新增 TUI 对齐门禁 `check-tui-parity.mjs`（接入 `check:all` 与 CI）：GUI 新增子视图而矩阵无行（未标对齐或豁免）即构建失败
+- Release decision Q4.3 amended: `dg` is kept — `dg tui` is the interactive entry and the subcommands remain the scriptable headless layer (`--json` / `--dry-run` / exit codes); the former retirement clause is void / 修订发布决策 Q4.3：保留 `dg`——`dg tui` 为交互入口，子命令继续作为可脚本化 headless 层（`--json` / `--dry-run` / exit code），原“退役”条款作废
+
 ## v1.3.9.5
 
 **Bug Fixes / 问题修复**
