@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dialog'
 import { useOmpStore } from '@/store/omp-store'
 import { ConfigStatus } from './ConfigStatus'
+import { OmpImportFromChannelDialog } from './OmpImportFromChannelDialog'
 import { ProviderCard } from './ProviderCard'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ChannelModelPickerDialog } from '@/components/channels/ChannelModelPickerDialog'
@@ -451,6 +452,10 @@ export function OmpConfigPage() {
   const [editingProvider, setEditingProvider] =
     useState<OmpCustomProviderEntry | null>(null)
   const [providerToDelete, setProviderToDelete] = useState<string | null>(null)
+  const [importFromChannelOpen, setImportFromChannelOpen] = useState(false)
+  const [importTargetProviderId, setImportTargetProviderId] = useState<
+    string | null
+  >(null)
 
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [newProfileName, setNewProfileName] = useState('')
@@ -473,6 +478,25 @@ export function OmpConfigPage() {
   const openNewProvider = () => {
     setEditingProvider(null)
     setProviderEditorOpen(true)
+  }
+
+  const openImportFromChannel = (targetProviderId: string | null) => {
+    setImportTargetProviderId(targetProviderId)
+    setImportFromChannelOpen(true)
+  }
+
+  const handleImportFromChannel = async (
+    providerId: string,
+    provider: OmpCustomProvider
+  ) => {
+    await saveCustomProvider(providerId, provider)
+    toast.success(
+      t(
+        importTargetProviderId
+          ? 'omp.provider.importDialog.updated'
+          : 'omp.provider.importDialog.imported'
+      )
+    )
   }
 
   const openEditProvider = (entry: OmpCustomProviderEntry) => {
@@ -702,10 +726,20 @@ export function OmpConfigPage() {
               <CardTitle className="text-base">
                 {t('omp.providers.title')}
               </CardTitle>
-              <Button variant="outline" size="sm" onClick={openNewProvider}>
-                <Plus className="h-4 w-4 mr-1" />
-                {t('omp.provider.add')}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openImportFromChannel(null)}
+                >
+                  <CloudDownload className="h-4 w-4 mr-1" />
+                  {t('omp.provider.importFromChannel')}
+                </Button>
+                <Button variant="outline" size="sm" onClick={openNewProvider}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  {t('omp.provider.add')}
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -723,7 +757,7 @@ export function OmpConfigPage() {
                     hasApiKey={Boolean(entry.config.apiKey)}
                     onEdit={() => openEditProvider(entry)}
                     onDelete={() => setProviderToDelete(entry.providerId)}
-                    onImport={() => openEditProvider(entry)}
+                    onImport={() => openImportFromChannel(entry.providerId)}
                   />
                 ))
               )}
@@ -794,6 +828,13 @@ export function OmpConfigPage() {
         onOpenChange={setProviderEditorOpen}
         entry={editingProvider}
         onSave={handleSaveProvider}
+      />
+      <OmpImportFromChannelDialog
+        open={importFromChannelOpen}
+        onOpenChange={setImportFromChannelOpen}
+        existingProviders={customProviders}
+        targetProviderId={importTargetProviderId}
+        onImported={handleImportFromChannel}
       />
       <Dialog
         open={providerToDelete !== null}
