@@ -43,8 +43,10 @@ tasks:
             ref: .OBFUSCATED
           DEV:
             ref: .DEV
-      # generate:icons skipped: the spike ships the pre-generated
-      # build/windows/icon.ico (no macOS icon bundle in this build).
+      # Regenerate windows/icon.ico from appicon.png so the exe (and the
+      # NSIS installer, which points at the same .ico) always carries the
+      # DroidGear logo — the task is a no-op when the .ico is up to date.
+      - task: common:generate:icons
     preconditions:
       - sh: '{{if eq .OBFUSCATED "true"}}command -v garble >/dev/null 2>&1{{else}}true{{end}}'
         msg: "garble is required for obfuscated builds. Install it with: go install mvdan.cc/garble@v0.16.0 (requires Go 1.24+). See https://github.com/burrowers/garble/releases for version/toolchain compatibility."
