@@ -35,7 +35,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag, e.g. wails-v1.3.9-1 (dispatch never creates tags; needs this file on main to appear).'
+        description: 'Existing release tag, e.g. wails-v1.3.9.4 (must equal wails-v + package.json version; dispatch never creates tags; needs this file on main to appear).'
         required: true
         type: string
       draft:
@@ -80,7 +80,7 @@ jobs:
           # `v*` tags, so a plain `v1.3.9-…` tag would also fire the
           # tag-triggered installer pipeline there.
           if [[ ! "$tag" =~ ^wails-v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            echo "::error::tag must look like wails-v1.2.3 or wails-v1.2.3-1 (got '$tag')"
+            echo "::error::tag must look like wails-v1.2.3 or wails-v1.2.3.4 (got '$tag')"
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -93,7 +93,11 @@ jobs:
           notes="$(mktemp)"
           # Reuse the CHANGELOG entry when there is one, then always append the
           # runtime-deps caveat so downloaders know what the single file needs.
-          sed -n "/^## ${tag}$/,/^## v/p" CHANGELOG.md | sed '$d' > "$notes" || true
+          # The tag is `wails-v…` but CHANGELOG headings are `## v…`, so strip
+          # the `wails-` prefix before matching (the `v` in `wails-v` would
+          # otherwise make `${tag}` a literal that never matches a heading).
+          changelog_version="${tag#wails-}"
+          sed -n "/^## ${changelog_version}$/,/^## v/p" CHANGELOG.md | sed '$d' > "$notes" || true
 
           cat >> "$notes" <<'EOF'
 

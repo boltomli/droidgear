@@ -86,15 +86,31 @@ explicitly (CI covers them in `.github/workflows/wails.yml`).
 
 | Tag / trigger                              | Workflow             | What it runs                                                                                                                            |
 | ------------------------------------------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `wails-v<version>-<n>` (**default**)       | `release-single.yml` | Single-file binaries (Windows/Linux/macOS GUI + `dg` CLI) as a **draft** release, built from the tagged commit — no `main` merge needed |
-| `vX.Y.Z`                                   | `release.yml`        | Official release (changelog-driven draft + Windows NSIS installer). The Tauri jobs are gone; this pipeline is Wails-only                |
+| `wails-v<version>` (**default**)           | `release-single.yml` | Single-file binaries (Windows/Linux/macOS GUI + `dg` CLI) as a **draft** release, built from the tagged commit — no `main` merge needed |
+| `vX.Y.Z` / `vX.Y.Z.W`                      | `release.yml`        | Official release (changelog-driven draft + Windows NSIS installer). The Tauri jobs are gone; this pipeline is Wails-only                |
 | pull request touching `wails/**`, `src/**` | `wails.yml`          | gofmt/vet/test, command-surface and layering drift, frontend bundle gates                                                               |
 
-On this branch always use the `wails-v*` form, e.g.:
+On this branch always use the `wails-v*` form. **Update the version first,
+tag second** — the build reads its version from `package.json` (via
+`sync-version.mjs` → ldflags → About pane), so the tag must be created _on_
+the commit that already contains the matching version, otherwise the exe
+reports a different version than its tag:
 
 ```bash
-git tag wails-v1.3.9-4 && git push origin HEAD --tags
+# 1. bump package.json (4th part allowed: 1.3.9.4), sync Wails metadata
+npm pkg set version=1.3.9.4 && npm install --package-lock-only
+node wails/scripts/sync-version.mjs
+
+# 2. commit the bump, THEN tag with exactly the package.json version
+git add package.json package-lock.json wails/build
+git commit -m "chore: release 1.3.9.4"
+git tag wails-v1.3.9.4 && git push origin HEAD --tags
 ```
+
+The old `wails-v<version>-<n>` counter suffix is gone: the rebuild counter
+lives in the 4th version part (`x.y.z.w`), so exe version ↔ tag always match.
+A CHANGELOG entry with heading `## v<version>` (e.g. `## v1.3.9.4`) is picked
+up as release notes (`release-single.yml` strips the `wails-` prefix).
 
 `release.yml` is **not** disabled in this repo — it still fires for `v*`
 tags (only its Tauri jobs were removed in `fe22c57`), so avoid pushing a

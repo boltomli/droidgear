@@ -33,8 +33,10 @@ function askQuestion(question) {
 async function prepareRelease() {
   const version = process.argv[2]
 
-  if (!version || !version.match(/^v?\d+\.\d+\.\d+([+-][\w.]+)?$/)) {
-    console.error('❌ Usage: node scripts/prepare-release.js v1.0.0')
+  if (!version || !version.match(/^v?\d+\.\d+\.\d+(\.\d+)?([+-][\w.]+)?$/)) {
+    console.error(
+      '❌ Usage: node scripts/prepare-release.js v1.0.0 (x.y.z or x.y.z.w)'
+    )
     console.error('   or: npm run prepare-release v1.0.0')
     process.exit(1)
   }

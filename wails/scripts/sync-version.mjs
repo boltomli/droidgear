@@ -3,16 +3,25 @@
 // source of truth shared with the Tauri build — into every place the Wails
 // build reads it from:
 //
-//   build/config.yml                  info.version (installer metadata source)
+//   build/config.yml                  info.version (wails templates source)
 //   build/windows/info.json           fixed.file_version + ProductVersion (syso)
-//   build/windows/nsis/wails_tools.nsh  INFO_PRODUCTVERSION (NSIS installer)
+//   build/windows/nsis/wails_tools.nsh  INFO_PRODUCTVERSION (NSIS display version)
+//   build/windows/nsis/project.nsi    VIProductVersion / VIFileVersion literals
 //   build/windows/msix/*.xml          Identity/Properties Version (MSIX)
 //
-// Semver build metadata (`1.3.9+wails1`) is stripped everywhere below: NSIS
-// VIProductVersion, MSIX Version and macOS CFBundleShortVersionString all
-// require a numeric x.y.z[.w]. The full version (with suffix) is still what
-// the Go binary reports — sync-version prints it to stdout for the ldflags
-// `-X ...appVersion=` injection, which is what About/General panes display.
+// Version shapes (package.json is the single source of truth; the release tag
+// is `wails-v<package.json version>` and must match it exactly):
+//
+//   full     1.3.9.4            printed to stdout → Go ldflags → About pane
+//   numeric  1.3.9.4            prerelease/build metadata stripped, 4th part kept
+//   base     1.3.9              first three parts — config.yml only, because the
+//                               wails msix template appends `.0` itself and
+//                               darwin CFBundleShortVersionString wants x.y.z
+//   win      1.3.9.4            exactly four parts — NSIS VIProductVersion /
+//                               VIFileVersion and MSIX Version require x.y.z.w
+//
+// For a three-part version (`1.3.10`) `win` pads `.0` → `1.3.10.0`, so a
+// four-part version like `1.3.9.4` must NEVER get another `.0` appended.
 //
 // The Go binary picks the version up at link time via
 // `-ldflags "-X droidgear-wails/internal/version.Version=<version>"` (see
@@ -38,16 +47,31 @@ const check = process.argv.includes('--check')
 const { version } = JSON.parse(
   fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
 )
-if (!/^\d+\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/.test(version)) {
+if (!/^\d+\.\d+\.\d+(\.\d+)?(-[\w.]+)?(\+[\w.]+)?$/.test(version)) {
   console.error(
     `sync-version: unexpected version format in package.json: ${version}`
   )
   process.exit(1)
 }
 
-// Numeric-only form (strips `-prerelease` and `+buildmeta`) for Windows
-// installer metadata: NSIS VIProductVersion and MSIX Version must be x.y.z[.w].
-const numericVersion = version.replace(/^([0-9]+\.[0-9]+\.[0-9]+).*$/, '$1')
+// Numeric form (strips `-prerelease` / `+buildmeta`, keeps an optional 4th
+// part) — feeds info.json and the NSIS display version.
+const numericVersion = version.replace(
+  /^([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?).*$/,
+  '$1'
+)
+
+// First three parts only — feeds config.yml: the wails msix template appends
+// `.0` to info.version itself (a 4th part would become a 5-part, invalid
+// Version) and darwin CFBundleShortVersionString wants x.y.z.
+const baseVersion = numericVersion.split('.').slice(0, 3).join('.')
+
+// Exactly four parts — feeds NSIS VIProductVersion/VIFileVersion and MSIX
+// Version, which require x.y.z.w.
+const winVersion =
+  numericVersion.split('.').length === 4
+    ? numericVersion
+    : `${numericVersion}.0`
 
 const changes = []
 
@@ -81,7 +105,7 @@ apply('build/config.yml', text => {
     )
     process.exit(1)
   }
-  return text.replace(pattern, `  version: "${numericVersion}"`)
+  return text.replace(pattern, `  version: "${baseVersion}"`)
 })
 
 // build/windows/info.json — embedded into the Windows version resource.
@@ -94,7 +118,9 @@ apply('build/windows/info.json', text => {
   return `${JSON.stringify(json, null, '\t')}\n`
 })
 
-// build/windows/nsis/wails_tools.nsh — NSIS installer defines.
+// build/windows/nsis/wails_tools.nsh — NSIS installer defines (display
+// version: VIAddVersionKey ProductVersion + registry DisplayVersion keep the
+// full numeric version, 4th part included).
 apply('build/windows/nsis/wails_tools.nsh', text =>
   replaceAll(
     'build/windows/nsis/wails_tools.nsh',
@@ -104,8 +130,24 @@ apply('build/windows/nsis/wails_tools.nsh', text =>
   )
 )
 
-// build/windows/msix manifests — 4-part version (x.y.z.0). The lookbehind
-// keeps MinVersion / MaxVersionTested untouched.
+// build/windows/nsis/project.nsi — VIProductVersion/VIFileVersion must be
+// exactly x.y.z.w, so they are managed as literals here instead of relying on
+// a `${INFO_PRODUCTVERSION}.0` append (which would turn 1.3.9.4 into
+// 1.3.9.4.0 and makensis would reject it). The `\s+` keeps the original
+// alignment; `[^\"]*` also matches a regenerated `${INFO_PRODUCTVERSION}.0`
+// macro, so a wails template refresh is re-synced on the next run.
+apply('build/windows/nsis/project.nsi', text =>
+  replaceAll(
+    'build/windows/nsis/project.nsi',
+    text,
+    '(VIProductVersion|VIFileVersion)(\\s+)"[^"]*"',
+    `$1$2"${winVersion}"`
+  )
+)
+
+// build/windows/msix manifests — exactly 4-part version (x.y.z.w; for a
+// three-part package.json version `winVersion` carries the padded `.0`). The
+// lookbehind keeps MinVersion / MaxVersionTested untouched.
 for (const file of [
   'build/windows/msix/template.xml',
   'build/windows/msix/app_manifest.xml',
@@ -114,8 +156,8 @@ for (const file of [
     replaceAll(
       file,
       text,
-      '(?<!\\w)Version="\\d+\\.\\d+\\.\\d+\\.\\d+"',
-      `Version="${numericVersion}.0"`
+      '(?<!\\w)Version="\\d+\\.\\d+\\.\\d+(?:\\.\\d+)?"',
+      `Version="${winVersion}"`
     )
   )
 }

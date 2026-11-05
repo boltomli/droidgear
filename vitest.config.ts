@@ -1,7 +1,12 @@
 import path from 'path'
+import { fileURLToPath } from 'url'
 import { defineConfig } from 'vitest/config'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
+
+// `__dirname` is unsupported by Vite's native config loader (planned default);
+// derive it from the module URL instead.
+const dir = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [
@@ -28,9 +33,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(dir, './src'),
       '@wails-bindings': path.resolve(
-        __dirname,
+        dir,
         './wails/frontend/bindings/droidgear-wails/internal/app/app.ts'
       ),
     },

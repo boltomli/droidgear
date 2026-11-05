@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import fs from 'node:fs'
 import path, { resolve } from 'path'
 import { fileURLToPath } from 'url'
-import packageJson from './package.json'
+import packageJson from './package.json' with { type: 'json' }
 
 /**
  * Single frontend build for the Wails shell.
