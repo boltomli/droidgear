@@ -12,6 +12,12 @@ import (
 	"droidgear-wails/internal/core"
 )
 
+// fileExists reports whether path is an existing regular file (callers span
+// several files in this package; core holds the implementation).
+func fileExists(path string) bool {
+	return core.FileExists(path)
+}
+
 func validateIOPath(path string) error {
 	if strings.TrimSpace(path) == "" {
 		return errString("Path cannot be empty")

@@ -39,6 +39,7 @@ npm run format:check     # Check formatting without changes
 npm run ast:lint         # ast-grep architecture rules
 npm run ast:fix          # ast-grep with auto-fix
 npm run check:no-tauri   # Fails if unbridged Tauri APIs creep into src/
+npm run check:tui-parity # GUI 子视图 ↔ 对齐矩阵 (docs/developer/tui-parity.zh.md §2) drift
 ```
 
 ## Testing — Frontend (Vitest)

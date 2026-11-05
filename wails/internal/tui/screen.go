@@ -32,42 +32,37 @@ type Module struct {
 	Open func(ctx context.Context) (Screen, error)
 }
 
-// DefaultModules is the module set shipped so far. Parity adds a row per
-// GUI view as its service package lands — the source of truth for what is
-// still missing is the matrix in docs/developer/tui-parity.zh.md §2.
+// DefaultModules is the module set shipped so far: the GUI's left栏 in the
+// same order (droid, channels, codex, claude, hermes, pi, omp, copilot, dsh)
+// followed by the Preferences panes that have their own TUI screen. Parity
+// adds a row per GUI view as its service package lands — the source of truth
+// for what is still missing is the matrix in docs/developer/tui-parity.zh.md §2.
 func DefaultModules() []Module {
-	sources := []struct {
-		key    string
-		title  string
-		source func() ListSource
+	specs := []struct {
+		key   string
+		title string
+		open  func(context.Context) (Screen, error)
 	}{
-		{"channels", "Channels", ChannelsSource},
-		{"export", "Export", ExportSource},
-		{"codex", "Codex", CodexSource},
-		{"hermes", "Hermes", HermesSource},
-		{"pi", "Pi", PiSource},
-		{"omp", "OMP", OmpSource},
-		{"mcp", "MCP", McpSource},
-		{"models", "Models", FactorySource},
+		{"droid", "Droid", newDroidScreen},
+		{"channels", "Channels", newChannelsScreen},
+		{"codex", "Codex", newCodexScreen},
+		{"claude", "Claude", list(ClaudeSource)},
+		{"hermes", "Hermes", list(HermesSource)},
+		{"pi", "Pi", newPiScreen},
+		{"omp", "OMP", newOmpScreen},
+		{"copilot", "Copilot", list(CopilotSource)},
+		{"dsh", "Dsh", newDshScreen},
+		{"paths", "Paths", newPathsScreen},
+		{"settings", "Settings", newSettingsScreen},
 	}
 
-	modules := []Module{
-		{
-			Key:   "paths",
-			Title: "Paths",
-			Open: func(ctx context.Context) (Screen, error) {
-				return newPathsScreen(ctx)
-			},
-		},
-	}
-	for _, entry := range sources {
-		entry := entry
+	modules := make([]Module, 0, len(specs))
+	for _, spec := range specs {
+		spec := spec
 		modules = append(modules, Module{
-			Key:   entry.key,
-			Title: entry.title,
-			Open: func(ctx context.Context) (Screen, error) {
-				return newListScreen(ctx, entry.source())
-			},
+			Key:   spec.key,
+			Title: spec.title,
+			Open:  spec.open,
 		})
 	}
 	return modules

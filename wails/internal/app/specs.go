@@ -1,300 +1,51 @@
-// Specs surface: ~/.factory/specs CRUD plus the `specs-changed` watcher.
+// Droid Specs commands — the GUI-facing forward — plus the `specs-changed`
+// poll watcher.
 //
-// Mirrors droidgear-core::specs and src-tauri/src/commands/specs.rs; the
-// notify watcher is replaced by a poll loop per wails/PORTING.md.
-//
-// This file also hosts the small path/JSON helpers shared by the other Droid
-// tool files in this package (mcp.go, droid_settings.go, droid_trusted.go,
-// factory_auth_profiles.go) — they are droid-prefixed so they read as one
-// spelling of the same concept across those files.
+// The CRUD lives in internal/service/specs; the watcher stays here because
+// it owns the Wails event bus (tui-parity §3: watcher 留在 GUI 适配层). The
+// poll loop itself is the accepted equivalent of the Rust notify watcher
+// (wails/PORTING.md).
 package app
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
-	"unicode/utf8"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/service/specs"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // ---------------------------------------------------------------------------
-// Shared Droid-tool helpers
+// Commands (src-tauri/src/commands/specs.rs)
 // ---------------------------------------------------------------------------
 
-// droidTempCounter makes sibling temp names unique within one process
-// (mirrors the atomic counters in droidgear-core's write helpers).
-var droidTempCounter atomic.Uint64
-
-// droidHomeDir resolves the user home directory with the Rust error string
-// (dirs::home_dir().ok_or("Failed to get home directory")).
-func droidHomeDir() (string, error) {
-	home, err := core.HomeDir()
-	if err != nil {
-		return "", errString("Failed to get home directory")
-	}
-	return home, nil
+// ListSpecs lists all spec files from ~/.factory/specs.
+func (a *App) ListSpecs() ([]specs.SpecFile, error) {
+	return specs.List()
 }
 
-// droidExtension mirrors Rust Path::extension() for a file *name*.
-func droidExtension(name string) string {
-	i := strings.LastIndex(name, ".")
-	if i <= 0 {
-		return ""
-	}
-	return name[i+1:]
+// RenameSpec renames a spec file inside the specs directory.
+func (a *App) RenameSpec(oldPath string, newName string) (specs.SpecFile, error) {
+	return specs.Rename(oldPath, newName)
 }
 
-// droidFileStem mirrors Rust Path::file_stem() for a file *name*.
-func droidFileStem(name string) string {
-	if i := strings.LastIndex(name, "."); i > 0 {
-		return name[:i]
-	}
-	return name
+// DeleteSpec deletes a spec file inside the specs directory.
+func (a *App) DeleteSpec(path string) error {
+	return specs.Delete(path)
 }
 
-// droidFileName mirrors Rust Path::file_name() (None → empty string).
-func droidFileName(path string) string {
-	if path == "" {
-		return ""
-	}
-	base := filepath.Base(filepath.Clean(path))
-	if base == "." || base == ".." || strings.HasSuffix(base, string(filepath.Separator)) {
-		return ""
-	}
-	return base
-}
-
-// droidPathsEqual compares paths component-wise like Rust's Path PartialEq
-// (separator-normalized, case-sensitive).
-func droidPathsEqual(a string, b string) bool {
-	return filepath.Clean(a) == filepath.Clean(b)
-}
-
-// droidPathHasPrefix mirrors Rust Path::starts_with (component-wise).
-func droidPathHasPrefix(path string, prefix string) bool {
-	p := filepath.Clean(path)
-	pre := filepath.Clean(prefix)
-	if p == pre {
-		return true
-	}
-	if !strings.HasPrefix(p, pre) {
-		return false
-	}
-	if strings.HasSuffix(pre, string(filepath.Separator)) {
-		return true
-	}
-	rest := p[len(pre):]
-	return len(rest) > 0 && rest[0] == filepath.Separator
-}
-
-// droidResolvePath mirrors std::fs::canonicalize (absolute, symlinks
-// resolved). On Windows the Rust side keeps the verbatim \\?\ prefix; the Go
-// port stores the ordinary absolute path, which stays self-consistent across
-// the Wails surface (see the porting report).
-func droidResolvePath(path string) (string, error) {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return "", err
-	}
-	resolved, err := filepath.EvalSymlinks(abs)
-	if err != nil {
-		return "", err
-	}
-	return resolved, nil
-}
-
-// droidAtomicWrite mirrors droidgear-core::storage::atomic_write: a unique
-// sibling temp file renamed over the target, with byte-identical errors.
-func droidAtomicWrite(path string, data []byte) error {
-	parent := filepath.Dir(path)
-	if !core.PathExists(parent) {
-		if err := os.MkdirAll(parent, 0o755); err != nil { // #nosec G301 -- config directory
-			return fmt.Errorf("Failed to create directory: %w", err)
-		}
-	}
-	name := filepath.Base(path)
-	nanos := time.Now().UnixNano()
-	pid := os.Getpid()
-	for counter := uint64(0); ; counter++ {
-		suffix := fmt.Sprintf("%d-%d", pid, nanos)
-		if counter > 0 {
-			suffix = fmt.Sprintf("%s-%d", suffix, counter)
-		}
-		candidate := filepath.Join(parent, "."+name+"."+suffix+".tmp")
-		if core.PathExists(candidate) {
-			continue
-		}
-		if err := writeDroidTempFile(candidate, data, path); err != nil {
-			return err
-		}
-		return nil
-	}
-}
-
-func writeDroidTempFile(tempPath string, data []byte, target string) error {
-	if err := os.WriteFile(tempPath, data, 0o644); err != nil { // #nosec G306 -- config files
-		return fmt.Errorf("Failed to write file: %w", err)
-	}
-	if err := os.Rename(tempPath, target); err != nil {
-		_ = os.Remove(tempPath)
-		return fmt.Errorf("Failed to write file: %w", err)
-	}
-	return nil
+// UpdateSpec overwrites a spec file's content.
+func (a *App) UpdateSpec(path string, content string) (specs.SpecFile, error) {
+	return specs.Update(path, content)
 }
 
 // ---------------------------------------------------------------------------
-// Types
+// Watcher (notify → 500ms poll, event name/payload mirrored)
 // ---------------------------------------------------------------------------
-
-// SpecFile mirrors specs::SpecFile (bindings.ts).
-type SpecFile struct {
-	Name       string `json:"name"`
-	Path       string `json:"path"`
-	Content    string `json:"content"`
-	ModifiedAt int64  `json:"modifiedAt"`
-}
-
-// ---------------------------------------------------------------------------
-// Path resolution
-// ---------------------------------------------------------------------------
-
-func specsDirForHome(home string) string {
-	return filepath.Join(core.FactoryHomeForHome(home), "specs")
-}
-
-// ---------------------------------------------------------------------------
-// CRUD (mirrors droidgear-core::specs)
-// ---------------------------------------------------------------------------
-
-func listSpecsForHome(home string) ([]SpecFile, error) {
-	dir := specsDirForHome(home)
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []SpecFile{}, nil
-		}
-		return nil, fmt.Errorf("Failed to read specs directory: %w", err)
-	}
-
-	specs := []SpecFile{}
-	for _, entry := range entries {
-		name := entry.Name()
-		if droidExtension(name) != "md" {
-			continue
-		}
-		path := filepath.Join(dir, name)
-		info, err := os.Stat(path) // follows symlinks, like fs::metadata
-		if err != nil || !info.Mode().IsRegular() {
-			continue
-		}
-		data, err := os.ReadFile(path) // #nosec G304 -- specs directory contents
-		if err != nil || !utf8.Valid(data) {
-			continue // Rust read_to_string skips unreadable/non-UTF-8 files
-		}
-		specs = append(specs, SpecFile{
-			Name:       name,
-			Path:       path,
-			Content:    string(data),
-			ModifiedAt: info.ModTime().UnixMilli(),
-		})
-	}
-
-	sort.SliceStable(specs, func(i, j int) bool {
-		return specs[i].ModifiedAt > specs[j].ModifiedAt
-	})
-	return specs, nil
-}
-
-func readSpecFile(path string) (SpecFile, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return SpecFile{}, errString("Spec file not found")
-		}
-		return SpecFile{}, fmt.Errorf("Failed to read file metadata: %w", err)
-	}
-	data, err := os.ReadFile(path) // #nosec G304 -- user-picked spec path
-	if err != nil {
-		return SpecFile{}, fmt.Errorf("Failed to read file content: %w", err)
-	}
-	if !utf8.Valid(data) {
-		return SpecFile{}, fmt.Errorf("Failed to read file content: %w", errString("stream did not contain valid UTF-8"))
-	}
-	return SpecFile{
-		Name:       droidFileName(path),
-		Path:       path,
-		Content:    string(data),
-		ModifiedAt: info.ModTime().UnixMilli(),
-	}, nil
-}
-
-func renameSpecForHome(home string, oldPath string, newName string) (SpecFile, error) {
-	specsDir := specsDirForHome(home)
-	cleanOld := filepath.Clean(oldPath)
-	if !droidPathHasPrefix(cleanOld, specsDir) {
-		return SpecFile{}, errString("Invalid file path")
-	}
-	if !core.PathExists(cleanOld) {
-		return SpecFile{}, errString("Spec file not found")
-	}
-
-	newName = strings.TrimSpace(newName)
-	if newName == "" {
-		return SpecFile{}, errString("File name cannot be empty")
-	}
-	if !strings.HasSuffix(newName, ".md") {
-		newName += ".md"
-	}
-	if strings.ContainsAny(newName, `/\`) {
-		return SpecFile{}, errString("Invalid file name")
-	}
-
-	newPath := filepath.Join(specsDir, newName)
-	if core.PathExists(newPath) && !droidPathsEqual(newPath, cleanOld) {
-		return SpecFile{}, errString("A file with this name already exists")
-	}
-	if err := os.Rename(cleanOld, newPath); err != nil {
-		return SpecFile{}, fmt.Errorf("Failed to rename file: %w", err)
-	}
-	return readSpecFile(newPath)
-}
-
-func deleteSpecForHome(home string, path string) error {
-	specsDir := specsDirForHome(home)
-	cleanPath := filepath.Clean(path)
-	if !droidPathHasPrefix(cleanPath, specsDir) {
-		return errString("Invalid file path")
-	}
-	if !core.PathExists(cleanPath) {
-		return errString("Spec file not found")
-	}
-	if err := os.Remove(cleanPath); err != nil {
-		return fmt.Errorf("Failed to delete file: %w", err)
-	}
-	return nil
-}
-
-func updateSpecForHome(home string, path string, content string) (SpecFile, error) {
-	specsDir := specsDirForHome(home)
-	cleanPath := filepath.Clean(path)
-	if !droidPathHasPrefix(cleanPath, specsDir) {
-		return SpecFile{}, errString("Invalid file path")
-	}
-	if !core.PathExists(cleanPath) {
-		return SpecFile{}, errString("Spec file not found")
-	}
-	if err := os.WriteFile(cleanPath, []byte(content), 0o644); err != nil { // #nosec G306 -- spec files
-		return SpecFile{}, fmt.Errorf("Failed to write file: %w", err)
-	}
-	return readSpecFile(path)
-}
 
 // ---------------------------------------------------------------------------
 // Watcher (notify → 500ms poll, event name/payload mirrored)
@@ -363,55 +114,14 @@ func specsSnapshotsEqual(left map[string]specsFileStamp, right map[string]specsF
 	return true
 }
 
-// ---------------------------------------------------------------------------
-// Commands (src-tauri/src/commands/specs.rs)
-// ---------------------------------------------------------------------------
-
-// ListSpecs lists all spec files from ~/.factory/specs.
-func (a *App) ListSpecs() ([]SpecFile, error) {
-	home, err := droidHomeDir()
-	if err != nil {
-		return []SpecFile{}, err
-	}
-	return listSpecsForHome(home)
-}
-
-// RenameSpec renames a spec file inside the specs directory.
-func (a *App) RenameSpec(oldPath string, newName string) (SpecFile, error) {
-	home, err := droidHomeDir()
-	if err != nil {
-		return SpecFile{}, err
-	}
-	return renameSpecForHome(home, oldPath, newName)
-}
-
-// DeleteSpec deletes a spec file inside the specs directory.
-func (a *App) DeleteSpec(path string) error {
-	home, err := droidHomeDir()
-	if err != nil {
-		return err
-	}
-	return deleteSpecForHome(home, path)
-}
-
-// UpdateSpec overwrites a spec file's content.
-func (a *App) UpdateSpec(path string, content string) (SpecFile, error) {
-	home, err := droidHomeDir()
-	if err != nil {
-		return SpecFile{}, err
-	}
-	return updateSpecForHome(home, path, content)
-}
-
 // StartSpecsWatcher creates the specs directory when missing and starts the
 // change poll loop (replacing any watcher already running, like the Rust
 // command does).
 func (a *App) StartSpecsWatcher() error {
-	home, err := droidHomeDir()
+	dir, err := specs.Dir()
 	if err != nil {
 		return err
 	}
-	dir := specsDirForHome(home)
 	if err := core.EnsureDir(dir); err != nil {
 		return fmt.Errorf("Failed to create specs directory: %w", err)
 	}
@@ -462,7 +172,7 @@ func (a *App) StartSpecsWatcher() error {
 
 // StopSpecsWatcher stops the change poll loop.
 func (a *App) StopSpecsWatcher() error {
-	if _, err := droidHomeDir(); err != nil {
+	if _, err := specs.Dir(); err != nil {
 		return err
 	}
 	specsWatcher.mu.Lock()

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -80,13 +79,13 @@ func TestOpencodeProfileCRUDAndApplyRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetOpencodeConfigStatus: %v", err)
 	}
-	writeTestFile(t, status.ConfigPath, `{
+	testutil.WriteTestFile(t, status.ConfigPath, `{
   // jsonc comment
   "theme": "dark",
   "unknownTopLevel": {"keep": true},
   "provider": {"existing": {"npm": "@ai/old"}}
 }`)
-	writeTestFile(t, status.AuthPath, `{"openai": {"type": "api", "key": "sk-from-auth"}}`)
+	testutil.WriteTestFile(t, status.AuthPath, `{"openai": {"type": "api", "key": "sk-from-auth"}}`)
 
 	applyProfile := loaded
 	applyProfile.Providers = map[string]OpenCodeProviderConfig{
@@ -205,7 +204,7 @@ func TestOpencodeConfigStatusHonoursPathOverride(t *testing.T) {
 
 	customConfig := filepath.Join(t.TempDir(), "oc-config")
 	customAuth := filepath.Join(t.TempDir(), "oc-auth")
-	writeTestFile(t, filepath.Join(home, ".droidgear", "settings.json"),
+	testutil.WriteTestFile(t, filepath.Join(home, ".droidgear", "settings.json"),
 		`{"configPaths": {"opencode": `+quoteJSON(customConfig)+`, "opencodeAuth": `+quoteJSON(customAuth)+`}}`)
 
 	status, err := a.GetOpencodeConfigStatus()
@@ -223,8 +222,8 @@ func TestOpencodeConfigStatusHonoursPathOverride(t *testing.T) {
 	}
 
 	// .jsonc wins over .json when both exist.
-	writeTestFile(t, filepath.Join(customConfig, "opencode.json"), `{}`)
-	writeTestFile(t, filepath.Join(customConfig, "opencode.jsonc"), `{}`)
+	testutil.WriteTestFile(t, filepath.Join(customConfig, "opencode.json"), `{}`)
+	testutil.WriteTestFile(t, filepath.Join(customConfig, "opencode.jsonc"), `{}`)
 	status, err = a.GetOpencodeConfigStatus()
 	if err != nil {
 		t.Fatalf("GetOpencodeConfigStatus (2): %v", err)
@@ -315,7 +314,7 @@ func TestOpencodeTestProviderConnection(t *testing.T) {
 func TestOpencodeReadJSONStripsComments(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "opencode.json")
-	writeTestFile(t, path, `{
+	testutil.WriteTestFile(t, path, `{
   // line comment with "quotes" and https://slash
   "a": 1, /* block */ "b": {"url": "https://example.test//not-a-comment"}
 }`)
@@ -335,7 +334,7 @@ func TestOpencodeReadJSONStripsComments(t *testing.T) {
 	if got := opencodeReadJSONValue(filepath.Join(dir, "absent.json")); got == nil {
 		t.Fatalf("missing file must yield an empty object")
 	}
-	writeTestFile(t, filepath.Join(dir, "broken.json"), "{not json")
+	testutil.WriteTestFile(t, filepath.Join(dir, "broken.json"), "{not json")
 	if got, ok := opencodeReadJSONValue(filepath.Join(dir, "broken.json")).(map[string]any); !ok || len(got) != 0 {
 		t.Fatalf("invalid file must yield an empty object, got %#v", got)
 	}
@@ -366,19 +365,9 @@ func TestOpencodeMarshalJSONKeepsNumbers(t *testing.T) {
 // helpers
 // ---------------------------------------------------------------------------
 
-func writeTestFile(t *testing.T, path string, content string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- test fixture
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil { // #nosec G306 -- test fixture
-		t.Fatalf("write %s: %v", path, err)
-	}
-}
-
 func readTestFile(t *testing.T, path string, content string) {
 	t.Helper()
-	writeTestFile(t, path, content)
+	testutil.WriteTestFile(t, path, content)
 }
 
 func quoteJSON(value string) string {

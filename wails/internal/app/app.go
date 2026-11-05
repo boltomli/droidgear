@@ -6,13 +6,7 @@
 package app
 
 import (
-	"encoding/json"
-	"errors"
-	"os"
-	"path/filepath"
-	"runtime"
-
-	"droidgear-wails/internal/core"
+	prefs "droidgear-wails/internal/service/preferences"
 	"droidgear-wails/internal/version"
 )
 
@@ -25,22 +19,15 @@ type App struct{}
 // ---------------------------------------------------------------------------
 
 // DroidRunPreferences mirrors droid_runtime::DroidRunPreferences.
-type DroidRunPreferences struct {
-	DisableAutoUpdateEnv    *bool `json:"disableAutoUpdateEnv"`
-	UnsetAnthropicAuthToken *bool `json:"unsetAnthropicAuthToken"`
-}
+//
+// The type lives in internal/service/preferences (the single write path for
+// the GUI, the TUI and any future CLI); this alias keeps the generated
+// bindings' type name and JSON shape unchanged.
+type DroidRunPreferences = prefs.DroidRunPreferences
 
 // AppPreferences mirrors types::AppPreferences (snake_case JSON on purpose —
 // the Rust struct does not rename fields).
-type AppPreferences struct {
-	Theme                string               `json:"theme"`
-	Language             *string              `json:"language"`
-	TerminalFontFamily   *string              `json:"terminal_font_family"`
-	TerminalShellCommand *string              `json:"terminal_shell_command"`
-	DisableAutoUpdate    *bool                `json:"disable_auto_update"`
-	PreferredTerminal    *string              `json:"preferred_terminal"`
-	DroidRun             *DroidRunPreferences `json:"droid_run"`
-}
+type AppPreferences = prefs.AppPreferences
 
 // GetAppVersion returns the application version string (mirrors the Tauri
 // `get_app_version` command, which also returns a bare string). The value
@@ -51,73 +38,15 @@ func (a *App) GetAppVersion() string {
 }
 
 func defaultPreferences() AppPreferences {
-	return AppPreferences{Theme: "system"}
-}
-
-func appDataDir() (string, error) {
-	switch runtime.GOOS {
-	case "windows":
-		roaming := os.Getenv("APPDATA")
-		if roaming == "" {
-			return "", errors.New("APPDATA is not set")
-		}
-		return filepath.Join(roaming, "com.droidgear.app"), nil
-	case "darwin":
-		home, err := core.HomeDir()
-		if err != nil {
-			return "", err
-		}
-		return filepath.Join(home, "Library", "Application Support", "com.droidgear.app"), nil
-	default:
-		base := os.Getenv("XDG_DATA_HOME")
-		if base == "" {
-			home, err := core.HomeDir()
-			if err != nil {
-				return "", err
-			}
-			base = filepath.Join(home, ".local", "share")
-		}
-		return filepath.Join(base, "com.droidgear.app"), nil
-	}
-}
-
-func preferencesPath() (string, error) {
-	dir, err := appDataDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "preferences.json"), nil
+	return prefs.Default()
 }
 
 // LoadPreferences reads preferences.json (shared with the Tauri app).
 func (a *App) LoadPreferences() (AppPreferences, error) {
-	path, err := preferencesPath()
-	if err != nil {
-		return defaultPreferences(), nil
-	}
-	data, err := os.ReadFile(path) // #nosec G304 -- fixed app data path
-	if err != nil {
-		return defaultPreferences(), nil
-	}
-	var prefs AppPreferences
-	if err := json.Unmarshal(data, &prefs); err != nil {
-		return defaultPreferences(), nil
-	}
-	if prefs.Theme == "" {
-		prefs.Theme = "system"
-	}
-	return prefs, nil
+	return prefs.Load()
 }
 
 // SavePreferences writes preferences.json atomically.
 func (a *App) SavePreferences(preferences AppPreferences) error {
-	path, err := preferencesPath()
-	if err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(preferences, "", "  ")
-	if err != nil {
-		return err
-	}
-	return core.AtomicWrite(path, data)
+	return prefs.Save(preferences)
 }

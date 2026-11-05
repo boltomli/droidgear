@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"droidgear-wails/internal/service/codex"
+	"droidgear-wails/internal/service/copilot"
 	"droidgear-wails/internal/service/hermes"
 	"droidgear-wails/internal/service/omp"
 	"droidgear-wails/internal/service/pi"
@@ -143,6 +144,28 @@ func OmpSource() ListSource {
 		},
 		get: func(id string) ([]byte, error) {
 			return marshalDetail(id, omp.GetProfile)
+		},
+	}
+}
+
+// CopilotSource adapts internal/service/copilot (Copilot → Profiles).
+func CopilotSource() ListSource {
+	return &profileSource{
+		title:  "Copilot",
+		active: copilot.GetActiveCopilotProfileId,
+		list: func() ([]ListRow, error) {
+			profiles, err := copilot.ListCopilotProfiles()
+			if err != nil {
+				return nil, err
+			}
+			rows := make([]ListRow, 0, len(profiles))
+			for _, profile := range profiles {
+				rows = append(rows, ListRow{ID: profile.ID, Label: profile.Name})
+			}
+			return rows, nil
+		},
+		get: func(id string) ([]byte, error) {
+			return marshalDetail(id, copilot.GetCopilotProfile)
 		},
 	}
 }

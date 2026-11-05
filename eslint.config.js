@@ -94,6 +94,7 @@ export default tseslint.config(
       'scripts/check-command-surface.mjs',
       'scripts/check-go-layering.mjs',
       'scripts/check-no-tauri.mjs',
+      'scripts/check-tui-parity.mjs',
     ],
     languageOptions: {
       ecmaVersion: 2022,

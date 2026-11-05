@@ -70,12 +70,27 @@ func (s *listScreen) Title() string { return s.source.Title() }
 
 func (s *listScreen) Status() string { return s.status }
 
+// revealSource is the optional extension for sources whose detail differs
+// between the redacted and the revealed view: values that live under generic
+// keys (Dsh `value` fields marked `secret: true`) cannot be recognised by
+// render-time redaction, so the source masks them itself.
+type revealSource interface {
+	ListSource
+	DetailFor(ctx context.Context, id string, reveal bool) ([]byte, error)
+}
+
 func (s *listScreen) loadDetail() {
 	s.raw = ""
 	if s.selected < 0 || s.selected >= len(s.rows) {
 		return
 	}
-	data, err := s.source.Detail(s.ctx, s.rows[s.selected].ID)
+	var data []byte
+	var err error
+	if src, ok := s.source.(revealSource); ok {
+		data, err = src.DetailFor(s.ctx, s.rows[s.selected].ID, s.reveal)
+	} else {
+		data, err = s.source.Detail(s.ctx, s.rows[s.selected].ID)
+	}
 	if err != nil {
 		s.err = err
 		return
@@ -102,6 +117,9 @@ func (s *listScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 		}
 	case "r":
 		s.reveal = !s.reveal
+		if _, ok := s.source.(revealSource); ok {
+			s.loadDetail()
+		}
 	}
 	return s, nil
 }

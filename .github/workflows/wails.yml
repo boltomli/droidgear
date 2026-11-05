@@ -18,6 +18,8 @@ on:
       - 'scripts/check-command-surface.mjs'
       - 'scripts/check-go-layering.mjs'
       - 'scripts/check-no-tauri.mjs'
+      - 'scripts/check-tui-parity.mjs'
+      - 'docs/developer/tui-parity.zh.md'
       - 'vite.config.ts'
       - 'vitest.config.ts'
       - 'package.json'
@@ -105,6 +107,11 @@ jobs:
       # stay free of Wails, cmd/dg must not import internal/app.
       - name: Go layering gate
         run: node scripts/check-go-layering.mjs
+
+      # docs/developer/tui-parity.zh.md §6: a GUI sub-view without a matrix
+      # row (对齐 or GUI-only exemption) fails the build.
+      - name: TUI parity gate
+        run: node scripts/check-tui-parity.mjs
 
       - name: Version source drift
         run: node wails/scripts/sync-version.mjs --check

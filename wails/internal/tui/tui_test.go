@@ -3,9 +3,14 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/service/claude"
+	"droidgear-wails/internal/service/preferences"
 	"droidgear-wails/internal/testutil"
 	"github.com/charmbracelet/bubbletea"
 )
@@ -42,8 +47,8 @@ func step(t *testing.T, m Model, msg tea.Msg) Model {
 func TestSidebarNavigationAndFocus(t *testing.T) {
 	m := New(context.Background())
 
-	if got := m.SelectedModule(); got != "paths" {
-		t.Fatalf("initial selection = %q, want paths", got)
+	if got := m.SelectedModule(); got != "droid" {
+		t.Fatalf("initial selection = %q, want droid", got)
 	}
 	if m.Focused() != focusSidebar {
 		t.Fatalf("initial focus = %v, want sidebar", m.Focused())
@@ -216,6 +221,15 @@ func TestChannelsAndExportScreensOpenOnAnEmptyHome(t *testing.T) {
 		"export": func(ctx context.Context) (Screen, error) {
 			return newListScreen(ctx, ExportSource())
 		},
+		"copilot": func(ctx context.Context) (Screen, error) {
+			return newListScreen(ctx, CopilotSource())
+		},
+		"codex-auth": func(ctx context.Context) (Screen, error) {
+			return newListScreen(ctx, CodexAuthSource())
+		},
+		"claude": func(ctx context.Context) (Screen, error) {
+			return newListScreen(ctx, ClaudeSource())
+		},
 	}
 	for name, open := range openers {
 		screen, err := open(context.Background())
@@ -232,11 +246,195 @@ func TestChannelsAndExportScreensOpenOnAnEmptyHome(t *testing.T) {
 	}
 }
 
+func TestCodexAuthScreenListsProfiles(t *testing.T) {
+	testutil.IsolatedHome(t)
+
+	dir, err := core.DroidGearDir()
+	if err != nil {
+		t.Fatalf("DroidGearDir: %v", err)
+	}
+	manifest := filepath.Join(dir, "auth-profiles", "codex", "profiles.json")
+	if err := os.MkdirAll(filepath.Dir(manifest), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	const body = `{"active":"prod","profiles":[` +
+		`{"name":"prod","label":"Prod BYOK","createdAt":"2026-01-01T00:00:00Z","isOfficial":false},` +
+		`{"name":"official","label":"Official","createdAt":"2026-01-02T00:00:00Z","isOfficial":true}]}`
+	if err := os.WriteFile(manifest, []byte(body), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	screen, err := newListScreen(context.Background(), CodexAuthSource())
+	if err != nil {
+		t.Fatalf("newListScreen: %v", err)
+	}
+	if got := screen.Status(); !strings.Contains(got, "active: Prod BYOK") || !strings.Contains(got, "1 official") {
+		t.Fatalf("status = %q, want the active profile and the official count", got)
+	}
+	view := screen.View(100, 24)
+	for _, want := range []string{"Prod BYOK", "Official  [official]"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("codex auth view missing %q:\n%s", want, view)
+		}
+	}
+}
+
+func TestSettingsScreenRendersPreferences(t *testing.T) {
+	home := testutil.IsolatedHome(t)
+	// preferences.json lives in the platform app-data dir, not HOME; point
+	// APPDATA at the throwaway home so Save never touches the developer's
+	// real profile.
+	t.Setenv("APPDATA", home)
+	t.Setenv("XDG_DATA_HOME", filepath.Join(home, "xdg-data"))
+
+	lang := "zh-CN"
+	if err := preferences.Save(preferences.AppPreferences{
+		Theme:    "dark",
+		Language: &lang,
+	}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	screen, err := newSettingsScreen(context.Background())
+	if err != nil {
+		t.Fatalf("newSettingsScreen: %v", err)
+	}
+	view := screen.View(100, 24)
+	for _, want := range []string{"Preferences", "theme", "dark", "language", "zh-CN", "[Appearance]"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("settings view missing %q:\n%s", want, view)
+		}
+	}
+}
+
+func TestClaudeScreenListsSettingsFiles(t *testing.T) {
+	testutil.IsolatedHome(t)
+
+	if _, err := claude.CreateSettingsFile("work", false); err != nil {
+		t.Fatalf("CreateSettingsFile: %v", err)
+	}
+	if _, err := claude.SetActiveSettingsFile(core.StrPtr("work")); err != nil {
+		t.Fatalf("SetActiveSettingsFile: %v", err)
+	}
+
+	screen, err := newListScreen(context.Background(), ClaudeSource())
+	if err != nil {
+		t.Fatalf("newListScreen: %v", err)
+	}
+	if got := screen.Status(); !strings.Contains(got, "active: work") {
+		t.Fatalf("status = %q, want the active settings file", got)
+	}
+	view := screen.View(100, 24)
+	for _, want := range []string{"Claude Settings", "Global", "work"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("claude view missing %q:\n%s", want, view)
+		}
+	}
+}
+
+func TestDroidScreenSectionsSwitch(t *testing.T) {
+	testutil.IsolatedHome(t)
+
+	screen, err := newDroidScreen(context.Background())
+	if err != nil {
+		t.Fatalf("newDroidScreen: %v", err)
+	}
+	if got := screen.Title(); got != "Droid" {
+		t.Fatalf("title = %q, want Droid", got)
+	}
+	view := screen.View(100, 30)
+	for _, want := range []string{"Droid Settings", "diff mode"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("droid settings section missing %q:\n%s", want, view)
+		}
+	}
+
+	next, _ := screen.Update(keyMsg("tab"))
+	screen = next
+	if view = screen.View(100, 30); !strings.Contains(view, "Droid Missions") {
+		t.Fatalf("tab did not reach the Missions section:\n%s", view)
+	}
+
+	// Number keys jump straight to a section (3 = Trusted, 7 = Models).
+	next, _ = screen.Update(keyMsg("3"))
+	screen = next
+	if view = screen.View(100, 30); !strings.Contains(view, "Trusted Folders") {
+		t.Fatalf("key 3 did not reach the Trusted section:\n%s", view)
+	}
+	next, _ = screen.Update(keyMsg("7"))
+	screen = next
+	if view = screen.View(100, 30); !strings.Contains(view, "Models") {
+		t.Fatalf("key 7 did not reach the Models section:\n%s", view)
+	}
+	if got := screen.Status(); !strings.Contains(got, "7/9") {
+		t.Fatalf("status = %q, want the 7/9 section counter", got)
+	}
+}
+
+func TestDshScreenSectionsSwitch(t *testing.T) {
+	testutil.DshTestHome(t)
+
+	screen, err := newDshScreen(context.Background())
+	if err != nil {
+		t.Fatalf("newDshScreen: %v", err)
+	}
+	view := screen.View(100, 30)
+	if !strings.Contains(view, "Dsh Desktop") {
+		t.Fatalf("desktop section missing:\n%s", view)
+	}
+	if got := screen.Status(); !strings.Contains(got, "1/3") {
+		t.Fatalf("status = %q, want the 1/3 section counter", got)
+	}
+
+	next, _ := screen.Update(keyMsg("tab"))
+	screen = next
+	if got := screen.Status(); !strings.Contains(got, "2/3") {
+		t.Fatalf("status after tab = %q, want the 2/3 section counter", got)
+	}
+}
+
+func TestSessionsSourceListsGenericSessions(t *testing.T) {
+	home := testutil.IsolatedHome(t)
+	dir := testutil.SessionsFixtureDir(t, home, "-work-demo")
+	testutil.SessionsWriteSession(t, dir, "sess-1", testutil.SessionsFixtureJSONL, "")
+
+	screen, err := newListScreen(context.Background(), DroidSessionsSource())
+	if err != nil {
+		t.Fatalf("newListScreen: %v", err)
+	}
+	if got := screen.Status(); !strings.Contains(got, "1 sessions") {
+		t.Fatalf("status = %q, want the session count", got)
+	}
+	view := screen.View(100, 24)
+	if !strings.Contains(view, "Hello World") {
+		t.Fatalf("sessions view missing the session title:\n%s", view)
+	}
+}
+
+func TestCodexScreenExposesProvidersAuthSessions(t *testing.T) {
+	testutil.IsolatedHome(t)
+
+	screen, err := newCodexScreen(context.Background())
+	if err != nil {
+		t.Fatalf("newCodexScreen: %v", err)
+	}
+	if got := screen.Status(); !strings.Contains(got, "1/3") {
+		t.Fatalf("status = %q, want the 1/3 section counter", got)
+	}
+	next, _ := screen.Update(keyMsg("tab"))
+	screen = next
+	next, _ = screen.Update(keyMsg("tab"))
+	screen = next
+	if got := screen.Status(); !strings.Contains(got, "3/3") || !strings.Contains(got, "Codex Sessions") {
+		t.Fatalf("status = %q, want the sessions section", got)
+	}
+}
+
 func TestDefaultModulesMatchParityMatrix(t *testing.T) {
 	// The P0 set is deliberately small; this pins the module keys so the
 	// parity matrix (docs/developer/tui-parity.zh.md) and the sidebar cannot
 	// drift apart silently.
-	want := []string{"paths", "channels", "export", "codex", "hermes", "pi", "omp", "mcp", "models"}
+	want := []string{"droid", "channels", "codex", "claude", "hermes", "pi", "omp", "copilot", "dsh", "paths", "settings"}
 	modules := DefaultModules()
 	if len(modules) != len(want) {
 		t.Fatalf("got %d modules, want %d", len(modules), len(want))

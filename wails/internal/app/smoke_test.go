@@ -179,7 +179,7 @@ func TestHermesAndOmpMountSequenceSmoke(t *testing.T) {
 // rewrites a profile cordis.patch.yml (the Dsh Models tab): the llm-pi-ai
 // entry is inserted while other entries and header comments survive.
 func TestDshProviderSaveToPatchProfile(t *testing.T) {
-	dshTestHome(t)
+	testutil.DshTestHome(t)
 	a := &App{}
 	profile := "desktop"
 
