@@ -1,10 +1,10 @@
 {
 	"fixed": {
-		"file_version": "1.3.9.6"
+		"file_version": "1.3.9.7"
 	},
 	"info": {
 		"0409": {
-			"ProductVersion": "1.3.9.6",
+			"ProductVersion": "1.3.9.7",
 			"CompanyName": "DroidGear",
 			"FileDescription": "DroidGear — BYOK Model Configuration for Factory Droid",
 			"LegalCopyright": "© 2026 DroidGear",
