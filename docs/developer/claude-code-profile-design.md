@@ -1,5 +1,9 @@
 # Claude Code Provider Profile Design
 
+> **路径说明**：本文写于 Tauri/Rust 时代，其中 `src-tauri/…`、`droidgear-tui` 等引用是
+> 当时的实现位置（已随 `fe22c57` 删除）；当前实现位于 `wails/internal/`（Go）。
+> 设计结论本身仍有效。
+
 这份文档定义 Claude Code 多 profile、Apply、Temporary Run 的产品边界和实现约束。
 
 这次要做的不是“Claude 官方模型选项管理器”，而是一个 provider-first 的配置系统：
@@ -12,7 +16,7 @@
 相关文档：
 
 - See [temporary-tool-run-design.md](./temporary-tool-run-design.md)
-- See [tauri-commands.md](./tauri-commands.md)
+- See [`../agents/wails-port.md`](../agents/wails-port.md) for the current command/IPC contract
 - See [tui-design.md](./tui-design.md)
 
 官方参考：

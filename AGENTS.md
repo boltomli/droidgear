@@ -10,7 +10,6 @@ This file contains only core rules. Detailed guidelines live in `docs/agents/`.
 | ----------------------------- | -------------------------------------- |
 | Build/lint/test commands      | `docs/agents/commands.md`              |
 | TypeScript/React code style   | `docs/agents/code-style-typescript.md` |
-| Rust code style               | `docs/agents/code-style-rust.md`       |
 | Zustand / state management    | `docs/agents/state-management.md`      |
 | Architecture patterns         | `docs/agents/architecture.md`          |
 | UI components (Radix, shadcn) | `docs/agents/ui-components.md`         |
@@ -20,43 +19,30 @@ For deep-dive topics, see `docs/developer/README.md`.
 
 ## Overview
 
-Tauri v2 + React 19 desktop app. Uses npm (NOT pnpm), TypeScript strict mode, Zustand for state, TanStack Query for persistence.
+Wails v3 (Go) + React 19 desktop app. Uses npm (NOT pnpm), TypeScript strict mode, Zustand for state, TanStack Query for persistence.
 
-## Dual Shell (Tauri + Wails v3)
+## Single Shell (Wails v3)
 
-> **Branch scope — `spike/wails-v3-minimal` is Wails-only.** The Tauri shell
-> (`src-tauri/`) and the Rust TUI are **frozen**: no new Tauri commands,
-> plugins, plugin-\* shims, or Rust TUI features. New work lands in `wails/`
-> (Go) + the shared `src/`. Differences where Rust and Go disagree are
-> resolved in favour of Go. Rules 1–2 below still apply to the shared
-> frontend (shims must resolve), but never extend them for Tauri's sake.
-> See `docs/developer/wails-tui-cli-design.zh.md` §0; drop this banner when
-> merging back into a dual-shell branch.
+> **The Tauri shell and the Rust workspace are gone** (removed in `fe22c57`,
+> see `docs/developer/tauri-removal-design.zh.md` and ADR-001). There is no
+> `src-tauri/`, no `src/wails/` shims and no Rust code left: all new work
+> lands in `wails/` (Go) + the shared `src/`. `npm run check:no-tauri`
+> fails the build if a Tauri API is reintroduced.
 
-`src/` is a component tree shared by two shells: **Tauri** (`src/main.tsx` →
-`src-tauri/`) and **Wails v3** (`src/wails/main.tsx` → `wails/`). Outside
-`src/wails/` and `src-tauri/`, **any change under `src/` must be evaluated
-against both shells**.
-
-1. **Shared code must not depend on unbridged Tauri capabilities**: every new
-   `@tauri-apps/plugin-*` usage needs a mapping in `src/wails/shims/` (see
-   `wails/PORTING.md` — no no-op shims), or it must be gated via
-   `src/lib/capabilities.ts`.
-2. **Command surface must stay aligned in four places**: Rust command ↔ Go
-   method ↔ shim mapping ↔ generated TS bindings.
+1. **No Tauri APIs in `src/`**: never import `@tauri-apps/*`; runtime access
+   goes through `src/lib/shell/*` and the generated bindings
+   (`npm run check:no-tauri` enforces this).
+2. **Command surface must stay aligned in three places**: Go method ↔ shell
+   table (`src/lib/shell/commands.ts`) ↔ generated TS bindings.
    `node scripts/check-command-surface.mjs` enforces this (CI runs it).
 3. **Wails verification order**: `npm ci` →
-   `wails3 generate bindings -clean=true -ts -i` →
-   `npx vite build --config wails/vite.config.ts --mode production` →
+   `wails3 generate bindings -clean=true -ts -i` → `npm run build` →
    `cd wails && go vet ./... && go test ./...` → `wails3 task run`. Skipping
    the bindings step fails the frontend build (the bindings directory is
    gitignored).
-4. **Style changes must check both shells' CSS output**: the Wails build sets
-   the Vite `root` to `wails/`, so Tailwind v4's automatic content detection
-   misses `src/`. `src/App.css` must keep the explicit
-   `@source './**/*.{ts,tsx}'`.
-5. **Tauri-only surface (auto-updater)**: never leave a failing entry point
-   under Wails — gate it with `isUpdaterSupported()`.
+4. **Keep the explicit Tailwind `@source`**: `src/App.css` must keep
+   `@source './**/*.{ts,tsx}'` so utilities used in `src/` survive every
+   Vite root/`publicDir` arrangement.
 
 Deep dive: `docs/agents/wails-port.md`; full audit:
 `docs/developer/wails-port-guidelines.zh.md` + the round2 follow-up.
@@ -68,15 +54,15 @@ Deep dive: `docs/agents/wails-port.md`; full audit:
 3. **Read before editing** — Understand context first
 4. **Run `npm run check:all`** after significant changes
 5. **No manual memoization** — React Compiler handles it
-6. **Tauri v2 docs only** — v1 patterns are incompatible; for the Wails shell **Wails v3 docs only** (v2 and v3 APIs are incompatible)
+6. **Wails v3 docs only** — v1/v2/v3 APIs are incompatible; never copy examples from Wails v1/v2 or from Tauri
 7. **No unsolicited commits** — Only when explicitly requested
 8. **Use `rm -f`** when removing files
-9. **GUI/TUI parity** — When implementing a new GUI feature, synchronously implement the corresponding TUI version. **Transition exception (ADR-001)**: the Rust TUI (`src-tauri/crates/droidgear-tui`) is frozen — new features go to the Go `internal/service` layer and must reach at least one non-GUI consumer (`cmd/dg` CLI or the Go TUI), or the PR description must record the exemption and reason. GUI-only features (window, menu, updater, notifications) are exempt. `cmd/dg` is the primary non-GUI consumer; the contract (layering, flags, exit codes, JSON shapes, exemptions) is `docs/developer/wails-tui-cli-design.zh.md`. See also `docs/developer/adr-001-tui-fate.zh.md`
+9. **GUI/TUI parity** — When implementing a new GUI feature, synchronously implement the corresponding TUI/CLI version. **ADR-001**: new features go to the Go `internal/service` layer and must reach at least one non-GUI consumer (`cmd/dg` CLI or the Go TUI), or the PR description must record the exemption and reason. GUI-only features (window, menu, updater, notifications) are exempt. `cmd/dg` is the primary non-GUI consumer; the contract (layering, flags, exit codes, JSON shapes, exemptions) is `docs/developer/wails-tui-cli-design.zh.md`. See also `docs/developer/adr-001-tui-fate.zh.md`
 10. **Pre-commit ready** — Before declaring work complete, run `npm audit fix`, `npm run format` (the `.` means ALL files, not just your changes), and verify `npm run check:all` passes with ZERO errors. If`check:all` reports issues in ANY file — even files you didn't touch — you MUST fix them. Code must be commit-ready; do not leave formatting, lint, or audit issues for the user to discover at commit time
 
 ## Version Requirements
 
-Tauri v2.x, React 19.x, Zustand v5.x, Tailwind v4.x, shadcn/ui v4.x, Vite v7.x, Vitest v4.x
+Wails v3.x, Go 1.27.x, React 19.x, Zustand v5.x, Tailwind v4.x, shadcn/ui v4.x, Vite v7.x, Vitest v4.x
 
 ### Go-based TypeScript
 
@@ -96,12 +82,11 @@ src/
 ├── hooks/               # Custom React hooks (use-*.ts)
 ├── lib/
 │   ├── commands/        # Command system
-│   └── tauri-bindings.ts # Auto-generated (don't edit)
+│   ├── bindings.ts      # Auto-generated by wails3 (don't edit)
+│   └── app-bindings.ts  # Typed facade re-exported from bindings.ts
 ├── store/               # Zustand stores (*-store.ts)
-└── services/            # TanStack Query + Tauri integration
-src-tauri/
-├── src/commands/        # Rust Tauri commands
-└── capabilities/        # Window permissions (security)
+└── services/            # TanStack Query + Go service integration
+wails/                   # Go shell: internal/service, internal/app, cmd/dg
 locales/                 # i18n translation files
 docs/
 ├── agents/              # Agent coding guidelines (read these!)

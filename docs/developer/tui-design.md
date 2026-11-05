@@ -1,5 +1,9 @@
 # TUI（Headless）版本设计：抽离核心库 + 终端交互
 
+> ⚠️ **历史文档（Rust TUI）** — 本文针对已删除的 `droidgear-tui`（Rust，ADR-001 已冻结并
+> 随 `fe22c57` 移除）。当前 TUI/CLI 规格见
+> [`wails-tui-cli-design.zh.md`](./wails-tui-cli-design.zh.md)；本文仅作 UX 设计参考。
+
 目标：在**没有桌面环境**的 Linux（SSH 终端）上提供 DroidGear 的主要能力，同时保证桌面版逻辑不分叉、不回归。
 
 本设计采用：**把 Rust 侧的业务逻辑抽离成 `core` 库**，桌面端（Tauri commands）与 TUI 端复用同一套核心逻辑；并用单元测试/特征化测试锁住行为，避免重构破坏现有功能。

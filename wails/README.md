@@ -6,18 +6,18 @@ plus **Channels** — built with [Wails v3](https://v3.wails.io) (Go backend +
 embedded webview frontend).
 
 The frontend is the **unmodified** `src/` component tree (shadcn/ui, zustand
-stores, TanStack Query, react-i18next); only the `invoke` transport is swapped
-out. Since the parity push, the Go service mirrors the full Tauri command
-surface, so the two shells expose the same features and render the same
-component tree (the only intentional exceptions are the Tauri-only
-auto-updater and the shell-level window chrome described below).
+stores, TanStack Query, react-i18next); only the transport differs — the
+Tauri shell was removed (`fe22c57`), so every backend call now runs through
+`src/lib/shell/*` into the Go service, and the parity table below is what
+the single remaining shell ships.
 
 > ⚠️ **Known gaps:** command-surface parity holds and the shell-level
 > integrations from the audit roadmap (window-state persistence, single
 > instance, opener shim, system-fonts shim, notifications service, updater
 > gating, theme-following window background, cross-platform platform shim)
 > are in place. Still missing: an in-window menu button for Windows/Linux
-> (frameless — see below), macOS/Linux build assets and the TUI/CLI layer.
+> (frameless — see below) and macOS/Linux packaging assets (icon bundles,
+> installers). The headless CLI layer **has** landed — see `cmd/dg` below.
 > Audit, evidence and the fix roadmap live in
 > [`docs/developer/wails-port-guidelines.zh.md`](../docs/developer/wails-port-guidelines.zh.md)
 > and its round2 follow-up.
@@ -27,15 +27,15 @@ auto-updater and the shell-level window chrome described below).
 > ```bash
 > npm ci                                                       # @wailsio/runtime etc.
 > cd wails && wails3 generate bindings -clean=true -ts -i && cd ..   # gitignored bindings
-> npx vite build --config wails/vite.config.ts --mode production     # go:embed needs frontend/dist
+> npm run build                                                   # → wails/frontend/dist (go:embed)
 > ```
 >
-> **Layout (fixed):** Tailwind v4 detects sources from the Vite `root`, and
-> this config sets `root: wails/`, so `src/**` classes were never generated
-> (CSS 45 kB instead of 136 kB → no `h-screen`/`w-[280px]`, broken sidebar
-> and buttons). Fixed by the explicit `@source './**/*.{ts,tsx}'` in
-> `src/App.css` — **keep it**; the `Tailwind utilities guard` CI step greps
-> the output for `.h-screen` / `w-\[280px\]` so this cannot regress silently.
+> **Layout (keep the guard):** Tailwind v4 detects sources from the Vite
+> `root`; the config now uses the repo root, but the explicit
+> `@source './**/*.{ts,tsx}'` in `src/App.css` must stay — dropping it once
+> collapsed the CSS from 136 kB → 45 kB (no `h-screen`/`w-[280px]`, broken
+> sidebar and buttons). The `Tailwind utilities guard` CI step greps the
+> output for `.h-screen` / `w-\[280px\]` so this cannot regress silently.
 >
 > **Frameless menu (known, accepted):** with `Frameless: true` Wails does
 > **not** attach the application menu on Windows/Linux (source:
@@ -50,47 +50,46 @@ auto-updater and the shell-level window chrome described below).
 ## How the reuse works
 
 ```
-React stores (unchanged)          Go service (new)
+React stores (unchanged)          Go service
   src/store/*-store.ts              wails/internal/app/*.go
         │                                   ▲
         ▼                                   │
-  src/lib/bindings.ts (unchanged)   generated TS bindings
-    TAURI_INVOKE("save_dsh_provider", …)   wails/frontend/bindings/**/app.ts
+  src/lib/commands/*               generated TS bindings
+    invoke("save_dsh_provider", …)  wails/frontend/bindings/**/app.ts
         │                                   ▲
-        └── alias ──► src/wails/shims/tauri-core.ts (invoke bridge)
+        └──► src/lib/shell/commands.ts (snake_case → PascalCase funnel)
 ```
 
 1. **One choke point.** Every backend call in the frontend funnels through
-   `TAURI_INVOKE(cmd, args)` from the tauri-specta generated
-   `src/lib/bindings.ts`. The Wails build aliases `@tauri-apps/api/core` to
-   `src/wails/shims/tauri-core.ts`, which maps each snake_case Tauri command
-   to the PascalCase Go method (see `COMMANDS` for the argument order) and
-   normalises rejections back to the raw error string that bindings.ts
-   expects (`Err(String)` in Rust ↔ Go `error`).
+   `invoke(cmd, args)` in `src/lib/bindings.ts`, and
+   `src/lib/shell/commands.ts` is the only module that knows the snake_case →
+   PascalCase mapping and the positional argument order (its `COMMANDS`
+   table). Rejections are normalised back to a plain string and localised
+   by `src/lib/shell/error-i18n.ts`.
 2. **Generated bindings.** `wails3 generate bindings -ts` produces typed TS
-   wrappers (`Call.ByID`) for the Go `App` service; the shim imports them via
-   the `@wails-bindings` Vite alias. **Regenerate them after adding or
-   renaming Go methods** (the `build:frontend` task does this automatically).
-3. **Same JSON contract.** The Go structs mirror the tauri-specta types in
+   wrappers (`Call.ByID`) for the Go `App` service; the shell modules
+   import them via the `@wails-bindings` Vite alias. **Regenerate them after
+   adding or renaming Go methods** (the `build:frontend` task does this
+   automatically).
+3. **Same JSON contract.** The Go structs mirror the generated types in
    `src/lib/bindings.ts` field-for-field (camelCase, `baseURL` for Dsh,
-   snake_case `AppPreferences`), including `#[serde(flatten)]`-style
+   snake_case `AppPreferences`), including `json.MarshalJSONWithExtra`-style
    preservation of unknown fields so newer tool configs survive a
    read/modify/write cycle.
-4. **Single Vite config.** `wails/vite.config.ts` reuses the repo-root
-   toolchain (React 19 + React Compiler, Tailwind v4, lightningcss) and only
-   overrides entry HTML, aliases (`@tauri-apps/*`, `tauri-pty`) and output dir.
-5. **Same shell, gated capabilities.** `src/wails/AppShell.tsx` renders the
-   _shared_ `MainWindow` (TitleBar, LeftSideBar, MainWindowContent, command
-   palette, preferences) unchanged. Tools and sub-views whose Go backend does
-   not exist yet are gated through `src/lib/capabilities.ts` (the Wails
-   build sets `__WAILS_BACKEND__`): unsupported tools render as disabled
-   placeholders in the switcher and the sessions entries are hidden, so the
-   two shells differ only in what is _enabled_, never in layout.
-6. **Terminal without Rust.** The `tauri-pty` npm API is re-implemented in
-   `src/wails/shims/tauri-pty.ts` on top of the Go PTY service
+4. **Single Vite config.** The repo-root `vite.config.ts` is the only
+   frontend build (React 19 + React Compiler, Tailwind v4, lightningcss); it
+   outputs to `wails/frontend/dist` for `//go:embed` and aliases
+   `@wails-bindings` to the generated bindings.
+5. **One entry, no capability gates.** `src/main.tsx` renders `App`
+   (TitleBar, LeftSideBar, MainWindowContent, command palette, preferences)
+   unchanged; `src/lib/capabilities.ts` and the Tauri shims were removed
+   together with the Tauri shell, so there is no per-backend feature switch
+   left in the component tree.
+6. **Terminal without a plugin.** The PTY API lives in
+   `src/lib/shell/pty.ts` on top of the Go PTY service
    (`internal/app/pty.go`, ConPTY via `aymanbagabas/go-pty`); output and exit
    stream over `pty:data` / `pty:exit` Wails events as base64 chunks, decoded
-   with a streaming `TextDecoder` in the shim.
+   with a streaming `TextDecoder`.
 
 ## What is implemented
 
@@ -106,38 +105,28 @@ React stores (unchanged)          Go service (new)
 | OpenClaw | Profile CRUD, apply → `~/.openclaw/openclaw.json` (order-preserving document merge that keeps unknown fields, key order, and number formatting byte-for-byte), **subagents** read/save (deep-merge, `main`+`allowAgents` synthesis)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Copilot  | Profile CRUD + sibling `.env` files, validation (single-line fields, positive token limits, provider types, WHATWG endpoint normalisation), channel-import preview, live `config.env` parse with `is_byok` detection, run-plan with secret-env separation, terminal launch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Droid    | **Settings files** (Global + custom, link/unlink external, active pointer), **trusted folders**, **Specs** (CRUD + poll watcher), **MCP servers** (load/save/delete/toggle + 百知 preset), **factory auth profiles**, run-settings values (diff mode, cloud session sync, reasoning effort, compaction limits, todo display, show-thinking, co-authored-by, mission models), launch                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Shared   | Preferences (shared with the Tauri app via the same `preferences.json`), model registry enrichment, **model connectivity tests** (ping + inference, single/all, diagnostics summary), BYOK custom models/favorites in `~/.factory/settings.json`, channels CRUD + New API/**Sub2API** token import + model fetching, channel JSON import/export, **channel export templates** (`~/.droidgear/export-templates.yaml`, JSON/YAML/TOML output), Hermes WSL path fallback, **Preferences → Paths pane** (per-tool overrides + WSL distro picker), **in-app terminal** (Go PTY: ConPTY on Windows via `aymanbagabas/go-pty`, streamed over `pty:data`/`pty:exit` Wails events), **crash-recovery data**, native notifications (Wails notifications service), shell env detection, localised backend errors (en/zh) |
+| Shared   | Preferences (`~/.droidgear/preferences.json`, shared with the `dg` CLI), model registry enrichment, **model connectivity tests** (ping + inference, single/all, diagnostics summary), BYOK custom models/favorites in `~/.factory/settings.json`, channels CRUD + New API/**Sub2API** token import + model fetching, channel JSON import/export, **channel export templates** (`~/.droidgear/export-templates.yaml`, JSON/YAML/TOML output), Hermes WSL path fallback, **Preferences → Paths pane** (per-tool overrides + WSL distro picker), **in-app terminal** (Go PTY: ConPTY on Windows via `aymanbagabas/go-pty`, streamed over `pty:data`/`pty:exit` Wails events), **crash-recovery data**, native notifications (Wails notifications service), shell env detection, localised backend errors (en/zh) |
 
 ## What is not implemented
 
-- **Auto-updater** — Tauri-only by design (see
-  `src/wails/shims/tauri-core.ts` `Resource` stub); the Wails build ships
-  without an update feed. Audited 2026-11-02 (round2 §B10): every entry
-  point that could reach `services/updater.ts` is gated, so nothing in the
-  Wails UI can throw `unsupported command`:
+- **Auto-updater** — removed together with the Tauri shell
+  (`services/updater.ts`, the `isUpdaterSupported()` gates, the toast and
+  the palette command are all gone). The Wails build ships no update feed:
+  **Preferences → General → Check for Updates** opens the published releases
+  page in the browser instead. Rebuilding it on Wails `pkg/updater` is
+  tracked in round2 §4 序 9.
 
-  | Entry                                            | Gate                                                                            |
-  | ------------------------------------------------ | ------------------------------------------------------------------------------- |
-  | `App.tsx` auto-check timers                      | Tauri entry only (`src/main.tsx`), not bundled                                  |
-  | `lib/menu.ts` “Check for Updates”                | Tauri entry only, not bundled                                                   |
-  | `GeneralPane` check button / auto-update toggle  | `isUpdaterSupported()`                                                          |
-  | `GeneralPane` download button / pending update   | unreachable: `pendingUpdate` is never persisted or set without the gated button |
-  | `notification.test-update-toast` palette command | `isAvailable: DEV && isUpdaterSupported()`                                      |
-  | `showUpdateNotification` callers                 | only the gated paths above                                                      |
-
-  Long term: either keep Tauri-only or rebuild on Wails `pkg/updater`
-  (round2 §4 序 9).
-
-- **macOS/Linux build assets** (Windows-first; the Go service itself is
-  portable and the terminal/launch code has POSIX fallbacks).
+- **macOS/Linux packaging** — `release-single.yml` ships bare single-file
+  binaries for both, but there is no `.icns` bundle, DMG or `.deb` yet
+  (Windows-first: NSIS installer + icon + version resource).
 
 Porting conventions for adding further command surfaces live in
 [`PORTING.md`](./PORTING.md).
 
 ## Backend error localisation
 
-`src/wails/error-i18n.ts` translates the common Go error strings to en/zh
-(`errors.*` locale keys) inside the invoke shim; unmatched messages pass
+`src/lib/shell/error-i18n.ts` translates the common Go error strings to en/zh
+(`errors.*` locale keys) inside the command bridge; unmatched messages pass
 through unchanged. The `DSH_CONFIG_CONFLICT` / `DSH_CONFIG_SHADOWED`
 prefixes are preserved verbatim because the store matches them.
 
@@ -183,12 +172,13 @@ domains move into `internal/service`.
 binary that needs none of the GUI's WebView2/GTK/WebKit runtime.
 
 Two release workflows exist on purpose: `release-single.yml`
-(`wails-v*` tags) is the Wails-only line — GUI single file + `dg`, nothing
-else — while the legacy `release.yml` (`v*` tags) still drives the Tauri
-installers, the updater manifest and the Windows NSIS package. The tag
-prefixes are disjoint so a `wails-v…` push can never fire the old pipeline;
-that also keeps CLI changes out of `release.yml` until the Tauri shell is
-removed (design doc §0).
+(`wails-v*` tags) is the single-binary line — one GUI file per platform plus
+`dg`, no installers — while `release.yml` (`v*` tags) drives the official
+release: changelog-driven draft plus the Windows NSIS installer
+(`wails3 task package`). The Tauri jobs were removed in `fe22c57`, so
+`release.yml` is Wails-only too; the tag prefixes stay disjoint so a
+`wails-v…` push can never fire it. **On this branch always tag `wails-v*`**
+(see `docs/agents/commands.md` → _CI / Release tags_).
 
 ## Building
 
@@ -205,12 +195,12 @@ wails3 task run       # run the last build
 The build pipeline (`build/Taskfile.yml`):
 
 1. `generate:bindings` — `wails3 generate bindings -clean=true -ts -i`
-2. `build:frontend` — `npx vite build --config wails/vite.config.ts` from the
-   repo root, output to `wails/frontend/dist`
+2. `build:frontend` — `npm run build` (repo-root `vite.config.ts`), output
+   to `wails/frontend/dist`
 3. `go build -tags production` with `//go:embed all:frontend/dist`
 
-**Version**: the single source of truth is the repo-root `package.json`
-(same value the Tauri build embeds). `scripts/sync-version.mjs` syncs it into
+**Version**: the single source of truth is the repo-root `package.json`.
+`scripts/sync-version.mjs` syncs it into
 `build/config.yml`, `build/windows/info.json` and the NSIS/MSIX installer
 assets, and prints it for the `-ldflags "-X
 droidgear-wails/internal/version.Version=…"` injection, so `GetAppVersion`
@@ -224,7 +214,7 @@ wails/
 ├── main.go                     # Wails app bootstrap (frameless window, embedded assets)
 ├── PORTING.md                  # contract for porting more Tauri commands → Go service
 ├── Taskfile.yml / build/       # customized Wails build pipeline (Windows)
-├── vite.config.ts / index.html # frontend build reusing the repo toolchain
+├── index.html                  # dev-mode entry served by `wails3 dev`
 ├── scripts/sync-registry.mjs   # refresh the vendored model registry
 ├── scripts/sync-version.mjs    # sync package.json version → build assets + ldflags
 └── internal/
@@ -244,13 +234,11 @@ wails/
     │   └── paths.go recovery.go notifications.go env.go fsio.go window.go
     └── core/                   # paths / atomic writes / YAML+JSON helpers / registry
 
-src/wails/                      # frontend glue (typechecked + linted with the repo)
-├── main.tsx / AppShell.tsx     # renders the shared MainWindow + startup init
-├── wails.css                   # height-chain + frameless drag-region overrides
-├── error-i18n.ts               # Go error → en/zh localisation rules
-└── shims/                      # @tauri-apps/* + tauri-pty replacements routing to Wails
-
-src/lib/capabilities.ts         # backend capability gating (shared with the Tauri build)
+src/lib/shell/                  # frontend ↔ Go bridge (typechecked + linted with the repo)
+├── commands.ts                 # snake_case → PascalCase command funnel
+├── events.ts / menu-bridge.ts  # Wails event bus + native menu wiring
+├── pty.ts / opener.ts / fonts.ts  # terminal, opener, system fonts
+└── error-i18n.ts               # Go error → en/zh localisation rules
 ```
 
 `src/lib/model-registry-data.json` is vendored into
@@ -263,4 +251,5 @@ the registry.
 - Frontend deps: `@wailsio/runtime` was added to the root `package.json`
   (used by the generated bindings).
 - `.prettierignore` excludes `wails/frontend/` (generated bindings + dist).
-- No Tauri code paths were modified; the Tauri app builds exactly as before.
+- The Tauri shell is gone (`fe22c57`); `npm run check:no-tauri` keeps it
+  from coming back.

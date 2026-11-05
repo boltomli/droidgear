@@ -273,26 +273,29 @@ DroidGear reads and writes to `~/.factory/settings.json`:
 ### Prerequisites
 
 - Node.js 20+
-- Rust (latest stable)
-- Platform-specific dependencies: https://tauri.app/start/prerequisites/
+- Go 1.27+ and the Wails v3 CLI: `go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`
+- Runtime: WebView2 on Windows (preinstalled on Windows 10/11); GTK3 + WebKitGTK 4.1 on Linux
 
 ### Setup
 
 ```bash
 npm install
-npm run tauri dev
+cd wails && wails3 generate bindings -clean=true -ts -i && cd ..   # first run: TS bindings
+npm run dev                          # frontend only (Vite dev server)
+cd wails && wails3 task dev          # full app (rebuilds on Go/TS changes)
 ```
 
 ### Build
 
 ```bash
-npm run tauri build
+npm run build                        # typecheck + frontend → wails/frontend/dist
+cd wails && wails3 task build        # production build → wails/bin/droidgear-minimal.exe
 ```
 
 ## Tech Stack
 
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
-- **Backend**: Tauri v2, Rust
+- **Backend**: Wails v3 (Go)
 - **State**: Zustand
 
 ## Privacy

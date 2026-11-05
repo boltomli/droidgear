@@ -68,7 +68,7 @@ before any frontend build):
 ```bash
 npm ci                                                             # sync deps (@wailsio/runtime etc.)
 cd wails && wails3 generate bindings -clean=true -ts -i && cd ..   # gitignored, required pre-build
-npx vite build --config wails/vite.config.ts --mode production     # frontend/dist (go:embed needs it)
+npm run build                                                   # → wails/frontend/dist (go:embed)
 cd wails && go vet ./... && go test ./...
 cd wails && wails3 task run     # run for real (embeds the built frontend)
 cd wails && wails3 dev          # rebuild + restart on Go/frontend changes (no Vite HMR)
@@ -102,15 +102,15 @@ tags (only its Tauri jobs were removed in `fe22c57`), so avoid pushing a
 
 ## All Commands (Quick Reference)
 
-| Category | Command                                        | Description                     |
-| -------- | ---------------------------------------------- | ------------------------------- |
-| Dev      | `npm run dev`                                  | Vite dev server (frontend only) |
-| Build    | `npm run build`                                | TypeScript check + Vite build   |
-| Check    | `npm run check:all`                            | Full check suite                |
-| Quality  | `npm run fix:all`                              | Auto-fix all fixable issues     |
-| Test     | `npm run test:run`                             | Vitest (single run)             |
-| CLI      | `cd wails && go run ./cmd/dg ...`              | dg CLI                          |
-| Wails    | `npx vite build --config wails/vite.config.ts` | Wails frontend build (go:embed) |
-| Wails    | `cd wails && go vet ./... && go test ./...`    | Go static checks + tests        |
-| Wails    | `node scripts/check-command-surface.mjs`       | Command-surface drift check     |
-| Wails    | `node scripts/check-go-layering.mjs`           | Go layering drift check         |
+| Category | Command                                     | Description                                        |
+| -------- | ------------------------------------------- | -------------------------------------------------- |
+| Dev      | `npm run dev`                               | Vite dev server (frontend only)                    |
+| Build    | `npm run build`                             | TypeScript check + Vite build                      |
+| Check    | `npm run check:all`                         | Full check suite                                   |
+| Quality  | `npm run fix:all`                           | Auto-fix all fixable issues                        |
+| Test     | `npm run test:run`                          | Vitest (single run)                                |
+| CLI      | `cd wails && go run ./cmd/dg ...`           | dg CLI                                             |
+| Wails    | `npm run build`                             | Frontend build into wails/frontend/dist (go:embed) |
+| Wails    | `cd wails && go vet ./... && go test ./...` | Go static checks + tests                           |
+| Wails    | `node scripts/check-command-surface.mjs`    | Command-surface drift check                        |
+| Wails    | `node scripts/check-go-layering.mjs`        | Go layering drift check                            |

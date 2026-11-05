@@ -1,15 +1,20 @@
 # Data Persistence
 
+> ⚠️ **历史文档（Tauri/Rust 时代）** — 文中的 Rust struct / Tauri 命令 / `npm run rust:bindings`
+> 已随 Tauri 壳删除（`fe22c57`），无法再运行。当前读写配置的模式（原子写、
+> 未知字段往返保留）见 [`../agents/wails-port.md`](../agents/wails-port.md) 陷阱 5 与
+> `wails/internal/core`。
+
 Patterns for saving and loading data to disk.
 
 ## Choosing a Storage Method
 
-| Need               | Solution           | When to Use                                                           |
-| ------------------ | ------------------ | --------------------------------------------------------------------- |
-| App preferences    | Preferences System | Strongly-typed settings (theme, shortcuts)                            |
-| Emergency recovery | Recovery System    | Crash recovery, backup before risky operations                        |
-| Relational data    | SQLite             | User data requiring queries, relationships                            |
-| External API data  | TanStack Query     | Remote data with caching (see [external-apis.md](./external-apis.md)) |
+| Need               | Solution           | When to Use                                                                          |
+| ------------------ | ------------------ | ------------------------------------------------------------------------------------ |
+| App preferences    | Preferences System | Strongly-typed settings (theme, shortcuts)                                           |
+| Emergency recovery | Recovery System    | Crash recovery, backup before risky operations                                       |
+| Relational data    | SQLite             | User data requiring queries, relationships                                           |
+| External API data  | TanStack Query     | Remote data with caching (see [external-apis.md](../archive/tauri/external-apis.md)) |
 
 ```
 Need to persist data?

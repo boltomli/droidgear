@@ -235,4 +235,6 @@ const handleChange = async (newValue: string) => {
 | Optional feature       | Either          | Graceful degradation | Silent fallback  |
 | Critical operation     | Structured enum | Explicit + rollback  | Toast + recovery |
 
-See also: [tauri-commands.md](./tauri-commands.md) for Result type patterns, [logging.md](./logging.md) for logging best practices.
+See also: [`../agents/wails-port.md`](../agents/wails-port.md) for the Go error
+contract, and the archived [logging.md](../archive/tauri/logging.md) for the
+historical `tauri-plugin-log` setup.

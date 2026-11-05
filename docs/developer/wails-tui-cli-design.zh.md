@@ -19,29 +19,26 @@ Go TUI」这条路线拆成可验收的步骤，并固定 CLI/TUI 的对外契�
 
 ## 0. 本分支的运行时边界：Wails only
 
-从本分支起，**GUI 的唯一目标是 Wails v3 + Go**。Tauri 壳与 Rust TUI 只作只读历史资料，
-不再是需要同步的目标：
+从本分支起，**GUI 的唯一目标是 Wails v3 + Go**。Tauri 壳与 Rust TUI 已随
+`fe22c57` 删除，只作只读历史资料，不再是需要同步的目标：
 
-| 端                         | 本分支状态                                   | 允许的改动                           |
-| -------------------------- | -------------------------------------------- | ------------------------------------ |
-| `wails/`（Go + React GUI） | **唯一的活跃实现**                           | 正常开发                             |
-| `src/`（共享前端）         | 双壳历史遗留——只保留 Wails 壳需要的部分      | 新代码不得为「兼容 Tauri」让步       |
-| `src-tauri/`（Tauri 壳）   | **冻结**：不修 bug、不补功能、不加命令/插件  | 仅「为 Go 侧提供参考」时可读，不改码 |
-| `droidgear-tui`（Rust）    | **冻结**（ADR-001 已定），由 Go CLI/TUI 取代 | 不改码                               |
+| 端                         | 本分支状态                                | 允许的改动                                        |
+| -------------------------- | ----------------------------------------- | ------------------------------------------------- |
+| `wails/`（Go + React GUI） | **唯一的活跃实现**                        | 正常开发                                          |
+| `src/`（前端）             | 单壳前端——经 `src/lib/shell/*` 调 Go      | 不得引入 `@tauri-apps/*`（`check:no-tauri` 拦截） |
+| `src-tauri/`（Tauri 壳）   | **已删除**（`fe22c57`）                   | 历史资料：`git show fe22c57^:src-tauri/…`         |
+| `droidgear-tui`（Rust）    | **已删除**（ADR-001，由 Go CLI/TUI 取代） | 历史资料                                          |
 
-冻结的硬规则：
+硬规则：
 
-1. **不新增 Tauri command / plugin / shim 映射**。`scripts/check-command-surface.mjs` 的基线只允许收缩。
+1. **不新增 Tauri command / plugin / shim 映射**。`scripts/check-command-surface.mjs` 的基线只允许收缩，`npm run check:no-tauri` 拦截回潮。
 2. **新增能力先落 Go `internal/service`**，再决定落到 GUI（`internal/app` 转发）与 CLI/TUI。
-   反过来（先写 Tauri 再补 Go）在本分支一律拒绝。
-3. **Tauri 侧的缺陷不再修**。遇到 `src-tauri` 与 Go 行为不一致，以 Go 为准，并把差异写进
-   `wails/PORTING.md` 的契约表，而不是改 Rust。
-4. **彻底删除 `src-tauri` 是独立任务**（含 `package.json` 的 `tauri:*`/`rust:*`/`tui:*` 脚本、
-   `.github/workflows/release.yml` 的 `publish-tauri` 与 `droidgear-tui` 打包、`AGENTS.md` 规则），
-   不在本文件范围内；在此之前「冻结」即满足本分支定义。
-   该独立任务的设计与执行清单见 [`tauri-removal-design.zh.md`](./tauri-removal-design.zh.md)
+   反过来（先写前端专用实现再补 Go）在本分支一律拒绝。
+3. **以 Go 为准**。历史差异记录见 `wails/PORTING.md` 的契约表。
+4. **删除任务的执行清单**见 [`tauri-removal-design.zh.md`](./tauri-removal-design.zh.md)
    与 [`tauri-removal-tasks.zh.md`](./tauri-removal-tasks.zh.md)（A 前端去壳 → B 删 Rust 工具链 →
-   C 能力补齐；与本文的分期不冲突，C 阶段即本文的 B3/B4 与期 4）。
+   C 能力补齐；与本文的分期不冲突，C 阶段即本文的 B3/B4 与期 4）。Tauri 专属文档已归档到
+   `docs/archive/tauri/`。
 
 > 结论：本分支的「非 GUI 消费者」只有 `cmd/dg`（当前）与未来的 Go TUI。
 > 规则 9 的 parity 对象从「Tauri + Wails + TUI」收窄为「Wails GUI ↔ `dg`」。

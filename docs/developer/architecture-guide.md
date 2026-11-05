@@ -1,5 +1,10 @@
 # Architecture Guide
 
+> ⚠️ **历史文档（Tauri/Rust 时代）** — 文中的 `src-tauri/`、`cargo …`、`@tauri-apps/*`、
+> tauri-specta 等内容已随 Tauri 壳删除（`fe22c57`），其中的命令无法再运行。
+> 当前架构见 [`../agents/wails-port.md`](../agents/wails-port.md) 与
+> [`../../wails/README.md`](../../wails/README.md)。
+
 High-level architectural overview and mental models for this app.
 
 ## Philosophy
@@ -192,7 +197,7 @@ CSP prevents XSS attacks. Configuration is in `src-tauri/tauri.conf.json`.
 | App preferences | App data directory (JSON)     | Medium         |
 | User content    | App data directory/SQLite     | Medium         |
 
-Never store sensitive tokens in `tauri-plugin-store` (plain JSON on disk). See [external-apis.md](./external-apis.md) for keychain patterns.
+Never store sensitive tokens in plaintext JSON on disk. See [external-apis.md](../archive/tauri/external-apis.md) (historical) for keychain patterns.
 
 ### Rust-First Security
 
@@ -244,7 +249,7 @@ if (result.status === 'ok') {
 const prefs = await invoke<AppPreferences>('load_preferences')
 ```
 
-See [tauri-commands.md](./tauri-commands.md) for adding new commands.
+See [`../agents/wails-port.md`](../agents/wails-port.md) for adding new commands (Go method ↔ shell table ↔ generated bindings).
 
 ## Quality Gates
 

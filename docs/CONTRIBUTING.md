@@ -6,9 +6,10 @@ Thank you for your interest in contributing!
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+)
-- [Rust](https://rustup.rs/) (latest stable)
-- Familiarity with React, TypeScript, and Rust
+- [Node.js](https://nodejs.org/) (v20+)
+- [Go](https://go.dev/dl/) (1.27+) and the Wails v3 CLI
+  (`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`)
+- Familiarity with React, TypeScript, and Go
 
 ### Setup
 
@@ -45,11 +46,11 @@ npm run check:all
 - Follow existing component patterns
 - See `docs/developer/` for architecture patterns
 
-### Rust
+### Go (Wails)
 
-- Use `cargo fmt` and `cargo clippy`
-- Use `Result<T, String>` for Tauri commands
-- See `docs/developer/rust-architecture.md`
+- Use `gofmt`, and run `go vet ./... && go test ./...` inside `wails/`
+- Return plain Go `error`s; the command bridge surfaces them as strings
+- See `docs/agents/wails-port.md`
 
 ## Quality Gates
 
@@ -57,7 +58,7 @@ All PRs must pass:
 
 - TypeScript type checking
 - ESLint and Prettier
-- Rust formatting and clippy
+- Go formatting, vet and tests (`cd wails && go vet ./... && go test ./...`)
 - Tests
 
 Run locally: `npm run check:all`

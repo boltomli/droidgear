@@ -272,26 +272,29 @@ DroidGear 读写 `~/.factory/settings.json` 文件：
 ### 前置要求
 
 - Node.js 20+
-- Rust（最新稳定版）
-- 平台特定依赖：https://tauri.app/start/prerequisites/
+- Go 1.27+ 与 Wails v3 CLI：`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`
+- 平台运行时：Windows 需 WebView2（Win10/11 自带）；Linux 需 GTK3 + WebKitGTK 4.1
 
 ### 启动开发
 
 ```bash
 npm install
-npm run tauri dev
+cd wails && wails3 generate bindings -clean=true -ts -i && cd ..   # 首次：生成 TS 绑定
+npm run dev                          # 仅前端（Vite dev server）
+cd wails && wails3 task dev          # 完整应用（监听 Go/前端变更，自动重建）
 ```
 
 ### 构建
 
 ```bash
-npm run tauri build
+npm run build                        # TS 检查 + 前端 → wails/frontend/dist
+cd wails && wails3 task build        # 生产构建 → wails/bin/droidgear-minimal.exe
 ```
 
 ## 技术栈
 
 - **前端**: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
-- **后端**: Tauri v2, Rust
+- **后端**: Wails v3 (Go)
 - **状态管理**: Zustand
 
 ## 隐私声明

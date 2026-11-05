@@ -1,5 +1,9 @@
 # Cross-Platform Development
 
+> ⚠️ **历史文档（Tauri/Rust 时代）** — 文中的 `src-tauri/tauri.conf.json`、`cargo` 交叉编译、
+> `#[tauri::command]` 等内容已随 Tauri 壳删除（`fe22c57`）。当前三平台构建见
+> `.github/workflows/release-single.yml` 与 [`../agents/commands.md`](../agents/commands.md)。
+
 This app supports macOS, Windows, and Linux. This guide covers platform-specific patterns, utilities, and configuration.
 
 ## Overview

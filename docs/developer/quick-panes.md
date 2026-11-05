@@ -1,5 +1,8 @@
 # Quick Panes
 
+> ⚠️ **历史文档（Tauri/Rust 时代）** — 该功能的 `tauri-nspanel` / `src-tauri/src/commands/quick_pane.rs`
+> 实现已随 Tauri 壳删除（`fe22c57`），仓库中已无对应 Go 实现。仅作设计参考。
+
 Quick panes are small floating windows that appear via global keyboard shortcut, even when the main application is not focused. This pattern is common for quick entry, command palettes, and similar quick-access features.
 
 ## Overview

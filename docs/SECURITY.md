@@ -29,25 +29,25 @@ Include:
 
 ## Security Measures
 
-This app uses Tauri's security model:
+This app uses a minimal-surface security model:
 
-- **Permissions**: Minimal system permissions via `capabilities/`
-- **IPC**: Type-safe commands via tauri-specta
-- **File Access**: Scoped to app directories by default
+- **Permissions**: only whitelisted Go methods are exposed as bindings
+- **IPC**: type-safe commands via the generated TS bindings (`wails3 generate bindings`)
+- **File Access**: scoped to app directories by default (`wails/internal/core/paths.go`)
 - **CSP**: Configured in `index.html`
 
 ## For Developers
 
 ### File Operations
 
-```rust
+```go
 // ✅ Validate paths - prevent traversal attacks
-if filename.contains("..") {
-    return Err("Invalid filename".into());
+if strings.Contains(filename, "..") {
+    return errors.New("invalid filename")
 }
 
 // ❌ Never trust raw user input for paths
-std::fs::write(user_input, data)
+os.WriteFile(userInput, data, 0o600)
 ```
 
 ### Secrets
@@ -60,10 +60,9 @@ std::fs::write(user_input, data)
 
 ```bash
 npm audit
-cargo audit
+govulncheck ./...   # go install golang.org/x/vuln/cmd/govulncheck@latest
 ```
 
 ## Resources
 
-- [Tauri Security Guide](https://tauri.app/security/)
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)

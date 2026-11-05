@@ -1,5 +1,9 @@
 # Using This Template
 
+> ⚠️ **历史文档** — 描述的是本项目起源的 Tauri 模板（`npm run tauri dev` 等），
+> 本仓库已不再使用该模板：现在是 Wails v3 + Go 单壳。当前命令见
+> [`agents/commands.md`](agents/commands.md)。
+
 This document is specific to the template and should be deleted once you're comfortable with your new project.
 
 ## Prerequisites
@@ -138,7 +142,7 @@ Add your public key to `src-tauri/tauri.conf.json`:
 }
 ```
 
-See [docs/developer/releases.md](developer/releases.md) for the full release process and auto-update system.
+See [docs/developer/releases.md](archive/tauri/releases.md) for the historical Tauri release process (the current flow is in `docs/agents/commands.md` → _CI / Release tags_).
 
 ## Next Steps
 

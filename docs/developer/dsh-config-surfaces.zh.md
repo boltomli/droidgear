@@ -1,12 +1,17 @@
 # DSH 配置面与 Dsh 页可视化设计
 
+> **路径说明**：本文写于 Tauri/Rust 时代，其中 `src-tauri/crates/droidgear-core/…`、
+> Tauri 命令、`cargo test` 等是当时的实现位置与命令（已随 `fe22c57` 删除）；
+> 该功能已迁移到 `wails/internal/`（Go），命令/绑定契约见
+> [`../agents/wails-port.md`](../agents/wails-port.md)。设计结论本身仍有效。
+
 这份文档回答一个问题：除了现有的「模型服务商 / API Key」，还能从 DeepSeek Harness（下称 DSH）的本地配置里扒出什么，做成 Dsh 页的可视化配置。
 
 基线版本：**DSH 0.2.1-rc.2**（与已安装的 `DeepSeek Harness.app` 一致，源码 git tag `dsh-v0.2.1-rc.2`）。DSH 的 rc 之间会删改配置键，本文所有结论都带源码出处，升级 DSH 后需要复核。
 
 相关文档：
 
-- See [tauri-commands.md](./tauri-commands.md)
+- See [`../agents/wails-port.md`](../agents/wails-port.md) for the current command/IPC contract
 - See [data-persistence.md](./data-persistence.md)
 - See [tui-design.md](./tui-design.md)
 

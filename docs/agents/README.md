@@ -4,15 +4,14 @@ Detailed coding guidelines for AI agents working on this codebase. These docs ar
 
 ## Index
 
-| Document                                                  | When to Read                                                        |
-| --------------------------------------------------------- | ------------------------------------------------------------------- |
-| [Commands](./commands.md)                                 | Running builds, lints, tests, or any npm task                       |
-| [TypeScript/React Code Style](./code-style-typescript.md) | Writing or reviewing TypeScript/React code                          |
-| [Rust Code Style](./code-style-rust.md)                   | Writing or reviewing Rust code                                      |
-| [State Management](./state-management.md)                 | Working with Zustand, TanStack Query, or state                      |
-| [Architecture](./architecture.md)                         | Understanding system design, Tauri bridge, i18n                     |
-| [UI Components](./ui-components.md)                       | Working with Radix UI, shadcn/ui, dialogs                           |
-| [Wails v3 Shell](./wails-port.md)                         | Touching `wails/`, `src/wails/`, or shared code used by both shells |
+| Document                                                  | When to Read                                        |
+| --------------------------------------------------------- | --------------------------------------------------- |
+| [Commands](./commands.md)                                 | Running builds, lints, tests, or any npm task       |
+| [TypeScript/React Code Style](./code-style-typescript.md) | Writing or reviewing TypeScript/React code          |
+| [State Management](./state-management.md)                 | Working with Zustand, TanStack Query, or state      |
+| [Architecture](./architecture.md)                         | Understanding system design, shell bridge, i18n     |
+| [UI Components](./ui-components.md)                       | Working with Radix UI, shadcn/ui, dialogs           |
+| [Wails v3 Shell](./wails-port.md)                         | Touching `wails/` (Go service) or `src/lib/shell/*` |
 
 ## Relationship to Other Docs
 

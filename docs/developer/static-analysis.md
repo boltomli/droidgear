@@ -4,20 +4,18 @@ All static analysis tools configured in this app and how to use them.
 
 ## Quick Reference
 
-| Tool           | Purpose                                                     | Command                  | In check:all |
-| -------------- | ----------------------------------------------------------- | ------------------------ | ------------ |
-| TypeScript     | Type checking                                               | `npm run typecheck`      | Yes          |
-| ESLint         | Syntax, style, TS rules                                     | `npm run lint`           | Yes          |
-| Prettier       | Code formatting                                             | `npm run format:check`   | Yes          |
-| ast-grep       | Architecture patterns                                       | `npm run ast:lint`       | Yes          |
-| React Compiler | Automatic memoization                                       | Build-time               | Yes          |
-| cargo fmt      | Rust formatting                                             | `npm run rust:fmt:check` | Yes          |
-| clippy         | Rust linting                                                | `npm run rust:clippy`    | Yes          |
-| Vitest         | Frontend tests                                              | `npm run test:run`       | Yes          |
-| cargo test     | Rust tests                                                  | `npm run rust:test`      | Yes          |
-| Vite build     | Production bundle (catches missing/renamed package exports) | `npm run build`          | Yes          |
-| knip           | Unused code detection                                       | `npm run knip`           | No           |
-| jscpd          | Duplicate code detection                                    | `npm run jscpd`          | No           |
+| Tool           | Purpose                                                     | Command                                     | In check:all |
+| -------------- | ----------------------------------------------------------- | ------------------------------------------- | ------------ |
+| TypeScript     | Type checking                                               | `npm run typecheck`                         | Yes          |
+| ESLint         | Syntax, style, TS rules                                     | `npm run lint`                              | Yes          |
+| Prettier       | Code formatting                                             | `npm run format:check`                      | Yes          |
+| ast-grep       | Architecture patterns                                       | `npm run ast:lint`                          | Yes          |
+| React Compiler | Automatic memoization                                       | Build-time                                  | Yes          |
+| gofmt/vet/test | Go service + CLI checks                                     | `cd wails && go vet ./... && go test ./...` | No (CI)      |
+| Vitest         | Frontend tests                                              | `npm run test:run`                          | Yes          |
+| Vite build     | Production bundle (catches missing/renamed package exports) | `npm run build`                             | Yes          |
+| knip           | Unused code detection                                       | `npm run knip`                              | No           |
+| jscpd          | Duplicate code detection                                    | `npm run jscpd`                             | No           |
 
 ## Running All Checks
 
@@ -79,14 +77,13 @@ The compiler analyzes code and adds memoization where beneficial.
 
 **Note:** The `getState()` pattern is still critical - it avoids store subscriptions, not memoization. See [state-management.md](./state-management.md).
 
-### Rust Tooling
+### Go Tooling
 
 ```bash
-npm run rust:fmt:check   # Check formatting
-npm run rust:fmt         # Fix formatting
-npm run rust:clippy      # Lint with clippy
-npm run rust:clippy:fix  # Auto-fix clippy warnings
-npm run rust:test        # Run Rust tests
+cd wails
+gofmt -l .                # formatting (CI fails on any output)
+go vet ./...              # static checks
+go test ./...             # service + cmd/dg tests
 ```
 
 ### knip (Periodic Cleanup)
