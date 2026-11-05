@@ -61,6 +61,25 @@ func (codexAuthSource) Detail(_ context.Context, name string) ([]byte, error) {
 
 const officialSuffix = "  [official]"
 
+// Actions wires 'a' = switch the live codex auth to the selected profile,
+// 'd' = delete it (both through the preview flow).
+func (codexAuthSource) Actions() []ListAction {
+	return []ListAction{
+		{
+			Key: "a", Label: "switch",
+			Run: func(_ context.Context, row ListRow) error {
+				return codex.SwitchAuthProfile(row.ID)
+			},
+		},
+		{
+			Key: "d", Label: "delete",
+			Run: func(_ context.Context, row ListRow) error {
+				return codex.DeleteAuthProfile(row.ID)
+			},
+		},
+	}
+}
+
 func (codexAuthSource) Summary(rows []ListRow) string {
 	active := "none"
 	official := 0

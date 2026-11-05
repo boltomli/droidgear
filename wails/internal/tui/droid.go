@@ -40,7 +40,12 @@ func droidSections() []screenSection {
 		{key: "models", title: "Models", open: list(FactorySource)},
 		{key: "sessions", title: "Sessions", open: list(DroidSessionsSource)},
 		{key: "legacy", title: "Legacy", open: func(ctx context.Context) (Screen, error) {
-			return newKVScreen("Droid Legacy", droidLegacyRows()), nil
+			return newKVScreen("Droid Legacy", droidLegacyRows()).
+				withRebuild(droidLegacyRows).
+				withActions(kvAction{
+					key: "d", label: "delete legacy config",
+					run: func() error { return legacy.Delete() },
+				}), nil
 		}},
 	}
 }
@@ -240,6 +245,35 @@ func (droidAuthSource) Detail(_ context.Context, name string) ([]byte, error) {
 	return nil, fmt.Errorf("Droid auth profile %q not found", name)
 }
 
+// Actions wires 'a' = switch the live Factory auth to the selected profile,
+// 'd' = delete it.
+func (droidAuthSource) Actions() []ListAction {
+	return []ListAction{
+		{
+			Key: "a", Label: "switch",
+			Run: func(_ context.Context, row ListRow) error {
+				return droid.SwitchAuthProfile(row.ID)
+			},
+		},
+		{
+			Key: "d", Label: "delete",
+			Run: func(_ context.Context, row ListRow) error {
+				return droid.DeleteAuthProfile(row.ID)
+			},
+		},
+	}
+}
+
+// Actions wires 'd' = drop the selected directory from the trusted list.
+func (droidTrustedSource) Actions() []ListAction {
+	return []ListAction{{
+		Key: "d", Label: "remove",
+		Run: func(_ context.Context, row ListRow) error {
+			return droid.RemoveTrustedFolder(row.ID)
+		},
+	}}
+}
+
 func (droidAuthSource) Summary(rows []ListRow) string {
 	active := "none"
 	for _, row := range rows {
@@ -287,6 +321,16 @@ func (specsSource) Detail(_ context.Context, path string) ([]byte, error) {
 		}
 	}
 	return nil, fmt.Errorf("spec %q not found", path)
+}
+
+// Actions wires 'd' = delete the selected spec file.
+func (specsSource) Actions() []ListAction {
+	return []ListAction{{
+		Key: "d", Label: "delete",
+		Run: func(_ context.Context, row ListRow) error {
+			return specs.Delete(row.ID)
+		},
+	}}
 }
 
 func (specsSource) Summary(rows []ListRow) string {

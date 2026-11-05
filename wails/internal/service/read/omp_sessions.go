@@ -736,7 +736,7 @@ func DeleteOmpSession(sessionPath string) error {
 	if _, err := readOmpSession(path, false); err != nil {
 		return err
 	}
-	if err := os.Remove(path); err != nil {
+	if err := core.RemoveFile(path); err != nil {
 		return fmt.Errorf("Failed to delete OMP session: %w", err)
 	}
 	return nil

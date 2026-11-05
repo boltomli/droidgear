@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"droidgear-wails/internal/service/claude"
 )
@@ -46,6 +47,30 @@ func (claudeSource) Detail(_ context.Context, name string) ([]byte, error) {
 		return nil, err
 	}
 	return json.MarshalIndent(contents, "", "  ")
+}
+
+// Actions wires 'a' = make the selected settings file active and 'd' = delete
+// it (the live Global file is never deletable, like in the GUI).
+func (claudeSource) Actions() []ListAction {
+	return []ListAction{
+		{
+			Key: "a", Label: "activate",
+			Run: func(_ context.Context, row ListRow) error {
+				name := row.ID
+				_, err := claude.SetActiveSettingsFile(&name)
+				return err
+			},
+		},
+		{
+			Key: "d", Label: "delete",
+			Run: func(_ context.Context, row ListRow) error {
+				if strings.EqualFold(row.ID, "Global") {
+					return fmt.Errorf("cannot delete the global settings file")
+				}
+				return claude.DeleteSettingsFile(row.ID)
+			},
+		},
+	}
 }
 
 func (claudeSource) Summary(rows []ListRow) string {

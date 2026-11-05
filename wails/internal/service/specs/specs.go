@@ -188,6 +188,14 @@ func renameSpecForHome(home string, oldPath string, newName string) (SpecFile, e
 	if core.PathExists(newPath) && !droidPathsEqual(newPath, cleanOld) {
 		return SpecFile{}, errString("A file with this name already exists")
 	}
+	if core.InDryRun() {
+		data, err := os.ReadFile(cleanOld) // #nosec G304 -- specs directory contents
+		if err != nil {
+			return SpecFile{}, err
+		}
+		core.RecordRename(cleanOld, newPath, data)
+		return readSpecFile(cleanOld) // preview only: the rename did not happen
+	}
 	if err := os.Rename(cleanOld, newPath); err != nil {
 		return SpecFile{}, fmt.Errorf("Failed to rename file: %w", err)
 	}
@@ -203,7 +211,7 @@ func deleteSpecForHome(home string, path string) error {
 	if !core.PathExists(cleanPath) {
 		return errString("Spec file not found")
 	}
-	if err := os.Remove(cleanPath); err != nil {
+	if err := core.RemoveFile(cleanPath); err != nil {
 		return fmt.Errorf("Failed to delete file: %w", err)
 	}
 	return nil
@@ -217,6 +225,9 @@ func updateSpecForHome(home string, path string, content string) (SpecFile, erro
 	}
 	if !core.PathExists(cleanPath) {
 		return SpecFile{}, errString("Spec file not found")
+	}
+	if core.RecordWrite(cleanPath, []byte(content)) {
+		return readSpecFile(cleanPath) // preview only: nothing was written
 	}
 	if err := os.WriteFile(cleanPath, []byte(content), 0o644); err != nil { // #nosec G306 -- spec files
 		return SpecFile{}, fmt.Errorf("Failed to write file: %w", err)

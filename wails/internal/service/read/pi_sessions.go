@@ -654,7 +654,7 @@ func DeletePiSession(sessionPath string) error {
 	if _, err := readPiSession(path, false); err != nil {
 		return err
 	}
-	if err := os.Remove(path); err != nil {
+	if err := core.RemoveFile(path); err != nil {
 		return fmt.Errorf("Failed to delete Pi session: %w", err)
 	}
 	return nil

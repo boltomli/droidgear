@@ -624,7 +624,7 @@ func DeleteSettingsFile(name string) error {
 	if !claudePathExists(path) {
 		return fmt.Errorf("Settings file '%s' does not exist", name)
 	}
-	if err := os.Remove(path); err != nil {
+	if err := core.RemoveFile(path); err != nil {
 		return fmt.Errorf("Failed to delete settings file: %w", err)
 	}
 

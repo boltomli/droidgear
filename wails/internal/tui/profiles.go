@@ -20,6 +20,30 @@ type profileSource struct {
 	list   func() ([]ListRow, error)
 	active func() (*string, error)
 	get    func(id string) ([]byte, error)
+	// apply/delete wire the P2 write actions ('a' / 'd'); nil keeps the
+	// source read-only.
+	apply  func(id string) error
+	delete func(id string) error
+}
+
+// Actions exposes apply/delete through the preview flow.
+func (p *profileSource) Actions() []ListAction {
+	actions := []ListAction{}
+	if p.apply != nil {
+		apply := p.apply
+		actions = append(actions, ListAction{
+			Key: "a", Label: "apply",
+			Run: func(_ context.Context, row ListRow) error { return apply(row.ID) },
+		})
+	}
+	if p.delete != nil {
+		del := p.delete
+		actions = append(actions, ListAction{
+			Key: "d", Label: "delete",
+			Run: func(_ context.Context, row ListRow) error { return del(row.ID) },
+		})
+	}
+	return actions
 }
 
 func (p *profileSource) Title() string { return p.title }
@@ -65,6 +89,8 @@ func CodexSource() ListSource {
 	return &profileSource{
 		title:  "Codex",
 		active: codex.GetActiveProfileID,
+		apply:  codex.ApplyProfile,
+		delete: codex.DeleteProfile,
 		list: func() ([]ListRow, error) {
 			profiles, err := codex.ListProfiles()
 			if err != nil {
@@ -87,6 +113,8 @@ func HermesSource() ListSource {
 	return &profileSource{
 		title:  "Hermes",
 		active: hermes.GetActiveProfileID,
+		apply:  hermes.ApplyProfile,
+		delete: hermes.DeleteProfile,
 		list: func() ([]ListRow, error) {
 			profiles, err := hermes.ListProfiles()
 			if err != nil {
@@ -109,6 +137,8 @@ func PiSource() ListSource {
 	return &profileSource{
 		title:  "Pi",
 		active: pi.GetActiveProfileID,
+		apply:  pi.ApplyProfile,
+		delete: pi.DeleteProfile,
 		list: func() ([]ListRow, error) {
 			profiles, err := pi.ListProfiles()
 			if err != nil {
@@ -131,6 +161,8 @@ func OmpSource() ListSource {
 	return &profileSource{
 		title:  "OMP",
 		active: omp.GetActiveProfileID,
+		apply:  omp.ApplyProfile,
+		delete: omp.DeleteProfile,
 		list: func() ([]ListRow, error) {
 			profiles, err := omp.ListProfiles()
 			if err != nil {
@@ -153,6 +185,8 @@ func CopilotSource() ListSource {
 	return &profileSource{
 		title:  "Copilot",
 		active: copilot.GetActiveCopilotProfileId,
+		apply:  copilot.ApplyCopilotProfile,
+		delete: copilot.DeleteCopilotProfile,
 		list: func() ([]ListRow, error) {
 			profiles, err := copilot.ListCopilotProfiles()
 			if err != nil {

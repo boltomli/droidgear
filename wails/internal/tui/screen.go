@@ -21,6 +21,13 @@ type Screen interface {
 	Status() string
 }
 
+// KeySink marks a screen that consumes navigation keys itself (the write
+// preview flow): the root model forwards everything except ctrl+c, and the
+// screen decides when to hand control back.
+type KeySink interface {
+	IsKeySink() bool
+}
+
 // Module is one entry of the left-hand list.
 type Module struct {
 	// Key is stable and machine-readable (parity matrix row id).

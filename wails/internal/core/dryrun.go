@@ -1,6 +1,8 @@
 package core
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,13 +12,16 @@ import (
 
 // Change is one file a --dry-run command would have written or removed
 // (design doc §3.3). `after` holds the full document that would have been
-// written, `removed` marks a deletion instead.
+// written, `removed` marks a deletion instead, `beforeHash` is the sha256 of
+// the file as it was when the write was recorded — the TUI preview flow
+// compares it between preview and apply to detect external edits (§5.2).
 type Change struct {
-	Path     string `json:"path"`
-	Kind     string `json:"kind"`
-	After    string `json:"after,omitempty"`
-	Removed  bool   `json:"removed,omitempty"`
-	Redacted bool   `json:"redacted,omitempty"`
+	Path       string `json:"path"`
+	Kind       string `json:"kind"`
+	BeforeHash string `json:"beforeHash,omitempty"`
+	After      string `json:"after,omitempty"`
+	Removed    bool   `json:"removed,omitempty"`
+	Redacted   bool   `json:"redacted,omitempty"`
 }
 
 // ChangeSet is the preview `dg --dry-run` prints: the real code path runs,
@@ -69,8 +74,60 @@ func (cs *ChangeSet) record(change Change) {
 
 func recordIfDryRun(change Change) {
 	if cs := dryRun.Load(); cs != nil {
+		if change.BeforeHash == "" {
+			change.BeforeHash = HashFile(change.Path)
+		}
 		cs.record(change)
 	}
+}
+
+// HashFile returns the `sha256:` digest of path's current content, or ""
+// when the file does not exist or is not a regular file (a fresh create has
+// no "before" state).
+func HashFile(path string) string {
+	info, err := os.Stat(path)
+	if err != nil || !info.Mode().IsRegular() {
+		return ""
+	}
+	data, err := os.ReadFile(path) // #nosec G304 -- hashing whatever the write path would replace
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// RecordWrite is the dry-run hook for write paths that cannot delegate to
+// AtomicWrite byte for byte (custom error strings, rename semantics): it
+// records the would-be write — beforeHash included — and reports whether a
+// recorder is installed, i.e. whether the caller must skip the real write.
+func RecordWrite(path string, data []byte) bool {
+	if !InDryRun() {
+		return false
+	}
+	recordIfDryRun(Change{Path: path, Kind: KindOf(path), After: string(data)})
+	return true
+}
+
+// RecordRemove mirrors RecordWrite for deletions (files and directories).
+func RecordRemove(path string) bool {
+	if !InDryRun() {
+		return false
+	}
+	recordIfDryRun(Change{Path: path, Kind: KindOf(path), Removed: true})
+	return true
+}
+
+// RecordRename previews an os.Rename as the pair the contract expects: the
+// old path removed, the new path written with newData. It reports whether
+// the real rename must be skipped.
+func RecordRename(oldPath string, newPath string, newData []byte) bool {
+	if !InDryRun() {
+		return false
+	}
+	recordIfDryRun(Change{Path: oldPath, Kind: KindOf(oldPath), Removed: true})
+	recordIfDryRun(Change{Path: newPath, Kind: KindOf(newPath), After: string(newData)})
+	return true
 }
 
 // KindOf classifies a path the way the ChangeSet contract does

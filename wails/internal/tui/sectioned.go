@@ -60,6 +60,16 @@ func (s *sectionedScreen) Status() string {
 	return fmt.Sprintf("%s · %d/%d tab sections", status, s.cur+1, len(s.sections))
 }
 
+// IsKeySink surfaces a key-sink body (the write preview flow): while the
+// flow is open it owns every key — including esc and the section digits —
+// so a cancelled preview can hand control back to its origin screen.
+func (s *sectionedScreen) IsKeySink() bool {
+	if ks, ok := s.body.(KeySink); ok {
+		return ks.IsKeySink()
+	}
+	return false
+}
+
 func (s *sectionedScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 	key, ok := msg.(tea.KeyMsg)
 	if !ok {
@@ -69,6 +79,13 @@ func (s *sectionedScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 			return s, cmd
 		}
 		return s, nil
+	}
+
+	// A body-level key sink (write preview) consumes everything first.
+	if s.IsKeySink() {
+		var cmd tea.Cmd
+		s.body, cmd = s.body.Update(key)
+		return s, cmd
 	}
 
 	name := key.String()

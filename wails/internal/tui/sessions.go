@@ -17,6 +17,20 @@ type sessionsSource struct {
 	title  string
 	load   func() ([]ListRow, error)
 	detail func(path string) ([]byte, error)
+	// delete wires the 'd' action through the preview flow (nil = read-only).
+	delete func(path string) error
+}
+
+// Actions exposes session deletion through the writeFlow (P2).
+func (s *sessionsSource) Actions() []ListAction {
+	if s.delete == nil {
+		return nil
+	}
+	del := s.delete
+	return []ListAction{{
+		Key: "d", Label: "delete",
+		Run: func(_ context.Context, row ListRow) error { return del(row.ID) },
+	}}
 }
 
 func (s *sessionsSource) Title() string { return s.title }
@@ -58,7 +72,8 @@ func marshalSessionDetail(value any) ([]byte, error) {
 // Sessions).
 func DroidSessionsSource() ListSource {
 	return &sessionsSource{
-		title: "Sessions",
+		title:  "Sessions",
+		delete: read.DeleteSession,
 		load: func() ([]ListRow, error) {
 			sessions, err := read.ListSessions(nil)
 			if err != nil {
@@ -81,7 +96,8 @@ func DroidSessionsSource() ListSource {
 // CodexSessionsSource exposes Codex sessions (Codex → Sessions).
 func CodexSessionsSource() ListSource {
 	return &sessionsSource{
-		title: "Codex Sessions",
+		title:  "Codex Sessions",
+		delete: read.DeleteCodexSession,
 		load: func() ([]ListRow, error) {
 			sessions, err := read.ListCodexSessions()
 			if err != nil {
@@ -104,7 +120,8 @@ func CodexSessionsSource() ListSource {
 // PiSessionsSource exposes Pi sessions (Pi → Sessions).
 func PiSessionsSource() ListSource {
 	return &sessionsSource{
-		title: "Pi Sessions",
+		title:  "Pi Sessions",
+		delete: read.DeletePiSession,
 		load: func() ([]ListRow, error) {
 			sessions, err := read.ListPiSessions()
 			if err != nil {
@@ -127,7 +144,8 @@ func PiSessionsSource() ListSource {
 // OmpSessionsSource exposes OMP sessions (OMP → Sessions).
 func OmpSessionsSource() ListSource {
 	return &sessionsSource{
-		title: "OMP Sessions",
+		title:  "OMP Sessions",
+		delete: read.DeleteOmpSession,
 		load: func() ([]ListRow, error) {
 			sessions, err := read.ListOmpSessions()
 			if err != nil {
@@ -150,7 +168,8 @@ func OmpSessionsSource() ListSource {
 // DshSessionsSource exposes Dsh sessions (Dsh → Sessions).
 func DshSessionsSource() ListSource {
 	return &sessionsSource{
-		title: "Dsh Sessions",
+		title:  "Dsh Sessions",
+		delete: read.DeleteDshSession,
 		load: func() ([]ListRow, error) {
 			sessions, err := read.ListDshSessions()
 			if err != nil {

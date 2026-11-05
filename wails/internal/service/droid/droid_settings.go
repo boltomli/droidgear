@@ -415,14 +415,20 @@ func droidCreateSettingsFile(home string, name string, copyFromActive bool) (Set
 			if err != nil {
 				return SettingsFileInfo{}, fmt.Errorf("Failed to copy settings: %w", err)
 			}
-			if err := os.WriteFile(path, data, 0o644); err != nil { // #nosec G306 -- settings files
-				return SettingsFileInfo{}, fmt.Errorf("Failed to copy settings: %w", err)
+			if !core.RecordWrite(path, data) {
+				if err := os.WriteFile(path, data, 0o644); err != nil { // #nosec G306 -- settings files
+					return SettingsFileInfo{}, fmt.Errorf("Failed to copy settings: %w", err)
+				}
 			}
-		} else if err := os.WriteFile(path, []byte("{}"), 0o644); err != nil { // #nosec G306 -- settings files
+		} else if !core.RecordWrite(path, []byte("{}")) {
+			if err := os.WriteFile(path, []byte("{}"), 0o644); err != nil { // #nosec G306 -- settings files
+				return SettingsFileInfo{}, fmt.Errorf("Failed to create settings file: %w", err)
+			}
+		}
+	} else if !core.RecordWrite(path, []byte("{}")) {
+		if err := os.WriteFile(path, []byte("{}"), 0o644); err != nil { // #nosec G306 -- settings files
 			return SettingsFileInfo{}, fmt.Errorf("Failed to create settings file: %w", err)
 		}
-	} else if err := os.WriteFile(path, []byte("{}"), 0o644); err != nil { // #nosec G306 -- settings files
-		return SettingsFileInfo{}, fmt.Errorf("Failed to create settings file: %w", err)
 	}
 
 	// Auto-switch to the new file.
@@ -440,7 +446,7 @@ func droidDeleteSettingsFile(home string, name string) error {
 	if !core.PathExists(path) {
 		return fmt.Errorf("Settings file '%s' does not exist", name)
 	}
-	if err := os.Remove(path); err != nil {
+	if err := core.RemoveFile(path); err != nil {
 		return fmt.Errorf("Failed to delete settings file: %w", err)
 	}
 	// If the deleted file was active, switch back to Global (Rust swallows

@@ -50,6 +50,25 @@ func (mcpSource) Detail(_ context.Context, name string) ([]byte, error) {
 	return nil, fmt.Errorf("MCP server %q not found", name)
 }
 
+// Actions wires 't' = flip the server's disabled flag (P2 preview).
+func (mcpSource) Actions() []ListAction {
+	return []ListAction{{
+		Key: "t", Label: "toggle",
+		Run: func(_ context.Context, row ListRow) error {
+			servers, err := mcp.LoadServers()
+			if err != nil {
+				return err
+			}
+			for _, server := range servers {
+				if server.Name == row.ID {
+					return mcp.ToggleServer(row.ID, !server.Config.Disabled)
+				}
+			}
+			return fmt.Errorf("MCP server %q not found", row.ID)
+		},
+	}}
+}
+
 func (mcpSource) Summary(rows []ListRow) string {
 	enabled := 0
 	for _, row := range rows {

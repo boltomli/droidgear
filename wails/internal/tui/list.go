@@ -37,6 +37,24 @@ type ListSource interface {
 	Summary(rows []ListRow) string
 }
 
+// ListAction is a previewable write bound to one rune key of the list
+// screen (apply profile, delete session, toggle MCP …). Run receives the
+// selected row; the screen wraps it in a writeFlow so every action goes
+// through the same preview → confirm → apply contract.
+type ListAction struct {
+	// Key is a single lowercase rune ("a", "d", "t").
+	Key string
+	// Label is the status-hint word ("apply", "delete").
+	Label string
+	Run   func(ctx context.Context, row ListRow) error
+}
+
+// ActionSource is the optional ListSource extension carrying write actions;
+// sources without it stay read-only.
+type ActionSource interface {
+	Actions() []ListAction
+}
+
 // listScreen is the shared list/detail pane.
 type listScreen struct {
 	ctx    context.Context
@@ -54,16 +72,48 @@ type listScreen struct {
 
 func newListScreen(ctx context.Context, source ListSource) (Screen, error) {
 	s := &listScreen{ctx: ctx, source: source}
+	s.reload()
+	return s, nil
+}
 
-	rows, err := source.Load(ctx)
+// reload re-reads the rows (called on open and after a writeFlow applied).
+func (s *listScreen) reload() {
+	rows, err := s.source.Load(s.ctx)
 	if err != nil {
 		s.err = err
-		return s, nil
+		s.status = ""
+		return
 	}
 	s.rows = rows
+	if s.selected >= len(s.rows) {
+		s.selected = len(s.rows) - 1
+	}
+	if s.selected < 0 {
+		s.selected = 0
+	}
 	s.loadDetail()
-	s.status = source.Summary(rows)
-	return s, nil
+	s.status = s.source.Summary(rows)
+	if hints := s.actionHints(); hints != "" {
+		s.status += " · " + hints
+	}
+}
+
+// Refresh implements the post-write reload the writeFlow asks for.
+func (s *listScreen) Refresh() { s.reload() }
+
+func (s *listScreen) actions() []ListAction {
+	if src, ok := s.source.(ActionSource); ok {
+		return src.Actions()
+	}
+	return nil
+}
+
+func (s *listScreen) actionHints() string {
+	parts := make([]string, 0, 2)
+	for _, action := range s.actions() {
+		parts = append(parts, action.Key+" "+action.Label)
+	}
+	return strings.Join(parts, " · ")
 }
 
 func (s *listScreen) Title() string { return s.source.Title() }
@@ -104,7 +154,26 @@ func (s *listScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 	if !ok {
 		return s, nil
 	}
-	switch key.String() {
+
+	// Write actions open the preview flow (P2); only meaningful with a row.
+	name := key.String()
+	if len(name) == 1 {
+		for _, action := range s.actions() {
+			if action.Key != name || s.selected < 0 || s.selected >= len(s.rows) {
+				continue
+			}
+			row := s.rows[s.selected]
+			flow := newWriteFlow(s, writeAction{
+				title: action.Label + " " + row.Label,
+				run: func() error {
+					return action.Run(s.ctx, row)
+				},
+			}, s.reload)
+			return flow, nil
+		}
+	}
+
+	switch name {
 	case "up", "k":
 		if s.selected > 0 {
 			s.selected--

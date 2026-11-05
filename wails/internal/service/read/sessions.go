@@ -515,11 +515,11 @@ func deleteDroidSession(sessionPath string) error {
 	if _, err := os.Stat(jsonlPath); err != nil {
 		return errString("Session file not found")
 	}
-	if err := os.Remove(jsonlPath); err != nil {
+	if err := core.RemoveFile(jsonlPath); err != nil {
 		return fmt.Errorf("Failed to delete session: %w", err)
 	}
 	if _, err := os.Stat(settingsPath); err == nil {
-		_ = os.Remove(settingsPath)
+		_ = core.RemoveFile(settingsPath)
 	}
 	return nil
 }

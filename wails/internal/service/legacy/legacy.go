@@ -86,7 +86,7 @@ func Delete() error {
 	if _, err := os.Stat(legacyPath); err != nil {
 		return nil
 	}
-	if err := os.Remove(legacyPath); err != nil {
+	if err := core.RemoveFile(legacyPath); err != nil {
 		return fmt.Errorf("Failed to delete legacy config: %w", err)
 	}
 	return nil

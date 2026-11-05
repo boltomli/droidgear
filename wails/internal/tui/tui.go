@@ -121,6 +121,17 @@ func (m Model) updateSidebar(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateContent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Key-sink screens (the write preview flow) own every key, including
+	// esc/q: they hand the screen back themselves so a cancelled preview
+	// returns to the screen it was opened from.
+	if ks, ok := m.screen.(KeySink); ok && ks.IsKeySink() {
+		var cmd tea.Cmd
+		m.screen, cmd = m.screen.Update(msg)
+		if s := m.screen.Status(); s != "" {
+			m.status = s
+		}
+		return m, cmd
+	}
 	switch msg.String() {
 	case "esc", "h", "left", "q":
 		m.focus = focusSidebar

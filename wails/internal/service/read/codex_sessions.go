@@ -876,13 +876,13 @@ func DeleteCodexSession(sessionPath string) error {
 	if !codexSessionWithin(sessionsDir, sessionPath) {
 		return errString("Session file not found")
 	}
-	if err := os.Remove(sessionPath); err != nil {
+	if err := core.RemoveFile(sessionPath); err != nil {
 		return fmt.Errorf("Failed to delete session: %w", err)
 	}
 	// Prune empty day/month directories, up to the sessions dir.
 	dir := filepath.Dir(sessionPath)
 	for dir != sessionsDir && strings.HasPrefix(dir, sessionsDir+string(filepath.Separator)) {
-		if err := os.Remove(dir); err != nil {
+		if err := core.RemoveFile(dir); err != nil {
 			break
 		}
 		parent := filepath.Dir(dir)

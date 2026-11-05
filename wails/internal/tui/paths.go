@@ -10,46 +10,113 @@ import (
 )
 
 // pathsScreen renders the effective configuration paths — the terminal
-// counterpart of Preferences → Paths. Writing path overrides is part of the
-// preview phase (tui-parity P2); for now the pane is read-only.
+// counterpart of Preferences → Paths, including the P2 write path: 'e'
+// edits an override and 'x' resets one, both through the shared writeFlow
+// preview (tui-parity §2).
 type pathsScreen struct {
+	ctx      context.Context
 	rows     []paths.EffectivePath
 	wsl      paths.WslInfo
 	selected int
 	offset   int
 	err      error
 	status   string
+
+	// edit mode ('e' / enter): a one-line path input.
+	editing bool
+	buffer  string
 }
 
 func newPathsScreen(ctx context.Context) (Screen, error) {
-	effective, err := paths.Effective(ctx)
+	s := &pathsScreen{ctx: ctx}
+	if err := s.reload(); err != nil {
+		s.err = err
+	}
+	return s, nil
+}
+
+// reload re-reads the effective paths (open + post-write refresh).
+func (s *pathsScreen) reload() error {
+	effective, err := paths.Effective(s.ctx)
 	if err != nil {
-		return &pathsScreen{err: err}, nil
+		return err
 	}
 	// WSL info is supplementary (the GUI shows it in Preferences → Paths);
 	// a failed probe must not blank the whole screen.
-	wsl, _ := paths.Wsl(ctx)
-	return &pathsScreen{
-		rows: effective.List(),
-		wsl:  wsl,
-	}, nil
+	wsl, _ := paths.Wsl(s.ctx)
+	s.rows = effective.List()
+	s.wsl = wsl
+	s.err = nil
+	if s.selected >= len(s.rows) {
+		s.selected = len(s.rows) - 1
+	}
+	if s.selected < 0 {
+		s.selected = 0
+	}
+	s.status = fmt.Sprintf("%d paths · e set · x reset", len(s.rows))
+	return nil
 }
+
+// Refresh implements the post-write reload the writeFlow asks for.
+func (s *pathsScreen) Refresh() { _ = s.reload() }
 
 func (s *pathsScreen) Title() string { return "Paths" }
 
 func (s *pathsScreen) Status() string { return s.status }
+
+func (s *pathsScreen) selectedRow() (paths.EffectivePath, bool) {
+	if s.selected < 0 || s.selected >= len(s.rows) {
+		return paths.EffectivePath{}, false
+	}
+	return s.rows[s.selected], true
+}
+
+// selectedRowKey is the key of the highlighted row (tests).
+func (s *pathsScreen) selectedRowKey() string {
+	if row, ok := s.selectedRow(); ok {
+		return row.Key
+	}
+	return ""
+}
 
 func (s *pathsScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 	key, ok := msg.(tea.KeyMsg)
 	if !ok {
 		return s, nil
 	}
-	switch key.String() {
-	case "up", "k":
+	name := key.String()
+
+	if s.editing {
+		return s.updateEdit(name), nil
+	}
+
+	row, has := s.selectedRow()
+	switch {
+	case name == "e" || (name == "enter" && has):
+		s.editing = true
+		s.buffer = ""
+		if has && !row.IsDefault {
+			s.buffer = row.Path
+		}
+		s.status = fmt.Sprintf("set %s · enter save · esc cancel", row.Key)
+	case name == "x" && has:
+		if row.IsDefault {
+			s.status = row.Key + " is already the default"
+			return s, nil
+		}
+		keyID := row.Key
+		flow := newWriteFlow(s, writeAction{
+			title: "reset " + keyID,
+			run: func() error {
+				return paths.ResetOverride(s.ctx, keyID)
+			},
+		}, s.Refresh)
+		return flow, nil
+	case name == "up", name == "k":
 		if s.selected > 0 {
 			s.selected--
 		}
-	case "down", "j":
+	case name == "down", name == "j":
 		if s.selected < len(s.rows)-1 {
 			s.selected++
 		}
@@ -57,9 +124,55 @@ func (s *pathsScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 	return s, nil
 }
 
+// updateEdit handles one key of the one-line path input.
+func (s *pathsScreen) updateEdit(name string) Screen {
+	row, _ := s.selectedRow()
+	switch name {
+	case "esc":
+		s.editing = false
+		s.status = fmt.Sprintf("%d paths · e set · x reset", len(s.rows))
+	case "enter":
+		value := strings.TrimSpace(s.buffer)
+		if value == "" {
+			s.status = "path required · esc cancel"
+			return s
+		}
+		keyID := row.Key
+		s.editing = false
+		return newWriteFlow(s, writeAction{
+			title: "set " + keyID,
+			run: func() error {
+				return paths.SaveOverride(s.ctx, keyID, value)
+			},
+		}, s.Refresh)
+	case "backspace":
+		if len(s.buffer) > 0 {
+			runes := []rune(s.buffer)
+			s.buffer = string(runes[:len(runes)-1])
+		}
+	default:
+		if len([]rune(name)) == 1 && name != "enter" && name != "esc" {
+			s.buffer += name
+		}
+	}
+	return s
+}
+
 func (s *pathsScreen) View(width, height int) string {
 	if s.err != nil {
 		return errStyle.Render("failed to load paths: " + s.err.Error())
+	}
+
+	if s.editing {
+		row, _ := s.selectedRow()
+		var b strings.Builder
+		b.WriteString(titleStyle.Render("Configuration paths"))
+		b.WriteString("\n\n")
+		b.WriteString(fmt.Sprintf("set %s =\n\n", row.Key))
+		b.WriteString(selectedStyle.Render(s.buffer + "│"))
+		b.WriteString("\n\n")
+		b.WriteString(dimStyle.Render("type the new path · enter save (preview first) · esc cancel"))
+		return b.String()
 	}
 
 	var b strings.Builder

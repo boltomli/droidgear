@@ -488,7 +488,7 @@ func DeleteCopilotProfile(id string) error {
 		return err
 	}
 	if core.FileExists(path) {
-		if err := os.Remove(path); err != nil {
+		if err := core.RemoveFile(path); err != nil {
 			return fmt.Errorf("Failed to delete profile: %w", err)
 		}
 	}
@@ -497,7 +497,7 @@ func DeleteCopilotProfile(id string) error {
 		return err
 	}
 	if core.FileExists(envPath) {
-		if err := os.Remove(envPath); err != nil {
+		if err := core.RemoveFile(envPath); err != nil {
 			return fmt.Errorf("Failed to remove profile config.env: %w", err)
 		}
 	}
@@ -511,7 +511,7 @@ func DeleteCopilotProfile(id string) error {
 			return err
 		}
 		if core.FileExists(activePath) {
-			if err := os.Remove(activePath); err != nil {
+			if err := core.RemoveFile(activePath); err != nil {
 				return fmt.Errorf("Failed to remove active profile id: %w", err)
 			}
 		}

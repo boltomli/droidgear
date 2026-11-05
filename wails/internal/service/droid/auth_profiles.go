@@ -124,12 +124,14 @@ func droidAuthCopyFiles(srcDir string, dstDir string) error {
 			return fmt.Errorf("Failed to copy %s from %s to %s: %w", filename, srcDir, dstDir, err)
 		}
 		dst := filepath.Join(dstDir, filename)
-		if err := os.WriteFile(dst, data, info.Mode().Perm()); err != nil { // #nosec G306 -- auth files, mode copied from source
-			return fmt.Errorf("Failed to copy %s from %s to %s: %w", filename, srcDir, dstDir, err)
+		if !core.RecordWrite(dst, data) {
+			if err := os.WriteFile(dst, data, info.Mode().Perm()); err != nil { // #nosec G306 -- auth files, mode copied from source
+				return fmt.Errorf("Failed to copy %s from %s to %s: %w", filename, srcDir, dstDir, err)
+			}
+			// WriteFile only applies the mode on create; enforce the source mode
+			// so overwrites behave like fs::copy.
+			_ = os.Chmod(dst, info.Mode().Perm())
 		}
-		// WriteFile only applies the mode on create; enforce the source mode
-		// so overwrites behave like fs::copy.
-		_ = os.Chmod(dst, info.Mode().Perm())
 	}
 	return nil
 }
@@ -233,7 +235,7 @@ func droidDeleteAuthProfile(home string, name string) error {
 		return errString("Cannot delete the currently active profile")
 	}
 	profileDir := droidAuthProfileDir(home, name)
-	if core.PathExists(profileDir) {
+	if core.PathExists(profileDir) && !core.RecordRemove(profileDir) {
 		if err := os.RemoveAll(profileDir); err != nil {
 			return fmt.Errorf("Failed to delete profile directory: %w", err)
 		}

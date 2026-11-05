@@ -36,7 +36,33 @@ func newSettingsScreen(context.Context) (Screen, error) {
 		return &kvScreen{title: "Preferences", err: err}, nil
 	}
 	path, _ := preferences.Path()
+	rowsFn := func() []kvRow {
+		current, err := preferences.Load()
+		if err != nil {
+			return settingsRows(prefs)
+		}
+		return settingsRows(current)
+	}
 	return newKVScreen("Preferences", settingsRows(prefs)).
+		withRebuild(rowsFn).
+		withActions(kvAction{
+			key: "t", label: "cycle theme",
+			run: func() error {
+				current, err := preferences.Load()
+				if err != nil {
+					return err
+				}
+				switch current.Theme {
+				case "system":
+					current.Theme = "light"
+				case "light":
+					current.Theme = "dark"
+				default:
+					current.Theme = "system"
+				}
+				return preferences.Save(current)
+			},
+		}).
 		withTrailing("preferences file: " + path), nil
 }
 

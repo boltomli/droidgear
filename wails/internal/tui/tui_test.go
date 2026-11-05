@@ -430,6 +430,44 @@ func TestCodexScreenExposesProvidersAuthSessions(t *testing.T) {
 	}
 }
 
+func TestSectionedScreenPassesKeysToNestedFlow(t *testing.T) {
+	testutil.IsolatedHome(t)
+	// One saved auth profile so the section has a row to act on.
+	dir, err := core.DroidGearDir()
+	if err != nil {
+		t.Fatalf("DroidGearDir: %v", err)
+	}
+	manifest := filepath.Join(dir, "auth-profiles", "codex", "profiles.json")
+	if err := os.MkdirAll(filepath.Dir(manifest), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	body := `{"active":null,"profiles":[` +
+		`{"name":"prod","label":"Prod","createdAt":"2026-01-01T00:00:00Z","isOfficial":false}]}`
+	if err := os.WriteFile(manifest, []byte(body), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	screen, err := newCodexScreen(context.Background())
+	if err != nil {
+		t.Fatalf("newCodexScreen: %v", err)
+	}
+	// Tab to the Auth section and trigger the switch action.
+	next, _ := screen.Update(keyMsg("tab"))
+	screen = next
+	next, _ = screen.Update(keyMsg("a"))
+	screen = next
+	if got := screen.Status(); !strings.Contains(got, "preview") {
+		t.Fatalf("status = %q, want the nested preview flow", got)
+	}
+	// esc is consumed by the flow, not by the root: it returns to the Auth
+	// section and the sectioned shell keeps the keys afterwards.
+	next, _ = screen.Update(keyMsg("esc"))
+	screen = next
+	if got := screen.Status(); !strings.Contains(got, "tab sections") {
+		t.Fatalf("status = %q, want back in the section shell", got)
+	}
+}
+
 func TestDefaultModulesMatchParityMatrix(t *testing.T) {
 	// The P0 set is deliberately small; this pins the module keys so the
 	// parity matrix (docs/developer/tui-parity.zh.md) and the sidebar cannot

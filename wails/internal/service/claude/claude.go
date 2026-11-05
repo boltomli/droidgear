@@ -644,7 +644,7 @@ func claudeSetActiveProfileID(id string) error {
 	trimmed := strings.TrimSpace(id)
 	if trimmed == "" {
 		if claudePathExists(path) {
-			if err := os.Remove(path); err != nil {
+			if err := core.RemoveFile(path); err != nil {
 				return fmt.Errorf("Failed to clear active profile id: %w", err)
 			}
 		}

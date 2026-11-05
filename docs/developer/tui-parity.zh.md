@@ -48,35 +48,35 @@
 
 状态：`✅` 已对齐 · `🚧` 部分实现 · `⏳` 未开始 · `GUI-only` 豁免
 
-| GUI 入口                               | 子视图                            | service 包                        | TUI 屏                      | 状态                                                |
-| -------------------------------------- | --------------------------------- | --------------------------------- | --------------------------- | --------------------------------------------------- |
-| 左栏 · 10 个工具 + Channels            | —                                 | —                                 | 模块列表 + 命令面板         | ✅ P0                                               |
-| Preferences → Paths                    | 九个路径键 + WSL 信息             | `service/paths`                   | Paths 屏（查看/set/reset）  | ✅ P0                                               |
-| Codex → Providers                      | `providers`                       | `service/codex`                   | Codex 屏 · Providers 分节   | ✅ P0 读                                            |
-| Codex → Auth profiles                  | `auth-profiles`                   | `service/codex`                   | Codex 屏 · Auth 分节        | 🚧 P1（读 ✅；save/switch/delete/rename 随 P2）     |
-| Codex → Sessions                       | `sessions`                        | `service/read`（B4）              | Codex 屏 · Sessions 分节    | 🚧 P3（读 ✅；删除随 P2）                           |
-| Pi → Providers                         | `providers`                       | `service/pi`                      | Pi 屏 · Providers 分节      | ✅ P0 读                                            |
-| Hermes → Model                         | `model`                           | `service/hermes`                  | Profiles 屏（通用）         | ✅ P0 读                                            |
-| OMP → Config                           | `config`                          | `service/omp`                     | OMP 屏 · Config 分节        | ✅ P0 读                                            |
-| Pi / OMP / Dsh / Droid → Sessions      | `sessions`                        | `service/read`（B4）              | 各工具屏 · Sessions 分节    | 🚧 P3（读 ✅；删除随 P2）                           |
-| Channels → 列表/详情/token/凭据        | `detail`                          | `service/channels`                | Channels 屏（分节）         | 🚧 P1（list/detail ✅；token=网络、凭据=写，随 P2） |
-| Channels → Export templates            | `export-templates`                | `service/export`                  | Channels 屏 · Export 分节   | 🚧 P1（list/detail ✅；run=写，随 P2）              |
-| Claude → Settings                      | `settings`                        | `service/claude`                  | Claude Settings 屏          | ✅ P1 读（set-active/CRUD/launch 随 P2）            |
-| Copilot → Profiles                     | `profiles`                        | `service/copilot`                 | Profiles 屏（通用）         | ✅ P1 读（apply/save/delete 随 P2）                 |
-| Droid → Models                         | `models`                          | `service/factory`                 | Droid 屏 · Models 分节      | ✅ P1                                               |
-| Droid → Settings / Trusted folders     | `settings` `trusted-folders`      | `service/droid`                   | Droid 屏（分节）            | ✅ P1 读（写随 P2）                                 |
-| Droid → Auth profiles / Specs          | `auth-profiles` `specs`           | `service/droid`、`service/specs`  | Droid 屏 · Auth/Specs 分节  | ✅ P1 读（写随 P2）                                 |
-| Droid → MCP                            | `mcp`                             | `service/mcp`                     | Droid 屏 · MCP 分节         | ✅ P1 读                                            |
-| Droid → Missions / Legacy versions     | `missions` `legacy-versions`      | `service/droid`、`service/legacy` | 同上 · Missions/Legacy 分节 | ✅ P1 读（legacy delete 随 P2）                     |
-| Dsh → Desktop / Web                    | `desktop` `web`                   | `service/dsh`                     | Dsh 屏（profile 切换）      | ✅ P1 读（写随 P2）                                 |
-| OpenCode → Providers                   | `providers`                       | `service/opencode`（B2 暂缓）     | Profiles 屏（通用）         | ⏳ **P3 后置**                                      |
-| OpenClaw → Providers/Helpers/Subagents | `providers` `helpers` `subagents` | `service/openclaw`（B2 暂缓）     | OpenClaw 屏（分节）         | ⏳ **P3 后置**                                      |
-| Preferences → Paths（写）              | set/reset                         | `service/paths`                   | 编辑态 + ChangeSet 预览     | 🚧 P2                                               |
-| 任一工具 → Apply profile               | apply/save/delete                 | `service/<域>`                    | 预览（ChangeSet）→ 确认     | 🚧 P2                                               |
-| 冲突（外部改动后写盘）                 | —                                 | `core` beforeHash                 | 冲突提示 + `--force` 等价   | ⏳ P2                                               |
-| Preferences → General / Appearance     | 语言、主题                        | `service/preferences`             | Settings 屏                 | 🚧 P1（读 ✅；写随 P2）                             |
-| 启动临时运行 / 打开终端                | launch                            | `service/<域>`                    | —                           | GUI-only                                            |
-| 窗口 / 菜单 / 通知 / PTY / 更新 / 字体 | —                                 | —                                 | —                           | GUI-only                                            |
+| GUI 入口                               | 子视图                            | service 包                        | TUI 屏                      | 状态                                                                                     |
+| -------------------------------------- | --------------------------------- | --------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------- |
+| 左栏 · 10 个工具 + Channels            | —                                 | —                                 | 模块列表 + 命令面板         | ✅ P0                                                                                    |
+| Preferences → Paths                    | 九个路径键 + WSL 信息             | `service/paths`                   | Paths 屏（查看/set/reset）  | ✅ P0                                                                                    |
+| Codex → Providers                      | `providers`                       | `service/codex`                   | Codex 屏 · Providers 分节   | ✅ P0 读                                                                                 |
+| Codex → Auth profiles                  | `auth-profiles`                   | `service/codex`                   | Codex 屏 · Auth 分节        | 🚧 P1/P2（读 ✅ · switch/delete ✅；save/rename 需输入框）                               |
+| Codex → Sessions                       | `sessions`                        | `service/read`（B4）              | Codex 屏 · Sessions 分节    | ✅ P3（读 · d 删除走预览流）                                                             |
+| Pi → Providers                         | `providers`                       | `service/pi`                      | Pi 屏 · Providers 分节      | ✅ P0 读                                                                                 |
+| Hermes → Model                         | `model`                           | `service/hermes`                  | Profiles 屏（通用）         | ✅ P0 读                                                                                 |
+| OMP → Config                           | `config`                          | `service/omp`                     | OMP 屏 · Config 分节        | ✅ P0 读                                                                                 |
+| Pi / OMP / Dsh / Droid → Sessions      | `sessions`                        | `service/read`（B4）              | 各工具屏 · Sessions 分节    | ✅ P3（读 · d 删除走预览流）                                                             |
+| Channels → 列表/详情/token/凭据        | `detail`                          | `service/channels`                | Channels 屏（分节）         | 🚧 P1（list/detail ✅；token=网络、凭据=写，随 P2）                                      |
+| Channels → Export templates            | `export-templates`                | `service/export`                  | Channels 屏 · Export 分节   | 🚧 P1（list/detail ✅；run=写，随 P2）                                                   |
+| Claude → Settings                      | `settings`                        | `service/claude`                  | Claude Settings 屏          | 🚧 P1/P2（读 ✅ · activate/delete ✅；create/duplicate/merge/launch 需输入或终端）       |
+| Copilot → Profiles                     | `profiles`                        | `service/copilot`                 | Profiles 屏（通用）         | 🚧 P1/P2（读 ✅ · apply/delete ✅；save 建档需输入）                                     |
+| Droid → Models                         | `models`                          | `service/factory`                 | Droid 屏 · Models 分节      | ✅ P1                                                                                    |
+| Droid → Settings / Trusted folders     | `settings` `trusted-folders`      | `service/droid`                   | Droid 屏（分节）            | 🚧 P1/P2（读 ✅ · trusted remove ✅；值编辑随 P2）                                       |
+| Droid → Auth profiles / Specs          | `auth-profiles` `specs`           | `service/droid`、`service/specs`  | Droid 屏 · Auth/Specs 分节  | 🚧 P1/P2（读 ✅ · auth switch/delete ✅ · specs delete ✅）                              |
+| Droid → MCP                            | `mcp`                             | `service/mcp`                     | Droid 屏 · MCP 分节         | ✅ P1 读                                                                                 |
+| Droid → Missions / Legacy versions     | `missions` `legacy-versions`      | `service/droid`、`service/legacy` | 同上 · Missions/Legacy 分节 | 🚧 P1/P2（读 ✅ · legacy d 删除 ✅；missions 编辑随 P2）                                 |
+| Dsh → Desktop / Web                    | `desktop` `web`                   | `service/dsh`                     | Dsh 屏（profile 切换）      | ✅ P1 读（写随 P2）                                                                      |
+| OpenCode → Providers                   | `providers`                       | `service/opencode`（B2 暂缓）     | Profiles 屏（通用）         | ⏳ **P3 后置**                                                                           |
+| OpenClaw → Providers/Helpers/Subagents | `providers` `helpers` `subagents` | `service/openclaw`（B2 暂缓）     | OpenClaw 屏（分节）         | ⏳ **P3 后置**                                                                           |
+| Preferences → Paths（写）              | set/reset                         | `service/paths`                   | 编辑态 + ChangeSet 预览     | ✅ P2（e 编辑 · x 重置 · 预览→确认→冲突/force）                                          |
+| 任一工具 → Apply profile               | apply/save/delete                 | `service/<域>`                    | 预览（ChangeSet）→ 确认     | 🚧 P2（apply/delete/switch/toggle/remove ✅；save 建档等输入类操作需文本输入原语，后置） |
+| 冲突（外部改动后写盘）                 | —                                 | `core` beforeHash                 | 冲突提示 + `--force` 等价   | ✅ P2（预览与确认双次 dry-run 比对 beforeHash/after；y=force）                           |
+| Preferences → General / Appearance     | 语言、主题                        | `service/preferences`             | Settings 屏                 | 🚧 P1/P2（读 ✅ · t 循环主题 ✅；语言/字体等输入类随 P2）                                |
+| 启动临时运行 / 打开终端                | launch                            | `service/<域>`                    | —                           | GUI-only                                                                                 |
+| 窗口 / 菜单 / 通知 / PTY / 更新 / 字体 | —                                 | —                                 | —                           | GUI-only                                                                                 |
 
 **矩阵的完整性门禁（已落地）**：`node scripts/check-tui-parity.mjs` 解析
 `src/store/ui-store.ts` 的子视图类型（`DroidSubView`、`CodexSubView` …），
@@ -117,6 +117,15 @@ B1–B4 批次是同一条工作流的两个视角：`dg` 期看命令覆盖，T
 Droid（Settings·Missions·Trusted·Auth·Specs·Legacy·Sessions，MCP 与 Models 已并入其
 分节）/ Settings（Preferences）/ Codex·Pi·OMP·Dsh 各屏与 Sessions（B4，`service/read`，
 watcher 留在 app）各屏已落地；每下沉一个 `internal/app` 域就加一个屏，矩阵随之打勾。
+
+**P2 进度（2026-11）**：写路径统一走 `writeFlow`（`internal/tui/write.go`）——
+预览 = 真实代码路径跑在 `core.BeginDryRun` 上（与 `dg --dry-run` 同源），确认时再跑一次
+dry-run 比对每个文件的 `beforeHash`/`after`，不一致即冲突提示，`y` 为 `--force` 等价。
+已接预览流的操作：paths set/reset、五组 profile 的 apply/delete、claude activate/delete、
+codex/droid auth switch/delete、trusted remove、mcp toggle、sessions delete（5 域）、
+specs delete、legacy delete、theme 循环。service 侧裸 `os.WriteFile`/`os.Remove`/`os.Rename`
+写盘点补了 `core.RecordWrite/RecordRemove/RecordRename` 录制钩子（droid/specs/copilot/
+claude/read），保证预览不漏文件。
 
 **P0 的实现约定**（与 `dg` 保持一致）：
 

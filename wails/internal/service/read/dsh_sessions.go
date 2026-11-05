@@ -883,12 +883,15 @@ func deleteDshSession(logPath string) error {
 	if filepath.Clean(filepath.Dir(projectDir)) != filepath.Clean(sessionsDir) {
 		return errString("Dsh session file not found")
 	}
+	if core.RecordRemove(sessionDir) {
+		return nil // dry run: preview the tree removal, touch nothing
+	}
 	if err := os.RemoveAll(sessionDir); err != nil {
 		return fmt.Errorf("Failed to delete Dsh session: %w", err)
 	}
 	// Prune the project directory when it becomes empty.
 	if entries, err := os.ReadDir(projectDir); err == nil && len(entries) == 0 {
-		_ = os.Remove(projectDir)
+		_ = core.RemoveFile(projectDir)
 	}
 	return nil
 }

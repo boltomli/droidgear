@@ -89,6 +89,12 @@ func droidResolvePath(path string) (string, error) {
 // droidAtomicWrite mirrors droidgear-core::storage::atomic_write: a unique
 // sibling temp file renamed over the target, with byte-identical errors.
 func droidAtomicWrite(path string, data []byte) error {
+	// Dry-run recording (dg --dry-run / TUI preview): the custom error
+	// strings below must stay byte-identical, so this path cannot delegate
+	// to core.AtomicWrite — it reports the would-be write instead.
+	if core.RecordWrite(path, data) {
+		return nil
+	}
 	parent := filepath.Dir(path)
 	if !core.PathExists(parent) {
 		if err := os.MkdirAll(parent, 0o755); err != nil { // #nosec G301 -- config directory
