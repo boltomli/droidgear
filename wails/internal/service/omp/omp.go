@@ -434,6 +434,33 @@ func readModelsYML() (ompModelsConfig, error) {
 	return config, nil
 }
 
+// pruneNullValues drops nil entries from nested maps so the generated
+// models.yml only carries declared fields. OMP's `omptype` schema rejects an
+// explicit `null` for every optional provider/model key (`headers: null` fails
+// with "must be an object (was null)"), while a missing key is accepted — so
+// nil Go fields must be omitted instead of serialised as null.
+func pruneNullValues(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(typed))
+		for key, item := range typed {
+			if item == nil {
+				continue
+			}
+			out[key] = pruneNullValues(item)
+		}
+		return out
+	case []any:
+		out := make([]any, len(typed))
+		for i, item := range typed {
+			out[i] = pruneNullValues(item)
+		}
+		return out
+	default:
+		return value
+	}
+}
+
 func writeModelsYML(config ompModelsConfig) error {
 	path, err := ompModelsYMLPath()
 	if err != nil {
@@ -441,7 +468,7 @@ func writeModelsYML(config ompModelsConfig) error {
 	}
 	root := &yaml.Node{Kind: yaml.MappingNode}
 	for key, value := range config.Extra {
-		node, err := core.AnyToNode(value)
+		node, err := core.AnyToNode(pruneNullValues(value))
 		if err != nil {
 			return fmt.Errorf("Failed to serialize models.yml section '%s': %w", key, err)
 		}
@@ -449,7 +476,7 @@ func writeModelsYML(config ompModelsConfig) error {
 	}
 	providers := &yaml.Node{Kind: yaml.MappingNode}
 	for id, value := range config.Providers {
-		node, err := core.AnyToNode(value)
+		node, err := core.AnyToNode(pruneNullValues(value))
 		if err != nil {
 			return fmt.Errorf("Failed to serialize OMP provider '%s': %w", id, err)
 		}
