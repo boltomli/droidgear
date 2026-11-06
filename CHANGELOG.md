@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.3.9.11
+
+**New Features / 新功能**
+
+- The startup model / model roles can be picked instead of typed: pi's default-model card and all 15 OMP model roles get a dropdown next to the free-text field, sourced from one Go list — `dg pi settings candidates` (models.json + pi's catalog) and `dg omp roles candidates` (`models.yml` + OMP's cached catalog) — so the GUI, the TUI hints and the CLI print the same ids / 启动模型与模型角色可以下拉选择：pi 默认模型卡与 OMP 全部 15 个模型角色的输入框旁新增下拉，选项来自同一个 Go 数据源——`dg pi settings candidates`（models.json + pi 自带 catalog）与 `dg omp roles candidates`（`models.yml` + OMP 缓存 catalog）——GUI、TUI 提示与 CLI 输出同一份 id
+- OMP profile apply now reports roles that OMP will not be able to resolve (`warnings` in the receipt, `warning:` lines in the CLI, a warning toast in the GUI) instead of letting the next OMP start fail with "No default model selected" / 应用 OMP Profile 现在会报告 OMP 无法解析的角色（回执里的 `warnings`、CLI 的 `warning:` 行、GUI 的警告提示），而不是等到下次启动 OMP 才报 "No default model selected"
+
+**Bug Fixes / 问题修复**
+
+- pi: applying a profile or deleting a provider no longer strands the startup model. `ApplyProfile` / `DeleteLiveProvider` run one reconcile pass (`ReconcileStartupModel`) that only repairs a selection this write made unresolvable — providers known to pi's catalog (`models-store.json`) are never touched — re-points it at the first available provider/model, clears the selection when nothing is left, and explains why in the receipt (`startup`, `startupAdjusted`, `startupReasons`), the GUI toast and the TUI preview diff / pi：应用 Profile 或删除 Provider 不再让启动模型悬空。`ApplyProfile` / `DeleteLiveProvider` 统一走一次修复（`ReconcileStartupModel`），只修复本次写入导致失效的选择（pi catalog 里已知的 Provider 一律不动），改指到第一个可用的 provider/model，无候选则清空，并在回执（`startup`、`startupAdjusted`、`startupReasons`）、GUI toast 与 TUI 预览 diff 中说明原因
+- pi: the startup thinking level is validated against the model's `thinkingLevelMap` from `models.json` **or** the cached catalog, so a level the model declares unsupported (or, after a model swap, does not declare) is cleared instead of being sent upstream; `dg pi settings set|show` warn about it instead of writing it silently / pi：启动思考级别按模型的 `thinkingLevelMap`（`models.json` 或缓存 catalog）校验，模型声明不支持（或换了模型后未声明）的级别会被清空而不是发给上游；`dg pi settings set|show` 只给 warning 而不再静默写入
+- omp: deleting a custom provider or saving one with a smaller model list no longer leaves `config.yml` roles dangling. `ReconcileModelRoles` re-points the affected roles at the first available `provider/model-id` (models.yml first, then the cached catalog, unknown roles in `Extra` included), clears a role when nothing is left, and writes `null` exactly like OMP does / omp：删除自定义 Provider 或保存时缩减模型列表不再让 `config.yml` 角色悬空。`ReconcileModelRoles` 把受影响的角色改指到第一个可用的 `provider/model-id`（`models.yml` 优先，其次缓存 catalog，`Extra` 里的未知角色同样处理），无候选则清空，并像 OMP 一样写成 `null`
+- omp: `defaultThinkingLevel` follows the model the default role now points at — a level its `thinking.efforts` cannot express is reset to `auto` (strict after a role re-point, otherwise only on an explicit exclusion), with the reason in the receipt (`thinking`) and the GUI toast / omp：`defaultThinkingLevel` 跟随默认角色指向的模型——模型 `thinking.efforts` 无法表达的级别会复位为 `auto`（角色被改指时严格校验，否则只在模型显式排除时复位），原因写进回执（`thinking`）与 GUI toast
+
 ## v1.3.9.10
 
 **New Features / 新功能**

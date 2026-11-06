@@ -7,6 +7,13 @@ description: Generate changelog from commits since last tag and release new vers
 
 ## Instructions
 
+> **Current policy (2026-11, `spike/wails-v3-minimal`):** releases ship as
+> `wails-v<version>` single-file builds only (draft release, no installers,
+> no `latest.json`). Do not ask which pipeline to use — use the
+> "single-binary preview" flow below and version `x.y.z.w` (4th part
+> increments). Only switch to the official `v*` pipeline when the user
+> explicitly asks for installers/updater.
+
 1. Get the latest tag:
 
    ```bash
