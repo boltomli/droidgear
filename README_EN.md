@@ -2,7 +2,9 @@
 
 [中文](README.md)
 
-A desktop enhancement tool for [Factory Droid](https://factory.ai) / [Claude](https://claude.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Hermes Agent](https://hermes-agent.nousresearch.com) / [Pi](https://pi.dev) / [Dsh (DeepSeek Harness)](https://deepseek.ai).
+A desktop enhancement tool for [Codex](https://github.com/openai/codex) / [Factory Droid](https://factory.ai) / [Hermes Agent](https://hermes-agent.nousresearch.com) / [OMP (Oh My Pi)](https://github.com/can1357/oh-my-pi) / [Pi](https://pi.dev), with a second batch for [Claude](https://claude.ai) / [GitHub Copilot](https://github.com/features/copilot) / [Dsh (DeepSeek Harness)](https://deepseek.ai).
+
+> Modules ship in batches: batch 1 `codex · droid · hermes · omp · pi`, batch 2 `claude · copilot · dsh`. `opencode` / `openclaw` are **deprecated** — the sidebar renders them last with a badge.
 
 Supports custom AI models (BYOK), embedded terminal, session & specs management, MCP server configuration, and more.
 
@@ -85,29 +87,6 @@ Use the [Baizhi toolkit entry](https://agent-toolkit.app.baizhi.cloud/) for the 
 
 Configuration remains ordinary `~/.factory/mcp.json`: this preset stores a nonsecret reference, not encrypted/keychain storage. The Baizhi writer includes `oauth: false` in the new raw JSON entry, as Factory recommends for header authentication. Enable/disable toggles preserve it. Saving through the existing generic editor may omit the unmodeled `oauth` field; inspect the configuration after edits. Actual Factory OAuth behavior has not been verified. When enabled, tool arguments go to Baizhi and returned content may enter your selected AI model. Disabling/deleting the local entry does not revoke a key, remote task, or charges.
 
-### OpenCode Support
-
-- **AI Development Integration** - OpenCode tool integration
-- **Configuration Management** - Load and save provider/auth configurations
-
-### OpenClaw Support
-
-- **AI Development Integration** - OpenClaw tool integration
-- **Configuration Management** - Load and save provider configurations
-- **Installation Helper** - Built-in installation commands for macOS/Linux/Windows
-
-### Claude Support
-
-- **Claude Settings File Management** - Switch and edit multiple settings files (Global + custom) with structured Provider / Model / Reasoning / Thinking / General / Permissions sections
-- **Settings File Actions** - Create, delete, duplicate, load from live config, merge to global, preview changes, and run once temporarily
-- **Set Active & Dirty Tracking** - Set a settings file as the active one, with unsaved-change dirty tracking (TUI)
-- **Merge Apply** - Shallow-merge env and permissions from a settings file into the global settings
-- **Import from Channel** - One-click import of provider configuration (base URL, API key, default model) from configured channels
-- **Fetch Models** - Load model IDs from the configured provider with the bearer token and pick the main or small model from the list, while still allowing a manual ID (GUI + TUI)
-- **Auto-compact Window** - Set the root `autoCompactWindow` (100,000–1,000,000 tokens) in the GUI and TUI. Leave it unset and Claude Code picks a window per model; a per-model window saved with `/autocompact`, or `CLAUDE_CODE_AUTO_COMPACT_WINDOW` in the environment, still takes precedence
-- **Runtime Core** - Settings loaded via a runtime overlay at launch so the live configuration is never mutated
-- **GUI/TUI Parity** - Desktop and TUI versions share the same Claude settings features and semantics (an empty small model uses Claude's default Haiku 5.5; mirroring the main model is explicit)
-
 ### Codex Support
 
 - **Codex CLI Integration** - Manage Codex configuration profiles
@@ -125,16 +104,43 @@ Configuration remains ordinary `~/.factory/mcp.json`: this preset stores a nonse
 - **Channel Import** - Import Hermes Agent configuration from channels (GUI, TUI `i`, and `dg hermes providers import` share one rule set: add `/v1`, write the v12 `providers` entry, and make it the default model)
 - **Provider Request Options** - Edit `extra_headers`, `session_affinity_header`, `discover_models`, `transport`, `capabilities`, plus per-model `context_length` / `prompt_caching` / `answer_in_reasoning` and `model.api_mode` / `model.streaming`
 
+### OMP (Oh My Pi) Support
+
+- **Custom Providers** - Read and write custom providers and models in the official `~/.omp/agent/models.yml` (GUI and TUI CRUD, plus `dg omp providers`), update models and providers from a channel, and preserve unrelated providers and unknown fields
+- **Model Roles** - Manage the 15 upstream model roles in `~/.omp/agent/config.yml` (default/smol/slow/vision/plan/commit/tiny/memory/task/advisor + image/web/speech/dictation/judge), and load them from the live config
+- **Session History** - Browse `~/.omp/agent/sessions` JSONL logs (GUI): list or project-grouped views, active-branch rendering with thinking blocks, follow new messages, hide empty sessions, and delete. The list loads in batches as you scroll
+
 ### Pi Support
 
 - **Pi Coding Agent Integration** - Pi (pi.dev) custom model configuration management
 - **Provider/Model Management** - Support configuring multiple providers and their models (baseUrl, api, apiKey, headers, compat, etc.)
 - **Connection Test** - Test Pi provider connectivity
 - **Profile Management** - Multi-profile support with one-click apply to `~/.pi/agent/models.json`
+- **Default Model** - Pin the startup `defaultProvider` / `defaultModel` / `defaultThinkingLevel` in `~/.pi/agent/settings.json` (GUI default-model card, TUI Pi → Defaults, and `dg pi settings show|set|reset` share one path); every other settings key is preserved, and empty fields hand the choice back to Pi
 - **Live Config Reading** - Load existing configuration from Pi's live config
 - **Channel Import** - Import a provider from a channel (GUI, TUI `i`, and `dg pi providers import` share one rule set: normalise the base URL, add `/v1`, enrich models from the registry, and set `compat.forceAdaptiveThinking` when required)
 - **Registry-Driven Models** - Enrich Pi provider models from the built-in model registry, with provider-neutral thinking level mapping. Models whose Anthropic profile is `anthropic-adaptive` (such as `claude-opus-5-5`) get `compat.forceAdaptiveThinking`; an explicit opt-out already stored on the model is kept
 - **Advanced Model Options** - One JSON block per model edits `inputLimits`, `promptCache`, `samplingParams`, and `samplingParamsByThinkingLevel` (proxy-side request tuning, so the dialog does not grow a dozen low-frequency fields)
+
+### Claude Support
+
+- **Claude Settings File Management** - Switch and edit multiple settings files (Global + custom) with structured Provider / Model / Reasoning / Thinking / General / Permissions sections
+- **Settings File Actions** - Create, delete, duplicate, load from live config, merge to global, preview changes, and run once temporarily
+- **Set Active & Dirty Tracking** - Set a settings file as the active one, with unsaved-change dirty tracking (TUI)
+- **Merge Apply** - Shallow-merge env and permissions from a settings file into the global settings
+- **Import from Channel** - One-click import of provider configuration (base URL, API key, default model) from configured channels
+- **Fetch Models** - Load model IDs from the configured provider with the bearer token and pick the main or small model from the list, while still allowing a manual ID (GUI + TUI)
+- **Auto-compact Window** - Set the root `autoCompactWindow` (100,000–1,000,000 tokens) in the GUI and TUI. Leave it unset and Claude Code picks a window per model; a per-model window saved with `/autocompact`, or `CLAUDE_CODE_AUTO_COMPACT_WINDOW` in the environment, still takes precedence
+- **Runtime Core** - Settings loaded via a runtime overlay at launch so the live configuration is never mutated
+- **GUI/TUI Parity** - Desktop and TUI versions share the same Claude settings features and semantics (an empty small model uses Claude's default Haiku 5.5; mirroring the main model is explicit)
+
+### GitHub Copilot Support
+
+- **BYOK Profile Management** - Manage GitHub Copilot BYOK profiles (OpenAI / Anthropic providers, model, and token limits) with create, duplicate, delete, apply, and load-applied operations
+- **Channel Import** - Import providers and models from channels, normalizing base URLs automatically (add `/v1` for OpenAI, strip `/v1` for Anthropic)
+- **Official Subscription Mode** - Clear BYOK overrides and use the Copilot CLI's existing login or auth token
+- **Temporary Run** - Launch Copilot with the selected profile in one click (process-scoped environment variables plus an explicit `--model` argument)
+- **Standalone Launcher** - Ships `copilot-local.sh` / `copilot-local.cmd` launchers to run Copilot with an exported profile without the GUI
 
 ### Dsh (DeepSeek Harness) Support
 
@@ -149,19 +155,20 @@ Configuration remains ordinary `~/.factory/mcp.json`: this preset stores a nonse
 - **Session History** - Browse `~/.dsh/sessions` logs (GUI + TUI): list or project-grouped views, thinking blocks, live follow, hide-empty and delete; consecutive reasoning-only steps collapse into one expandable "Thinking process" block
 - **Registry Auto-Adaptation** - Auto-fill model name, context window, max tokens, and reasoning efforts from the registry by model ID
 
-### GitHub Copilot Support
+### OpenCode Support (deprecated)
 
-- **BYOK Profile Management** - Manage GitHub Copilot BYOK profiles (OpenAI / Anthropic providers, model, and token limits) with create, duplicate, delete, apply, and load-applied operations
-- **Channel Import** - Import providers and models from channels, normalizing base URLs automatically (add `/v1` for OpenAI, strip `/v1` for Anthropic)
-- **Official Subscription Mode** - Clear BYOK overrides and use the Copilot CLI's existing login or auth token
-- **Temporary Run** - Launch Copilot with the selected profile in one click (process-scoped environment variables plus an explicit `--model` argument)
-- **Standalone Launcher** - Ships `copilot-local.sh` / `copilot-local.cmd` launchers to run Copilot with an exported profile without the GUI
+> **Deprecated**: the OpenCode module receives no new features; it still reads/writes existing configuration. New work lands in the batch 1 / batch 2 modules. The sidebar renders it last with a "deprecated" badge.
 
-### OMP (Oh My Pi) Support
+- **AI Development Integration** - OpenCode tool integration
+- **Configuration Management** - Load and save provider/auth configurations
 
-- **Custom Providers** - Read and write custom providers and models in the official `~/.omp/agent/models.yml` (GUI and TUI CRUD, plus `dg omp providers`), update models and providers from a channel, and preserve unrelated providers and unknown fields
-- **Model Roles** - Manage the 15 upstream model roles in `~/.omp/agent/config.yml` (default/smol/slow/vision/plan/commit/tiny/memory/task/advisor + image/web/speech/dictation/judge), and load them from the live config
-- **Session History** - Browse `~/.omp/agent/sessions` JSONL logs (GUI): list or project-grouped views, active-branch rendering with thinking blocks, follow new messages, hide empty sessions, and delete. The list loads in batches as you scroll
+### OpenClaw Support (deprecated)
+
+> **Deprecated**: the OpenClaw module receives no new features; it still reads/writes existing configuration. New work lands in the batch 1 / batch 2 modules. The sidebar renders it last with a "deprecated" badge.
+
+- **AI Development Integration** - OpenClaw tool integration
+- **Configuration Management** - Load and save provider configurations
+- **Installation Helper** - Built-in installation commands for macOS/Linux/Windows
 
 ### Other Features
 
@@ -208,13 +215,22 @@ dg mcp list
 
 ### Modules (mirroring the GUI sidebar)
 
-- **Droid**: Settings · Missions · Trusted · Auth · Specs · MCP · Models · Sessions · Legacy
+Order matches the GUI sidebar: **batch 1** → **batch 2** → Preferences.
+
 - **Channels**: channel detail + Export templates (sections)
-- **Codex**: Providers · Auth · Sessions (sections)
-- **Claude / Hermes / Copilot**: settings files / model / profile lists
-- **Pi / OMP**: providers·config + sessions (sections)
-- **Dsh**: Desktop · Web · Sessions (sections)
+- **Batch 1**
+  - **Codex**: Providers · Auth · Sessions (sections)
+  - **Droid**: Settings · Missions · Trusted · Auth · Specs · MCP · Models · Sessions · Legacy
+  - **Hermes**: Model / profile lists
+  - **OMP**: Config + Providers + Sessions (sections)
+  - **Pi**: Providers · Defaults + Sessions (sections)
+- **Batch 2**
+  - **Claude**: settings files / model / profile lists
+  - **Copilot**: profile list
+  - **Dsh**: Desktop · Web · Sessions (sections)
 - **Paths / Settings**: Preferences path overrides and general/appearance items
+
+> `opencode` / `openclaw` are deprecated and have no TUI screen.
 
 ### Basic Keys
 

@@ -10,6 +10,7 @@ import (
 
 	"droidgear-wails/internal/core"
 	"droidgear-wails/internal/service/claude"
+	"droidgear-wails/internal/service/pi"
 	"droidgear-wails/internal/service/preferences"
 	"droidgear-wails/internal/testutil"
 	"github.com/charmbracelet/bubbletea"
@@ -49,16 +50,16 @@ func step(t *testing.T, m Model, msg tea.Msg) Model {
 func TestSidebarNavigationAndFocus(t *testing.T) {
 	m := New(context.Background())
 
-	if got := m.SelectedModule(); got != "droid" {
-		t.Fatalf("initial selection = %q, want droid", got)
+	if got := m.SelectedModule(); got != "channels" {
+		t.Fatalf("initial selection = %q, want channels", got)
 	}
 	if m.Focused() != focusSidebar {
 		t.Fatalf("initial focus = %v, want sidebar", m.Focused())
 	}
 
 	m = step(t, m, keyMsg("down"))
-	if got := m.SelectedModule(); got != "channels" {
-		t.Fatalf("after down selection = %q, want channels", got)
+	if got := m.SelectedModule(); got != "codex" {
+		t.Fatalf("after down selection = %q, want codex", got)
 	}
 
 	// Bottom of the list clamps instead of wrapping.
@@ -473,8 +474,10 @@ func TestSectionedScreenPassesKeysToNestedFlow(t *testing.T) {
 func TestDefaultModulesMatchParityMatrix(t *testing.T) {
 	// The P0 set is deliberately small; this pins the module keys so the
 	// parity matrix (docs/developer/tui-parity.zh.md) and the sidebar cannot
-	// drift apart silently.
-	want := []string{"droid", "channels", "codex", "claude", "hermes", "pi", "omp", "copilot", "dsh", "settings", "registry", "paths"}
+	// drift apart silently. Order = GUI left栏 order: Channels, batch 1
+	// (codex, droid, hermes, omp, pi), batch 2 (claude, copilot, dsh),
+	// Preferences panes. opencode / openclaw are deprecated and absent.
+	want := []string{"channels", "codex", "droid", "hermes", "omp", "pi", "claude", "copilot", "dsh", "settings", "registry", "paths"}
 	modules := DefaultModules()
 	if len(modules) != len(want) {
 		t.Fatalf("got %d modules, want %d", len(modules), len(want))
@@ -522,3 +525,70 @@ func (*fakeScreen) Title() string                          { return "Fake" }
 func (s *fakeScreen) Update(msg tea.Msg) (Screen, tea.Cmd) { return s, nil }
 func (*fakeScreen) View(width, height int) string          { return "fake" }
 func (*fakeScreen) Status() string                         { return "" }
+
+// TestPiDefaultsScreenEditsStartupModel covers the Pi → Defaults section: the
+// rows mirror ~/.pi/agent/settings.json, the edit goes through the shared
+// prompt → preview → apply flow, and the file keeps its other keys.
+func TestPiDefaultsScreenEditsStartupModel(t *testing.T) {
+	testutil.IsolatedHome(t)
+
+	screen, err := newPiDefaultsScreen(context.Background())
+	if err != nil {
+		t.Fatalf("newPiDefaultsScreen: %v", err)
+	}
+	view := screen.View(100, 24)
+	for _, want := range []string{"Pi defaults", "provider", "model", "thinking level", autoLabel} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("pi defaults view missing %q:\n%s", want, view)
+		}
+	}
+
+	// e opens the prompt, the typed value goes through the preview.
+	next, _ := screen.Update(keyMsg("e"))
+	screen = next
+	if got := screen.Status(); !strings.Contains(got, "a value is required") && !strings.Contains(got, "enter save") {
+		t.Fatalf("prompt status = %q", got)
+	}
+	for _, r := range "wududu" {
+		next, _ = screen.Update(keyMsg(string(r)))
+		screen = next
+	}
+	next, _ = screen.Update(keyMsg("enter"))
+	screen = next
+	if got := screen.Status(); !strings.Contains(got, "preview") {
+		t.Fatalf("status = %q, want the preview flow", got)
+	}
+
+	next, _ = screen.Update(keyMsg("y"))
+	screen = next
+	if got := screen.Status(); !strings.Contains(got, "applied") {
+		t.Fatalf("status = %q, want applied", got)
+	}
+	status, err := pi.ReadSettings()
+	if err != nil {
+		t.Fatalf("ReadSettings: %v", err)
+	}
+	if status.DefaultProvider == nil || *status.DefaultProvider != "wududu" {
+		t.Fatalf("defaultProvider = %v, want wududu", status.DefaultProvider)
+	}
+
+	// Enter leaves the flow; the rebuilt screen shows the pinned provider.
+	next, _ = screen.Update(keyMsg("enter"))
+	screen = next
+	if view := screen.View(100, 24); !strings.Contains(view, "wududu") {
+		t.Fatalf("defaults view missing the saved provider:\n%s", view)
+	}
+
+	// x clears the selection through the same preview contract.
+	next, _ = screen.Update(keyMsg("x"))
+	screen = next
+	next, _ = screen.Update(keyMsg("y"))
+	screen = next
+	status, err = pi.ReadSettings()
+	if err != nil {
+		t.Fatalf("ReadSettings after reset: %v", err)
+	}
+	if status.DefaultProvider != nil {
+		t.Fatalf("defaultProvider = %v, want cleared", status.DefaultProvider)
+	}
+}

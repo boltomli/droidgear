@@ -34,6 +34,7 @@ func newPiScreen(ctx context.Context) (Screen, error) {
 	return newSectionedScreen(ctx, "Pi", []screenSection{
 		{key: "profiles", title: "Profiles", open: list(PiSource)},
 		{key: "providers", title: "Providers", open: list(PiProvidersSource)},
+		{key: "defaults", title: "Defaults", open: newPiDefaultsScreen},
 		{key: "sessions", title: "Sessions", open: list(PiSessionsSource)},
 	})
 }

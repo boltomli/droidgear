@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Server,
@@ -25,10 +25,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 // Import directly from individual files (not barrel indexes) so that page
@@ -47,24 +49,65 @@ import { PiFeatureList } from '@/components/pi/PiFeatureList'
 import { OmpFeatureList } from '@/components/omp/OmpFeatureList'
 import { CopilotFeatureList } from '@/components/copilot/CopilotFeatureList'
 import { DshFeatureList } from '@/components/dsh/DshFeatureList'
-import { useUIStore } from '@/store/ui-store'
+import {
+  useUIStore,
+  type NavigationView,
+  type ToolView,
+} from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
 import type { Channel } from '@/lib/bindings'
 import { saveChannelAuth } from '@/lib/channel-utils'
 
-type NavigationView =
-  | 'droid'
-  | 'channels'
-  | 'opencode'
-  | 'codex'
-  | 'claude'
-  | 'openclaw'
-  | 'hermes'
-  | 'pi'
-  | 'omp'
-  | 'copilot'
-  | 'dsh'
+interface ToolModule {
+  id: ToolView
+  labelKey: string
+  icon: React.ElementType
+  /** Legacy module kept for compatibility — rendered last, behind a divider. */
+  deprecated?: boolean
+}
+
+const DROID_MODULE: ToolModule = {
+  id: 'droid',
+  labelKey: 'sidebar.droid',
+  icon: Bot,
+}
+
+// Batches rather than a flat list: the first batch is what the tool switcher
+// leads with, the second follows, and deprecated modules sit at the very
+// bottom. Order inside a batch is alphabetical. This is the GUI half of the
+// module order — `wails/internal/tui/screen.go` DefaultModules must match it,
+// pinned by wails/internal/tui/tui_test.go::TestDefaultModulesMatchParityMatrix.
+const TOOL_BATCHES: ToolModule[][] = [
+  [
+    { id: 'codex', labelKey: 'sidebar.codex', icon: Code },
+    DROID_MODULE,
+    { id: 'hermes', labelKey: 'sidebar.hermes', icon: Cpu },
+    { id: 'omp', labelKey: 'sidebar.omp', icon: CircuitBoard },
+    { id: 'pi', labelKey: 'sidebar.pi', icon: CircuitBoard },
+  ],
+  [
+    { id: 'claude', labelKey: 'sidebar.claude', icon: Feather },
+    { id: 'copilot', labelKey: 'sidebar.copilot', icon: BotMessageSquare },
+    { id: 'dsh', labelKey: 'sidebar.dsh', icon: CircuitBoard },
+  ],
+  [
+    {
+      id: 'openclaw',
+      labelKey: 'sidebar.openclaw',
+      icon: Cog,
+      deprecated: true,
+    },
+    {
+      id: 'opencode',
+      labelKey: 'sidebar.opencode',
+      icon: Terminal,
+      deprecated: true,
+    },
+  ],
+]
+
+const TOOL_MODULES = TOOL_BATCHES.flat()
 
 interface LeftSideBarProps {
   children?: React.ReactNode
@@ -91,59 +134,12 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   const lastToolView = useUIStore(state => state.lastToolView)
 
   // Shared content for tool button
+  const activeModule =
+    TOOL_MODULES.find(module => module.id === lastToolView) ?? DROID_MODULE
   const toolButtonContent = (
     <>
-      {lastToolView === 'opencode' ? (
-        <>
-          <Terminal className="h-4 w-4 mr-2" />
-          {t('sidebar.opencode')}
-        </>
-      ) : lastToolView === 'codex' ? (
-        <>
-          <Code className="h-4 w-4 mr-2" />
-          {t('sidebar.codex')}
-        </>
-      ) : lastToolView === 'claude' ? (
-        <>
-          <Feather className="h-4 w-4 mr-2" />
-          {t('sidebar.claude')}
-        </>
-      ) : lastToolView === 'openclaw' ? (
-        <>
-          <Cog className="h-4 w-4 mr-2" />
-          {t('sidebar.openclaw')}
-        </>
-      ) : lastToolView === 'hermes' ? (
-        <>
-          <Cpu className="h-4 w-4 mr-2" />
-          {t('sidebar.hermes')}
-        </>
-      ) : lastToolView === 'pi' ? (
-        <>
-          <CircuitBoard className="h-4 w-4 mr-2" />
-          {t('sidebar.pi')}
-        </>
-      ) : lastToolView === 'omp' ? (
-        <>
-          <CircuitBoard className="h-4 w-4 mr-2" />
-          {t('sidebar.omp')}
-        </>
-      ) : lastToolView === 'copilot' ? (
-        <>
-          <BotMessageSquare className="h-4 w-4 mr-2" />
-          {t('sidebar.copilot')}
-        </>
-      ) : lastToolView === 'dsh' ? (
-        <>
-          <CircuitBoard className="h-4 w-4 mr-2" />
-          {t('sidebar.dsh')}
-        </>
-      ) : (
-        <>
-          <Bot className="h-4 w-4 mr-2" />
-          {t('sidebar.droid')}
-        </>
-      )}
+      <activeModule.icon className="h-4 w-4 mr-2" />
+      {t(activeModule.labelKey)}
       <ChevronDown className="h-3 w-3 ml-1" />
     </>
   )
@@ -256,124 +252,34 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
               </ActionButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <ActionDropdownMenuItem
-                onClick={() => {
-                  handleViewChange('droid')
-                  setDropdownOpen(false)
-                }}
-              >
-                <Bot className="h-4 w-4 mr-2" />
-                {t('sidebar.droid')}
-                {lastToolView === 'droid' && (
-                  <Check className="h-4 w-4 ml-auto" />
-                )}
-              </ActionDropdownMenuItem>
-              <ActionDropdownMenuItem
-                onClick={() => {
-                  handleViewChange('opencode')
-                  setDropdownOpen(false)
-                }}
-              >
-                <Terminal className="h-4 w-4 mr-2" />
-                {t('sidebar.opencode')}
-                {lastToolView === 'opencode' && (
-                  <Check className="h-4 w-4 ml-auto" />
-                )}
-              </ActionDropdownMenuItem>
-              <ActionDropdownMenuItem
-                onClick={() => {
-                  handleViewChange('codex')
-                  setDropdownOpen(false)
-                }}
-              >
-                <Code className="h-4 w-4 mr-2" />
-                {t('sidebar.codex')}
-                {lastToolView === 'codex' && (
-                  <Check className="h-4 w-4 ml-auto" />
-                )}
-              </ActionDropdownMenuItem>
-              <ActionDropdownMenuItem
-                onClick={() => {
-                  handleViewChange('claude')
-                  setDropdownOpen(false)
-                }}
-              >
-                <Feather className="h-4 w-4 mr-2" />
-                {t('sidebar.claude')}
-                {lastToolView === 'claude' && (
-                  <Check className="h-4 w-4 ml-auto" />
-                )}
-              </ActionDropdownMenuItem>
-              <ActionDropdownMenuItem
-                onClick={() => {
-                  handleViewChange('openclaw')
-                  setDropdownOpen(false)
-                }}
-              >
-                <Cog className="h-4 w-4 mr-2" />
-                {t('sidebar.openclaw')}
-                {lastToolView === 'openclaw' && (
-                  <Check className="h-4 w-4 ml-auto" />
-                )}
-              </ActionDropdownMenuItem>
-              <ActionDropdownMenuItem
-                onClick={() => {
-                  handleViewChange('hermes')
-                  setDropdownOpen(false)
-                }}
-              >
-                <Cpu className="h-4 w-4 mr-2" />
-                {t('sidebar.hermes')}
-                {lastToolView === 'hermes' && (
-                  <Check className="h-4 w-4 ml-auto" />
-                )}
-              </ActionDropdownMenuItem>
-              <ActionDropdownMenuItem
-                onClick={() => {
-                  handleViewChange('pi')
-                  setDropdownOpen(false)
-                }}
-              >
-                <CircuitBoard className="h-4 w-4 mr-2" />
-                {t('sidebar.pi')}
-                {lastToolView === 'pi' && <Check className="h-4 w-4 ml-auto" />}
-              </ActionDropdownMenuItem>
-              <ActionDropdownMenuItem
-                onClick={() => {
-                  handleViewChange('omp')
-                  setDropdownOpen(false)
-                }}
-              >
-                <CircuitBoard className="h-4 w-4 mr-2" />
-                {t('sidebar.omp')}
-                {lastToolView === 'omp' && (
-                  <Check className="h-4 w-4 ml-auto" />
-                )}
-              </ActionDropdownMenuItem>
-              <ActionDropdownMenuItem
-                onClick={() => {
-                  handleViewChange('copilot')
-                  setDropdownOpen(false)
-                }}
-              >
-                <BotMessageSquare className="mr-2 h-4 w-4" />
-                {t('sidebar.copilot')}
-                {lastToolView === 'copilot' && (
-                  <Check className="ml-auto h-4 w-4" />
-                )}
-              </ActionDropdownMenuItem>
-              <ActionDropdownMenuItem
-                onClick={() => {
-                  handleViewChange('dsh')
-                  setDropdownOpen(false)
-                }}
-              >
-                <CircuitBoard className="h-4 w-4 mr-2" />
-                {t('sidebar.dsh')}
-                {lastToolView === 'dsh' && (
-                  <Check className="h-4 w-4 ml-auto" />
-                )}
-              </ActionDropdownMenuItem>
+              {TOOL_BATCHES.map((batch, batchIndex) => (
+                <Fragment key={batch.map(module => module.id).join('-')}>
+                  {batchIndex > 0 && <DropdownMenuSeparator />}
+                  {batch.map(module => (
+                    <ActionDropdownMenuItem
+                      key={module.id}
+                      onClick={() => {
+                        handleViewChange(module.id)
+                        setDropdownOpen(false)
+                      }}
+                    >
+                      <module.icon className="h-4 w-4 mr-2" />
+                      {t(module.labelKey)}
+                      {module.deprecated && (
+                        <Badge
+                          variant="outline"
+                          className="ml-2 px-1.5 py-0 text-[10px] font-normal text-muted-foreground"
+                        >
+                          {t('sidebar.deprecated')}
+                        </Badge>
+                      )}
+                      {lastToolView === module.id && (
+                        <Check className="h-4 w-4 ml-auto" />
+                      )}
+                    </ActionDropdownMenuItem>
+                  ))}
+                </Fragment>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

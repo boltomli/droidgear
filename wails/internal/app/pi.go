@@ -21,6 +21,8 @@ type (
 	PiConfigStatus       = pi.PiConfigStatus
 	PiCurrentConfig      = pi.PiCurrentConfig
 	PiProviderTestResult = pi.PiProviderTestResult
+	PiSettings           = pi.PiSettings
+	PiSettingsStatus     = pi.PiSettingsStatus
 )
 
 // ListPiProfiles lists all Pi profiles sorted by name.
@@ -81,6 +83,17 @@ func (a *App) ReadPiCurrentConfig() (PiCurrentConfig, error) {
 // TestPiProviderConnection probes a provider endpoint with the pi CLI.
 func (a *App) TestPiProviderConnection(providerID string, config PiProviderConfig) (PiProviderTestResult, error) {
 	return pi.TestProviderConnection(providerID, config)
+}
+
+// ReadPiSettings reads the startup model selection from ~/.pi/agent/settings.json.
+func (a *App) ReadPiSettings() (PiSettingsStatus, error) {
+	return pi.ReadSettings()
+}
+
+// SavePiSettings writes the startup model selection, keeping every other key
+// in settings.json.
+func (a *App) SavePiSettings(settings PiSettings) error {
+	return pi.SaveSettings(settings)
 }
 
 // ---------------------------------------------------------------------------

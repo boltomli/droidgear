@@ -39,26 +39,35 @@ type Module struct {
 	Open func(ctx context.Context) (Screen, error)
 }
 
-// DefaultModules is the module set shipped so far: the GUI's left栏 in the
-// same order (droid, channels, codex, claude, hermes, pi, omp, copilot, dsh)
-// followed by the Preferences panes that have their own TUI screen. Parity
-// adds a row per GUI view as its service package lands — the source of truth
-// for what is still missing is the matrix in docs/developer/tui-parity.zh.md §2.
+// DefaultModules is the module set shipped so far, in the GUI left栏 order:
+// Channels (the GUI's standalone first button) then the tool batches —
+// batch 1 (codex, droid, hermes, omp, pi), batch 2 (claude, copilot, dsh) —
+// followed by the Preferences panes that have their own TUI screen. Batch
+// membership and the alphabetical order inside a batch are shared with
+// src/components/layout/LeftSideBar.tsx (TOOL_BATCHES) and pinned by
+// TestDefaultModulesMatchParityMatrix. opencode / openclaw are deprecated
+// (GUI renders them last, behind a divider) and never get a TUI screen.
+// Parity adds a row per GUI view as its service package lands — the source of
+// truth for what is still missing is the matrix in
+// docs/developer/tui-parity.zh.md §2.
 func DefaultModules() []Module {
 	specs := []struct {
 		key   string
 		title string
 		open  func(context.Context) (Screen, error)
 	}{
-		{"droid", "Droid", newDroidScreen},
 		{"channels", "Channels", newChannelsScreen},
+		// Batch 1: the daily drivers.
 		{"codex", "Codex", newCodexScreen},
-		{"claude", "Claude", list(ClaudeSource)},
+		{"droid", "Droid", newDroidScreen},
 		{"hermes", "Hermes", newHermesScreen},
-		{"pi", "Pi", newPiScreen},
 		{"omp", "OMP", newOmpScreen},
+		{"pi", "Pi", newPiScreen},
+		// Batch 2.
+		{"claude", "Claude", list(ClaudeSource)},
 		{"copilot", "Copilot", list(CopilotSource)},
 		{"dsh", "Dsh", newDshScreen},
+		// Preferences panes.
 		{"settings", "Settings", newSettingsScreen},
 		{"registry", "Registry", list(RegistrySource)},
 		{"paths", "Paths", newPathsScreen},

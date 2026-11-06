@@ -117,6 +117,8 @@ const COMMANDS: Record<string, CommandSpec> = {
   apply_pi_profile: { fn: 'ApplyPiProfile', args: ['id'] },
   get_pi_config_status: { fn: 'GetPiConfigStatus', args: [] },
   read_pi_current_config: { fn: 'ReadPiCurrentConfig', args: [] },
+  read_pi_settings: { fn: 'ReadPiSettings', args: [] },
+  save_pi_settings: { fn: 'SavePiSettings', args: ['settings'] },
   test_pi_provider_connection: {
     fn: 'TestPiProviderConnection',
     args: ['providerId', 'config'],

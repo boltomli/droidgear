@@ -222,6 +222,12 @@ export function OpenClawConfigPage() {
         </div>
       </div>
 
+      {/* Deprecated module — the sidebar renders it last, behind a divider */}
+      <div className="mx-4 mt-4 p-3 bg-muted/50 border rounded-md flex items-start gap-2 text-xs text-muted-foreground">
+        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+        <span>{t('sidebar.deprecatedNotice')}</span>
+      </div>
+
       {/* Error Alert */}
       {error && (
         <div className="mx-4 mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center gap-2">

@@ -6,6 +6,8 @@ import {
   type PiProviderConfig,
   type PiConfigStatus,
   type PiCurrentConfig,
+  type PiSettings,
+  type PiSettingsStatus,
 } from '@/lib/bindings'
 
 interface PiState {
@@ -15,10 +17,16 @@ interface PiState {
   isLoading: boolean
   error: string | null
   configStatus: PiConfigStatus | null
+  /** Startup model selection from ~/.pi/agent/settings.json (not per profile). */
+  settings: PiSettingsStatus | null
+  /** Providers as they exist in the live models.json — the default-model options. */
+  liveProviders: Record<string, PiProviderConfig>
 
   loadProfiles: () => Promise<void>
   loadActiveProfileId: () => Promise<void>
   loadConfigStatus: () => Promise<void>
+  loadSettings: () => Promise<void>
+  saveSettings: (settings: PiSettings) => Promise<void>
   selectProfile: (id: string) => void
   createProfile: (name: string) => Promise<void>
   saveProfile: () => Promise<void>
@@ -41,6 +49,8 @@ export const usePiStore = create<PiState>()(
       isLoading: false,
       error: null,
       configStatus: null,
+      settings: null,
+      liveProviders: {},
 
       loadProfiles: async () => {
         set(
@@ -116,6 +126,49 @@ export const usePiStore = create<PiState>()(
         } catch {
           // ignore
         }
+      },
+
+      // The startup model selection lives in settings.json, outside profiles,
+      // so it is read/written directly. models.json is read alongside it to
+      // offer the live providers/models as the dropdown options.
+      loadSettings: async () => {
+        const [settingsResult, liveResult] = await Promise.all([
+          commands.readPiSettings(),
+          commands.readPiCurrentConfig(),
+        ])
+        if (settingsResult.status !== 'ok') {
+          set(
+            { error: settingsResult.error },
+            undefined,
+            'pi/loadSettings/error'
+          )
+          return
+        }
+        set(
+          {
+            settings: settingsResult.data,
+            liveProviders:
+              liveResult.status === 'ok'
+                ? Object.fromEntries(
+                    Object.entries(liveResult.data.providers ?? {}).filter(
+                      (entry): entry is [string, PiProviderConfig] =>
+                        entry[1] !== undefined
+                    )
+                  )
+                : {},
+          },
+          undefined,
+          'pi/loadSettings/success'
+        )
+      },
+
+      saveSettings: async settings => {
+        const result = await commands.savePiSettings(settings)
+        if (result.status !== 'ok') {
+          set({ error: result.error }, undefined, 'pi/saveSettings/error')
+          return
+        }
+        await get().loadSettings()
       },
 
       selectProfile: id => {

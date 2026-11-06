@@ -50,6 +50,20 @@ import {
 } from './PiImportFromChannelDialog'
 import type { PiProviderConfig } from '@/lib/bindings'
 
+/** pi settings.md § Model and thinking: the `defaultThinkingLevel` enum. */
+const THINKING_LEVELS = [
+  'off',
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+] as const
+
+/** "auto" means the key stays absent, so pi picks the model itself. */
+const AUTO_VALUE = '__auto__'
+
 export function PiConfigPage() {
   const { t } = useTranslation()
   const profiles = usePiStore(state => state.profiles)
@@ -72,6 +86,9 @@ export function PiConfigPage() {
   const addProvider = usePiStore(state => state.addProvider)
   const saveProfile = usePiStore(state => state.saveProfile)
   const setError = usePiStore(state => state.setError)
+  const settings = usePiStore(state => state.settings)
+  const loadSettings = usePiStore(state => state.loadSettings)
+  const saveSettings = usePiStore(state => state.saveSettings)
 
   const [providerDialogOpen, setProviderDialogOpen] = useState(false)
   const [editingProviderId, setEditingProviderId] = useState<string | null>(
@@ -86,6 +103,32 @@ export function PiConfigPage() {
   const [showDuplicateProfileDialog, setShowDuplicateProfileDialog] =
     useState(false)
   const [newProfileName, setNewProfileName] = useState('')
+
+  // Startup model selection draft. It lives in ~/.pi/agent/settings.json and
+  // is deliberately not part of a profile (a profile only carries
+  // models.json), so it is edited and saved on its own.
+  const [defaultProvider, setDefaultProvider] = useState(
+    settings?.defaultProvider ?? ''
+  )
+  const [defaultModel, setDefaultModel] = useState(settings?.defaultModel ?? '')
+  const [defaultThinkingLevel, setDefaultThinkingLevel] = useState(
+    settings?.defaultThinkingLevel ?? AUTO_VALUE
+  )
+  const [savingDefaults, setSavingDefaults] = useState(false)
+
+  // Re-sync the draft whenever the file on disk changes (save or refresh).
+  const settingsKey = [
+    settings?.defaultProvider ?? '',
+    settings?.defaultModel ?? '',
+    settings?.defaultThinkingLevel ?? '',
+  ].join('|')
+  const [lastSettingsKey, setLastSettingsKey] = useState(settingsKey)
+  if (settingsKey !== lastSettingsKey) {
+    setLastSettingsKey(settingsKey)
+    setDefaultProvider(settings?.defaultProvider ?? '')
+    setDefaultModel(settings?.defaultModel ?? '')
+    setDefaultThinkingLevel(settings?.defaultThinkingLevel ?? AUTO_VALUE)
+  }
 
   // Local editing state for profile fields
   const profileKey = currentProfile?.id ?? ''
@@ -109,7 +152,8 @@ export function PiConfigPage() {
     }
     init()
     loadConfigStatus()
-  }, [loadProfiles, loadActiveProfileId, loadConfigStatus])
+    loadSettings()
+  }, [loadProfiles, loadActiveProfileId, loadConfigStatus, loadSettings])
 
   const handleProfileChange = (profileId: string) => {
     selectProfile(profileId)
@@ -209,6 +253,20 @@ export function PiConfigPage() {
     await saveProfile()
   }
 
+  const handleSaveDefaults = async () => {
+    setSavingDefaults(true)
+    await saveSettings({
+      defaultProvider: defaultProvider.trim() || null,
+      defaultModel: defaultModel.trim() || null,
+      defaultThinkingLevel:
+        defaultThinkingLevel === AUTO_VALUE ? null : defaultThinkingLevel,
+    })
+    setSavingDefaults(false)
+    if (!usePiStore.getState().error) {
+      toast.success(t('pi.defaults.saved'))
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -228,6 +286,7 @@ export function PiConfigPage() {
             onClick={() => {
               loadProfiles()
               loadConfigStatus()
+              loadSettings()
             }}
             disabled={isLoading}
             title={t('common.refresh')}
@@ -340,6 +399,75 @@ export function PiConfigPage() {
               </div>
             </>
           )}
+        </div>
+
+        {/* Default model (settings.json) */}
+        <div className="space-y-3 p-4 border rounded-lg">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="text-lg font-medium">{t('pi.defaults.title')}</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('pi.defaults.hint')}
+              </p>
+              {settings?.settingsPath && (
+                <p className="text-xs text-muted-foreground/70 font-mono truncate">
+                  {settings.settingsPath}
+                </p>
+              )}
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveDefaults}
+              disabled={savingDefaults}
+            >
+              {savingDefaults ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              {t('pi.defaults.save')}
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label className="w-32 shrink-0">{t('pi.defaults.provider')}</Label>
+            <Input
+              className="flex-1 font-mono text-sm"
+              value={defaultProvider}
+              onChange={e => setDefaultProvider(e.target.value)}
+              placeholder={t('pi.defaults.providerPlaceholder')}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="w-32 shrink-0">{t('pi.defaults.model')}</Label>
+            <Input
+              className="flex-1 font-mono text-sm"
+              value={defaultModel}
+              onChange={e => setDefaultModel(e.target.value)}
+              placeholder={t('pi.defaults.modelPlaceholder')}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="w-32 shrink-0">
+              {t('pi.defaults.thinkingLevel')}
+            </Label>
+            <Select
+              value={defaultThinkingLevel}
+              onValueChange={setDefaultThinkingLevel}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={AUTO_VALUE}>
+                  {t('pi.defaults.auto')}
+                </SelectItem>
+                {THINKING_LEVELS.map(level => (
+                  <SelectItem key={level} value={level}>
+                    {level}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Providers Section */}

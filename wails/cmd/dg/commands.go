@@ -942,18 +942,150 @@ func (c *cli) hermesStatus(args []string) error {
 
 func (c *cli) pi(args []string) error {
 	if len(args) == 0 {
-		return c.usage("pi needs a subcommand: profiles | providers | status")
+		return c.usage("pi needs a subcommand: profiles | providers | settings | status")
 	}
 	switch args[0] {
 	case "profiles":
 		return c.piProfiles(args[1:])
 	case "providers":
 		return c.piProviders(args[1:])
+	case "settings":
+		return c.piSettings(args[1:])
 	case "status":
 		return c.piStatus(args[1:])
 	default:
-		return c.usage("unknown pi subcommand %q (want profiles | providers | status)", args[0])
+		return c.usage("unknown pi subcommand %q (want profiles | providers | settings | status)", args[0])
 	}
+}
+
+// ---------------------------------------------------------------------------
+// dg pi settings — the startup model selection in ~/.pi/agent/settings.json
+// ---------------------------------------------------------------------------
+
+func (c *cli) piSettings(args []string) error {
+	if len(args) == 0 {
+		return c.usage("pi settings needs a subcommand: show | set | reset")
+	}
+	switch args[0] {
+	case "show":
+		return c.piSettingsShow(args[1:])
+	case "set":
+		return c.piSettingsSet(args[1:])
+	case "reset":
+		return c.piSettingsReset(args[1:])
+	default:
+		return c.usage("unknown pi settings subcommand %q (want show | set | reset)", args[0])
+	}
+}
+
+// settingOrAuto renders an unset setting the way pi reads it: automatic.
+func settingOrAuto(value *string) string {
+	if value == nil || strings.TrimSpace(*value) == "" {
+		return "(auto)"
+	}
+	return *value
+}
+
+func settingFlagValue(value string) *string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
+func (c *cli) piSettingsShow(args []string) error {
+	if len(args) != 0 {
+		return c.usage("pi settings show takes no arguments")
+	}
+	status, err := pi.ReadSettings()
+	if err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, status, func(w io.Writer) error {
+		state := "missing"
+		if status.SettingsExists {
+			state = "present"
+		}
+		fmt.Fprintf(w, "file:      %s (%s)\n", status.SettingsPath, state)
+		fmt.Fprintf(w, "provider:  %s\n", settingOrAuto(status.DefaultProvider))
+		fmt.Fprintf(w, "model:     %s\n", settingOrAuto(status.DefaultModel))
+		fmt.Fprintf(w, "thinking:  %s\n", settingOrAuto(status.DefaultThinkingLevel))
+		return nil
+	})
+}
+
+func (c *cli) piSettingsSet(args []string) error {
+	fs := c.newFlagSet("pi settings set")
+	provider := fs.String("provider", "", "default provider id (empty clears it)")
+	model := fs.String("model", "", "default model id (empty clears it)")
+	thinking := fs.String("thinking", "", "default thinking level: off|minimal|low|medium|high|xhigh|max (empty clears it)")
+	if err := fs.Parse(args); err != nil {
+		return c.usage("%v", err)
+	}
+	if fs.NArg() != 0 {
+		return c.usage("pi settings set takes no positional arguments")
+	}
+	visited := map[string]bool{}
+	fs.Visit(func(f *flag.Flag) { visited[f.Name] = true })
+	if len(visited) == 0 {
+		return c.usage("pi settings set needs at least one of --provider, --model, --thinking")
+	}
+
+	current, err := pi.ReadSettings()
+	if err != nil {
+		return err
+	}
+	next := current.PiSettings
+	if visited["provider"] {
+		next.DefaultProvider = settingFlagValue(*provider)
+	}
+	if visited["model"] {
+		next.DefaultModel = settingFlagValue(*model)
+	}
+	if visited["thinking"] {
+		next.DefaultThinkingLevel = settingFlagValue(*thinking)
+	}
+	if err := pi.SaveSettings(next); err != nil {
+		return err
+	}
+
+	applied := !c.opts.dryRun
+	receipt := map[string]any{
+		"applied":              applied,
+		"defaultProvider":      next.DefaultProvider,
+		"defaultModel":         next.DefaultModel,
+		"defaultThinkingLevel": next.DefaultThinkingLevel,
+		"settingsPath":         current.SettingsPath,
+	}
+	return emit(c.opts, c.stdout, receipt, func(w io.Writer) error {
+		verb := "set"
+		if !applied {
+			verb = "would set"
+		}
+		fmt.Fprintf(w, "%s pi default model: %s / %s (thinking %s)\n",
+			verb, settingOrAuto(next.DefaultProvider), settingOrAuto(next.DefaultModel),
+			settingOrAuto(next.DefaultThinkingLevel))
+		return nil
+	})
+}
+
+func (c *cli) piSettingsReset(args []string) error {
+	if len(args) != 0 {
+		return c.usage("pi settings reset takes no arguments")
+	}
+	if err := pi.ClearSettings(); err != nil {
+		return err
+	}
+	applied := !c.opts.dryRun
+	return emit(c.opts, c.stdout, map[string]any{"applied": applied, "cleared": true}, func(w io.Writer) error {
+		if applied {
+			_, err := fmt.Fprintln(w, "cleared pi default model (pi picks automatically)")
+			return err
+		}
+		_, err := fmt.Fprintln(w, "would clear pi default model")
+		return err
+	})
 }
 
 func (c *cli) piProfiles(args []string) error {

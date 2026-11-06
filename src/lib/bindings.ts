@@ -1277,6 +1277,28 @@ async readPiCurrentConfig() : Promise<Result<PiCurrentConfig, string>> {
 }
 },
 /**
+ * Read the Pi startup model selection (~/.pi/agent/settings.json).
+ */
+async readPiSettings() : Promise<Result<PiSettingsStatus, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("read_pi_settings") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Save the Pi startup model selection, keeping every other settings key.
+ */
+async savePiSettings(settings: PiSettings) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_pi_settings", { settings }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Build the provider entry for a Pi channel import (no write).
  */
 async preparePiChannelImport(input: PiChannelImportInput) : Promise<Result<PiChannelImportResult, string>> {
@@ -3457,6 +3479,14 @@ export type PiProviderConfig = { name?: string | null; baseUrl?: string | null; 
  * Result of validating a provider through Pi's own CLI runtime.
  */
 export type PiProviderTestResult = { success: boolean; providerId: string; modelId: string; latencyMs: number; responseText?: string | null; error?: string | null }
+/**
+ * Pi startup model selection (subset of ~/.pi/agent/settings.json)
+ */
+export type PiSettings = { defaultProvider?: string | null; defaultModel?: string | null; defaultThinkingLevel?: string | null }
+/**
+ * Pi startup model selection plus document state
+ */
+export type PiSettingsStatus = { defaultProvider?: string | null; defaultModel?: string | null; defaultThinkingLevel?: string | null; settingsExists: boolean; settingsPath: string }
 /** One model listed by a channel token (Pi channel import). */
 export type PiChannelModel = { id: string; name?: string | null }
 /**

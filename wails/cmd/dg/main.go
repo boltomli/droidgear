@@ -400,6 +400,9 @@ Commands:
   pi profiles list|show|active|apply|save|delete  manage pi profiles
   pi providers list|show|delete            live ~/.pi/agent/models.json providers
   pi providers import --channel <id> [--token <t>] [--models a,b] [--provider <id>]  import a channel as a pi provider
+  pi settings show              startup model selection from ~/.pi/agent/settings.json
+  pi settings set [--provider <id>] [--model <id>] [--thinking <level>]  pin the startup model
+  pi settings reset             clear the startup model (pi picks automatically)
   pi status                     report the live config path and active profile
   omp profiles list|show|active|apply|save|delete  manage omp profiles
   omp providers list|save --file <json>|delete <id>  manage omp custom providers

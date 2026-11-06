@@ -2,7 +2,9 @@
 
 [English](README_EN.md)
 
-[Factory Droid](https://factory.ai) / [Claude](https://claude.ai) / [OpenClaw](https://openclaw.ai) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) / [Hermes Agent](https://hermes-agent.nousresearch.com) / [Pi](https://pi.dev) / [Dsh (DeepSeek Harness)](https://deepseek.ai) 的桌面增强管理工具。
+[Codex](https://github.com/openai/codex) / [Factory Droid](https://factory.ai) / [Hermes Agent](https://hermes-agent.nousresearch.com) / [OMP（Oh My Pi）](https://github.com/can1357/oh-my-pi) / [Pi](https://pi.dev) 的桌面增强管理工具；第二批接入 [Claude](https://claude.ai) / [GitHub Copilot](https://github.com/features/copilot) / [Dsh (DeepSeek Harness)](https://deepseek.ai)。
+
+> 模块按批次排列：第一批 `codex · droid · hermes · omp · pi`，第二批 `claude · copilot · dsh`；`opencode` / `openclaw` 已**弃用**，在左栏排最后并标记。
 
 支持自定义 AI 模型（BYOK）、嵌入式终端、会话与 Specs 管理、MCP 服务器配置等。
 
@@ -85,29 +87,6 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 
 配置仍写入普通 `~/.factory/mcp.json`；保存的是非秘密引用，不是加密存储或钥匙串。百智专属写入入口在新条目的原始 JSON 中保存 `oauth: false`，对应 Factory 官方对 Header 认证的推荐。启用/停用切换会保留该选项；在现有通用编辑器保存条目可能丢掉未建模的 `oauth` 字段，编辑后请核对配置。这里未验证真实 Factory 的 OAuth 行为。启用后，工具参数发送给百智，返回内容可能进入所选 AI 模型。停用或删除本地条目不等于撤销 Key、远端任务或费用。
 
-### OpenCode 支持
-
-- **AI 开发集成** - OpenCode 工具集成
-- **配置管理** - 服务商/认证配置的加载和保存
-
-### OpenClaw 支持
-
-- **AI 开发集成** - OpenClaw 工具集成
-- **配置管理** - 服务商配置的加载和保存
-- **安装辅助** - 内置 macOS/Linux/Windows 安装命令
-
-### Claude 支持
-
-- **Claude 设置文件管理** - 多设置文件（Global + 自定义）切换与编辑，结构化 Provider / 模型 / Reasoning / Thinking / 通用设置 / 权限分段
-- **设置文件操作** - 新建、删除、复制、从实时配置加载、合并到全局、变更预览，以及临时单次运行
-- **设为活动与脏状态跟踪** - 可将设置文件设为活动，未保存的修改有脏状态提示（TUI）
-- **合并应用** - 将设置文件中的 env 与 permissions 浅合并到全局设置
-- **从渠道导入** - 一键从已配置渠道导入 Provider 配置（base URL、API Key、默认模型）
-- **模型拉取** - 使用已配置 Provider 的 Bearer Token 拉取模型 ID，主模型与 Small 模型可从列表选择，仍可手动输入（GUI + TUI）
-- **自动压缩窗口** - 在 GUI 与 TUI 中设置根级 `autoCompactWindow`（100,000–1,000,000 tokens）。留空则由 Claude Code 按模型选择窗口；`/autocompact` 按模型保存的窗口与环境变量 `CLAUDE_CODE_AUTO_COMPACT_WINDOW` 仍然优先
-- **运行时核心** - 启动时通过运行时覆盖层加载设置，从不修改实时配置文件
-- **GUI/TUI 功能对齐** - 桌面版与 TUI 版的设置功能与语义保持一致（Small 模型留空时使用 Claude 默认的 Haiku 5.5，跟随主模型需显式开启）
-
 ### Codex 支持
 
 - **Codex CLI 集成** - Codex 配置 Profile 管理
@@ -126,16 +105,43 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 - **渠道导入** - 从渠道导入 Hermes Agent 配置（GUI/TUI `i`/`dg hermes providers import` 共用同一套推断：自动补 `/v1`、写入 v12 `providers` 字典并设为默认模型）
 - **Provider 请求选项** - 可编辑 `extra_headers`、`session_affinity_header`、`discover_models`、`transport`、`capabilities`，以及模型级 `context_length`/`prompt_caching`/`answer_in_reasoning`、`model.api_mode`/`model.streaming`
 
+### OMP（Oh My Pi）支持
+
+- **自定义 Provider** - 按官方 `~/.omp/agent/models.yml` 读写自定义 Provider 与模型（GUI 与 TUI 增删改），支持从渠道更新模型和 Provider，并保留其他 Provider 与未知字段
+- **模型角色** - 管理 `~/.omp/agent/config.yml` 中的 15 个模型角色（default/smol/slow/vision/plan/commit/tiny/memory/task/advisor + image/web/speech/dictation/judge），并可从当前配置加载
+- **会话历史** - 浏览 `~/.omp/agent/sessions` 的 JSONL 日志（GUI）：列表或按项目分组、渲染当前分支与思考内容、跟随新消息、隐藏空会话与删除，滚动时分批加载
+
 ### Pi 支持
 
 - **Pi 编码代理集成** - Pi（pi.dev）自定义模型配置管理
 - **Provider/Model 管理** - 支持配置多个 Provider 及其模型（baseUrl, api, apiKey, headers, compat 等）
 - **连接测试** - 测试 Pi Provider 连通性
 - **Profile 管理** - 多 Profile 支持，一键应用到 `~/.pi/agent/models.json`
+- **默认模型** - 在 `~/.pi/agent/settings.json` 设置启动用的 `defaultProvider` / `defaultModel` / `defaultThinkingLevel`（GUI 默认模型卡、TUI Pi → Defaults、`dg pi settings show|set|reset` 同源），settings.json 的其余键原样保留；留空即交回 Pi 自动选择
 - **实时配置读取** - 支持从 Pi 的 live config 加载现有配置
 - **渠道导入** - 从渠道导入 Provider（GUI/TUI `i`/`dg pi providers import` 共用同一套推断：自动规范 Base URL、补齐 `/v1`、按注册表填充模型参数并写入 `compat.forceAdaptiveThinking`）
 - **模型注册表驱动** - 从内置模型注册表丰富 Pi Provider 模型，支持与 Provider 无关的思考级别映射。Anthropic 编码为 `anthropic-adaptive` 的模型（如 `claude-opus-5-5`）会写入 `compat.forceAdaptiveThinking`，已显式关闭的配置会保留
 - **高级模型选项** - 每个模型可用一个 JSON 块编辑 `inputLimits`、`promptCache`、`samplingParams`、`samplingParamsByThinkingLevel`（代理侧请求调优，避免堆叠大量低频字段）
+
+### Claude 支持
+
+- **Claude 设置文件管理** - 多设置文件（Global + 自定义）切换与编辑，结构化 Provider / 模型 / Reasoning / Thinking / 通用设置 / 权限分段
+- **设置文件操作** - 新建、删除、复制、从实时配置加载、合并到全局、变更预览，以及临时单次运行
+- **设为活动与脏状态跟踪** - 可将设置文件设为活动，未保存的修改有脏状态提示（TUI）
+- **合并应用** - 将设置文件中的 env 与 permissions 浅合并到全局设置
+- **从渠道导入** - 一键从已配置渠道导入 Provider 配置（base URL、API Key、默认模型）
+- **模型拉取** - 使用已配置 Provider 的 Bearer Token 拉取模型 ID，主模型与 Small 模型可从列表选择，仍可手动输入（GUI + TUI）
+- **自动压缩窗口** - 在 GUI 与 TUI 中设置根级 `autoCompactWindow`（100,000–1,000,000 tokens）。留空则由 Claude Code 按模型选择窗口；`/autocompact` 按模型保存的窗口与环境变量 `CLAUDE_CODE_AUTO_COMPACT_WINDOW` 仍然优先
+- **运行时核心** - 启动时通过运行时覆盖层加载设置，从不修改实时配置文件
+- **GUI/TUI 功能对齐** - 桌面版与 TUI 版的设置功能与语义保持一致（Small 模型留空时使用 Claude 默认的 Haiku 5.5，跟随主模型需显式开启）
+
+### GitHub Copilot 支持
+
+- **BYOK Profile 管理** - 管理 GitHub Copilot BYOK 配置（OpenAI / Anthropic 提供商、模型与 Token 限制），支持创建、复制、删除、应用与加载已应用配置
+- **渠道导入** - 从渠道导入 Provider 与模型，自动规范 Base URL（OpenAI 补 `/v1`、Anthropic 去 `/v1`）
+- **官方订阅模式** - 清除 BYOK 覆盖，使用 Copilot CLI 现有登录或认证 Token
+- **临时运行** - 一键以所选配置启动 Copilot（进程级环境变量 + 显式 `--model` 参数）
+- **独立启动器** - 附带 `copilot-local.sh` / `copilot-local.cmd` 启动器，无需 GUI 即可用已导出的配置启动 Copilot
 
 ### Dsh（DeepSeek Harness）支持
 
@@ -150,19 +156,20 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 - **会话历史** - 浏览 `~/.dsh/sessions` 会话日志（GUI + TUI）：列表/按项目分组、思考内容渲染、实时追踪、隐藏空会话与删除；连续的纯思考步骤合并为一个可展开的「思考过程」块
 - **注册表自动适配** - 按模型 ID 自动填充名称、上下文窗口、最大 Token 与推理强度（reasoningEfforts）
 
-### GitHub Copilot 支持
+### OpenCode 支持（弃用）
 
-- **BYOK Profile 管理** - 管理 GitHub Copilot BYOK 配置（OpenAI / Anthropic 提供商、模型与 Token 限制），支持创建、复制、删除、应用与加载已应用配置
-- **渠道导入** - 从渠道导入 Provider 与模型，自动规范 Base URL（OpenAI 补 `/v1`、Anthropic 去 `/v1`）
-- **官方订阅模式** - 清除 BYOK 覆盖，使用 Copilot CLI 现有登录或认证 Token
-- **临时运行** - 一键以所选配置启动 Copilot（进程级环境变量 + 显式 `--model` 参数）
-- **独立启动器** - 附带 `copilot-local.sh` / `copilot-local.cmd` 启动器，无需 GUI 即可用已导出的配置启动 Copilot
+> **已弃用**：OpenCode 模块不再新增功能，仅保留既有配置的读写。新工作在批次 1 / 批次 2 的模块上进行；左栏把它排在最后并标记「弃用」。
 
-### OMP（Oh My Pi）支持
+- **AI 开发集成** - OpenCode 工具集成
+- **配置管理** - 服务商/认证配置的加载和保存
 
-- **自定义 Provider** - 按官方 `~/.omp/agent/models.yml` 读写自定义 Provider 与模型（GUI 与 TUI 增删改），支持从渠道更新模型和 Provider，并保留其他 Provider 与未知字段
-- **模型角色** - 管理 `~/.omp/agent/config.yml` 中的 15 个模型角色（default/smol/slow/vision/plan/commit/tiny/memory/task/advisor + image/web/speech/dictation/judge），并可从当前配置加载
-- **会话历史** - 浏览 `~/.omp/agent/sessions` 的 JSONL 日志（GUI）：列表或按项目分组、渲染当前分支与思考内容、跟随新消息、隐藏空会话与删除，滚动时分批加载
+### OpenClaw 支持（弃用）
+
+> **已弃用**：OpenClaw 模块不再新增功能，仅保留既有配置的读写。新工作在批次 1 / 批次 2 的模块上进行；左栏把它排在最后并标记「弃用」。
+
+- **AI 开发集成** - OpenClaw 工具集成
+- **配置管理** - 服务商配置的加载和保存
+- **安装辅助** - 内置 macOS/Linux/Windows 安装命令
 
 ### 其他功能
 
@@ -206,13 +213,22 @@ dg mcp list
 
 ### 模块（与 GUI 左栏对应）
 
-- **Droid**：Settings · Missions · Trusted · Auth · Specs · MCP · Models · Sessions · Legacy
+顺序与 GUI 左栏一致：**批次 1** → **批次 2** → Preferences。
+
 - **Channels**：渠道详情 + Export templates（分节）
-- **Codex**：Providers · Auth · Sessions（分节）
-- **Claude / Hermes / Copilot**：设置文件 / Model / Profile 列表
-- **Pi / OMP**：Providers·Config + Sessions（分节）
-- **Dsh**：Desktop · Web · Sessions（分节）
+- **批次 1**
+  - **Codex**：Providers · Auth · Sessions（分节）
+  - **Droid**：Settings · Missions · Trusted · Auth · Specs · MCP · Models · Sessions · Legacy
+  - **Hermes**：Model / Profile 列表
+  - **OMP**：Config + Providers + Sessions（分节）
+  - **Pi**：Providers · Defaults + Sessions（分节）
+- **批次 2**
+  - **Claude**：设置文件 / Model / Profile 列表
+  - **Copilot**：Profile 列表
+  - **Dsh**：Desktop · Web · Sessions（分节）
 - **Paths / Settings**：Preferences 的路径覆盖与通用/外观项
+
+> `opencode` / `openclaw` 已弃用，TUI 不提供对应屏。
 
 ### 基本操作
 

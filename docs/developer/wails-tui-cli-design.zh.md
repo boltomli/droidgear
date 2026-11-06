@@ -226,9 +226,10 @@ dg codex status                               # T2 ✅（config/auth 路径 + ac
 dg pi|hermes|omp profiles ...                   # T1/T2 ✅（与 codex 同形态；omp 另有 providers）
 dg hermes providers list|show|delete|import --channel <id> [--token <t>] [--model <m>] [--name <n>]  # T1 ✅（导入与 GUI 同源）
 dg pi providers list|show|delete|import --channel <id> [--token <t>] [--models a,b] [--provider <id>]  # T1 ✅（导入与 GUI 同源：service/importflow）
+dg pi settings show|set [--provider <id>] [--model <id>] [--thinking <level>]|reset  # ✅ 启动模型（~/.pi/agent/settings.json，与 GUI 默认模型卡 / TUI Defaults 同源）
 dg omp providers list|save --file <json>|delete <id>|import --channel <id> […]            # T1 ✅（import 与 GUI 同源）
 dg claude settings ... | dg copilot profiles ... # 同上形态 ✅
-dg opencode|openclaw ...                        # 同上形态  B2 暂缓（维护者指定后置）
+dg opencode|openclaw ...                        # 已弃用（不做，见 tui-parity §0.4）
 dg droid settings|trusted|auth|missions|legacy # T1    ✅（models = dg factory models）
 dg dsh providers list|save --file <json>|delete [--profile] + status  # T1 ✅
 dg mcp list|toggle <id>|apply                 # T1/T2 B3

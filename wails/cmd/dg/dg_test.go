@@ -1104,3 +1104,98 @@ func TestFactoryModelsFavoritesDefaultsRoundTrip(t *testing.T) {
 		t.Errorf("defaults show = %s", out)
 	}
 }
+
+// TestPiSettingsLifecycle covers `dg pi settings` (the startup model selection
+// in ~/.pi/agent/settings.json): show on an empty home, pin a model, keep
+// unrelated keys, dry-run the write, and reset.
+func TestPiSettingsLifecycle(t *testing.T) {
+	home := sandbox(t)
+
+	code, out, errOut := runCLI(t, "--json", "pi", "settings", "show")
+	if code != 0 {
+		t.Fatalf("show exit = %d, stderr = %s", code, errOut)
+	}
+	shown := decode(t, out)
+	if shown["settingsExists"] != false {
+		t.Errorf("settingsExists = %v, want false", shown["settingsExists"])
+	}
+
+	// A foreign key (retry) must survive the write.
+	piDir := filepath.Join(home, ".pi", "agent")
+	if err := os.MkdirAll(piDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	settingsPath := filepath.Join(piDir, "settings.json")
+	if err := os.WriteFile(settingsPath, []byte(`{"retry":{"enabled":true}}`), 0o600); err != nil {
+		t.Fatalf("seed settings: %v", err)
+	}
+
+	// Dry-run records the write instead of performing it.
+	code, _, errOut = runCLI(t, "--dry-run", "pi", "settings", "set", "--provider", "wududu", "--model", "m1", "--thinking", "high")
+	if code != 0 {
+		t.Fatalf("dry set exit = %d, stderr = %s", code, errOut)
+	}
+	if _, err := os.Stat(settingsPath); err != nil {
+		t.Fatalf("settings.json vanished: %v", err)
+	}
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	if strings.Contains(string(data), "defaultProvider") {
+		t.Errorf("dry run wrote settings.json: %s", data)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "pi", "settings", "set", "--provider", "wududu", "--model", "m1", "--thinking", "high")
+	if code != 0 {
+		t.Fatalf("set exit = %d, stderr = %s", code, errOut)
+	}
+	if receipt := decode(t, out); receipt["applied"] != true || receipt["defaultProvider"] != "wududu" {
+		t.Errorf("set receipt = %v", receipt)
+	}
+
+	data, err = os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	var root map[string]any
+	if err := json.Unmarshal(data, &root); err != nil {
+		t.Fatalf("settings is not JSON: %v", err)
+	}
+	if root["defaultModel"] != "m1" || root["defaultThinkingLevel"] != "high" {
+		t.Errorf("settings = %v", root)
+	}
+	if _, ok := root["retry"].(map[string]any); !ok {
+		t.Errorf("foreign key retry dropped: %v", root["retry"])
+	}
+
+	// An invalid thinking level fails instead of being written.
+	for _, args := range [][]string{
+		{"--json", "pi", "settings", "set", "--thinking", "highh"},
+		{"--json", "pi", "settings", "set"},
+	} {
+		if code, _, _ := runCLI(t, args...); code == 0 {
+			t.Errorf("%v: expected a non-zero exit", args)
+		}
+	}
+
+	code, out, errOut = runCLI(t, "--json", "pi", "settings", "reset")
+	if code != 0 {
+		t.Fatalf("reset exit = %d, stderr = %s", code, errOut)
+	}
+	if receipt := decode(t, out); receipt["applied"] != true || receipt["cleared"] != true {
+		t.Errorf("reset receipt = %v", receipt)
+	}
+
+	code, out, errOut = runCLI(t, "--json", "pi", "settings", "show")
+	if code != 0 {
+		t.Fatalf("show exit = %d, stderr = %s", code, errOut)
+	}
+	shown = decode(t, out)
+	if _, ok := shown["defaultProvider"]; ok {
+		t.Errorf("defaultProvider still set after reset: %v", shown)
+	}
+	if shown["settingsExists"] != true {
+		t.Errorf("settingsExists = %v, want true", shown["settingsExists"])
+	}
+}
