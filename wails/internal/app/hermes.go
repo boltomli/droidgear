@@ -66,3 +66,20 @@ func (a *App) GetHermesConfigStatus() (HermesConfigStatus, error) {
 func (a *App) ReadHermesCurrentConfig() (HermesCurrentConfig, error) {
 	return hermes.ReadCurrentConfig()
 }
+
+// ---------------------------------------------------------------------------
+// Channel import (shared inference: service/hermes)
+// ---------------------------------------------------------------------------
+
+// Type aliases for the import contract.
+type (
+	HermesChannelImportInput  = hermes.HermesChannelImportInput
+	HermesChannelImportResult = hermes.HermesChannelImportResult
+)
+
+// PrepareHermesChannelImport builds the model entry for a channel import
+// without writing anything. The GUI dialog and the non-GUI consumers share
+// this rule set.
+func (a *App) PrepareHermesChannelImport(input HermesChannelImportInput) (HermesChannelImportResult, error) {
+	return hermes.PrepareChannelImport(input)
+}

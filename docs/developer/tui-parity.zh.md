@@ -62,6 +62,7 @@
 | Codex → Sessions                       | `sessions`                        | `service/read`（B4）                     | Codex 屏 · Sessions 分节    | ✅ P3（读 · d 删除走预览流）                                                       |
 | Pi → Providers                         | `providers`                       | `service/pi` + `service/importflow`      | Pi 屏 · Providers 分节      | ✅ 读 + `i` 渠道导入（`dg pi providers import` 同源）/ `d` 删除，均走预览流        |
 | Hermes → Model                         | `model`                           | `service/hermes`                         | Profiles 屏（通用）         | ✅ P0 读                                                                           |
+| Hermes → Providers                     | provider 条目                     | `service/hermes` + `service/importflow`  | Hermes 屏 · Providers 分节  | ✅ 读 + `i` 渠道导入（`dg hermes providers import` 同源）/ `d` 删除，均走预览流    |
 | OMP → Config                           | `config`                          | `service/omp`                            | OMP 屏 · Config 分节        | ✅ P0 读（15 个模型角色）                                                          |
 | OMP → Providers                        | `providers`                       | `service/omp` + `service/importflow`     | OMP 屏 · Providers 分节     | ✅ 读 + `i` 渠道导入（`dg omp providers import` 同源）/ `d` 删除，均走预览流       |
 | Pi / OMP / Dsh / Droid → Sessions      | `sessions`                        | `service/read`（B4）                     | 各工具屏 · Sessions 分节    | ✅ P3（读 · d 删除走预览流）                                                       |

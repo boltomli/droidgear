@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"droidgear-wails/internal/service/channels"
+	"droidgear-wails/internal/service/hermes"
 	"droidgear-wails/internal/service/omp"
 	"droidgear-wails/internal/service/pi"
 )
@@ -162,4 +163,30 @@ func ImportOmp(ctx context.Context, channelID string, tokenRef string, modelIDs 
 		}
 	}
 	return omp.ImportChannelProvider(input)
+}
+
+// ImportHermes writes the resolved channel into the live ~/.hermes/config.yaml.
+// Hermes uses one model per provider; modelID picks it, otherwise the first
+// model the endpoint lists is used.
+func ImportHermes(ctx context.Context, channelID string, tokenRef string, modelID string) (hermes.HermesChannelImportResult, error) {
+	requested := []string{}
+	if strings.TrimSpace(modelID) != "" {
+		requested = []string{modelID}
+	}
+	resolved, err := Resolve(ctx, channelID, tokenRef, requested)
+	if err != nil {
+		return hermes.HermesChannelImportResult{}, err
+	}
+	chosen := strings.TrimSpace(modelID)
+	if chosen == "" && len(resolved.ModelIDs) > 0 {
+		chosen = resolved.ModelIDs[0]
+	}
+	return hermes.ImportChannelProvider(hermes.HermesChannelImportInput{
+		ChannelName:  resolved.Channel.Name,
+		ChannelType:  resolved.Channel.Type,
+		BaseURL:      resolved.Channel.BaseURL,
+		APIKey:       resolved.Token.Key,
+		TokenName:    resolved.Token.Name,
+		DefaultModel: chosen,
+	})
 }

@@ -54,7 +54,7 @@ func DefaultModules() []Module {
 		{"channels", "Channels", newChannelsScreen},
 		{"codex", "Codex", newCodexScreen},
 		{"claude", "Claude", list(ClaudeSource)},
-		{"hermes", "Hermes", list(HermesSource)},
+		{"hermes", "Hermes", newHermesScreen},
 		{"pi", "Pi", newPiScreen},
 		{"omp", "OMP", newOmpScreen},
 		{"copilot", "Copilot", list(CopilotSource)},

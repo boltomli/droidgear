@@ -33,7 +33,6 @@ import {
   isApiKeyAuthChannel,
   isOpenAICompatiblePlatform,
 } from '@/lib/channel-utils'
-import { normalizeBaseUrl } from '@/lib/sub2api-platform'
 import {
   commands,
   type Channel,
@@ -128,12 +127,28 @@ export function ImportFromChannelDialog({
     }
   }, [selectedChannelId, selectedChannel, keysMap, fetchKeys])
 
-  // Hermes always uses "custom" as provider regardless of channel type or model
-  const inferProvider = (_modelId: string, _platform?: string | null): string =>
-    'custom'
-
-  /** Append /v1 to baseUrl unless it already ends with it */
-  const withV1 = (url: string) => normalizeBaseUrl(url, '/v1')
+  // Hermes always uses "custom" as provider and appends /v1; both rules live
+  // in service/hermes so `dg hermes providers import` and the TUI share them.
+  const prepareChannel = async (
+    apiKey: string,
+    defaultModel: string
+  ): Promise<boolean> => {
+    if (!selectedChannel) return false
+    const prepared = await commands.prepareHermesChannelImport({
+      channelName: selectedChannel.name || selectedChannel.id,
+      channelType: selectedChannel.type,
+      baseUrl: selectedChannel.baseUrl,
+      apiKey,
+      defaultModel,
+    })
+    if (prepared.status !== 'ok') {
+      setResolveError(prepared.error)
+      return false
+    }
+    setResolvedBaseUrl(prepared.data.baseUrl)
+    setResolvedProvider(prepared.data.provider)
+    return true
+  }
 
   const handleChannelNext = async () => {
     if (!selectedChannel) return
@@ -155,10 +170,9 @@ export function ImportFromChannelDialog({
           return
         }
         setResolvedApiKey(result.data)
-        setResolvedBaseUrl(withV1(selectedChannel.baseUrl))
-        setResolvedProvider('custom')
         setIsResolvingKey(false)
         // Skip token step, go straight to model step
+        await prepareChannel(result.data, '')
         await fetchModelsForKey(selectedChannel.baseUrl, result.data, null)
         setStep('model')
       } catch (e) {
@@ -174,11 +188,9 @@ export function ImportFromChannelDialog({
   const handleTokenSelect = async (token: ChannelToken) => {
     const apiKey = token.key
     const rawBaseUrl = selectedChannel?.baseUrl ?? ''
-    const provider = inferProvider(token.name, token.platform)
 
     setResolvedApiKey(apiKey)
-    setResolvedBaseUrl(withV1(rawBaseUrl))
-    setResolvedProvider(provider)
+    await prepareChannel(apiKey, '')
 
     await fetchModelsForKey(rawBaseUrl, apiKey, token.platform)
     setStep('model')
@@ -211,13 +223,25 @@ export function ImportFromChannelDialog({
     }
   }
 
-  const handleImport = () => {
-    onImported({
-      baseUrl: resolvedBaseUrl,
+  const handleImport = async () => {
+    if (!selectedChannel) return
+    const prepared = await commands.prepareHermesChannelImport({
+      channelName: selectedChannel.name || selectedChannel.id,
+      channelType: selectedChannel.type,
+      baseUrl: selectedChannel.baseUrl,
       apiKey: resolvedApiKey,
-      provider: resolvedProvider,
-      name: selectedChannel?.name,
-      defaultModel: selectedModel || undefined,
+      defaultModel: selectedModel,
+    })
+    if (prepared.status !== 'ok') {
+      setModelError(prepared.error)
+      return
+    }
+    onImported({
+      baseUrl: prepared.data.baseUrl,
+      apiKey: prepared.data.apiKey,
+      provider: prepared.data.provider,
+      name: prepared.data.name,
+      defaultModel: prepared.data.defaultModel ?? undefined,
     })
     onOpenChange(false)
   }

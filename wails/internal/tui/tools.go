@@ -21,6 +21,14 @@ func newCodexScreen(ctx context.Context) (Screen, error) {
 	})
 }
 
+// newHermesScreen is the Hermes tool pane — profiles / providers.
+func newHermesScreen(ctx context.Context) (Screen, error) {
+	return newSectionedScreen(ctx, "Hermes", []screenSection{
+		{key: "profiles", title: "Profiles", open: list(HermesSource)},
+		{key: "providers", title: "Providers", open: list(HermesProvidersSource)},
+	})
+}
+
 // newPiScreen is the Pi tool pane — providers / profiles / sessions.
 func newPiScreen(ctx context.Context) (Screen, error) {
 	return newSectionedScreen(ctx, "Pi", []screenSection{

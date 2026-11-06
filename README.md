@@ -122,7 +122,8 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 
 - **配置管理** - Hermes Agent YAML Profile 配置管理
 - **推理强度** - 为每个 Hermes Profile 独立设置推理强度（none/minimal/low/medium/high/xhigh/max/ultra）
-- **渠道导入** - 支持从渠道导入 Hermes Agent 配置
+- **渠道导入** - 从渠道导入 Hermes Agent 配置（GUI/TUI `i`/`dg hermes providers import` 共用同一套推断：自动补 `/v1`、写入 v12 `providers` 字典并设为默认模型）
+- **Provider 请求选项** - 可编辑 `extra_headers`、`session_affinity_header`、`discover_models`、`transport`、`capabilities`，以及模型级 `context_length`/`prompt_caching`/`answer_in_reasoning`
 
 ### Pi 支持
 

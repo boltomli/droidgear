@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/service/hermes"
 	"droidgear-wails/internal/service/importflow"
 	"droidgear-wails/internal/service/omp"
 	"droidgear-wails/internal/service/pi"
@@ -180,4 +181,88 @@ func parseImportValue(value string) (channelID string, tokenRef string, modelIDs
 		}
 	}
 	return channelID, tokenRef, modelIDs
+}
+
+// hermesProvidersSource is Hermes → Providers over the LIVE config.yaml
+// (model entries backed by a `custom:<name>` provider). 'i' imports a channel
+// through service/importflow — the same path as `dg hermes providers import`
+// and the GUI dialog.
+type hermesProvidersSource struct{}
+
+// HermesProvidersSource exposes the live Hermes custom providers.
+func HermesProvidersSource() ListSource { return hermesProvidersSource{} }
+
+func (hermesProvidersSource) Title() string { return "Hermes Providers" }
+
+func (hermesProvidersSource) Load(context.Context) ([]ListRow, error) {
+	current, err := hermes.ReadCurrentConfig()
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]ListRow, 0, len(current.Models))
+	for _, model := range current.Models {
+		if model.Name == nil || strings.TrimSpace(*model.Name) == "" {
+			continue
+		}
+		mark := "  "
+		if model.IsDefault {
+			mark = "* "
+		}
+		rows = append(rows, ListRow{ID: *model.Name, Label: *model.Name, Mark: mark})
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Label < rows[j].Label })
+	return rows, nil
+}
+
+func (hermesProvidersSource) Detail(_ context.Context, id string) ([]byte, error) {
+	current, err := hermes.ReadCurrentConfig()
+	if err != nil {
+		return nil, err
+	}
+	for _, model := range current.Models {
+		if model.Name == nil || *model.Name != id {
+			continue
+		}
+		if model.APIKey != nil {
+			masked := core.RedactSecret(*model.APIKey)
+			model.APIKey = &masked
+		}
+		return json.MarshalIndent(model, "", "  ")
+	}
+	return nil, fmt.Errorf("hermes provider %q not found", id)
+}
+
+func (hermesProvidersSource) Actions() []ListAction {
+	return []ListAction{{
+		Key: "d", Label: "delete",
+		Run: func(_ context.Context, row ListRow) error {
+			return hermes.DeleteLiveProvider(row.ID)
+		},
+	}}
+}
+
+func (hermesProvidersSource) InputActions() []InputAction {
+	return []InputAction{{
+		Key:   "i",
+		Label: "import from channel",
+		Hint:  "channel-id [token|-] [model] — omitted/- = first token; omitted model = first model the endpoint lists",
+		Submit: func(ctx context.Context, _ ListRow, value string) writeAction {
+			channelID, tokenRef, modelIDs := parseImportValue(value)
+			modelID := ""
+			if len(modelIDs) > 0 {
+				modelID = modelIDs[0]
+			}
+			return writeAction{
+				title: "import hermes provider from channel " + channelID,
+				run: func() error {
+					_, err := importflow.ImportHermes(ctx, channelID, tokenRef, modelID)
+					return err
+				},
+			}
+		},
+	}}
+}
+
+func (hermesProvidersSource) Summary(rows []ListRow) string {
+	return fmt.Sprintf("Hermes Providers · %d provider(s) · i import from channel · d delete", len(rows))
 }

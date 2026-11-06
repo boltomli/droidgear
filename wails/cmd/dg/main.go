@@ -395,6 +395,7 @@ Commands:
   codex profiles delete <id>    delete a profile
   codex status                  report live config/auth paths and the active profile
   hermes profiles list|show|active|apply|save|delete  manage hermes profiles
+  hermes providers list|show|delete|import --channel <id> [--token <t>] [--model <m>] [--name <n>]  live ~/.hermes/config.yaml providers
   hermes status                 report the live config path and active profile
   pi profiles list|show|active|apply|save|delete  manage pi profiles
   pi providers list|show|delete            live ~/.pi/agent/models.json providers

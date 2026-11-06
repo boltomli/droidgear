@@ -330,3 +330,120 @@ custom_providers:
 		t.Fatalf("model section should not keep base_url/api_key for named providers")
 	}
 }
+
+// TestHermesProviderOptionsRoundTrip covers the v12 request knobs and the
+// per-model capabilities added for upstream drift.
+func TestHermesProviderOptionsRoundTrip(t *testing.T) {
+	testutil.IsolatedHome(t)
+	discover := false
+	promptCaching := true
+	answerInReasoning := true
+	contextLength := uint32(1000000)
+	profile := HermesProfile{
+		ID: "p-knobs", Name: "Knobs", CreatedAt: core.NowRFC3339(), UpdatedAt: core.NowRFC3339(),
+		Models: []HermesModelConfig{{
+			Name: core.StrPtr("gateway"), Default: core.StrPtr("fable"),
+			BaseURL: core.StrPtr("https://gateway.example.com/v1"), APIKey: core.StrPtr("sk"),
+			IsDefault:             true,
+			ExtraHeaders:          map[string]string{"CF-Access-Client-Id": "client"},
+			SessionAffinityHeader: core.StrPtr("x-litellm-session-id"),
+			DiscoverModels:        &discover,
+			Transport:             core.StrPtr("anthropic_messages"),
+			Capabilities:          map[string]any{"openai_native_compaction": true},
+			ContextLength:         &contextLength,
+			PromptCaching:         &promptCaching,
+			AnswerInReasoning:     &answerInReasoning,
+		}},
+	}
+	if err := SaveProfile(profile); err != nil {
+		t.Fatalf("SaveProfile: %v", err)
+	}
+	if err := ApplyProfile("p-knobs"); err != nil {
+		t.Fatalf("ApplyProfile: %v", err)
+	}
+
+	current, err := ReadCurrentConfig()
+	if err != nil {
+		t.Fatalf("ReadCurrentConfig: %v", err)
+	}
+	if len(current.Models) != 1 {
+		t.Fatalf("models = %+v", current.Models)
+	}
+	loaded := current.Models[0]
+	if loaded.ExtraHeaders["CF-Access-Client-Id"] != "client" {
+		t.Errorf("extra headers = %v", loaded.ExtraHeaders)
+	}
+	if loaded.SessionAffinityHeader == nil || *loaded.SessionAffinityHeader != "x-litellm-session-id" {
+		t.Errorf("session affinity = %v", loaded.SessionAffinityHeader)
+	}
+	if loaded.DiscoverModels == nil || *loaded.DiscoverModels {
+		t.Errorf("discover models = %v", loaded.DiscoverModels)
+	}
+	if loaded.Transport == nil || *loaded.Transport != "anthropic_messages" {
+		t.Errorf("transport = %v", loaded.Transport)
+	}
+	if loaded.Capabilities["openai_native_compaction"] != true {
+		t.Errorf("capabilities = %v", loaded.Capabilities)
+	}
+	if loaded.ContextLength == nil || *loaded.ContextLength != contextLength {
+		t.Errorf("context length = %v", loaded.ContextLength)
+	}
+	if loaded.PromptCaching == nil || !*loaded.PromptCaching || loaded.AnswerInReasoning == nil || !*loaded.AnswerInReasoning {
+		t.Errorf("model flags = %v / %v", loaded.PromptCaching, loaded.AnswerInReasoning)
+	}
+}
+
+// TestHermesImportChannelProvider covers the shared channel-import path and
+// DeleteLiveProvider.
+func TestHermesImportChannelProvider(t *testing.T) {
+	testutil.IsolatedHome(t)
+	configPath := writeHermesTestConfig(t, `
+model:
+  default: existing
+  provider: custom:mine
+providers:
+  mine:
+    api: https://mine.example.com/v1
+    api_key: sk-mine
+  spare:
+    api: https://spare.example.com/v1
+`)
+
+	result, err := ImportChannelProvider(HermesChannelImportInput{
+		ChannelName: "My Chan", ChannelType: "general",
+		BaseURL: "https://api.example.com", APIKey: "sk-test", DefaultModel: "gpt-5.2",
+	})
+	if err != nil {
+		t.Fatalf("ImportChannelProvider: %v", err)
+	}
+	if result.Provider != "custom" || result.BaseURL != "https://api.example.com/v1" {
+		t.Fatalf("result = %+v", result)
+	}
+	root := mustParseConfig(t, configPath)
+	providers := core.MappingGetMap(root, "providers")
+	imported := core.MappingGetMap(providers, "My Chan")
+	if imported == nil {
+		t.Fatalf("imported provider missing: %s", testutil.MustRead(t, configPath))
+	}
+	if got := core.MappingGetString(imported, "api"); got != "https://api.example.com/v1" {
+		t.Errorf("api = %q", got)
+	}
+	if core.MappingGetMap(providers, "spare") == nil {
+		t.Error("unrelated provider dropped")
+	}
+	model := core.MappingGetMap(root, "model")
+	if got := core.MappingGetString(model, "provider"); got != "custom:My Chan" {
+		t.Errorf("model.provider = %q", got)
+	}
+
+	if err := DeleteLiveProvider("spare"); err != nil {
+		t.Fatalf("DeleteLiveProvider(spare): %v", err)
+	}
+	root = mustParseConfig(t, configPath)
+	if core.MappingGetMap(core.MappingGetMap(root, "providers"), "spare") != nil {
+		t.Error("spare was not deleted")
+	}
+	if err := DeleteLiveProvider("My Chan"); err == nil {
+		t.Error("deleting the active provider should be refused")
+	}
+}

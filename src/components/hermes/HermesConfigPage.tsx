@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/dialog'
 import { useHermesStore } from '@/store/hermes-store'
 import { trimToNull } from '@/lib/utils'
+import { formatKeyValueLines, parseKeyValueLines } from '@/lib/key-value'
 import type { HermesModelConfig } from '@/lib/bindings'
 import { ConfigStatus } from './ConfigStatus'
 import { ImportFromChannelDialog } from './ImportFromChannelDialog'
@@ -55,6 +56,14 @@ function cleanEntry(entry: HermesModelConfig): HermesModelConfig {
     provider: trimToNull(entry.provider ?? ''),
     baseUrl: trimToNull(entry.baseUrl ?? ''),
     apiKey: trimToNull(entry.apiKey ?? ''),
+    extraHeaders: entry.extraHeaders ?? null,
+    sessionAffinityHeader: trimToNull(entry.sessionAffinityHeader ?? ''),
+    discoverModels: entry.discoverModels ?? null,
+    transport: trimToNull(entry.transport ?? ''),
+    capabilities: entry.capabilities ?? null,
+    contextLength: entry.contextLength ?? null,
+    promptCaching: entry.promptCaching ?? null,
+    answerInReasoning: entry.answerInReasoning ?? null,
     isDefault: entry.isDefault === true,
   }
 }
@@ -66,6 +75,14 @@ function emptyEntry(isDefault: boolean): HermesModelConfig {
     provider: null,
     baseUrl: null,
     apiKey: null,
+    extraHeaders: null,
+    sessionAffinityHeader: null,
+    discoverModels: null,
+    transport: null,
+    capabilities: null,
+    contextLength: null,
+    promptCaching: null,
+    answerInReasoning: null,
     isDefault,
   }
 }
@@ -111,6 +128,13 @@ export function HermesConfigPage() {
   const [editingModels, setEditingModels] = useState<HermesModelConfig[]>(() =>
     (currentProfile?.models ?? []).map(m => ({ ...m }))
   )
+  // Draft text for the per-provider extra headers (KEY=VALUE lines). The
+  // committed value lives on the model entry; the draft keeps partial input
+  // usable while typing.
+  const [headerDrafts, setHeaderDrafts] = useState<Record<number, string>>({})
+  const headerDraftFor = (index: number, entry: HermesModelConfig) =>
+    headerDrafts[index] ?? formatKeyValueLines(entry.extraHeaders)
+
   const [editingReasoningEffort, setEditingReasoningEffort] = useState(
     currentProfile?.reasoningEffort ?? ''
   )
@@ -543,6 +567,178 @@ export function HermesConfigPage() {
                       placeholder={t('hermes.model.apiKeyPlaceholder')}
                     />
                   </div>
+                  <details className="ml-10 rounded-md border px-3 py-2">
+                    <summary className="cursor-pointer text-sm font-medium">
+                      {t('hermes.model.advanced')}
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Label className="w-32 shrink-0 text-xs">
+                          {t('hermes.model.transport')}
+                        </Label>
+                        <Input
+                          className="flex-1"
+                          value={entry.transport ?? ''}
+                          onChange={e =>
+                            setEditingModels(prev =>
+                              prev.map((m, i) =>
+                                i === index
+                                  ? { ...m, transport: e.target.value }
+                                  : m
+                              )
+                            )
+                          }
+                          onBlur={handleModelBlur}
+                          placeholder="openai_chat / anthropic_messages"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="w-32 shrink-0 text-xs">
+                          {t('hermes.model.sessionAffinityHeader')}
+                        </Label>
+                        <Input
+                          className="flex-1"
+                          value={entry.sessionAffinityHeader ?? ''}
+                          onChange={e =>
+                            setEditingModels(prev =>
+                              prev.map((m, i) =>
+                                i === index
+                                  ? {
+                                      ...m,
+                                      sessionAffinityHeader: e.target.value,
+                                    }
+                                  : m
+                              )
+                            )
+                          }
+                          onBlur={handleModelBlur}
+                          placeholder="x-litellm-session-id"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="w-32 shrink-0 text-xs">
+                          {t('hermes.model.contextLength')}
+                        </Label>
+                        <Input
+                          className="w-36"
+                          inputMode="numeric"
+                          value={entry.contextLength ?? ''}
+                          onChange={e =>
+                            setEditingModels(prev =>
+                              prev.map((m, i) =>
+                                i === index
+                                  ? {
+                                      ...m,
+                                      contextLength: e.target.value
+                                        ? Number(e.target.value)
+                                        : null,
+                                    }
+                                  : m
+                              )
+                            )
+                          }
+                          onBlur={handleModelBlur}
+                          placeholder="1000000"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-4">
+                        <label className="flex items-center gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={entry.discoverModels !== false}
+                            onChange={e =>
+                              setEditingModels(prev =>
+                                prev.map((m, i) =>
+                                  i === index
+                                    ? {
+                                        ...m,
+                                        discoverModels: e.target.checked
+                                          ? null
+                                          : false,
+                                      }
+                                    : m
+                                )
+                              )
+                            }
+                            onBlur={handleModelBlur}
+                          />
+                          {t('hermes.model.discoverModels')}
+                        </label>
+                        <label className="flex items-center gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={entry.promptCaching === true}
+                            onChange={e =>
+                              setEditingModels(prev =>
+                                prev.map((m, i) =>
+                                  i === index
+                                    ? {
+                                        ...m,
+                                        promptCaching: e.target.checked
+                                          ? true
+                                          : null,
+                                      }
+                                    : m
+                                )
+                              )
+                            }
+                            onBlur={handleModelBlur}
+                          />
+                          {t('hermes.model.promptCaching')}
+                        </label>
+                        <label className="flex items-center gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={entry.answerInReasoning === true}
+                            onChange={e =>
+                              setEditingModels(prev =>
+                                prev.map((m, i) =>
+                                  i === index
+                                    ? {
+                                        ...m,
+                                        answerInReasoning: e.target.checked
+                                          ? true
+                                          : null,
+                                      }
+                                    : m
+                                )
+                              )
+                            }
+                            onBlur={handleModelBlur}
+                          />
+                          {t('hermes.model.answerInReasoning')}
+                        </label>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">
+                          {t('hermes.model.extraHeaders')}
+                        </Label>
+                        <textarea
+                          className="min-h-16 w-full rounded-md border bg-transparent px-3 py-2 font-mono text-sm"
+                          value={headerDraftFor(index, entry)}
+                          onChange={e => {
+                            const text = e.target.value
+                            setHeaderDrafts(prev => ({
+                              ...prev,
+                              [index]: text,
+                            }))
+                            setEditingModels(prev =>
+                              prev.map((m, i) =>
+                                i === index
+                                  ? {
+                                      ...m,
+                                      extraHeaders: parseKeyValueLines(text),
+                                    }
+                                  : m
+                              )
+                            )
+                          }}
+                          onBlur={handleModelBlur}
+                          placeholder="CF-Access-Client-Id=client"
+                        />
+                      </div>
+                    </div>
+                  </details>
                 </div>
               ))}
             </div>

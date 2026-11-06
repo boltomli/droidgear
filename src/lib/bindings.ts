@@ -1167,6 +1167,17 @@ async readHermesCurrentConfig() : Promise<Result<HermesCurrentConfig, string>> {
 }
 },
 /**
+ * Build the model entry for a Hermes channel import (no write).
+ */
+async prepareHermesChannelImport(input: HermesChannelImportInput) : Promise<Result<HermesChannelImportResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("prepare_hermes_channel_import", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * List all Pi profiles
  */
 async listPiProfiles() : Promise<Result<PiProfile[], string>> {
@@ -2667,9 +2678,17 @@ export type CodexProfile = { id: string; name: string; description?: string | nu
  */
 authProfileName?: string | null; apiKeyModelDiscovery?: boolean }
 /**
+ * Codex 提供者能力（对应 [model_providers.<id>.capabilities]）。
+ */
+export type CodexProviderCapabilities = { externalWebAccess?: boolean | null; remoteCompaction?: string | null }
+/**
+ * Codex 命令式 Bearer Token（对应 [model_providers.<id>.auth]）。
+ */
+export type CodexProviderAuth = { command?: string | null; args?: string[] | null; timeoutMs?: number | null; refreshIntervalMs?: number | null; cwd?: string | null }
+/**
  * Codex Provider 配置（对应 config.toml 中的 [model_providers.<id>]）
  */
-export type CodexProviderConfig = { name?: string | null; baseUrl?: string | null; wireApi?: string | null; requiresOpenaiAuth?: boolean | null; envKey?: string | null; envKeyInstructions?: string | null; httpHeaders?: Partial<{ [key in string]: string }> | null; queryParams?: Partial<{ [key in string]: string }> | null; model?: string | null; modelReasoningEffort?: string | null; 
+export type CodexProviderConfig = { name?: string | null; baseUrl?: string | null; wireApi?: string | null; requiresOpenaiAuth?: boolean | null; envKey?: string | null; envKeyInstructions?: string | null; httpHeaders?: Partial<{ [key in string]: string }> | null; envHttpHeaders?: Partial<{ [key in string]: string }> | null; queryParams?: Partial<{ [key in string]: string }> | null; modelCatalogUrl?: string | null; capabilities?: CodexProviderCapabilities | null; requestMaxRetries?: number | null; streamMaxRetries?: number | null; streamIdleTimeoutMs?: number | null; supportsWebSockets?: boolean | null; supportsStandaloneWebSearch?: boolean | null; auth?: CodexProviderAuth | null; model?: string | null; modelReasoningEffort?: string | null; 
 /**
  * DroidGear-only: written to config.toml top-level
  * `model_context_window` while this provider is active.
@@ -3094,6 +3113,38 @@ baseUrl?: string | null;
  */
 apiKey?: string | null; 
 /**
+ * 每 Provider 请求选项：附加 HTTP 头（写入 `providers.<name>.extra_headers`）。
+ */
+extraHeaders?: Partial<{ [key in string]: string }> | null; 
+/**
+ * 会话亲和 Header 名（`providers.<name>.session_affinity_header`）。
+ */
+sessionAffinityHeader?: string | null; 
+/**
+ * 是否自动探测模型（`providers.<name>.discover_models`）。
+ */
+discoverModels?: boolean | null; 
+/**
+ * 传输协议（`providers.<name>.transport`，如 openai_chat / anthropic_messages）。
+ */
+transport?: string | null; 
+/**
+ * Provider 能力开关（`providers.<name>.capabilities`）。
+ */
+capabilities?: Partial<{ [key in string]: JsonValue }> | null; 
+/**
+ * 单模型上下文长度（`providers.<name>.models.<id>.context_length`）。
+ */
+contextLength?: number | null; 
+/**
+ * 单模型 Prompt 缓存开关（`providers.<name>.models.<id>.prompt_caching`）。
+ */
+promptCaching?: boolean | null; 
+/**
+ * 单模型把 reasoning 字段当答案（`providers.<name>.models.<id>.answer_in_reasoning`）。
+ */
+answerInReasoning?: boolean | null; 
+/**
  * 是否为默认配置（apply 时写入 `model.default` + `model.provider`）。
  */
 isDefault: boolean }
@@ -3113,6 +3164,11 @@ models: HermesModelConfig[];
  * 选项：none, minimal, low, medium, high, xhigh, max, ultra
  */
 reasoningEffort?: string | null }
+/**
+ * 渠道导入的 Hermes 输入（服务端推断 base URL / provider / 名称）。
+ */
+export type HermesChannelImportInput = { channelName: string; channelType: string; baseUrl: string; apiKey: string; tokenName?: string; defaultModel?: string }
+export type HermesChannelImportResult = { baseUrl: string; apiKey: string; provider: string; name: string; defaultModel?: string | null }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 /**
  * MCP server entry with name
@@ -3224,7 +3280,15 @@ export type OmpProfile = { id: string; name: string; description?: string | null
 /**
  * Model role assignments (what gets written to config.yml on apply).
  */
-modelRoles?: OmpModelRoles }
+modelRoles?: OmpModelRoles; 
+/**
+ * 默认思考级别（config.yml `defaultThinkingLevel`）；空串清除，null 保持不变。
+ */
+defaultThinkingLevel?: string | null; 
+/**
+ * 模型预设（config.yml `modelPresets`）。
+ */
+modelPresets?: Partial<{ [key in string]: JsonValue }> | null }
 /**
  * A provider's cached model list from `models.db`.
  */

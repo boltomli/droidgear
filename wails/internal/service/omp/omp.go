@@ -186,6 +186,13 @@ type OmpProfile struct {
 	CreatedAt   string        `json:"createdAt"`
 	UpdatedAt   string        `json:"updatedAt"`
 	ModelRoles  OmpModelRoles `json:"modelRoles"`
+	// DefaultThinkingLevel is the fallback thinking level written to
+	// config.yml. An empty string clears the key; nil leaves the live value
+	// untouched (older profiles predate the field).
+	DefaultThinkingLevel *string `json:"defaultThinkingLevel,omitempty"`
+	// ModelPresets mirrors config.yml `modelPresets` (a named snapshot of
+	// every role assignment plus its thinking level).
+	ModelPresets map[string]any `json:"modelPresets,omitempty"`
 }
 
 // OmpProviderTestResult mirrors omp::OmpProviderTestResult.
@@ -1016,6 +1023,17 @@ func ApplyProfile(id string) error {
 	}
 	roles := mergeOmpModelRoles(config.ModelRoles, profile.ModelRoles)
 	config.ModelRoles = &roles
+	if profile.DefaultThinkingLevel != nil {
+		if strings.TrimSpace(*profile.DefaultThinkingLevel) == "" {
+			config.DefaultThinkingLevel = nil
+		} else {
+			value := strings.TrimSpace(*profile.DefaultThinkingLevel)
+			config.DefaultThinkingLevel = &value
+		}
+	}
+	if profile.ModelPresets != nil {
+		config.ModelPresets = profile.ModelPresets
+	}
 	if err := writeConfigYML(config); err != nil {
 		return err
 	}

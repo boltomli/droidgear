@@ -135,6 +135,10 @@ const COMMANDS: Record<string, CommandSpec> = {
   apply_hermes_profile: { fn: 'ApplyHermesProfile', args: ['id'] },
   get_hermes_config_status: { fn: 'GetHermesConfigStatus', args: [] },
   read_hermes_current_config: { fn: 'ReadHermesCurrentConfig', args: [] },
+  prepare_hermes_channel_import: {
+    fn: 'PrepareHermesChannelImport',
+    args: ['input'],
+  },
 
   // OMP
   list_omp_profiles: { fn: 'ListOmpProfiles', args: [] },

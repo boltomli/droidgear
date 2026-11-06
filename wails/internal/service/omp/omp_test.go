@@ -175,3 +175,63 @@ func TestDeleteCustomProviderKeepsFileNullFree(t *testing.T) {
 		t.Fatalf("delete rewrite reintroduced nulls:\n%s", written)
 	}
 }
+
+// TestApplyProfileWritesThinkingLevelAndPresets covers the remaining
+// config.yml fields: defaultThinkingLevel and modelPresets.
+func TestApplyProfileWritesThinkingLevelAndPresets(t *testing.T) {
+	sandbox(t)
+	level := "medium"
+	if err := writeConfigYML(OmpAgentConfig{DefaultThinkingLevel: &level}); err != nil {
+		t.Fatalf("writeConfigYML: %v", err)
+	}
+	profile := OmpProfile{
+		ID: "p1", Name: "P1", CreatedAt: "now", UpdatedAt: "now",
+		ModelRoles:           OmpModelRoles{Default: strPtr("prov/default")},
+		DefaultThinkingLevel: strPtr("high"),
+		ModelPresets: map[string]any{
+			"deep": map[string]any{"defaultThinkingLevel": "high"},
+		},
+	}
+	if err := SaveProfile(profile); err != nil {
+		t.Fatalf("SaveProfile: %v", err)
+	}
+	if err := ApplyProfile("p1"); err != nil {
+		t.Fatalf("ApplyProfile: %v", err)
+	}
+	config, err := readConfigYML()
+	if err != nil {
+		t.Fatalf("readConfigYML: %v", err)
+	}
+	if config.DefaultThinkingLevel == nil || *config.DefaultThinkingLevel != "high" {
+		t.Errorf("defaultThinkingLevel = %v", config.DefaultThinkingLevel)
+	}
+	if _, ok := config.ModelPresets["deep"]; !ok {
+		t.Errorf("modelPresets = %v", config.ModelPresets)
+	}
+
+	// A nil field leaves the live value untouched; an empty string clears it.
+	profile.DefaultThinkingLevel = nil
+	profile.ModelPresets = nil
+	if err := SaveProfile(profile); err != nil {
+		t.Fatalf("SaveProfile: %v", err)
+	}
+	if err := ApplyProfile("p1"); err != nil {
+		t.Fatalf("ApplyProfile: %v", err)
+	}
+	config, _ = readConfigYML()
+	if config.DefaultThinkingLevel == nil || *config.DefaultThinkingLevel != "high" {
+		t.Errorf("nil should keep the live level, got %v", config.DefaultThinkingLevel)
+	}
+	empty := ""
+	profile.DefaultThinkingLevel = &empty
+	if err := SaveProfile(profile); err != nil {
+		t.Fatalf("SaveProfile: %v", err)
+	}
+	if err := ApplyProfile("p1"); err != nil {
+		t.Fatalf("ApplyProfile: %v", err)
+	}
+	config, _ = readConfigYML()
+	if config.DefaultThinkingLevel != nil {
+		t.Errorf("empty string should clear the level, got %v", config.DefaultThinkingLevel)
+	}
+}

@@ -700,15 +700,17 @@ func presentOr(exists bool) string {
 
 func (c *cli) hermes(args []string) error {
 	if len(args) == 0 {
-		return c.usage("hermes needs a subcommand: profiles | status")
+		return c.usage("hermes needs a subcommand: profiles | providers | status")
 	}
 	switch args[0] {
 	case "profiles":
 		return c.hermesProfiles(args[1:])
+	case "providers":
+		return c.hermesProviders(args[1:])
 	case "status":
 		return c.hermesStatus(args[1:])
 	default:
-		return c.usage("unknown hermes subcommand %q (want profiles | status)", args[0])
+		return c.usage("unknown hermes subcommand %q (want profiles | providers | status)", args[0])
 	}
 }
 

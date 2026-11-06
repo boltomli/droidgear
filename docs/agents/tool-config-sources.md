@@ -22,14 +22,11 @@ Last full pass: **2026-11-06** (codex / pi / hermes / omp).
 These are intentionally not implemented yet. They are additive fields, so the
 current build preserves them (lossless apply) but cannot edit them:
 
-- **Codex**: command-backed provider auth (`model_providers.<id>.auth`), retry /
-  websocket / capabilities toggles, provider-level `model_catalog_url`.
-- **Hermes**: per-provider request knobs and per-model capabilities; `model.api_mode`.
-- **OMP**: role presets (`modelPresets`) and `defaultThinkingLevel` are read and
-  preserved but have no editor; `imageInputDecoder` / `omitMaxOutputTokens` /
-  `preferWebsockets` are model fields with no input in the provider dialog.
+- **Hermes**: `model.api_mode` / `model.streaming` are not surfaced.
 - **Pi**: per-model `inputLimits` / `samplingParams*` / `promptCache` are typed
   and preserved but have no dedicated editor.
+- **Codex**: `model_auto_compact_token_limit_scope` and
+  `model_post_turn_compact_threshold_percent` are top-level keys with no editor.
 
 ## Channel import (shared inference)
 

@@ -119,3 +119,55 @@ func TestOmpProvidersImport(t *testing.T) {
 		}
 	}
 }
+
+func TestHermesProvidersImportAndDelete(t *testing.T) {
+	home := sandbox(t)
+	seedApiKeyChannel(t, home)
+
+	code, out, errOut := runCLI(t, "--json", "hermes", "providers", "import",
+		"--channel", "c1", "--model", "claude-opus-5-5")
+	if code != 0 {
+		t.Fatalf("exit = %d, stderr = %s", code, errOut)
+	}
+	receipt := decode(t, out)
+	if receipt["name"] != "My Chan" {
+		t.Errorf("name = %v", receipt["name"])
+	}
+	if strings.Contains(out, "sk-test") {
+		t.Errorf("receipt leaked the API key: %s", out)
+	}
+	path := filepath.Join(home, ".hermes", "config.yaml")
+	data, err := os.ReadFile(path) // #nosec G304 -- isolated test path
+	if err != nil {
+		t.Fatalf("read config.yaml: %v", err)
+	}
+	for _, want := range []string{"providers:", "My Chan:", "api: https://api.example.com/v1", "custom:My Chan"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("config.yaml missing %q:\n%s", want, data)
+		}
+	}
+
+	// The imported provider is active, so deleting it is refused.
+	code, _, errOut = runCLI(t, "hermes", "providers", "delete", "My Chan")
+	if code == 0 {
+		t.Fatalf("deleting the active provider should fail, stderr=%s", errOut)
+	}
+
+	// Import a second provider under a custom name, then delete the first.
+	code, _, errOut = runCLI(t, "--json", "hermes", "providers", "import",
+		"--channel", "c1", "--model", "deepseek-v4.1-flash", "--name", "spare")
+	if code != 0 {
+		t.Fatalf("second import exit = %d, stderr = %s", code, errOut)
+	}
+	code, out, errOut = runCLI(t, "--json", "hermes", "providers", "list")
+	if code != 0 {
+		t.Fatalf("list exit = %d, stderr = %s", code, errOut)
+	}
+	if strings.Contains(out, "sk-test") {
+		t.Errorf("list leaked the API key: %s", out)
+	}
+	code, _, errOut = runCLI(t, "hermes", "providers", "delete", "My Chan")
+	if code != 0 {
+		t.Fatalf("delete exit = %d, stderr = %s", code, errOut)
+	}
+}

@@ -40,6 +40,7 @@ import { ProviderCard } from './ProviderCard'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ChannelModelPickerDialog } from '@/components/channels/ChannelModelPickerDialog'
 import type {
+  JsonValue,
   OmpCustomModel,
   OmpCustomProvider,
   OmpCustomProviderEntry,
@@ -129,6 +130,7 @@ function OmpProviderEditor({
   const [api, setApi] = useState(entry?.config.api ?? 'openai-completions')
   const [apiKey, setApiKey] = useState(entry?.config.apiKey ?? '')
   const [auth, setAuth] = useState(entry?.config.auth ?? 'apiKey')
+  const [transport, setTransport] = useState(entry?.config.transport ?? '')
   const [models, setModels] = useState<OmpCustomModel[]>(
     entry?.config.models ?? []
   )
@@ -192,6 +194,7 @@ function OmpProviderEditor({
       api: api || undefined,
       apiKey: apiKey.trim() || undefined,
       auth: auth || undefined,
+      transport: transport.trim() || undefined,
       models: models.filter(model => model.id.trim()),
     })
     onOpenChange(false)
@@ -273,6 +276,14 @@ function OmpProviderEditor({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('omp.provider.transport')}</Label>
+              <Input
+                value={transport}
+                onChange={e => setTransport(e.target.value)}
+                placeholder="pi-native"
+              />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -424,6 +435,48 @@ function OmpProviderEditor({
                           }
                         />
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">
+                          {t('omp.provider.imageInputDecoder')}
+                        </Label>
+                        <Input
+                          className="w-28 h-8"
+                          value={model.imageInputDecoder ?? ''}
+                          onChange={e =>
+                            updateModel(index, {
+                              imageInputDecoder: e.target.value || undefined,
+                            })
+                          }
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={model.omitMaxOutputTokens === true}
+                          onChange={e =>
+                            updateModel(index, {
+                              omitMaxOutputTokens: e.target.checked
+                                ? true
+                                : undefined,
+                            })
+                          }
+                        />
+                        {t('omp.provider.omitMaxOutputTokens')}
+                      </label>
+                      <label className="flex items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={model.preferWebsockets === true}
+                          onChange={e =>
+                            updateModel(index, {
+                              preferWebsockets: e.target.checked
+                                ? true
+                                : undefined,
+                            })
+                          }
+                        />
+                        {t('omp.provider.preferWebsockets')}
+                      </label>
                     </div>
                   </div>
                 ))}
@@ -570,6 +623,36 @@ export function OmpConfigPage() {
     }
   }
 
+  // Presets are a JSON document; keep a per-profile draft so typing is not
+  // re-serialised on every keystroke and switching profiles shows that
+  // profile's saved text.
+  const [presetsDrafts, setPresetsDrafts] = useState<Record<string, string>>({})
+  const presetsDraft = currentProfile
+    ? (presetsDrafts[currentProfile.id] ??
+      (currentProfile.modelPresets
+        ? JSON.stringify(currentProfile.modelPresets, null, 2)
+        : ''))
+    : ''
+  const setPresetsDraft = (text: string) => {
+    if (!currentProfile) return
+    setPresetsDrafts(previous => ({ ...previous, [currentProfile.id]: text }))
+  }
+
+  const commitPresets = async () => {
+    if (!currentProfile) return
+    const text = presetsDraft.trim()
+    if (!text) {
+      await updateCurrentProfile({ modelPresets: null })
+      return
+    }
+    try {
+      const parsed = JSON.parse(text) as Record<string, JsonValue>
+      await updateCurrentProfile({ modelPresets: parsed })
+    } catch {
+      toast.error(t('omp.modelRoles.invalidPresets'))
+    }
+  }
+
   const updateCurrentProfile = async (patch: Partial<OmpProfile>) => {
     const store = useOmpStore.getState()
     if (!store.currentProfile) return
@@ -587,6 +670,8 @@ export function OmpConfigPage() {
     if (latest?.agentConfig?.modelRoles) {
       await updateCurrentProfile({
         modelRoles: latest.agentConfig.modelRoles,
+        defaultThinkingLevel: latest.agentConfig.defaultThinkingLevel ?? null,
+        modelPresets: latest.agentConfig.modelPresets ?? null,
       })
       toast.success(t('omp.actions.loadedFromLive'))
     } else {
@@ -748,6 +833,36 @@ export function OmpConfigPage() {
                   />
                 </div>
               ))}
+              <div className="flex items-center gap-2">
+                <Label className="w-24 shrink-0 text-sm">
+                  {t('omp.modelRoles.defaultThinkingLevel')}
+                </Label>
+                <Input
+                  value={currentProfile.defaultThinkingLevel ?? ''}
+                  onChange={e =>
+                    updateCurrentProfile({
+                      defaultThinkingLevel: e.target.value,
+                    })
+                  }
+                  placeholder="high"
+                  className="flex-1 font-mono text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">{t('omp.modelRoles.presets')}</Label>
+                <textarea
+                  className="min-h-32 w-full rounded-md border bg-transparent px-3 py-2 font-mono text-xs"
+                  value={presetsDraft}
+                  onChange={e => setPresetsDraft(e.target.value)}
+                  onBlur={commitPresets}
+                  placeholder={
+                    '{\n  "deep": { "defaultThinkingLevel": "high" }\n}'
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('omp.modelRoles.presetsHint')}
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}

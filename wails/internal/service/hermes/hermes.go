@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"droidgear-wails/internal/core"
@@ -26,6 +27,16 @@ type HermesModelConfig struct {
 	BaseURL   *string `json:"baseUrl"`
 	APIKey    *string `json:"apiKey"`
 	IsDefault bool    `json:"isDefault"`
+	// Per-provider request options from the v12 `providers.<name>` entry.
+	ExtraHeaders          map[string]string `json:"extraHeaders,omitempty"`
+	SessionAffinityHeader *string           `json:"sessionAffinityHeader,omitempty"`
+	DiscoverModels        *bool             `json:"discoverModels,omitempty"`
+	Transport             *string           `json:"transport,omitempty"`
+	Capabilities          map[string]any    `json:"capabilities,omitempty"`
+	// Per-model capabilities from `providers.<name>.models.<id>`.
+	ContextLength     *uint32 `json:"contextLength,omitempty"`
+	PromptCaching     *bool   `json:"promptCaching,omitempty"`
+	AnswerInReasoning *bool   `json:"answerInReasoning,omitempty"`
 }
 
 // HermesProfile mirrors hermes::HermesProfile.
@@ -395,6 +406,42 @@ func upsertHermesProviderEntry(root *yaml.Node, name string, entry HermesModelCo
 	if model := nonEmpty(entry.Default); model != "" {
 		core.MappingSet(target, "default_model", core.StringScalar(model))
 	}
+	if len(entry.ExtraHeaders) > 0 {
+		node, err := hermesJSONNode(entry.ExtraHeaders)
+		if err != nil {
+			return err
+		}
+		core.MappingSet(target, "extra_headers", node)
+	}
+	if entry.SessionAffinityHeader != nil {
+		if value := nonEmpty(entry.SessionAffinityHeader); value != "" {
+			core.MappingSet(target, "session_affinity_header", core.StringScalar(value))
+		} else {
+			core.MappingRemove(target, "session_affinity_header")
+		}
+	}
+	if entry.DiscoverModels != nil {
+		core.MappingSet(target, "discover_models", hermesBoolScalar(*entry.DiscoverModels))
+	}
+	if entry.Transport != nil {
+		if value := nonEmpty(entry.Transport); value != "" {
+			core.MappingSet(target, "transport", core.StringScalar(value))
+		} else {
+			core.MappingRemove(target, "transport")
+		}
+	}
+	if len(entry.Capabilities) > 0 {
+		node, err := hermesJSONNode(entry.Capabilities)
+		if err != nil {
+			return err
+		}
+		core.MappingSet(target, "capabilities", node)
+	}
+	if entry.ContextLength != nil || entry.PromptCaching != nil || entry.AnswerInReasoning != nil {
+		if err := upsertHermesModelOptions(target, nonEmpty(entry.Default), entry); err != nil {
+			return err
+		}
+	}
 
 	if list := core.MappingGetSeq(root, "custom_providers"); list != nil {
 		kept := list.Content[:0]
@@ -411,6 +458,160 @@ func upsertHermesProviderEntry(root *yaml.Node, name string, entry HermesModelCo
 		}
 	}
 	return nil
+}
+
+// hermesBoolScalar / hermesIntScalar build typed YAML scalars (core only
+// exposes StringScalar, and a plain Value without a tag round-trips as a
+// string).
+func hermesBoolScalar(value bool) *yaml.Node {
+	return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: strconv.FormatBool(value)}
+}
+
+func hermesIntScalar(value int64) *yaml.Node {
+	return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!int", Value: strconv.FormatInt(value, 10)}
+}
+
+// hermesJSONNode converts a Go value into a YAML node (through JSON so the
+// same encoding rules apply to maps, slices and scalars).
+func hermesJSONNode(value any) (*yaml.Node, error) {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to serialize YAML value: %w", err)
+	}
+	node, err := core.JSONToNode(raw)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to serialize YAML value: %w", err)
+	}
+	return node, nil
+}
+
+// upsertHermesModelOptions writes `providers.<name>.models.<id>` options.
+// A legacy sequence of model ids is converted to a mapping so every id is
+// kept, and a nil option leaves the existing value untouched.
+func upsertHermesModelOptions(provider *yaml.Node, modelID string, entry HermesModelConfig) error {
+	if modelID == "" {
+		return errors.New("per-model options need a default model id")
+	}
+	models := core.MappingGetMap(provider, "models")
+	if existing := core.MappingGet(provider, "models"); existing != nil && models == nil {
+		// Legacy list form: carry the ids over into a mapping.
+		if !core.IsSequence(existing) {
+			return errors.New("providers models must be a list or a mapping")
+		}
+		models = &yaml.Node{Kind: yaml.MappingNode}
+		for _, item := range existing.Content {
+			if item.Kind != yaml.ScalarNode || strings.TrimSpace(item.Value) == "" {
+				continue
+			}
+			core.MappingSet(models, item.Value, &yaml.Node{Kind: yaml.MappingNode})
+		}
+		core.MappingSet(provider, "models", models)
+	}
+	if models == nil {
+		models = &yaml.Node{Kind: yaml.MappingNode}
+		core.MappingSet(provider, "models", models)
+	}
+	target := core.MappingGetMap(models, modelID)
+	if target == nil {
+		if existing := core.MappingGet(models, modelID); existing != nil {
+			return errors.New("provider model entry must be a YAML mapping")
+		}
+		target = &yaml.Node{Kind: yaml.MappingNode}
+		core.MappingSet(models, modelID, target)
+	}
+	if entry.ContextLength != nil {
+		core.MappingSet(target, "context_length", hermesIntScalar(int64(*entry.ContextLength)))
+	}
+	if entry.PromptCaching != nil {
+		core.MappingSet(target, "prompt_caching", hermesBoolScalar(*entry.PromptCaching))
+	}
+	if entry.AnswerInReasoning != nil {
+		core.MappingSet(target, "answer_in_reasoning", hermesBoolScalar(*entry.AnswerInReasoning))
+	}
+	return nil
+}
+
+// hermesReadProviderOptions copies the v12 per-provider request knobs and
+// the per-model capabilities into the editable model entry.
+func hermesReadProviderOptions(item *yaml.Node, entry *HermesModelConfig) {
+	if headers := core.MappingGetMap(item, "extra_headers"); headers != nil {
+		extra := map[string]string{}
+		for i := 0; i+1 < len(headers.Content); i += 2 {
+			key := headers.Content[i]
+			value := headers.Content[i+1]
+			if key.Kind == yaml.ScalarNode && value.Kind == yaml.ScalarNode {
+				extra[key.Value] = value.Value
+			}
+		}
+		if len(extra) > 0 {
+			entry.ExtraHeaders = extra
+		}
+	}
+	if value := hermesNodeString(item, "session_affinity_header"); value != "" {
+		entry.SessionAffinityHeader = &value
+	}
+	if flag, ok := hermesNodeBool(item, "discover_models"); ok {
+		entry.DiscoverModels = &flag
+	}
+	if value := hermesNodeString(item, "transport"); value != "" {
+		entry.Transport = &value
+	}
+	if caps := core.MappingGet(item, "capabilities"); caps != nil {
+		raw, err := core.NodeToJSON(caps)
+		if err == nil {
+			var capabilities map[string]any
+			if json.Unmarshal(raw, &capabilities) == nil && len(capabilities) > 0 {
+				entry.Capabilities = capabilities
+			}
+		}
+	}
+	if modelID := nonEmpty(entry.Default); modelID != "" {
+		if models := core.MappingGetMap(item, "models"); models != nil {
+			if model := core.MappingGetMap(models, modelID); model != nil {
+				if length, ok := hermesNodeUint32(model, "context_length"); ok {
+					entry.ContextLength = &length
+				}
+				if flag, ok := hermesNodeBool(model, "prompt_caching"); ok {
+					entry.PromptCaching = &flag
+				}
+				if flag, ok := hermesNodeBool(model, "answer_in_reasoning"); ok {
+					entry.AnswerInReasoning = &flag
+				}
+			}
+		}
+	}
+}
+
+func hermesNodeString(node *yaml.Node, key string) string {
+	child := core.MappingGet(node, key)
+	if child != nil && child.Kind == yaml.ScalarNode {
+		return strings.TrimSpace(child.Value)
+	}
+	return ""
+}
+
+func hermesNodeBool(node *yaml.Node, key string) (bool, bool) {
+	child := core.MappingGet(node, key)
+	if child == nil || child.Kind != yaml.ScalarNode {
+		return false, false
+	}
+	value, err := strconv.ParseBool(strings.TrimSpace(child.Value))
+	if err != nil {
+		return false, false
+	}
+	return value, true
+}
+
+func hermesNodeUint32(node *yaml.Node, key string) (uint32, bool) {
+	child := core.MappingGet(node, key)
+	if child == nil || child.Kind != yaml.ScalarNode {
+		return 0, false
+	}
+	value, err := strconv.ParseUint(strings.TrimSpace(child.Value), 10, 32)
+	if err != nil {
+		return 0, false
+	}
+	return uint32(value), true
 }
 
 // applyHermesProfileToConfig applies a profile to config.yaml using a
@@ -591,13 +792,15 @@ func ReadCurrentConfig() (HermesCurrentConfig, error) {
 			if def == "" {
 				def = core.MappingGetString(item, "model") // legacy field name
 			}
-			models = append(models, HermesModelConfig{
+			entry := HermesModelConfig{
 				Name:      ptrIfSet(name),
 				Default:   ptrIfSet(def),
 				BaseURL:   ptrIfSet(baseURL),
 				APIKey:    ptrIfSet(core.MappingGetString(item, "api_key")),
 				IsDefault: false,
-			})
+			}
+			hermesReadProviderOptions(item, &entry)
+			models = append(models, entry)
 			seen[name] = true
 		}
 	}

@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,19 +36,44 @@ import (
 // CodexProviderConfig mirrors codex::CodexProviderConfig — one entry of the
 // `[model_providers.<id>]` table in config.toml.
 type CodexProviderConfig struct {
-	Name                       *string           `json:"name,omitempty"`
-	BaseURL                    *string           `json:"baseUrl,omitempty"`
-	WireAPI                    *string           `json:"wireApi,omitempty"`
-	RequiresOpenaiAuth         *bool             `json:"requiresOpenaiAuth,omitempty"`
-	EnvKey                     *string           `json:"envKey,omitempty"`
-	EnvKeyInstructions         *string           `json:"envKeyInstructions,omitempty"`
-	HTTPHeaders                map[string]string `json:"httpHeaders,omitempty"`
-	QueryParams                map[string]string `json:"queryParams,omitempty"`
-	Model                      *string           `json:"model,omitempty"`
-	ModelReasoningEffort       *string           `json:"modelReasoningEffort,omitempty"`
-	ModelContextWindow         *uint32           `json:"modelContextWindow,omitempty"`
-	ModelAutoCompactTokenLimit *uint32           `json:"modelAutoCompactTokenLimit,omitempty"`
-	APIKey                     *string           `json:"apiKey,omitempty"`
+	Name                        *string                    `json:"name,omitempty"`
+	BaseURL                     *string                    `json:"baseUrl,omitempty"`
+	WireAPI                     *string                    `json:"wireApi,omitempty"`
+	RequiresOpenaiAuth          *bool                      `json:"requiresOpenaiAuth,omitempty"`
+	EnvKey                      *string                    `json:"envKey,omitempty"`
+	EnvKeyInstructions          *string                    `json:"envKeyInstructions,omitempty"`
+	HTTPHeaders                 map[string]string          `json:"httpHeaders,omitempty"`
+	EnvHTTPHeaders              map[string]string          `json:"envHttpHeaders,omitempty"`
+	QueryParams                 map[string]string          `json:"queryParams,omitempty"`
+	ModelCatalogURL             *string                    `json:"modelCatalogUrl,omitempty"`
+	Capabilities                *CodexProviderCapabilities `json:"capabilities,omitempty"`
+	RequestMaxRetries           *uint32                    `json:"requestMaxRetries,omitempty"`
+	StreamMaxRetries            *uint32                    `json:"streamMaxRetries,omitempty"`
+	StreamIdleTimeoutMS         *uint32                    `json:"streamIdleTimeoutMs,omitempty"`
+	SupportsWebSockets          *bool                      `json:"supportsWebSockets,omitempty"`
+	SupportsStandaloneWebSearch *bool                      `json:"supportsStandaloneWebSearch,omitempty"`
+	Auth                        *CodexProviderAuth         `json:"auth,omitempty"`
+	Model                       *string                    `json:"model,omitempty"`
+	ModelReasoningEffort        *string                    `json:"modelReasoningEffort,omitempty"`
+	ModelContextWindow          *uint32                    `json:"modelContextWindow,omitempty"`
+	ModelAutoCompactTokenLimit  *uint32                    `json:"modelAutoCompactTokenLimit,omitempty"`
+	APIKey                      *string                    `json:"apiKey,omitempty"`
+}
+
+// CodexProviderCapabilities mirrors `[model_providers.<id>.capabilities]`.
+type CodexProviderCapabilities struct {
+	ExternalWebAccess *bool   `json:"externalWebAccess,omitempty"`
+	RemoteCompaction  *string `json:"remoteCompaction,omitempty"`
+}
+
+// CodexProviderAuth mirrors `[model_providers.<id>.auth]` (command-backed
+// bearer tokens; mutually exclusive with env_key / api key).
+type CodexProviderAuth struct {
+	Command           *string  `json:"command,omitempty"`
+	Args              []string `json:"args,omitempty"`
+	TimeoutMS         *uint32  `json:"timeoutMs,omitempty"`
+	RefreshIntervalMS *uint32  `json:"refreshIntervalMs,omitempty"`
+	Cwd               *string  `json:"cwd,omitempty"`
 }
 
 // CodexProfile mirrors codex::CodexProfile (stored as JSON under
@@ -409,7 +435,110 @@ func codexProviderToTOML(id string, config CodexProviderConfig) map[string]any {
 		}
 		table["query_params"] = params
 	}
+	if config.EnvHTTPHeaders != nil {
+		table["env_http_headers"] = codexAnyMap(config.EnvHTTPHeaders)
+	}
+	if config.ModelCatalogURL != nil && strings.TrimSpace(*config.ModelCatalogURL) != "" {
+		table["model_catalog_url"] = *config.ModelCatalogURL
+	}
+	if config.Capabilities != nil {
+		capabilities := map[string]any{}
+		if config.Capabilities.ExternalWebAccess != nil {
+			capabilities["external_web_access"] = *config.Capabilities.ExternalWebAccess
+		}
+		if config.Capabilities.RemoteCompaction != nil && strings.TrimSpace(*config.Capabilities.RemoteCompaction) != "" {
+			capabilities["remote_compaction"] = *config.Capabilities.RemoteCompaction
+		}
+		if len(capabilities) > 0 {
+			table["capabilities"] = capabilities
+		}
+	}
+	if config.RequestMaxRetries != nil {
+		table["request_max_retries"] = int64(*config.RequestMaxRetries)
+	}
+	if config.StreamMaxRetries != nil {
+		table["stream_max_retries"] = int64(*config.StreamMaxRetries)
+	}
+	if config.StreamIdleTimeoutMS != nil {
+		table["stream_idle_timeout_ms"] = int64(*config.StreamIdleTimeoutMS)
+	}
+	if config.SupportsWebSockets != nil {
+		table["supports_websockets"] = *config.SupportsWebSockets
+	}
+	if config.SupportsStandaloneWebSearch != nil {
+		table["supports_standalone_web_search"] = *config.SupportsStandaloneWebSearch
+	}
+	// Command-backed auth is mutually exclusive with env_key and the inline
+	// bearer token (upstream: "Do not combine with env_key,
+	// experimental_bearer_token, or requires_openai_auth").
+	if bearer == "" && config.EnvKey == nil && config.Auth != nil && config.Auth.Command != nil {
+		auth := map[string]any{"command": *config.Auth.Command}
+		if len(config.Auth.Args) > 0 {
+			args := make([]any, 0, len(config.Auth.Args))
+			for _, arg := range config.Auth.Args {
+				args = append(args, arg)
+			}
+			auth["args"] = args
+		}
+		if config.Auth.TimeoutMS != nil {
+			auth["timeout_ms"] = int64(*config.Auth.TimeoutMS)
+		}
+		if config.Auth.RefreshIntervalMS != nil {
+			auth["refresh_interval_ms"] = int64(*config.Auth.RefreshIntervalMS)
+		}
+		if config.Auth.Cwd != nil && strings.TrimSpace(*config.Auth.Cwd) != "" {
+			auth["cwd"] = *config.Auth.Cwd
+		}
+		table["auth"] = auth
+	}
 	return table
+}
+
+// codexAnyMap converts a string map into the map[string]any shape the TOML
+// encoder expects.
+func codexAnyMap(values map[string]string) map[string]any {
+	out := make(map[string]any, len(values))
+	for key, value := range values {
+		out[key] = value
+	}
+	return out
+}
+
+// codexUint32 reads a positive TOML integer (go-toml decodes numbers as
+// int64, but tolerate float64 from hand-built tables).
+func codexUint32(value any) *uint32 {
+	switch typed := value.(type) {
+	case int64:
+		if typed >= 0 && typed <= math.MaxUint32 {
+			v := uint32(typed)
+			return &v
+		}
+	case int:
+		if typed >= 0 {
+			v := uint32(typed)
+			return &v
+		}
+	case float64:
+		if typed >= 0 && typed <= math.MaxUint32 {
+			v := uint32(typed)
+			return &v
+		}
+	}
+	return nil
+}
+
+func codexStringMap(value any) map[string]string {
+	raw, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+	out := make(map[string]string, len(raw))
+	for key, item := range raw {
+		if text, ok := item.(string); ok {
+			out[key] = text
+		}
+	}
+	return out
 }
 
 // codexMergeProviderTable copies keys the profile does not model (upstream
@@ -437,15 +566,24 @@ func codexMergeProviderTable(previous map[string]any, id string, table map[strin
 // `requires_openai_auth` is listed because it must never be written (it
 // conflicts with experimental_bearer_token), so a stale value is dropped.
 var codexManagedProviderKeys = map[string]bool{
-	"name":                      true,
-	"base_url":                  true,
-	"wire_api":                  true,
-	"experimental_bearer_token": true,
-	"env_key":                   true,
-	"env_key_instructions":      true,
-	"http_headers":              true,
-	"query_params":              true,
-	"requires_openai_auth":      true,
+	"name":                           true,
+	"base_url":                       true,
+	"wire_api":                       true,
+	"experimental_bearer_token":      true,
+	"env_key":                        true,
+	"env_key_instructions":           true,
+	"http_headers":                   true,
+	"env_http_headers":               true,
+	"query_params":                   true,
+	"model_catalog_url":              true,
+	"capabilities":                   true,
+	"request_max_retries":            true,
+	"stream_max_retries":             true,
+	"stream_idle_timeout_ms":         true,
+	"supports_websockets":            true,
+	"supports_standalone_web_search": true,
+	"auth":                           true,
+	"requires_openai_auth":           true,
 }
 
 // codexTOMLToProviderConfig parses one [model_providers.<id>] table back into
@@ -490,21 +628,66 @@ func codexTOMLToProviderConfig(value any) (CodexProviderConfig, bool) {
 	if b, ok := table["requires_openai_auth"].(bool); ok {
 		requiresOpenaiAuth = &b
 	}
+	var capabilities *CodexProviderCapabilities
+	if caps, ok := table["capabilities"].(map[string]any); ok {
+		capabilities = &CodexProviderCapabilities{}
+		if b, ok := caps["external_web_access"].(bool); ok {
+			capabilities.ExternalWebAccess = &b
+		}
+		if s, ok := caps["remote_compaction"].(string); ok {
+			capabilities.RemoteCompaction = &s
+		}
+	}
+	var supportsWebSockets, supportsStandaloneWebSearch *bool
+	if b, ok := table["supports_websockets"].(bool); ok {
+		supportsWebSockets = &b
+	}
+	if b, ok := table["supports_standalone_web_search"].(bool); ok {
+		supportsStandaloneWebSearch = &b
+	}
+	var auth *CodexProviderAuth
+	if raw, ok := table["auth"].(map[string]any); ok {
+		auth = &CodexProviderAuth{Command: strFrom(raw, "command"), TimeoutMS: codexUint32(raw["timeout_ms"]), RefreshIntervalMS: codexUint32(raw["refresh_interval_ms"]), Cwd: strFrom(raw, "cwd")}
+		if args, ok := raw["args"].([]any); ok {
+			for _, arg := range args {
+				if text, ok := arg.(string); ok {
+					auth.Args = append(auth.Args, text)
+				}
+			}
+		}
+	}
 	apiKey := codexPtr(bearer)
 	if bearer == "" {
 		apiKey = nil
 	}
 	return CodexProviderConfig{
-		Name:               str("name"),
-		BaseURL:            str("base_url"),
-		WireAPI:            str("wire_api"),
-		RequiresOpenaiAuth: requiresOpenaiAuth,
-		EnvKey:             str("env_key"),
-		EnvKeyInstructions: str("env_key_instructions"),
-		HTTPHeaders:        headers,
-		QueryParams:        params,
-		APIKey:             apiKey,
+		Name:                        str("name"),
+		BaseURL:                     str("base_url"),
+		WireAPI:                     str("wire_api"),
+		RequiresOpenaiAuth:          requiresOpenaiAuth,
+		EnvKey:                      str("env_key"),
+		EnvKeyInstructions:          str("env_key_instructions"),
+		HTTPHeaders:                 headers,
+		EnvHTTPHeaders:              codexStringMap(table["env_http_headers"]),
+		QueryParams:                 params,
+		ModelCatalogURL:             str("model_catalog_url"),
+		Capabilities:                capabilities,
+		RequestMaxRetries:           codexUint32(table["request_max_retries"]),
+		StreamMaxRetries:            codexUint32(table["stream_max_retries"]),
+		StreamIdleTimeoutMS:         codexUint32(table["stream_idle_timeout_ms"]),
+		SupportsWebSockets:          supportsWebSockets,
+		SupportsStandaloneWebSearch: supportsStandaloneWebSearch,
+		Auth:                        auth,
+		APIKey:                      apiKey,
 	}, true
+}
+
+// strFrom reads one string key out of a nested table.
+func strFrom(table map[string]any, key string) *string {
+	if s, ok := table[key].(string); ok {
+		return &s
+	}
+	return nil
 }
 
 // codexModelCatalog identifies a model family that ships a catalog file.

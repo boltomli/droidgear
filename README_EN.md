@@ -122,7 +122,8 @@ Configuration remains ordinary `~/.factory/mcp.json`: this preset stores a nonse
 
 - **Configuration Management** - Hermes Agent YAML profile management
 - **Reasoning Effort** - Set reasoning effort independently for each Hermes profile (none/minimal/low/medium/high/xhigh/max/ultra)
-- **Channel Import** - Import Hermes Agent configuration from channels
+- **Channel Import** - Import Hermes Agent configuration from channels (GUI, TUI `i`, and `dg hermes providers import` share one rule set: add `/v1`, write the v12 `providers` entry, and make it the default model)
+- **Provider Request Options** - Edit `extra_headers`, `session_affinity_header`, `discover_models`, `transport`, `capabilities`, plus per-model `context_length` / `prompt_caching` / `answer_in_reasoning`
 
 ### Pi Support
 

@@ -190,12 +190,16 @@ project_id = "my-project"
 	if custom["base_url"] != "https://api.example.com/v1" || custom["wire_api"] != "responses" {
 		t.Fatalf("provider fields: %+v", custom)
 	}
-	// Unknown upstream provider keys survive the apply.
-	if custom["request_max_retries"] != int64(7) || custom["supports_websockets"] != true || custom["future_provider_key"] != "keep" {
-		t.Fatalf("unknown provider keys lost: %+v", custom)
+	// Keys the profile now models are its desired state (cleared when the
+	// profile has no value); truly unknown keys survive.
+	if _, ok := custom["request_max_retries"]; ok {
+		t.Fatalf("stale managed key survived: %+v", custom)
 	}
-	if auth, ok := custom["auth"].(map[string]any); !ok || auth["command"] != "get-token" {
-		t.Fatalf("provider auth block lost: %+v", custom["auth"])
+	if _, ok := custom["auth"]; ok {
+		t.Fatalf("stale managed auth block survived: %+v", custom)
+	}
+	if custom["future_provider_key"] != "keep" {
+		t.Fatalf("unknown provider key lost: %+v", custom)
 	}
 	// Built-in providers configured outside DroidGear profiles are kept.
 	if gcp, ok := providers["gcp"].(map[string]any); !ok || gcp["project_id"] != "my-project" {
@@ -787,5 +791,73 @@ func TestCodexResolveWindowsProgramCandidates(t *testing.T) {
 	}
 	if got := codexResolveWindowsProgram(`sub\codex`); got != `sub\codex` {
 		t.Fatalf("relative path: %q", got)
+	}
+}
+
+// TestCodexProviderUpstreamFieldsRoundTrip covers the newer
+// `model_providers.<id>` keys (catalog URL, capabilities, retries, websockets,
+// env headers, command-backed auth).
+func TestCodexProviderUpstreamFieldsRoundTrip(t *testing.T) {
+	retries := uint32(7)
+	streamRetries := uint32(3)
+	idle := uint32(120000)
+	trueValue := true
+	compaction := "v2"
+	config := CodexProviderConfig{
+		Name:                        core.StrPtr("Upstream"),
+		BaseURL:                     core.StrPtr("https://api.example.com/v1"),
+		WireAPI:                     core.StrPtr("responses"),
+		ModelCatalogURL:             core.StrPtr("https://api.example.com/models.json"),
+		EnvHTTPHeaders:              map[string]string{"X-Org": "ORG_ID"},
+		RequestMaxRetries:           &retries,
+		StreamMaxRetries:            &streamRetries,
+		StreamIdleTimeoutMS:         &idle,
+		SupportsWebSockets:          &trueValue,
+		SupportsStandaloneWebSearch: &trueValue,
+		Capabilities: &CodexProviderCapabilities{
+			ExternalWebAccess: &trueValue,
+			RemoteCompaction:  &compaction,
+		},
+		Auth: &CodexProviderAuth{
+			Command:           core.StrPtr("get-token"),
+			Args:              []string{"--audience", "codex"},
+			TimeoutMS:         &idle,
+			RefreshIntervalMS: &idle,
+			Cwd:               core.StrPtr("/work"),
+		},
+	}
+	table := codexProviderToTOML("upstream", config)
+	parsed, ok := codexTOMLToProviderConfig(table)
+	if !ok {
+		t.Fatal("provider table did not parse")
+	}
+	if parsed.ModelCatalogURL == nil || *parsed.ModelCatalogURL != *config.ModelCatalogURL {
+		t.Errorf("model catalog URL = %v", parsed.ModelCatalogURL)
+	}
+	if parsed.EnvHTTPHeaders["X-Org"] != "ORG_ID" {
+		t.Errorf("env http headers = %v", parsed.EnvHTTPHeaders)
+	}
+	if parsed.RequestMaxRetries == nil || *parsed.RequestMaxRetries != retries {
+		t.Errorf("request retries = %v", parsed.RequestMaxRetries)
+	}
+	if parsed.StreamIdleTimeoutMS == nil || *parsed.StreamIdleTimeoutMS != idle {
+		t.Errorf("stream idle = %v", parsed.StreamIdleTimeoutMS)
+	}
+	if parsed.SupportsStandaloneWebSearch == nil || !*parsed.SupportsStandaloneWebSearch {
+		t.Errorf("standalone web search = %v", parsed.SupportsStandaloneWebSearch)
+	}
+	if parsed.Capabilities == nil || parsed.Capabilities.RemoteCompaction == nil || *parsed.Capabilities.RemoteCompaction != "v2" {
+		t.Errorf("capabilities = %+v", parsed.Capabilities)
+	}
+	if parsed.Auth == nil || parsed.Auth.Command == nil || *parsed.Auth.Command != "get-token" || len(parsed.Auth.Args) != 2 {
+		t.Errorf("auth = %+v", parsed.Auth)
+	}
+
+	// Command-backed auth must not be combined with an inline bearer token.
+	bearerConfig := config
+	bearerConfig.APIKey = core.StrPtr("sk-test")
+	bearerTable := codexProviderToTOML("upstream", bearerConfig)
+	if _, ok := bearerTable["auth"]; ok {
+		t.Error("auth written together with experimental_bearer_token")
 	}
 }

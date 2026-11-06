@@ -99,3 +99,32 @@ func containsSecret(raw []byte) bool {
 	value, _ := decoded["apiKey"].(string)
 	return value == "sk-test"
 }
+
+func TestHermesProvidersSourceImportsFromChannel(t *testing.T) {
+	home := testutil.IsolatedHome(t)
+	seedTuiChannel(t, home)
+
+	source := HermesProvidersSource()
+	actions := source.(InputActionSource).InputActions()
+	if len(actions) != 1 || actions[0].Key != "i" {
+		t.Fatalf("input actions = %+v", actions)
+	}
+	action := actions[0].Submit(context.Background(), ListRow{}, "c1 - gpt-5.2")
+	if err := action.run(); err != nil {
+		t.Fatalf("import failed: %v", err)
+	}
+	rows, err := source.Load(context.Background())
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(rows) != 1 || rows[0].ID != "My Chan" || rows[0].Mark != "* " {
+		t.Fatalf("rows = %+v", rows)
+	}
+	detail, err := source.Detail(context.Background(), rows[0].ID)
+	if err != nil {
+		t.Fatalf("Detail: %v", err)
+	}
+	if containsSecret(detail) {
+		t.Errorf("detail leaked the key: %s", detail)
+	}
+}

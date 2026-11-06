@@ -36,6 +36,7 @@ import {
   needsOpenAICompatibleV1,
 } from '@/lib/sub2api-platform'
 import { trimToNull } from '@/lib/utils'
+import { formatKeyValueLines, parseKeyValueLines } from '@/lib/key-value'
 import {
   clampEffortToSupported,
   getSupportedEfforts,
@@ -124,6 +125,23 @@ function toStoredEffort(effort: string): string {
   return effort === 'none' ? '' : effort
 }
 
+const formatHeaderLines = formatKeyValueLines
+const parseHeaderLines = parseKeyValueLines
+
+/** Optional non-negative integer from a text input. */
+function parseOptionalUint(text: string): number | null {
+  const trimmed = text.trim()
+  if (!trimmed) return null
+  const value = Number(trimmed)
+  return Number.isFinite(value) && value >= 0 ? Math.floor(value) : null
+}
+
+/** Optional string from a text input. */
+function trimToNullValue(text: string): string | null {
+  const trimmed = text.trim()
+  return trimmed ? trimmed : null
+}
+
 interface ProviderDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -174,6 +192,48 @@ function ProviderForm({
     return toStoredEffort(clampEffortToSupported(current, options))
   })
   const [apiKey, setApiKey] = useState(existingConfig?.apiKey ?? '')
+
+  // `[model_providers.<id>]` advanced keys (upstream config-reference).
+  const [advanced, setAdvanced] = useState(() => ({
+    modelCatalogUrl: existingConfig?.modelCatalogUrl ?? '',
+    envHttpHeaders: formatHeaderLines(existingConfig?.envHttpHeaders),
+    requestMaxRetries:
+      existingConfig?.requestMaxRetries != null
+        ? String(existingConfig.requestMaxRetries)
+        : '',
+    streamMaxRetries:
+      existingConfig?.streamMaxRetries != null
+        ? String(existingConfig.streamMaxRetries)
+        : '',
+    streamIdleTimeoutMs:
+      existingConfig?.streamIdleTimeoutMs != null
+        ? String(existingConfig.streamIdleTimeoutMs)
+        : '',
+    supportsWebSockets: existingConfig?.supportsWebSockets ?? false,
+    supportsStandaloneWebSearch:
+      existingConfig?.supportsStandaloneWebSearch ?? false,
+    externalWebAccess:
+      existingConfig?.capabilities?.externalWebAccess == null
+        ? 'default'
+        : existingConfig.capabilities.externalWebAccess
+          ? 'on'
+          : 'off',
+    remoteCompaction:
+      existingConfig?.capabilities?.remoteCompaction ?? 'default',
+    authCommand: existingConfig?.auth?.command ?? '',
+    authArgs: (existingConfig?.auth?.args ?? []).join(' '),
+    authTimeoutMs:
+      existingConfig?.auth?.timeoutMs != null
+        ? String(existingConfig.auth.timeoutMs)
+        : '',
+    authRefreshIntervalMs:
+      existingConfig?.auth?.refreshIntervalMs != null
+        ? String(existingConfig.auth.refreshIntervalMs)
+        : '',
+    authCwd: existingConfig?.auth?.cwd ?? '',
+  }))
+  const setAdv = (patch: Partial<typeof advanced>) =>
+    setAdvanced(previous => ({ ...previous, ...patch }))
 
   const isReservedProviderId = providerId.trim().toLowerCase() === 'openai'
 
@@ -281,15 +341,54 @@ function ProviderForm({
   const handleSave = () => {
     if (!providerId.trim()) return
 
+    const capabilities =
+      advanced.externalWebAccess === 'default' &&
+      advanced.remoteCompaction === 'default'
+        ? null
+        : {
+            externalWebAccess:
+              advanced.externalWebAccess === 'default'
+                ? null
+                : advanced.externalWebAccess === 'on',
+            remoteCompaction:
+              advanced.remoteCompaction === 'default'
+                ? null
+                : advanced.remoteCompaction,
+          }
+    const authCommand = advanced.authCommand.trim()
+    const auth = authCommand
+      ? {
+          command: authCommand,
+          args: advanced.authArgs.trim()
+            ? advanced.authArgs.trim().split(/\s+/)
+            : null,
+          timeoutMs: parseOptionalUint(advanced.authTimeoutMs),
+          refreshIntervalMs: parseOptionalUint(advanced.authRefreshIntervalMs),
+          cwd: trimToNullValue(advanced.authCwd),
+        }
+      : null
+
     const config: CodexProviderConfig = {
       name: trimToNull(name),
       baseUrl: trimToNull(baseUrl),
       wireApi: wireApi || null,
       requiresOpenaiAuth: false,
-      envKey: null,
-      envKeyInstructions: null,
-      httpHeaders: null,
-      queryParams: null,
+      // Preserve keys this dialog does not edit instead of nulling them.
+      envKey: existingConfig?.envKey ?? null,
+      envKeyInstructions: existingConfig?.envKeyInstructions ?? null,
+      httpHeaders: existingConfig?.httpHeaders ?? null,
+      envHttpHeaders: parseHeaderLines(advanced.envHttpHeaders),
+      queryParams: existingConfig?.queryParams ?? null,
+      modelCatalogUrl: trimToNullValue(advanced.modelCatalogUrl),
+      capabilities,
+      requestMaxRetries: parseOptionalUint(advanced.requestMaxRetries),
+      streamMaxRetries: parseOptionalUint(advanced.streamMaxRetries),
+      streamIdleTimeoutMs: parseOptionalUint(advanced.streamIdleTimeoutMs),
+      supportsWebSockets: advanced.supportsWebSockets ? true : null,
+      supportsStandaloneWebSearch: advanced.supportsStandaloneWebSearch
+        ? true
+        : null,
+      auth,
       model: trimToNull(model),
       modelReasoningEffort: resolvedEffort || null,
       modelContextWindow: parseTokenLimit(modelContextWindow),
@@ -526,6 +625,194 @@ function ProviderForm({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Advanced provider keys (upstream config-reference) */}
+          <details className="rounded-md border px-3 py-2">
+            <summary className="cursor-pointer text-sm font-medium">
+              {t('codex.provider.advanced')}
+            </summary>
+            <div className="mt-3 space-y-4">
+              <div className="space-y-2">
+                <Label>{t('codex.provider.modelCatalogUrl')}</Label>
+                <Input
+                  value={advanced.modelCatalogUrl}
+                  onChange={e => setAdv({ modelCatalogUrl: e.target.value })}
+                  placeholder="https://example.com/models.json"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('codex.provider.envHttpHeaders')}</Label>
+                <textarea
+                  className="min-h-20 w-full rounded-md border bg-transparent px-3 py-2 font-mono text-sm"
+                  value={advanced.envHttpHeaders}
+                  onChange={e => setAdv({ envHttpHeaders: e.target.value })}
+                  placeholder="X-Org=ORG_ID"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('codex.provider.envHttpHeadersHint')}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label>{t('codex.provider.requestMaxRetries')}</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={advanced.requestMaxRetries}
+                    onChange={e =>
+                      setAdv({
+                        requestMaxRetries: e.target.value.replace(/\D+/g, ''),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('codex.provider.streamMaxRetries')}</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={advanced.streamMaxRetries}
+                    onChange={e =>
+                      setAdv({
+                        streamMaxRetries: e.target.value.replace(/\D+/g, ''),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('codex.provider.streamIdleTimeoutMs')}</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={advanced.streamIdleTimeoutMs}
+                    onChange={e =>
+                      setAdv({
+                        streamIdleTimeoutMs: e.target.value.replace(/\D+/g, ''),
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={advanced.supportsWebSockets}
+                  onChange={e =>
+                    setAdv({ supportsWebSockets: e.target.checked })
+                  }
+                />
+                {t('codex.provider.supportsWebSockets')}
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={advanced.supportsStandaloneWebSearch}
+                  onChange={e =>
+                    setAdv({ supportsStandaloneWebSearch: e.target.checked })
+                  }
+                />
+                {t('codex.provider.supportsStandaloneWebSearch')}
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>{t('codex.provider.externalWebAccess')}</Label>
+                  <Select
+                    value={advanced.externalWebAccess}
+                    onValueChange={value =>
+                      setAdv({ externalWebAccess: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">
+                        {t('codex.provider.defaultValue')}
+                      </SelectItem>
+                      <SelectItem value="on">
+                        {t('codex.provider.on')}
+                      </SelectItem>
+                      <SelectItem value="off">
+                        {t('codex.provider.off')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('codex.provider.remoteCompaction')}</Label>
+                  <Select
+                    value={advanced.remoteCompaction}
+                    onValueChange={value => setAdv({ remoteCompaction: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">
+                        {t('codex.provider.defaultValue')}
+                      </SelectItem>
+                      <SelectItem value="unsupported">unsupported</SelectItem>
+                      <SelectItem value="v2">v2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('codex.provider.authCommand')}</Label>
+                <Input
+                  value={advanced.authCommand}
+                  onChange={e => setAdv({ authCommand: e.target.value })}
+                  placeholder="get-token"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('codex.provider.authArgs')}</Label>
+                <Input
+                  value={advanced.authArgs}
+                  onChange={e => setAdv({ authArgs: e.target.value })}
+                  placeholder="--audience codex"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label>{t('codex.provider.authTimeoutMs')}</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={advanced.authTimeoutMs}
+                    onChange={e =>
+                      setAdv({
+                        authTimeoutMs: e.target.value.replace(/\D+/g, ''),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('codex.provider.authRefreshIntervalMs')}</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={advanced.authRefreshIntervalMs}
+                    onChange={e =>
+                      setAdv({
+                        authRefreshIntervalMs: e.target.value.replace(
+                          /\D+/g,
+                          ''
+                        ),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('codex.provider.authCwd')}</Label>
+                  <Input
+                    value={advanced.authCwd}
+                    onChange={e => setAdv({ authCwd: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
       </ResizableDialogBody>
 
