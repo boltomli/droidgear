@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.3.9.12
+
+**New Features / 新功能**
+
+- The app now updates itself from its single-file releases: Preferences → General checks the newest `wails-v*` release, downloads the one asset published for the running platform (`droidgear-wails-windows-x64.exe` / `-macos-arm64` / `-linux-x64`), verifies it against the release's `SHA256SUMS.txt`, swaps the executable and restarts into the new build — with download progress, a "restart & install" step and a dismissible startup banner (startup checks honour the existing auto-update preference). The same Go service powers `dg update [--check] [--force]` for headless boxes, and the native "Check for Updates..." menu entry is back / 应用可以从单文件发布自更新：偏好设置 → 通用会检查最新的 `wails-v*` release，下载本平台唯一资产（`droidgear-wails-windows-x64.exe` / `-macos-arm64` / `-linux-x64`），用 release 内的 `SHA256SUMS.txt` 校验后替换可执行文件并重启到新版本——带下载进度、「重启并安装」与可忽略的启动横幅（启动检查遵循既有的自动更新偏好）。同一套 Go service 为 headless 场景提供 `dg update [--check] [--force]`，原生「检查更新...」菜单项一并恢复
+- The release pipeline now publishes a `SHA256SUMS.txt` for every `wails-v*` release (hashed after all three platform builds finish), and the updater refuses to install any release without it — an unverifiable download never replaces the binary / 发布流水线现在为每个 `wails-v*` release 生成 `SHA256SUMS.txt`（三平台构建完成后统一计算），更新器拒绝安装缺少校验文件的 release——无法校验的下载永远不会替换可执行文件
+- Platform-correct swapping: Windows renames the running image aside (`exe.old`, cleaned on the next start) before taking its place, POSIX replaces atomically with `rename`; the relaunched binary waits for the old process to exit first so the single-instance lock is not fought over / 按平台正确替换：Windows 先把运行中的镜像改名到 `exe.old`（下次启动清理）再落位，POSIX 用 `rename` 原子替换；重启时新进程先等旧进程退出，避免争抢单实例锁
+
+**Bug Fixes / 问题修复**
+
+- Documentation and UI text no longer claim the app has no update feed (the updater was removed with the Tauri shell); the software-update section, the native menu and the user guide now describe the real single-file update flow / 文档与界面文案不再声明应用没有更新源（更新器随 Tauri 壳一起被删除时的状态）；软件更新区域、原生菜单与用户指南现在描述真实的单文件更新流程
+
+> First release with the updater: `1.3.9.11` and earlier have no update client, so this version has to be downloaded manually once — every later release can self-update. / 这是第一个带更新器的版本：`1.3.9.11` 及更早版本没有更新客户端，因此本版本仍需手动下载一次，之后的所有版本都可以自更新。
+
 ## v1.3.9.11
 
 **New Features / 新功能**
