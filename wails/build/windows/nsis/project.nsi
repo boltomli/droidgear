@@ -36,8 +36,8 @@ Unicode true
 !include "wails_tools.nsh"
 
 # The version information for this two must consist of 4 parts
-VIProductVersion "1.3.9.10"
-VIFileVersion    "1.3.9.10"
+VIProductVersion "1.3.9.11"
+VIFileVersion    "1.3.9.11"
 
 VIAddVersionKey "CompanyName"     "${INFO_COMPANYNAME}"
 VIAddVersionKey "FileDescription" "${INFO_PRODUCTNAME} Installer"
