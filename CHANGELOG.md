@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.3.9.9
+
+**New Features / 新功能**
+
+- Channel import is now one Go implementation for the GUI, TUI and CLI: `service/channelimport` + `service/importflow` replace the React-only inference, `dg pi|omp|hermes providers import` work headlessly, and the Pi / OMP / Hermes panes get Providers sections with `i` import and `d` delete through the same ChangeSet preview flow / 渠道导入改为 GUI、TUI、CLI 共用的 Go 实现：`service/channelimport` + `service/importflow` 取代仅存在于 React 的推断，新增 `dg pi|omp|hermes providers import`，Pi / OMP / Hermes 屏增加 Providers 分节（`i` 导入、`d` 删除，均走同一 ChangeSet 预览流）
+- Pi upstream alignment: model `type` / `baseUrl` / `inputLimits` / `promptCache` / `samplingParams*`, provider `name`, and the newer `compat` flags are modeled; a combined advanced-JSON editor covers `inputLimits` / `promptCache` / `samplingParams*`, and apply merges over the live `models.json` so unknown keys and `$schema` survive / Pi 上游对齐：模型 `type` / `baseUrl` / `inputLimits` / `promptCache` / `samplingParams*`、Provider `name` 与新增 `compat` 字段均进入模型；每个模型提供高级 JSON 块编辑 `inputLimits` / `promptCache` / `samplingParams*`，apply 改为合并写入 `models.json`，未知键与 `$schema` 得以保留
+- OMP upstream alignment: all 15 model roles, `defaultThinkingLevel`, `modelPresets` (JSON editor), model `maxContextWindow` / `imageInputDecoder` / `omitMaxOutputTokens` / `preferWebsockets`, and provider `transport` / OMP 上游对齐：完整 15 个模型角色、`defaultThinkingLevel`、`modelPresets`（JSON 编辑器）、模型 `maxContextWindow` / `imageInputDecoder` / `omitMaxOutputTokens` / `preferWebsockets`，以及 Provider `transport`
+- Codex provider Advanced settings: `model_catalog_url`, `capabilities`, `env_http_headers`, request/stream retries, stream idle timeout, WebSockets, standalone web search, command-backed `auth`, plus `model_auto_compact_token_limit_scope` and `model_post_turn_compact_threshold_percent` / Codex Provider 高级设置：`model_catalog_url`、`capabilities`、`env_http_headers`、请求/流重试、流空闲超时、WebSocket、独立联网搜索、命令式 `auth`，以及 `model_auto_compact_token_limit_scope` 与 `model_post_turn_compact_threshold_percent`
+- Hermes provider request options and per-model capabilities are editable: `extra_headers`, `session_affinity_header`, `discover_models`, `transport`, `capabilities`, `context_length`, `prompt_caching`, `answer_in_reasoning`, plus `model.api_mode` / `model.streaming`; deleting the active provider is refused / Hermes 可编辑 Provider 请求选项与模型级能力：`extra_headers`、`session_affinity_header`、`discover_models`、`transport`、`capabilities`、`context_length`、`prompt_caching`、`answer_in_reasoning`，以及 `model.api_mode` / `model.streaming`；删除活动 Provider 会被拒绝
+
+**Bug Fixes / 问题修复**
+
+- OMP saving a provider no longer panics when the incoming entry has no unknown fields, and applying a profile merges the role map instead of replacing it / OMP 保存 Provider 时不再因未知字段为空而崩溃；应用 Profile 改为合并角色表而不是整体替换
+- Codex apply no longer resurrects a deliberately cleared `env_key` / bearer token, and keeps the built-in `gcp` / `amazon-bedrock` / `ollama` / `lmstudio` provider tables / Codex apply 不再把已清除的 `env_key` / bearer token 重新写回，并保留内置 `gcp` / `amazon-bedrock` / `ollama` / `lmstudio` Provider 表
+- Pi apply keeps the optional `$schema` root key and unknown provider/model keys; OMP apply keeps unknown roles / Pi apply 保留可选的 `$schema` 根键与未知 Provider/模型键；OMP apply 保留未知角色
+
 ## v1.3.9.8
 
 **New Features / 新功能**
