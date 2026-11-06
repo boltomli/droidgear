@@ -131,6 +131,7 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 - **连接测试** - 测试 Pi Provider 连通性
 - **Profile 管理** - 多 Profile 支持，一键应用到 `~/.pi/agent/models.json`
 - **实时配置读取** - 支持从 Pi 的 live config 加载现有配置
+- **渠道导入** - 从渠道导入 Provider（GUI/TUI `i`/`dg pi providers import` 共用同一套推断：自动规范 Base URL、补齐 `/v1`、按注册表填充模型参数并写入 `compat.forceAdaptiveThinking`）
 - **模型注册表驱动** - 从内置模型注册表丰富 Pi Provider 模型，支持与 Provider 无关的思考级别映射。Anthropic 编码为 `anthropic-adaptive` 的模型（如 `claude-opus-5-5`）会写入 `compat.forceAdaptiveThinking`，已显式关闭的配置会保留
 
 ### Dsh（DeepSeek Harness）支持
@@ -157,7 +158,7 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 ### OMP（Oh My Pi）支持
 
 - **自定义 Provider** - 按官方 `~/.omp/agent/models.yml` 读写自定义 Provider 与模型（GUI 与 TUI 增删改），支持从渠道更新模型和 Provider，并保留其他 Provider 与未知字段
-- **模型角色** - 管理 `~/.omp/agent/config.yml` 中的模型角色，并可从当前配置加载
+- **模型角色** - 管理 `~/.omp/agent/config.yml` 中的 15 个模型角色（default/smol/slow/vision/plan/commit/tiny/memory/task/advisor + image/web/speech/dictation/judge），并可从当前配置加载
 - **会话历史** - 浏览 `~/.omp/agent/sessions` 的 JSONL 日志（GUI）：列表或按项目分组、渲染当前分支与思考内容、跟随新消息、隐藏空会话与删除，滚动时分批加载
 
 ### 其他功能

@@ -46,7 +46,23 @@ import type {
   OmpProfile,
 } from '@/lib/bindings'
 
-const ROLE_KEYS = ['default', 'smol', 'slow', 'plan', 'commit'] as const
+const ROLE_KEYS = [
+  'default',
+  'smol',
+  'slow',
+  'vision',
+  'plan',
+  'commit',
+  'tiny',
+  'memory',
+  'task',
+  'advisor',
+  'image',
+  'web',
+  'speech',
+  'dictation',
+  'judge',
+] as const
 
 function ProfileFields({
   profile,
@@ -368,6 +384,23 @@ function OmpProviderEditor({
                           onChange={e =>
                             updateModel(index, {
                               contextWindow: e.target.value
+                                ? Number(e.target.value)
+                                : undefined,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">
+                          {t('omp.provider.maxContextWindow')}
+                        </Label>
+                        <Input
+                          className="w-28 h-8"
+                          type="number"
+                          value={model.maxContextWindow ?? ''}
+                          onChange={e =>
+                            updateModel(index, {
+                              maxContextWindow: e.target.value
                                 ? Number(e.target.value)
                                 : undefined,
                             })

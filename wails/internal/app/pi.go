@@ -82,3 +82,22 @@ func (a *App) ReadPiCurrentConfig() (PiCurrentConfig, error) {
 func (a *App) TestPiProviderConnection(providerID string, config PiProviderConfig) (PiProviderTestResult, error) {
 	return pi.TestProviderConnection(providerID, config)
 }
+
+// ---------------------------------------------------------------------------
+// Channel import (shared inference: service/pi + channelimport)
+// ---------------------------------------------------------------------------
+
+// Type aliases for the import contract.
+type (
+	PiChannelModel        = pi.PiChannelModel
+	PiChannelImportInput  = pi.PiChannelImportInput
+	PiChannelImportResult = pi.PiChannelImportResult
+)
+
+// PreparePiChannelImport builds the provider entry for a channel import
+// without writing anything. The GUI dialog calls it to prefill the form and
+// again on import; `dg pi providers import` and the TUI call the service
+// directly, so all three share one rule set.
+func (a *App) PreparePiChannelImport(input PiChannelImportInput) (PiChannelImportResult, error) {
+	return pi.PrepareChannelImport(input)
+}

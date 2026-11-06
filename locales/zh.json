@@ -1546,6 +1546,7 @@
   "omp.provider.modelBaseUrl": "模型基础 URL",
   "omp.provider.reasoning": "推理",
   "omp.provider.contextWindow": "上下文窗口",
+  "omp.provider.maxContextWindow": "扩展上下文窗口",
   "omp.provider.maxTokens": "最大 Token 数",
   "omp.provider.modelsCount": "{{count}} 个模型",
   "omp.provider.apiKeyConfigured": "已配置 API Key",

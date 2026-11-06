@@ -119,6 +119,21 @@ shell_snapshot = true
 
 [projects."/work/other"]
 trust_level = "trusted"
+
+[model_providers.custom]
+name = "Old"
+base_url = "https://old.example.com"
+env_key = "OLD_KEY"
+requires_openai_auth = true
+request_max_retries = 7
+supports_websockets = true
+future_provider_key = "keep"
+
+[model_providers.custom.auth]
+command = "get-token"
+
+[model_providers.gcp]
+project_id = "my-project"
 `)
 
 	profile := codexTestCustomProfile("p1", "P1")
@@ -169,8 +184,22 @@ trust_level = "trusted"
 	if _, ok := custom["requires_openai_auth"]; ok {
 		t.Fatalf("requires_openai_auth must never be written: %+v", custom)
 	}
+	if _, ok := custom["env_key"]; ok {
+		t.Fatalf("stale env_key survived the apply: %+v", custom)
+	}
 	if custom["base_url"] != "https://api.example.com/v1" || custom["wire_api"] != "responses" {
 		t.Fatalf("provider fields: %+v", custom)
+	}
+	// Unknown upstream provider keys survive the apply.
+	if custom["request_max_retries"] != int64(7) || custom["supports_websockets"] != true || custom["future_provider_key"] != "keep" {
+		t.Fatalf("unknown provider keys lost: %+v", custom)
+	}
+	if auth, ok := custom["auth"].(map[string]any); !ok || auth["command"] != "get-token" {
+		t.Fatalf("provider auth block lost: %+v", custom["auth"])
+	}
+	// Built-in providers configured outside DroidGear profiles are kept.
+	if gcp, ok := providers["gcp"].(map[string]any); !ok || gcp["project_id"] != "my-project" {
+		t.Fatalf("built-in gcp provider lost: %+v", providers["gcp"])
 	}
 
 	// Active profile recorded; read_current backfills the active provider.

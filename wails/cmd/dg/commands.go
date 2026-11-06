@@ -940,15 +940,17 @@ func (c *cli) hermesStatus(args []string) error {
 
 func (c *cli) pi(args []string) error {
 	if len(args) == 0 {
-		return c.usage("pi needs a subcommand: profiles | status")
+		return c.usage("pi needs a subcommand: profiles | providers | status")
 	}
 	switch args[0] {
 	case "profiles":
 		return c.piProfiles(args[1:])
+	case "providers":
+		return c.piProviders(args[1:])
 	case "status":
 		return c.piStatus(args[1:])
 	default:
-		return c.usage("unknown pi subcommand %q (want profiles | status)", args[0])
+		return c.usage("unknown pi subcommand %q (want profiles | providers | status)", args[0])
 	}
 }
 
@@ -1220,7 +1222,7 @@ func (c *cli) ompProfiles(args []string) error {
 
 func (c *cli) ompProviders(args []string) error {
 	if len(args) == 0 {
-		return c.usage("omp providers needs a subcommand: list | save | delete")
+		return c.usage("omp providers needs a subcommand: list | save | delete | import")
 	}
 	switch args[0] {
 	case "list":
@@ -1229,8 +1231,10 @@ func (c *cli) ompProviders(args []string) error {
 		return c.ompProvidersSave(args[1:])
 	case "delete":
 		return c.ompProvidersDelete(args[1:])
+	case "import":
+		return c.ompProvidersImport(args[1:])
 	default:
-		return c.usage("unknown omp providers subcommand %q (want list | save | delete)", args[0])
+		return c.usage("unknown omp providers subcommand %q (want list | save | delete | import)", args[0])
 	}
 }
 

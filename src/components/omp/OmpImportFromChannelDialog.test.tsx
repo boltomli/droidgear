@@ -5,6 +5,7 @@ const { commandMocks } = vi.hoisted(() => ({
   commandMocks: {
     getChannelApiKey: vi.fn(),
     fetchModelsByApiKey: vi.fn(),
+    prepareOmpChannelImport: vi.fn(),
   },
 }))
 
@@ -38,6 +39,31 @@ describe('OmpImportFromChannelDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     setChannels([])
+    commandMocks.prepareOmpChannelImport.mockImplementation(
+      async (input: {
+        baseUrl: string
+        apiKey: string
+        providerId?: string
+        modelIds: string[]
+        existing?: { models?: { id: string }[]; auth?: string } | null
+      }) => ({
+        status: 'ok',
+        data: {
+          providerId: input.providerId || 'my-api',
+          provider: {
+            ...(input.existing ?? {}),
+            baseUrl: input.baseUrl,
+            api: 'openai-completions',
+            apiKey: input.apiKey,
+            auth: input.existing?.auth ?? 'apiKey',
+            models:
+              input.modelIds.length > 0
+                ? input.modelIds.map(id => ({ id }))
+                : (input.existing?.models ?? []),
+          },
+        },
+      })
+    )
   })
 
   it('imports a provider from an api-key channel', async () => {

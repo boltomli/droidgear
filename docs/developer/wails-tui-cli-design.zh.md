@@ -224,6 +224,8 @@ dg export list|save --file <json>|delete <name>|run <name>  # T1/T2 ✅（run �
 dg codex profiles list|show <id>|active|apply <id>|save --file <json>|delete <id>  # T1/T2 ✅
 dg codex status                               # T2 ✅（config/auth 路径 + active profile）
 dg pi|hermes|omp profiles ...                   # T1/T2 ✅（与 codex 同形态；omp 另有 providers）
+dg pi providers list|show|delete|import --channel <id> [--token <t>] [--models a,b] [--provider <id>]  # T1 ✅（导入与 GUI 同源：service/importflow）
+dg omp providers list|save --file <json>|delete <id>|import --channel <id> […]            # T1 ✅（import 与 GUI 同源）
 dg claude settings ... | dg copilot profiles ... # 同上形态 ✅
 dg opencode|openclaw ...                        # 同上形态  B2 暂缓（维护者指定后置）
 dg droid settings|trusted|auth|missions|legacy # T1    ✅（models = dg factory models）

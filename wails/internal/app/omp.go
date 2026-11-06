@@ -92,3 +92,22 @@ func (a *App) ReadOmpCurrentConfig() (OmpCurrentConfig, error) {
 func (a *App) TestOmpProviderConnection(providerID string) (OmpProviderTestResult, error) {
 	return omp.TestProviderConnection(providerID)
 }
+
+// ---------------------------------------------------------------------------
+// Channel import (shared inference: service/omp + channelimport)
+// ---------------------------------------------------------------------------
+
+// Type aliases for the import contract.
+type (
+	OmpChannelModel        = omp.OmpChannelModel
+	OmpChannelImportInput  = omp.OmpChannelImportInput
+	OmpChannelImportResult = omp.OmpChannelImportResult
+)
+
+// PrepareOmpChannelImport builds the provider entry for a channel import
+// without writing anything. The GUI dialog calls it to prefill the form and
+// again on import; `dg omp providers import` and the TUI call the service
+// directly, so all three share one rule set.
+func (a *App) PrepareOmpChannelImport(input OmpChannelImportInput) (OmpChannelImportResult, error) {
+	return omp.PrepareChannelImport(input)
+}

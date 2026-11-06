@@ -21,14 +21,26 @@ import (
 // Types (mirroring droidgear-core::omp)
 // ---------------------------------------------------------------------------
 
-// OmpModelRoles mirrors omp::OmpModelRoles.
+// OmpModelRoles mirrors omp::OmpModelRoles. Upstream groups chat roles
+// (default, smol, slow, vision, plan, commit, tiny, memory, task, advisor)
+// and model-kind roles (image, web, speech, dictation, judge).
 type OmpModelRoles struct {
-	Default *string                    `json:"default"`
-	Smol    *string                    `json:"smol"`
-	Slow    *string                    `json:"slow"`
-	Plan    *string                    `json:"plan"`
-	Commit  *string                    `json:"commit"`
-	Extra   map[string]json.RawMessage `json:"-"`
+	Default   *string                    `json:"default"`
+	Smol      *string                    `json:"smol"`
+	Slow      *string                    `json:"slow"`
+	Vision    *string                    `json:"vision"`
+	Plan      *string                    `json:"plan"`
+	Commit    *string                    `json:"commit"`
+	Tiny      *string                    `json:"tiny"`
+	Memory    *string                    `json:"memory"`
+	Task      *string                    `json:"task"`
+	Advisor   *string                    `json:"advisor"`
+	Image     *string                    `json:"image"`
+	Web       *string                    `json:"web"`
+	Speech    *string                    `json:"speech"`
+	Dictation *string                    `json:"dictation"`
+	Judge     *string                    `json:"judge"`
+	Extra     map[string]json.RawMessage `json:"-"`
 }
 
 // OmpTheme mirrors omp::OmpTheme.
@@ -39,14 +51,16 @@ type OmpTheme struct {
 
 // OmpAgentConfig mirrors omp::OmpAgentConfig (config.yml).
 type OmpAgentConfig struct {
-	ModelRoles    *OmpModelRoles             `json:"modelRoles"`
-	Theme         *OmpTheme                  `json:"theme"`
-	SteeringMode  *string                    `json:"steeringMode"`
-	FollowUpMode  *string                    `json:"followUpMode"`
-	InterruptMode *string                    `json:"interruptMode"`
-	SymbolPreset  *string                    `json:"symbolPreset"`
-	SetupVersion  *uint32                    `json:"setupVersion"`
-	Extra         map[string]json.RawMessage `json:"-"`
+	ModelRoles           *OmpModelRoles             `json:"modelRoles"`
+	ModelPresets         map[string]any             `json:"modelPresets,omitempty"`
+	DefaultThinkingLevel *string                    `json:"defaultThinkingLevel,omitempty"`
+	Theme                *OmpTheme                  `json:"theme"`
+	SteeringMode         *string                    `json:"steeringMode"`
+	FollowUpMode         *string                    `json:"followUpMode"`
+	InterruptMode        *string                    `json:"interruptMode"`
+	SymbolPreset         *string                    `json:"symbolPreset"`
+	SetupVersion         *uint32                    `json:"setupVersion"`
+	Extra                map[string]json.RawMessage `json:"-"`
 }
 
 // OmpModelCost mirrors omp::OmpModelCost.
@@ -67,20 +81,24 @@ type OmpThinkingConfig struct {
 
 // OmpCustomModel mirrors omp::OmpCustomModel.
 type OmpCustomModel struct {
-	ID               string                     `json:"id"`
-	Name             *string                    `json:"name"`
-	API              *string                    `json:"api"`
-	BaseURL          *string                    `json:"baseUrl"`
-	Reasoning        *bool                      `json:"reasoning"`
-	Thinking         *OmpThinkingConfig         `json:"thinking"`
-	Input            *[]string                  `json:"input"`
-	Cost             *OmpModelCost              `json:"cost"`
-	ContextWindow    *uint32                    `json:"contextWindow"`
-	MaxTokens        *uint32                    `json:"maxTokens"`
-	Headers          map[string]string          `json:"headers"`
-	Compat           any                        `json:"compat"`
-	RemoteCompaction any                        `json:"remoteCompaction"`
-	Extra            map[string]json.RawMessage `json:"-"`
+	ID                  string                     `json:"id"`
+	Name                *string                    `json:"name"`
+	API                 *string                    `json:"api"`
+	BaseURL             *string                    `json:"baseUrl"`
+	Reasoning           *bool                      `json:"reasoning"`
+	Thinking            *OmpThinkingConfig         `json:"thinking"`
+	Input               *[]string                  `json:"input"`
+	ImageInputDecoder   *string                    `json:"imageInputDecoder"`
+	Cost                *OmpModelCost              `json:"cost"`
+	ContextWindow       *uint32                    `json:"contextWindow"`
+	MaxContextWindow    *uint32                    `json:"maxContextWindow"`
+	MaxTokens           *uint32                    `json:"maxTokens"`
+	OmitMaxOutputTokens *bool                      `json:"omitMaxOutputTokens"`
+	PreferWebsockets    *bool                      `json:"preferWebsockets"`
+	Headers             map[string]string          `json:"headers"`
+	Compat              any                        `json:"compat"`
+	RemoteCompaction    any                        `json:"remoteCompaction"`
+	Extra               map[string]json.RawMessage `json:"-"`
 }
 
 // OmpCustomProvider mirrors omp::OmpCustomProvider.
@@ -117,18 +135,19 @@ type OmpCustomProviders struct {
 
 // OmpCachedModel mirrors omp::OmpCachedModel (models.db, read-only).
 type OmpCachedModel struct {
-	ID            string                     `json:"id"`
-	Name          *string                    `json:"name"`
-	API           *string                    `json:"api"`
-	Provider      *string                    `json:"provider"`
-	BaseURL       *string                    `json:"baseUrl"`
-	Reasoning     bool                       `json:"reasoning"`
-	Input         []string                   `json:"input"`
-	Cost          *OmpModelCost              `json:"cost"`
-	ContextWindow uint32                     `json:"contextWindow"`
-	MaxTokens     uint32                     `json:"maxTokens"`
-	Thinking      *OmpThinkingConfig         `json:"thinking"`
-	Extra         map[string]json.RawMessage `json:"-"`
+	ID               string                     `json:"id"`
+	Name             *string                    `json:"name"`
+	API              *string                    `json:"api"`
+	Provider         *string                    `json:"provider"`
+	BaseURL          *string                    `json:"baseUrl"`
+	Reasoning        bool                       `json:"reasoning"`
+	Input            []string                   `json:"input"`
+	Cost             *OmpModelCost              `json:"cost"`
+	ContextWindow    uint32                     `json:"contextWindow"`
+	MaxContextWindow uint32                     `json:"maxContextWindow,omitempty"`
+	MaxTokens        uint32                     `json:"maxTokens"`
+	Thinking         *OmpThinkingConfig         `json:"thinking"`
+	Extra            map[string]json.RawMessage `json:"-"`
 }
 
 // OmpProviderModels mirrors omp::OmpProviderModels.
@@ -573,6 +592,9 @@ func SaveCustomProvider(providerID string, provider OmpCustomProvider) error {
 		if err == nil {
 			var previous OmpCustomProvider
 			if err := json.Unmarshal(raw, &previous); err == nil {
+				if provider.Extra == nil {
+					provider.Extra = map[string]json.RawMessage{}
+				}
 				for key, value := range previous.Extra {
 					if _, exists := provider.Extra[key]; !exists {
 						provider.Extra[key] = value
@@ -582,6 +604,9 @@ func SaveCustomProvider(providerID string, provider OmpCustomProvider) error {
 					for _, previousModel := range previous.Models {
 						if previousModel.ID != provider.Models[i].ID {
 							continue
+						}
+						if provider.Models[i].Extra == nil {
+							provider.Models[i].Extra = map[string]json.RawMessage{}
 						}
 						for key, value := range previousModel.Extra {
 							if _, exists := provider.Models[i].Extra[key]; !exists {
@@ -989,7 +1014,7 @@ func ApplyProfile(id string) error {
 	if err != nil {
 		return err
 	}
-	roles := profile.ModelRoles
+	roles := mergeOmpModelRoles(config.ModelRoles, profile.ModelRoles)
 	config.ModelRoles = &roles
 	if err := writeConfigYML(config); err != nil {
 		return err

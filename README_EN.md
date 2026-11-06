@@ -131,6 +131,7 @@ Configuration remains ordinary `~/.factory/mcp.json`: this preset stores a nonse
 - **Connection Test** - Test Pi provider connectivity
 - **Profile Management** - Multi-profile support with one-click apply to `~/.pi/agent/models.json`
 - **Live Config Reading** - Load existing configuration from Pi's live config
+- **Channel Import** - Import a provider from a channel (GUI, TUI `i`, and `dg pi providers import` share one rule set: normalise the base URL, add `/v1`, enrich models from the registry, and set `compat.forceAdaptiveThinking` when required)
 - **Registry-Driven Models** - Enrich Pi provider models from the built-in model registry, with provider-neutral thinking level mapping. Models whose Anthropic profile is `anthropic-adaptive` (such as `claude-opus-5-5`) get `compat.forceAdaptiveThinking`; an explicit opt-out already stored on the model is kept
 
 ### Dsh (DeepSeek Harness) Support
@@ -156,8 +157,8 @@ Configuration remains ordinary `~/.factory/mcp.json`: this preset stores a nonse
 
 ### OMP (Oh My Pi) Support
 
-- **Custom Providers** - Read and write custom providers and models in the official `~/.omp/agent/models.yml` (GUI and TUI CRUD), update models and providers from a channel, and preserve unrelated providers and unknown fields
-- **Model Roles** - Manage model role assignments in `~/.omp/agent/config.yml`, and load them from the live config
+- **Custom Providers** - Read and write custom providers and models in the official `~/.omp/agent/models.yml` (GUI and TUI CRUD, plus `dg omp providers`), update models and providers from a channel, and preserve unrelated providers and unknown fields
+- **Model Roles** - Manage the 15 upstream model roles in `~/.omp/agent/config.yml` (default/smol/slow/vision/plan/commit/tiny/memory/task/advisor + image/web/speech/dictation/judge), and load them from the live config
 - **Session History** - Browse `~/.omp/agent/sessions` JSONL logs (GUI): list or project-grouped views, active-branch rendering with thinking blocks, follow new messages, hide empty sessions, and delete. The list loads in batches as you scroll
 
 ### Other Features

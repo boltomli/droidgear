@@ -34,18 +34,11 @@ import {
   commands,
   type Channel,
   type ChannelToken,
-  type CustomModel,
   type ModelInfo,
   type OmpCustomProvider,
   type OmpCustomProviderEntry,
 } from '@/lib/bindings'
 import { useChannelStore } from '@/store/channel-store'
-import {
-  buildOmpProvider,
-  computeDefaultProviderId,
-  inferOmpApiType,
-  normalizeOmpBaseUrl,
-} from './channel-import'
 
 interface OmpImportFromChannelDialogProps {
   open: boolean
@@ -99,6 +92,8 @@ export function OmpImportFromChannelDialog({
   const [resolvedApiKey, setResolvedApiKey] = useState('')
   const [resolvedBaseUrl, setResolvedBaseUrl] = useState('')
   const [resolvedPlatform, setResolvedPlatform] = useState<string | null>(null)
+  const [resolvedTokenName, setResolvedTokenName] = useState('')
+  const [resolvedApi, setResolvedApi] = useState('openai-completions')
   const [providerId, setProviderId] = useState('')
   const [models, setModels] = useState<ModelInfo[]>([])
   const [selectedModelIds, setSelectedModelIds] = useState<Set<string>>(
@@ -123,6 +118,8 @@ export function OmpImportFromChannelDialog({
     setResolvedApiKey('')
     setResolvedBaseUrl('')
     setResolvedPlatform(null)
+    setResolvedTokenName('')
+    setResolvedApi('openai-completions')
     setProviderId(targetProviderId ?? '')
     setModels([])
     setSelectedModelIds(new Set())
@@ -150,7 +147,8 @@ export function OmpImportFromChannelDialog({
   const fetchModelsForKey = async (
     baseUrl: string,
     apiKey: string,
-    platform: string | null | undefined
+    platform: string | null | undefined,
+    tokenName: string
   ) => {
     setIsFetchingModels(true)
     setModelError(null)
@@ -165,6 +163,30 @@ export function OmpImportFromChannelDialog({
       if (result.status === 'ok') {
         setModels(result.data)
         setSelectedModelIds(new Set(result.data.map(model => model.id)))
+        // The service owns the inference (base URL, protocol, provider id);
+        // the dialog asks it once the model list is known and reuses the
+        // answer on import, so GUI/CLI/TUI cannot drift.
+        const prepared = await commands.prepareOmpChannelImport({
+          channelName: selectedChannel?.name ?? '',
+          channelType: selectedChannel?.type ?? '',
+          baseUrl: selectedChannel?.baseUrl ?? baseUrl,
+          platform: platform ?? null,
+          apiKey,
+          tokenName,
+          providerId: isUpdate ? (targetProviderId ?? '') : '',
+          modelIds: result.data.map(model => model.id),
+          existingProviderIds,
+          existing: targetProvider ?? undefined,
+        })
+        if (prepared.status === 'ok') {
+          setResolvedBaseUrl(prepared.data.provider.baseUrl ?? '')
+          setResolvedApi(prepared.data.provider.api ?? 'openai-completions')
+          if (!isUpdate && !providerId.trim()) {
+            setProviderId(prepared.data.providerId)
+          }
+        } else {
+          setModelError(prepared.error)
+        }
       } else {
         setModelError(result.error)
       }
@@ -174,11 +196,6 @@ export function OmpImportFromChannelDialog({
       setIsFetchingModels(false)
     }
   }
-
-  const suggestProviderId = (channel: Channel, tokenName?: string): string =>
-    isUpdate
-      ? (targetProviderId ?? '')
-      : computeDefaultProviderId(channel.name, tokenName, existingProviderIds)
 
   const handleChannelNext = async () => {
     if (!selectedChannel) return
@@ -201,12 +218,9 @@ export function OmpImportFromChannelDialog({
         return
       }
       setResolvedApiKey(result.data)
-      setResolvedBaseUrl(
-        normalizeOmpBaseUrl(selectedChannel.type, selectedChannel.baseUrl, null)
-      )
       setResolvedPlatform(null)
-      setProviderId(suggestProviderId(selectedChannel))
-      await fetchModelsForKey(selectedChannel.baseUrl, result.data, null)
+      setResolvedTokenName('')
+      await fetchModelsForKey(selectedChannel.baseUrl, result.data, null, '')
       setStep('configure')
     } catch (error) {
       setResolveError(String(error))
@@ -218,16 +232,14 @@ export function OmpImportFromChannelDialog({
   const handleTokenSelect = async (token: ChannelToken) => {
     if (!selectedChannel) return
     setResolvedApiKey(token.key)
-    setResolvedBaseUrl(
-      normalizeOmpBaseUrl(
-        selectedChannel.type,
-        selectedChannel.baseUrl,
-        token.platform
-      )
-    )
     setResolvedPlatform(token.platform ?? null)
-    setProviderId(suggestProviderId(selectedChannel, token.name))
-    await fetchModelsForKey(selectedChannel.baseUrl, token.key, token.platform)
+    setResolvedTokenName(token.name)
+    await fetchModelsForKey(
+      selectedChannel.baseUrl,
+      token.key,
+      token.platform,
+      token.name
+    )
     setStep('configure')
   }
 
@@ -254,26 +266,25 @@ export function OmpImportFromChannelDialog({
     const trimmedProviderId = providerId.trim()
     if (!trimmedProviderId) return
 
-    const selectedModels: CustomModel[] = models
-      .filter(model => selectedModelIds.has(model.id))
-      .map(model => ({
-        model: model.id,
-        baseUrl: resolvedBaseUrl,
-        apiKey: resolvedApiKey,
-        provider: 'generic-chat-completion-api',
-        displayName: model.name,
-      }))
-
-    const provider = buildOmpProvider({
+    const prepared = await commands.prepareOmpChannelImport({
+      channelName: selectedChannel.name,
       channelType: selectedChannel.type,
-      platform: resolvedPlatform,
       baseUrl: selectedChannel.baseUrl,
+      platform: resolvedPlatform,
       apiKey: resolvedApiKey,
-      models: selectedModels,
-      existing: targetProvider,
+      tokenName: resolvedTokenName,
+      providerId: trimmedProviderId,
+      modelIds: models
+        .filter(model => selectedModelIds.has(model.id))
+        .map(model => model.id),
+      existingProviderIds,
+      existing: targetProvider ?? undefined,
     })
-
-    await onImported(trimmedProviderId, provider)
+    if (prepared.status !== 'ok') {
+      setModelError(prepared.error)
+      return
+    }
+    await onImported(prepared.data.providerId, prepared.data.provider)
     onOpenChange(false)
   }
 
@@ -296,10 +307,7 @@ export function OmpImportFromChannelDialog({
     !!trimmedProviderId &&
     existingProviderIds.includes(trimmedProviderId)
   const canImport = !!trimmedProviderId && !providerIdConflict
-  const importedApi = inferOmpApiType(
-    resolvedPlatform,
-    models.find(model => selectedModelIds.has(model.id))?.id
-  )
+  const importedApi = resolvedApi
 
   const renderChannelStep = () => {
     if (enabledChannels.length > 0) {

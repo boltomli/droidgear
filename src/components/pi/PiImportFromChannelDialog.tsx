@@ -32,16 +32,9 @@ import {
 import { useChannelStore } from '@/store/channel-store'
 import { isApiKeyAuthChannel } from '@/lib/channel-utils'
 import {
-  ensureOpenAICompatibleV1,
-  needsOpenAICompatibleV1,
-  normalizeBaseUrl,
-} from '@/lib/sub2api-platform'
-import { enrichPiModelFromRegistry } from '@/lib/pi-model-metadata'
-import {
   commands,
   type Channel,
   type ChannelToken,
-  type ChannelType,
   type ModelInfo,
   type PiModel,
 } from '@/lib/bindings'
@@ -71,29 +64,6 @@ const channelTypeI18nKeys: Record<string, string> = {
   general: 'channels.typeGeneral',
 }
 
-function sanitizeProviderId(raw: string): string {
-  return raw
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-/** Infer Pi API type from platform string */
-function inferPiApiType(
-  platform: string | null | undefined,
-  modelId?: string
-): string {
-  if (platform === 'anthropic' || platform === 'claude')
-    return 'anthropic-messages'
-  if (platform === 'gemini') return 'google-generative-ai'
-  if (platform === 'antigravity') {
-    const lower = (modelId ?? '').toLowerCase()
-    if (lower.startsWith('claude-')) return 'anthropic-messages'
-    return 'openai-completions'
-  }
-  return 'openai-completions'
-}
-
 export function PiImportFromChannelDialog({
   open,
   onOpenChange,
@@ -112,6 +82,7 @@ export function PiImportFromChannelDialog({
   const [resolvedApiKey, setResolvedApiKey] = useState<string>('')
   const [resolvedBaseUrl, setResolvedBaseUrl] = useState<string>('')
   const [resolvedPlatform, setResolvedPlatform] = useState<string | null>(null)
+  const [resolvedTokenName, setResolvedTokenName] = useState<string>('')
   const [providerId, setProviderId] = useState<string>('')
 
   const [models, setModels] = useState<ModelInfo[]>([])
@@ -137,6 +108,7 @@ export function PiImportFromChannelDialog({
       setResolvedApiKey('')
       setResolvedBaseUrl('')
       setResolvedPlatform(null)
+      setResolvedTokenName('')
       setProviderId('')
       setModels([])
       setSelectedModelIds(new Set())
@@ -162,43 +134,6 @@ export function PiImportFromChannelDialog({
     }
   }, [selectedChannelId, selectedChannel, keysMap, fetchKeys])
 
-  const normalizeBaseUrlForPi = (
-    channelType: ChannelType,
-    url: string,
-    platform: string | null | undefined
-  ): string => {
-    // sub2api 渠道走 chat/completions 时必须带 /v1
-    // （antigravity 有独立的路径规则，不在此列）
-    if (
-      platform !== 'antigravity' &&
-      needsOpenAICompatibleV1(
-        channelType,
-        undefined,
-        inferPiApiType(platform) === 'openai-completions'
-      )
-    ) {
-      return ensureOpenAICompatibleV1(url)
-    }
-    // Only append /v1 for OpenAI-compatible platforms
-    if (!platform || platform === 'openai') return normalizeBaseUrl(url, '/v1')
-    // Anthropic, Gemini, etc. use their own base URL as-is
-    return url.replace(/\/+$/, '')
-  }
-
-  const computeDefaultProviderId = (
-    channel: Channel,
-    tokenName?: string
-  ): string => {
-    const base = sanitizeProviderId(
-      tokenName ? `${channel.name}-${tokenName}` : channel.name
-    )
-    if (!base) return 'imported-provider'
-    if (!existingProviderIds.includes(base)) return base
-    let i = 2
-    while (existingProviderIds.includes(`${base}-${i}`)) i++
-    return `${base}-${i}`
-  }
-
   const handleChannelNext = async () => {
     if (!selectedChannel) return
     setResolveError(null)
@@ -217,17 +152,10 @@ export function PiImportFromChannelDialog({
           return
         }
         setResolvedApiKey(result.data)
-        setResolvedBaseUrl(
-          normalizeBaseUrlForPi(
-            selectedChannel.type,
-            selectedChannel.baseUrl,
-            null
-          )
-        )
         setResolvedPlatform(null)
-        setProviderId(computeDefaultProviderId(selectedChannel))
+        setResolvedTokenName('')
         setIsResolvingKey(false)
-        await fetchModelsForKey(selectedChannel.baseUrl, result.data, null)
+        await fetchModelsForKey(selectedChannel.baseUrl, result.data, null, '')
         setStep('configure')
       } catch (e) {
         setResolveError(String(e))
@@ -244,20 +172,18 @@ export function PiImportFromChannelDialog({
     const rawBaseUrl = selectedChannel.baseUrl
 
     setResolvedApiKey(apiKey)
-    setResolvedBaseUrl(
-      normalizeBaseUrlForPi(selectedChannel.type, rawBaseUrl, token.platform)
-    )
     setResolvedPlatform(token.platform ?? null)
-    setProviderId(computeDefaultProviderId(selectedChannel, token.name))
+    setResolvedTokenName(token.name)
 
-    await fetchModelsForKey(rawBaseUrl, apiKey, token.platform)
+    await fetchModelsForKey(rawBaseUrl, apiKey, token.platform, token.name)
     setStep('configure')
   }
 
   const fetchModelsForKey = async (
     baseUrl: string,
     apiKey: string,
-    platform: string | null | undefined
+    platform: string | null | undefined,
+    tokenName: string
   ) => {
     setIsFetchingModels(true)
     setModelError(null)
@@ -271,6 +197,25 @@ export function PiImportFromChannelDialog({
       )
       if (result.status === 'ok') {
         setModels(result.data)
+        // Base URL normalisation and the provider-id suggestion come from
+        // the service (shared with dg/TUI) instead of a local copy.
+        const prepared = await commands.preparePiChannelImport({
+          channelName: selectedChannel?.name ?? '',
+          channelType: selectedChannel?.type ?? '',
+          baseUrl: selectedChannel?.baseUrl ?? baseUrl,
+          platform: platform ?? null,
+          apiKey,
+          tokenName,
+          providerId: '',
+          modelIds: result.data.map(model => model.id),
+          existingProviderIds,
+        })
+        if (prepared.status === 'ok') {
+          setResolvedBaseUrl(prepared.data.baseUrl)
+          if (!providerId.trim()) setProviderId(prepared.data.providerId)
+        } else {
+          setModelError(prepared.error)
+        }
       } else {
         setModelError(result.error)
       }
@@ -301,30 +246,29 @@ export function PiImportFromChannelDialog({
     }
   }
 
-  const handleImport = () => {
-    if (!providerId.trim()) return
-    const firstModelId =
-      selectedModelIds.size > 0 ? Array.from(selectedModelIds)[0] : undefined
-    const api = inferPiApiType(resolvedPlatform, firstModelId)
-    const piModels: PiModel[] = Array.from(selectedModelIds).map(id =>
-      enrichPiModelFromRegistry({
-        id,
-        name: null,
-        api: null,
-        reasoning: false,
-        input: ['text'],
-        contextWindow: 128000,
-        maxTokens: 16384,
-        cost: null,
-        compat: null,
-      })
-    )
-    onImported({
-      providerId: providerId.trim(),
-      baseUrl: resolvedBaseUrl,
+  const handleImport = async () => {
+    if (!providerId.trim() || !selectedChannel) return
+    const prepared = await commands.preparePiChannelImport({
+      channelName: selectedChannel.name,
+      channelType: selectedChannel.type,
+      baseUrl: selectedChannel.baseUrl,
+      platform: resolvedPlatform,
       apiKey: resolvedApiKey,
-      api,
-      models: piModels,
+      tokenName: resolvedTokenName,
+      providerId: providerId.trim(),
+      modelIds: Array.from(selectedModelIds),
+      existingProviderIds,
+    })
+    if (prepared.status !== 'ok') {
+      setModelError(prepared.error)
+      return
+    }
+    onImported({
+      providerId: prepared.data.providerId,
+      baseUrl: prepared.data.baseUrl,
+      apiKey: resolvedApiKey,
+      api: prepared.data.api,
+      models: prepared.data.models,
     })
     onOpenChange(false)
   }

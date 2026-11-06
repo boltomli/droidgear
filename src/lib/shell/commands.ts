@@ -154,6 +154,14 @@ const COMMANDS: Record<string, CommandSpec> = {
     fn: 'DeleteOmpCustomProvider',
     args: ['providerId'],
   },
+  prepare_omp_channel_import: {
+    fn: 'PrepareOmpChannelImport',
+    args: ['input'],
+  },
+  prepare_pi_channel_import: {
+    fn: 'PreparePiChannelImport',
+    args: ['input'],
+  },
   test_omp_provider_connection: {
     fn: 'TestOmpProviderConnection',
     args: ['providerId'],

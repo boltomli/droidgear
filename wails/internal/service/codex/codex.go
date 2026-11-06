@@ -412,6 +412,42 @@ func codexProviderToTOML(id string, config CodexProviderConfig) map[string]any {
 	return table
 }
 
+// codexMergeProviderTable copies keys the profile does not model (upstream
+// additions such as `auth`, `request_max_retries`, `capabilities`,
+// `model_catalog_url`, …) from the previous live table into the freshly
+// rendered one. Known keys always come from the profile, so an apply never
+// reverts a value the user just edited.
+func codexMergeProviderTable(previous map[string]any, id string, table map[string]any) {
+	prev, ok := previous[id].(map[string]any)
+	if !ok {
+		return
+	}
+	for key, value := range prev {
+		if codexManagedProviderKeys[key] {
+			// A key the profile owns is never inherited: clearing the API
+			// key or env key must actually remove it, not resurrect the old
+			// value from the previous table.
+			continue
+		}
+		table[key] = value
+	}
+}
+
+// codexManagedProviderKeys are the provider keys codexProviderToTOML decides.
+// `requires_openai_auth` is listed because it must never be written (it
+// conflicts with experimental_bearer_token), so a stale value is dropped.
+var codexManagedProviderKeys = map[string]bool{
+	"name":                      true,
+	"base_url":                  true,
+	"wire_api":                  true,
+	"experimental_bearer_token": true,
+	"env_key":                   true,
+	"env_key_instructions":      true,
+	"http_headers":              true,
+	"query_params":              true,
+	"requires_openai_auth":      true,
+}
+
 // codexTOMLToProviderConfig parses one [model_providers.<id>] table back into
 // the JSON model. Returns false when the value is not a table (Rust skips
 // those entries).
@@ -627,6 +663,10 @@ func codexApplyProfileToConfig(config map[string]any, profile CodexProfile) erro
 	}
 
 	// Official OpenAI mode must not inject custom providers into live config.
+	// Capture the previous tables first so unknown provider keys (upstream
+	// additions such as auth/retries/capabilities) and the reserved built-in
+	// providers survive the rewrite.
+	previousProviders, _ := config["model_providers"].(map[string]any)
 	delete(config, "model_providers")
 	if !isOpenAI {
 		providers := map[string]any{}
@@ -635,13 +675,27 @@ func codexApplyProfileToConfig(config map[string]any, profile CodexProfile) erro
 				RequiresOpenaiAuth: codexPtr(false),
 				APIKey:             codexResolvedAPIKey(profile, nil),
 			}
-			providers[providerID] = codexProviderToTOML(providerID, fallback)
+			table := codexProviderToTOML(providerID, fallback)
+			codexMergeProviderTable(previousProviders, providerID, table)
+			providers[providerID] = table
 		} else {
 			for id, provider := range profile.Providers {
 				if id == providerID {
 					provider.APIKey = codexResolvedAPIKey(profile, &provider)
 				}
-				providers[id] = codexProviderToTOML(id, provider)
+				table := codexProviderToTOML(id, provider)
+				codexMergeProviderTable(previousProviders, id, table)
+				providers[id] = table
+			}
+		}
+		// Built-in providers are configured outside DroidGear profiles; keep
+		// them instead of deleting a user's Vertex/Bedrock setup on apply.
+		for _, id := range []string{"gcp", "amazon-bedrock", "ollama", "lmstudio"} {
+			if _, ok := providers[id]; ok {
+				continue
+			}
+			if previous, ok := previousProviders[id].(map[string]any); ok {
+				providers[id] = previous
 			}
 		}
 		config["model_providers"] = providers

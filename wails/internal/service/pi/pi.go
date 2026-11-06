@@ -40,60 +40,101 @@ type PiModelCost struct {
 
 // PiCompatConfig mirrors pi::PiCompatConfig.
 type PiCompatConfig struct {
-	SupportsStore                               *bool                      `json:"supportsStore,omitempty"`
-	SupportsDeveloperRole                       *bool                      `json:"supportsDeveloperRole,omitempty"`
-	SupportsReasoningEffort                     *bool                      `json:"supportsReasoningEffort,omitempty"`
-	ReasoningEffortMap                          map[string]any             `json:"reasoningEffortMap,omitempty"`
-	SupportsUsageInStreaming                    *bool                      `json:"supportsUsageInStreaming,omitempty"`
-	MaxTokensField                              *string                    `json:"maxTokensField,omitempty"`
-	RequiresToolResultName                      *bool                      `json:"requiresToolResultName,omitempty"`
-	RequiresAssistantAfterToolResult            *bool                      `json:"requiresAssistantAfterToolResult,omitempty"`
-	RequiresThinkingAsText                      *bool                      `json:"requiresThinkingAsText,omitempty"`
-	RequiresReasoningContentOnAssistantMessages *bool                      `json:"requiresReasoningContentOnAssistantMessages,omitempty"`
-	ThinkingFormat                              *string                    `json:"thinkingFormat,omitempty"`
-	CacheControlFormat                          *string                    `json:"cacheControlFormat,omitempty"`
-	SupportsStrictMode                          *bool                      `json:"supportsStrictMode,omitempty"`
-	SupportsLongCacheRetention                  *bool                      `json:"supportsLongCacheRetention,omitempty"`
-	SupportsEagerToolInputStreaming             *bool                      `json:"supportsEagerToolInputStreaming,omitempty"`
-	ForceAdaptiveThinking                       *bool                      `json:"forceAdaptiveThinking,omitempty"`
-	OpenRouterRouting                           any                        `json:"openRouterRouting,omitempty"`
-	VercelGatewayRouting                        any                        `json:"vercelGatewayRouting,omitempty"`
-	Extra                                       map[string]json.RawMessage `json:"-"`
+	SupportsStore                               *bool          `json:"supportsStore,omitempty"`
+	SupportsDeveloperRole                       *bool          `json:"supportsDeveloperRole,omitempty"`
+	SupportsReasoningEffort                     *bool          `json:"supportsReasoningEffort,omitempty"`
+	ReasoningEffortMap                          map[string]any `json:"reasoningEffortMap,omitempty"`
+	SupportsUsageInStreaming                    *bool          `json:"supportsUsageInStreaming,omitempty"`
+	MaxTokensField                              *string        `json:"maxTokensField,omitempty"`
+	RequiresToolResultName                      *bool          `json:"requiresToolResultName,omitempty"`
+	RequiresAssistantAfterToolResult            *bool          `json:"requiresAssistantAfterToolResult,omitempty"`
+	RequiresThinkingAsText                      *bool          `json:"requiresThinkingAsText,omitempty"`
+	RequiresReasoningContentOnAssistantMessages *bool          `json:"requiresReasoningContentOnAssistantMessages,omitempty"`
+	ThinkingFormat                              *string        `json:"thinkingFormat,omitempty"`
+	CacheControlFormat                          *string        `json:"cacheControlFormat,omitempty"`
+	SupportsStrictMode                          *bool          `json:"supportsStrictMode,omitempty"`
+	SupportsLongCacheRetention                  *bool          `json:"supportsLongCacheRetention,omitempty"`
+	SupportsEagerToolInputStreaming             *bool          `json:"supportsEagerToolInputStreaming,omitempty"`
+	ForceAdaptiveThinking                       *bool          `json:"forceAdaptiveThinking,omitempty"`
+	OpenRouterRouting                           any            `json:"openRouterRouting,omitempty"`
+	VercelGatewayRouting                        any            `json:"vercelGatewayRouting,omitempty"`
+	// Upstream additions (pi docs/models-configuration.md):
+	SupportsFinishReason            *bool                      `json:"supportsFinishReason,omitempty"`
+	RequiresNonNullAssistantContent *bool                      `json:"requiresNonNullAssistantContent,omitempty"`
+	ChatTemplateKwargs              any                        `json:"chatTemplateKwargs,omitempty"`
+	ChatTemplateArgs                any                        `json:"chatTemplateArgs,omitempty"`
+	ZaiToolStream                   *bool                      `json:"zaiToolStream,omitempty"`
+	ThinkingTokenBudgetField        *string                    `json:"thinkingTokenBudgetField,omitempty"`
+	SupportsThinkingTokenBudget     *bool                      `json:"supportsThinkingTokenBudget,omitempty"`
+	SupportsOpenAIGrammarTools      *bool                      `json:"supportsOpenAIGrammarTools,omitempty"`
+	SupportsMidConvoSystemMessages  *bool                      `json:"supportsMidConvoSystemMessages,omitempty"`
+	SupportsMidConvoToolAdditions   *bool                      `json:"supportsMidConvoToolAdditions,omitempty"`
+	SendSessionAffinityHeaders      *bool                      `json:"sendSessionAffinityHeaders,omitempty"`
+	SessionAffinityFormat           *string                    `json:"sessionAffinityFormat,omitempty"`
+	PromptCacheKeyMode              *string                    `json:"promptCacheKeyMode,omitempty"`
+	VllmPriority                    *int                       `json:"vllmPriority,omitempty"`
+	SupportsAdditionalTools         *bool                      `json:"supportsAdditionalTools,omitempty"`
+	SupportsToolSearch              *bool                      `json:"supportsToolSearch,omitempty"`
+	SupportsExplicitPromptCacheMode *bool                      `json:"supportsExplicitPromptCacheMode,omitempty"`
+	SupportsMidConvoEffort          *bool                      `json:"supportsMidConvoEffort,omitempty"`
+	SupportsMaxOutputTokens         *bool                      `json:"supportsMaxOutputTokens,omitempty"`
+	SupportsCacheControlOnTools     *bool                      `json:"supportsCacheControlOnTools,omitempty"`
+	SupportsTemperature             *bool                      `json:"supportsTemperature,omitempty"`
+	AllowEmptySignature             *bool                      `json:"allowEmptySignature,omitempty"`
+	SupportsStrictTools             *bool                      `json:"supportsStrictTools,omitempty"`
+	SupportsMidConvoToolChanges     *bool                      `json:"supportsMidConvoToolChanges,omitempty"`
+	SupportsMessageThreads          *bool                      `json:"supportsMessageThreads,omitempty"`
+	AllowedFallbackModels           any                        `json:"allowedFallbackModels,omitempty"`
+	Extra                           map[string]json.RawMessage `json:"-"`
 }
 
 // PiModel mirrors pi::PiModel.
 type PiModel struct {
-	ID               string                     `json:"id"`
-	Name             *string                    `json:"name,omitempty"`
-	API              *string                    `json:"api,omitempty"`
-	Reasoning        bool                       `json:"reasoning"`
-	ThinkingLevelMap map[string]*string         `json:"thinkingLevelMap,omitempty"`
-	Input            []string                   `json:"input,omitempty"`
-	ContextWindow    uint32                     `json:"contextWindow,omitempty"`
-	MaxTokens        uint32                     `json:"maxTokens,omitempty"`
-	Cost             *PiModelCost               `json:"cost,omitempty"`
-	Headers          map[string]string          `json:"headers,omitempty"`
-	Compat           *PiCompatConfig            `json:"compat,omitempty"`
-	Extra            map[string]json.RawMessage `json:"-"`
+	ID string `json:"id"`
+	// Type is the operation discriminator (chat | image | classifier);
+	// omitted means chat (upstream models-configuration.md).
+	Type                          *string                    `json:"type,omitempty"`
+	Name                          *string                    `json:"name,omitempty"`
+	API                           *string                    `json:"api,omitempty"`
+	BaseURL                       *string                    `json:"baseUrl,omitempty"`
+	Reasoning                     bool                       `json:"reasoning"`
+	ThinkingLevelMap              map[string]*string         `json:"thinkingLevelMap,omitempty"`
+	Input                         []string                   `json:"input,omitempty"`
+	InputLimits                   any                        `json:"inputLimits,omitempty"`
+	ContextWindow                 uint32                     `json:"contextWindow,omitempty"`
+	MaxTokens                     uint32                     `json:"maxTokens,omitempty"`
+	Cost                          *PiModelCost               `json:"cost,omitempty"`
+	PromptCache                   any                        `json:"promptCache,omitempty"`
+	SamplingParams                map[string]any             `json:"samplingParams,omitempty"`
+	SamplingParamsByThinkingLevel map[string]any             `json:"samplingParamsByThinkingLevel,omitempty"`
+	Headers                       map[string]string          `json:"headers,omitempty"`
+	Compat                        *PiCompatConfig            `json:"compat,omitempty"`
+	Extra                         map[string]json.RawMessage `json:"-"`
 }
 
 // PiModelOverride mirrors pi::PiModelOverride.
 type PiModelOverride struct {
-	Name             *string                    `json:"name,omitempty"`
-	API              *string                    `json:"api,omitempty"`
-	Reasoning        *bool                      `json:"reasoning,omitempty"`
-	ThinkingLevelMap map[string]*string         `json:"thinkingLevelMap,omitempty"`
-	Input            *[]string                  `json:"input,omitempty"`
-	ContextWindow    *uint32                    `json:"contextWindow,omitempty"`
-	MaxTokens        *uint32                    `json:"maxTokens,omitempty"`
-	Cost             *PiModelCost               `json:"cost,omitempty"`
-	Headers          map[string]string          `json:"headers,omitempty"`
-	Compat           *PiCompatConfig            `json:"compat,omitempty"`
-	Extra            map[string]json.RawMessage `json:"-"`
+	Name                          *string                    `json:"name,omitempty"`
+	API                           *string                    `json:"api,omitempty"`
+	BaseURL                       *string                    `json:"baseUrl,omitempty"`
+	Reasoning                     *bool                      `json:"reasoning,omitempty"`
+	ThinkingLevelMap              map[string]*string         `json:"thinkingLevelMap,omitempty"`
+	Input                         *[]string                  `json:"input,omitempty"`
+	InputLimits                   any                        `json:"inputLimits,omitempty"`
+	ContextWindow                 *uint32                    `json:"contextWindow,omitempty"`
+	MaxTokens                     *uint32                    `json:"maxTokens,omitempty"`
+	Cost                          *PiModelCost               `json:"cost,omitempty"`
+	PromptCache                   any                        `json:"promptCache,omitempty"`
+	SamplingParams                map[string]any             `json:"samplingParams,omitempty"`
+	SamplingParamsByThinkingLevel map[string]any             `json:"samplingParamsByThinkingLevel,omitempty"`
+	Headers                       map[string]string          `json:"headers,omitempty"`
+	Compat                        *PiCompatConfig            `json:"compat,omitempty"`
+	Extra                         map[string]json.RawMessage `json:"-"`
 }
 
 // PiProviderConfig mirrors pi::PiProviderConfig.
 type PiProviderConfig struct {
+	Name           *string                    `json:"name,omitempty"`
 	BaseURL        *string                    `json:"baseUrl,omitempty"`
 	API            *string                    `json:"api,omitempty"`
 	APIKey         *string                    `json:"apiKey,omitempty"`
@@ -122,8 +163,11 @@ type PiConfigStatus struct {
 	ConfigPath   string `json:"configPath"`
 }
 
-// PiCurrentConfig mirrors pi::PiCurrentConfig.
+// PiCurrentConfig mirrors pi::PiCurrentConfig. Schema keeps the optional
+// `$schema` root key visible; other unknown root keys survive ApplyProfile's
+// read-modify-write merge.
 type PiCurrentConfig struct {
+	Schema    *string                     `json:"$schema,omitempty"`
 	Providers map[string]PiProviderConfig `json:"providers"`
 }
 
@@ -446,6 +490,9 @@ func SetActiveProfileID(id string) error {
 }
 
 // ApplyPiProfile writes the profile's providers to ~/.pi/agent/models.json.
+// It merges over the live document instead of rebuilding it so upstream
+// fields this build does not model survive (and an optional `$schema` root
+// key is kept). Providers absent from the profile are removed.
 func ApplyProfile(id string) error {
 	profile, err := GetProfile(id)
 	if err != nil {
@@ -455,13 +502,17 @@ func ApplyProfile(id string) error {
 	if err != nil {
 		return err
 	}
-	current := PiCurrentConfig{Providers: profile.Providers}
-	if current.Providers == nil {
-		current.Providers = map[string]PiProviderConfig{}
-	}
-	data, err := json.MarshalIndent(current, "", "  ")
+	live, err := readLiveConfigForMerge(configPath)
 	if err != nil {
-		return fmt.Errorf("Failed to serialize Pi config: %w", err)
+		return err
+	}
+	providers := profile.Providers
+	if providers == nil {
+		providers = map[string]PiProviderConfig{}
+	}
+	data, err := mergePiConfig(live, providers, false)
+	if err != nil {
+		return err
 	}
 	if err := core.AtomicWrite(configPath, data); err != nil {
 		return err

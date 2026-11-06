@@ -397,9 +397,12 @@ Commands:
   hermes profiles list|show|active|apply|save|delete  manage hermes profiles
   hermes status                 report the live config path and active profile
   pi profiles list|show|active|apply|save|delete  manage pi profiles
+  pi providers list|show|delete            live ~/.pi/agent/models.json providers
+  pi providers import --channel <id> [--token <t>] [--models a,b] [--provider <id>]  import a channel as a pi provider
   pi status                     report the live config path and active profile
   omp profiles list|show|active|apply|save|delete  manage omp profiles
   omp providers list|save --file <json>|delete <id>  manage omp custom providers
+  omp providers import --channel <id> [--token <t>] [--models a,b] [--provider <id>]  import a channel as an omp provider
   omp status                    report config/DB presence and the active profile
   export list                   list export templates
   export save --file <json>     create or replace a template from a JSON document

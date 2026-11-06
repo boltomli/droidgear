@@ -1546,6 +1546,7 @@
   "omp.provider.modelBaseUrl": "Model Base URL",
   "omp.provider.reasoning": "Reasoning",
   "omp.provider.contextWindow": "Context Window",
+  "omp.provider.maxContextWindow": "Extended Context Window",
   "omp.provider.maxTokens": "Max Tokens",
   "omp.provider.modelsCount": "{{count}} model(s)",
   "omp.provider.apiKeyConfigured": "API key configured",

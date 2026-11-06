@@ -4,14 +4,15 @@ Detailed coding guidelines for AI agents working on this codebase. These docs ar
 
 ## Index
 
-| Document                                                  | When to Read                                        |
-| --------------------------------------------------------- | --------------------------------------------------- |
-| [Commands](./commands.md)                                 | Running builds, lints, tests, or any npm task       |
-| [TypeScript/React Code Style](./code-style-typescript.md) | Writing or reviewing TypeScript/React code          |
-| [State Management](./state-management.md)                 | Working with Zustand, TanStack Query, or state      |
-| [Architecture](./architecture.md)                         | Understanding system design, shell bridge, i18n     |
-| [UI Components](./ui-components.md)                       | Working with Radix UI, shadcn/ui, dialogs           |
-| [Wails v3 Shell](./wails-port.md)                         | Touching `wails/` (Go service) or `src/lib/shell/*` |
+| Document                                                  | When to Read                                                |
+| --------------------------------------------------------- | ----------------------------------------------------------- |
+| [Commands](./commands.md)                                 | Running builds, lints, tests, or any npm task               |
+| [TypeScript/React Code Style](./code-style-typescript.md) | Writing or reviewing TypeScript/React code                  |
+| [State Management](./state-management.md)                 | Working with Zustand, TanStack Query, or state              |
+| [Architecture](./architecture.md)                         | Understanding system design, shell bridge, i18n             |
+| [UI Components](./ui-components.md)                       | Working with Radix UI, shadcn/ui, dialogs                   |
+| [Wails v3 Shell](./wails-port.md)                         | Touching `wails/` (Go service) or `src/lib/shell/*`         |
+| [Upstream config sources](./tool-config-sources.md)       | Changing a tool's config surface or checking upstream drift |
 
 ## Relationship to Other Docs
 

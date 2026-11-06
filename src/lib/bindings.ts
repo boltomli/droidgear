@@ -1266,6 +1266,17 @@ async readPiCurrentConfig() : Promise<Result<PiCurrentConfig, string>> {
 }
 },
 /**
+ * Build the provider entry for a Pi channel import (no write).
+ */
+async preparePiChannelImport(input: PiChannelImportInput) : Promise<Result<PiChannelImportResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("prepare_pi_channel_import", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * List all OMP profiles
  */
 async listOmpProfiles() : Promise<Result<OmpProfile[], string>> {
@@ -1372,6 +1383,17 @@ async saveOmpCustomProvider(providerId: string, provider: OmpCustomProvider) : P
 async deleteOmpCustomProvider(providerId: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("delete_omp_custom_provider", { providerId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Build the provider entry for an OMP channel import (no write).
+ */
+async prepareOmpChannelImport(input: OmpChannelImportInput) : Promise<Result<OmpChannelImportResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("prepare_omp_channel_import", { input }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -3152,11 +3174,11 @@ export type ModelTestResult = { modelId: string; modelName: string; diagnostics:
 /**
  * OMP agent configuration (from `~/.omp/agent/config.yml`).
  */
-export type OmpAgentConfig = { modelRoles?: OmpModelRoles | null; theme?: OmpTheme | null; steeringMode?: string | null; followUpMode?: string | null; interruptMode?: string | null; symbolPreset?: string | null; setupVersion?: number | null }
+export type OmpAgentConfig = { modelRoles?: OmpModelRoles | null; modelPresets?: Partial<{ [key in string]: JsonValue }> | null; defaultThinkingLevel?: string | null; theme?: OmpTheme | null; steeringMode?: string | null; followUpMode?: string | null; interruptMode?: string | null; symbolPreset?: string | null; setupVersion?: number | null }
 /**
  * A cached model entry from `models.db` (read-only).
  */
-export type OmpCachedModel = { id: string; name?: string | null; api?: string | null; provider?: string | null; baseUrl?: string | null; reasoning?: boolean; input?: string[]; cost?: OmpModelCost | null; contextWindow?: number; maxTokens?: number; thinking?: OmpThinkingConfig | null }
+export type OmpCachedModel = { id: string; name?: string | null; api?: string | null; provider?: string | null; baseUrl?: string | null; reasoning?: boolean; input?: string[]; cost?: OmpModelCost | null; contextWindow?: number; maxContextWindow?: number; maxTokens?: number; thinking?: OmpThinkingConfig | null }
 /**
  * Full OMP configuration status.
  */
@@ -3172,7 +3194,7 @@ export type OmpCurrentConfig = { agentConfig?: OmpAgentConfig; providerModels?: 
 /**
  * A model declared in `models.yml`.
  */
-export type OmpCustomModel = { id: string; name?: string | null; api?: string | null; baseUrl?: string | null; reasoning?: boolean | null; thinking?: OmpThinkingConfig | null; input?: string[] | null; cost?: OmpModelCost | null; contextWindow?: number | null; maxTokens?: number | null; headers?: Partial<{ [key in string]: string }> | null; compat?: JsonValue | null; remoteCompaction?: JsonValue | null }
+export type OmpCustomModel = { id: string; name?: string | null; api?: string | null; baseUrl?: string | null; reasoning?: boolean | null; thinking?: OmpThinkingConfig | null; input?: string[] | null; imageInputDecoder?: string | null; cost?: OmpModelCost | null; contextWindow?: number | null; maxContextWindow?: number | null; maxTokens?: number | null; omitMaxOutputTokens?: boolean | null; preferWebsockets?: boolean | null; headers?: Partial<{ [key in string]: string }> | null; compat?: JsonValue | null; remoteCompaction?: JsonValue | null }
 /**
  * A provider declared in `~/.omp/agent/models.yml`.
  */
@@ -3190,9 +3212,11 @@ export type OmpCustomProviders = { providers: OmpCustomProviderEntry[] }
  */
 export type OmpModelCost = { input?: number; output?: number; cacheRead?: number; cacheWrite?: number }
 /**
- * OMP model roles — which model handles which role.
+ * OMP model roles — which model handles which role. Upstream groups chat
+ * roles (default, smol, slow, vision, plan, commit, tiny, memory, task,
+ * advisor) and model-kind roles (image, web, speech, dictation, judge).
  */
-export type OmpModelRoles = { default?: string | null; smol?: string | null; slow?: string | null; plan?: string | null; commit?: string | null }
+export type OmpModelRoles = { default?: string | null; smol?: string | null; slow?: string | null; vision?: string | null; plan?: string | null; commit?: string | null; tiny?: string | null; memory?: string | null; task?: string | null; advisor?: string | null; image?: string | null; web?: string | null; speech?: string | null; dictation?: string | null; judge?: string | null }
 /**
  * OMP profile (stored in DroidGear) — snapshot of model role assignments.
  */
@@ -3209,6 +3233,14 @@ export type OmpProviderModels = { providerId: string; models: OmpCachedModel[] }
  * Result of validating an OMP provider through HTTP connectivity testing.
  */
 export type OmpProviderTestResult = { success: boolean; providerId: string; modelId: string; latencyMs: number; responseText?: string | null; error?: string | null }
+/** One model listed by a channel token (OMP channel import). */
+export type OmpChannelModel = { id: string; name?: string | null }
+/**
+ * Resolved channel/token plus the selected models for an OMP provider import.
+ * The inference runs in service/omp (shared with dg and the TUI).
+ */
+export type OmpChannelImportInput = { channelName: string; channelType: string; baseUrl: string; platform?: string | null; apiKey: string; tokenName?: string; providerId?: string; modelIds: string[]; channelModels?: OmpChannelModel[]; existingProviderIds?: string[]; existing?: OmpCustomProvider | null }
+export type OmpChannelImportResult = { providerId: string; provider: OmpCustomProvider }
 export type OmpSessionDetail = { summary: OmpSessionSummary; messages: OmpSessionMessage[] }
 export type OmpSessionMessage = { id: string; role: string; content: ContentBlock[]; timestamp: string; isActiveBranch: boolean }
 export type OmpSessionSummary = { id: string; title: string; project: string; model: string; modelProvider: string; modifiedAt: number; messageCount: number; tokenUsage: OmpTokenUsage; path: string }
@@ -3300,7 +3332,7 @@ export type OutputStructure = "flat" |
 /**
  * Pi compatibility configuration. Unknown fields are retained for newer pi versions.
  */
-export type PiCompatConfig = { supportsStore?: boolean | null; supportsDeveloperRole?: boolean | null; supportsReasoningEffort?: boolean | null; reasoningEffortMap?: Partial<{ [key in string]: JsonValue }> | null; supportsUsageInStreaming?: boolean | null; maxTokensField?: string | null; requiresToolResultName?: boolean | null; requiresAssistantAfterToolResult?: boolean | null; requiresThinkingAsText?: boolean | null; requiresReasoningContentOnAssistantMessages?: boolean | null; thinkingFormat?: string | null; cacheControlFormat?: string | null; supportsStrictMode?: boolean | null; supportsLongCacheRetention?: boolean | null; supportsEagerToolInputStreaming?: boolean | null; 
+export type PiCompatConfig = { supportsStore?: boolean | null; supportsDeveloperRole?: boolean | null; supportsReasoningEffort?: boolean | null; reasoningEffortMap?: Partial<{ [key in string]: JsonValue }> | null; supportsUsageInStreaming?: boolean | null; maxTokensField?: string | null; requiresToolResultName?: boolean | null; requiresAssistantAfterToolResult?: boolean | null; requiresThinkingAsText?: boolean | null; requiresReasoningContentOnAssistantMessages?: boolean | null; thinkingFormat?: string | null; cacheControlFormat?: string | null; supportsStrictMode?: boolean | null; supportsLongCacheRetention?: boolean | null; supportsEagerToolInputStreaming?: boolean | null; supportsFinishReason?: boolean | null; requiresNonNullAssistantContent?: boolean | null; chatTemplateKwargs?: JsonValue | null; chatTemplateArgs?: JsonValue | null; zaiToolStream?: boolean | null; thinkingTokenBudgetField?: string | null; supportsThinkingTokenBudget?: boolean | null; supportsOpenAIGrammarTools?: boolean | null; supportsMidConvoSystemMessages?: boolean | null; supportsMidConvoToolAdditions?: boolean | null; sendSessionAffinityHeaders?: boolean | null; sessionAffinityFormat?: string | null; promptCacheKeyMode?: string | null; vllmPriority?: number | null; supportsAdditionalTools?: boolean | null; supportsToolSearch?: boolean | null; supportsExplicitPromptCacheMode?: boolean | null; supportsMidConvoEffort?: boolean | null; supportsMaxOutputTokens?: boolean | null; supportsCacheControlOnTools?: boolean | null; supportsTemperature?: boolean | null; allowEmptySignature?: boolean | null; supportsStrictTools?: boolean | null; supportsMidConvoToolChanges?: boolean | null; supportsMessageThreads?: boolean | null; allowedFallbackModels?: JsonValue | null; 
 /**
  * Force adaptive thinking (thinking.type: adaptive + output_config.effort)
  * regardless of model ID. Required by Anthropic-compatible upstreams for
@@ -3314,11 +3346,11 @@ export type PiConfigStatus = { configExists: boolean; configPath: string }
 /**
  * Current Pi configuration (from `~/.pi/agent/models.json`)
  */
-export type PiCurrentConfig = { providers?: Partial<{ [key in string]: PiProviderConfig }> }
+export type PiCurrentConfig = { "$schema"?: string | null; providers?: Partial<{ [key in string]: PiProviderConfig }> }
 /**
  * Pi model definition
  */
-export type PiModel = { id: string; name?: string | null; api?: string | null; reasoning?: boolean; thinkingLevelMap?: Partial<{ [key in string]: string | null }> | null; input?: string[]; contextWindow?: number; maxTokens?: number; cost?: PiModelCost | null; headers?: Partial<{ [key in string]: string }> | null; compat?: PiCompatConfig | null }
+export type PiModel = { id: string; type?: string | null; name?: string | null; api?: string | null; baseUrl?: string | null; reasoning?: boolean; thinkingLevelMap?: Partial<{ [key in string]: string | null }> | null; input?: string[]; inputLimits?: JsonValue | null; contextWindow?: number; maxTokens?: number; cost?: PiModelCost | null; promptCache?: JsonValue | null; samplingParams?: Partial<{ [key in string]: JsonValue }> | null; samplingParamsByThinkingLevel?: Partial<{ [key in string]: JsonValue }> | null; headers?: Partial<{ [key in string]: string }> | null; compat?: PiCompatConfig | null }
 /**
  * Pi model cost configuration
  */
@@ -3330,7 +3362,7 @@ export type PiModelCostTier = { inputTokensAbove: number; input: number; output:
 /**
  * Pi model override (subset of PiModel fields for overriding built-in models)
  */
-export type PiModelOverride = { name?: string | null; api?: string | null; reasoning?: boolean | null; thinkingLevelMap?: Partial<{ [key in string]: string | null }> | null; input?: string[] | null; contextWindow?: number | null; maxTokens?: number | null; cost?: PiModelCost | null; headers?: Partial<{ [key in string]: string }> | null; compat?: PiCompatConfig | null }
+export type PiModelOverride = { name?: string | null; api?: string | null; baseUrl?: string | null; reasoning?: boolean | null; thinkingLevelMap?: Partial<{ [key in string]: string | null }> | null; input?: string[] | null; inputLimits?: JsonValue | null; contextWindow?: number | null; maxTokens?: number | null; cost?: PiModelCost | null; promptCache?: JsonValue | null; samplingParams?: Partial<{ [key in string]: JsonValue }> | null; samplingParamsByThinkingLevel?: Partial<{ [key in string]: JsonValue }> | null; headers?: Partial<{ [key in string]: string }> | null; compat?: PiCompatConfig | null }
 /**
  * Pi profile (stored in DroidGear)
  */
@@ -3338,11 +3370,19 @@ export type PiProfile = { id: string; name: string; description?: string | null;
 /**
  * Pi provider configuration
  */
-export type PiProviderConfig = { baseUrl?: string | null; api?: string | null; apiKey?: string | null; oauth?: string | null; headers?: Partial<{ [key in string]: string }> | null; authHeader?: boolean | null; models: PiModel[]; modelOverrides?: Partial<{ [key in string]: PiModelOverride }> | null; compat?: PiCompatConfig | null }
+export type PiProviderConfig = { name?: string | null; baseUrl?: string | null; api?: string | null; apiKey?: string | null; oauth?: string | null; headers?: Partial<{ [key in string]: string }> | null; authHeader?: boolean | null; models: PiModel[]; modelOverrides?: Partial<{ [key in string]: PiModelOverride }> | null; compat?: PiCompatConfig | null }
 /**
  * Result of validating a provider through Pi's own CLI runtime.
  */
 export type PiProviderTestResult = { success: boolean; providerId: string; modelId: string; latencyMs: number; responseText?: string | null; error?: string | null }
+/** One model listed by a channel token (Pi channel import). */
+export type PiChannelModel = { id: string; name?: string | null }
+/**
+ * Resolved channel/token plus the selected models for a Pi provider import.
+ * The inference runs in service/pi (shared with dg and the TUI).
+ */
+export type PiChannelImportInput = { channelName: string; channelType: string; baseUrl: string; platform?: string | null; apiKey: string; tokenName?: string; providerId?: string; modelIds: string[]; channelModels?: PiChannelModel[]; existingProviderIds?: string[]; existing?: PiProviderConfig | null }
+export type PiChannelImportResult = { providerId: string; baseUrl: string; api: string; models: PiModel[] }
 export type PiSessionDetail = { summary: PiSessionSummary; messages: PiSessionMessage[] }
 export type PiSessionMessage = { id: string; role: string; content: ContentBlock[]; timestamp: string; isActiveBranch: boolean }
 export type PiSessionSummary = { id: string; title: string; project: string; model: string; modelProvider: string; modifiedAt: number; messageCount: number; tokenUsage: PiTokenUsage; path: string }

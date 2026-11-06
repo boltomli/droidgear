@@ -21,18 +21,20 @@ func newCodexScreen(ctx context.Context) (Screen, error) {
 	})
 }
 
-// newPiScreen is the Pi tool pane — providers / sessions.
+// newPiScreen is the Pi tool pane — providers / profiles / sessions.
 func newPiScreen(ctx context.Context) (Screen, error) {
 	return newSectionedScreen(ctx, "Pi", []screenSection{
-		{key: "providers", title: "Providers", open: list(PiSource)},
+		{key: "profiles", title: "Profiles", open: list(PiSource)},
+		{key: "providers", title: "Providers", open: list(PiProvidersSource)},
 		{key: "sessions", title: "Sessions", open: list(PiSessionsSource)},
 	})
 }
 
-// newOmpScreen is the OMP tool pane — config / sessions.
+// newOmpScreen is the OMP tool pane — config / providers / sessions.
 func newOmpScreen(ctx context.Context) (Screen, error) {
 	return newSectionedScreen(ctx, "OMP", []screenSection{
 		{key: "config", title: "Config", open: list(OmpSource)},
+		{key: "providers", title: "Providers", open: list(OmpProvidersSource)},
 		{key: "sessions", title: "Sessions", open: list(OmpSessionsSource)},
 	})
 }
