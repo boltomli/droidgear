@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.3.9.10
+
+**New Features / 新功能**
+
+- The left sidebar now ships tool modules in batches instead of one flat list: batch 1 (`codex`, `droid`, `hermes`, `omp`, `pi`) → batch 2 (`claude`, `copilot`, `dsh`) → deprecated modules, separated by dividers, and the module switcher/entries are rendered from one table (`TOOL_BATCHES`) instead of a hand-written if-chain. The Go TUI module list follows exactly the same order and a test pins it, so the GUI and the terminal cannot drift apart / 左栏改为按批次展示工具模块，不再是平铺列表：第一批（`codex`、`droid`、`hermes`、`omp`、`pi`）→ 第二批（`claude`、`copilot`、`dsh`）→ 弃用模块，批次间有分隔线；模块切换按钮与条目改由同一张表（`TOOL_BATCHES`）渲染，取代手写 if 链。Go TUI 的模块列表与其完全同序并由测试钉住，GUI 与终端不会各自漂移
+- `opencode` / `openclaw` are marked deprecated: they render last behind a divider with a "deprecated" badge, their pages carry a deprecation notice, and the README / parity docs state they receive no new features (existing config read/write keeps working) / `opencode` / `openclaw` 标记弃用：排在左栏最后、分隔线之后并带「弃用」标记，页面顶部有弃用说明，README 与对齐文档明确它们不再新增功能（既有配置的读写仍然可用）
+- Pi can now pin its startup model: `defaultProvider`, `defaultModel` and `defaultThinkingLevel` from `~/.pi/agent/settings.json` are editable in a new default-model card (GUI), in the Pi → Defaults section (`e` edit, `x` clear, TUI) and through `dg pi settings show|set|reset`. Saving is a read-modify-write that keeps every other settings key (`retry`, `theme`, `compaction`, `$schema` …), blank fields remove the key so Pi picks automatically, and thinking levels are validated against the upstream enum / Pi 现在可以固定启动模型：新增默认模型卡片（GUI）、Pi → Defaults 分节（`e` 编辑、`x` 清空，TUI）与 `dg pi settings show|set|reset`，读写 `~/.pi/agent/settings.json` 的 `defaultProvider` / `defaultModel` / `defaultThinkingLevel`。保存为读-改-写，保留 `retry`、`theme`、`compaction`、`$schema` 等其余键；留空即删除该键交回 Pi 自动选择；思考级别按上游枚举校验
+
+**Bug Fixes / 问题修复**
+
+- The codex/dsh ProviderDialog tests no longer fail intermittently in full runs: post-click assertions wait for the DOM to settle and the suite gets a 15s per-test budget, instead of reading Radix select triggers and registry-derived fields synchronously / codex/dsh 的 ProviderDialog 测试不再在全量运行时偶发失败：点击后的断言改为等待 DOM 稳定，并给予每个用例 15s 预算，而不是同步读取 Radix 下拉触发器的文本与注册表推导字段
+
 ## v1.3.9.9
 
 **New Features / 新功能**
