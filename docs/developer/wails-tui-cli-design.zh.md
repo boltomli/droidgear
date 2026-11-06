@@ -226,8 +226,9 @@ dg codex status                               # T2 ✅（config/auth 路径 + ac
 dg pi|hermes|omp profiles ...                   # T1/T2 ✅（与 codex 同形态；omp 另有 providers）
 dg hermes providers list|show|delete|import --channel <id> [--token <t>] [--model <m>] [--name <n>]  # T1 ✅（导入与 GUI 同源）
 dg pi providers list|show|delete|import --channel <id> [--token <t>] [--models a,b] [--provider <id>]  # T1 ✅（导入与 GUI 同源：service/importflow）
-dg pi settings show|set [--provider <id>] [--model <id>] [--thinking <level>]|reset  # ✅ 启动模型（~/.pi/agent/settings.json，与 GUI 默认模型卡 / TUI Defaults 同源）
-dg omp providers list|save --file <json>|delete <id>|import --channel <id> […]            # T1 ✅（import 与 GUI 同源）
+dg omp roles candidates        # ✅ 列出模型角色可用的 provider/model-id（models.yml + models.db 缓存，与 GUI 下拉 / TUI hint 同源）
+dg pi settings show|set [--provider <id>] [--model <id>] [--thinking <level>]|reset|candidates  # ✅ 启动模型（~/.pi/agent/settings.json，与 GUI 默认模型卡 / TUI Defaults 同源）；candidates 列出 models.json + catalog 里可选的 provider/model；set 对未知 id 输出 warnings；profiles apply 回执带 startup / startupAdjusted / startupReasons（apply 会把被 profile 删掉的默认模型改到该 profile 的第一个模型）
+dg omp providers list|save --file <json>|delete <id>|import --channel <id> […]            # T1 ✅（import 与 GUI 同源；save/delete 回执带 rolesAdjusted/modelRoles/roleAdjustments/thinkingAdjusted/defaultThinkingLevel，说明被自动修复的 config.yml 角色与 thinking 级别；profiles apply 另带 warnings）
 dg claude settings ... | dg copilot profiles ... # 同上形态 ✅
 dg opencode|openclaw ...                        # 已弃用（不做，见 tui-parity §0.4）
 dg droid settings|trusted|auth|missions|legacy # T1    ✅（models = dg factory models）

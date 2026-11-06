@@ -236,7 +236,7 @@ func ImportChannelProvider(input OmpChannelImportInput) (OmpChannelImportResult,
 	if err != nil {
 		return OmpChannelImportResult{}, err
 	}
-	if err := SaveCustomProvider(result.ProviderID, result.Provider); err != nil {
+	if _, err := SaveCustomProvider(result.ProviderID, result.Provider); err != nil {
 		return OmpChannelImportResult{}, err
 	}
 	return result, nil

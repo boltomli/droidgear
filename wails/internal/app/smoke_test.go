@@ -74,8 +74,10 @@ func TestPiMountSequenceSmoke(t *testing.T) {
 		t.Fatalf("GetPiConfigStatus: %v", err)
 	}
 
-	if err := a.ApplyPiProfile(profile.ID); err != nil {
+	if applied, err := a.ApplyPiProfile(profile.ID); err != nil {
 		t.Fatalf("ApplyPiProfile: %v", err)
+	} else if applied.ID != profile.ID {
+		t.Fatalf("ApplyPiProfile returned id %q, want %q", applied.ID, profile.ID)
 	}
 	current, err := a.ReadPiCurrentConfig()
 	if err != nil {
@@ -150,8 +152,10 @@ func TestHermesAndOmpMountSequenceSmoke(t *testing.T) {
 	if err := a.SaveOmpProfile(ompProfile); err != nil {
 		t.Fatalf("SaveOmpProfile: %v", err)
 	}
-	if err := a.ApplyOmpProfile(ompProfile.ID); err != nil {
+	if applied, err := a.ApplyOmpProfile(ompProfile.ID); err != nil {
 		t.Fatalf("ApplyOmpProfile: %v", err)
+	} else if applied.ID != ompProfile.ID {
+		t.Fatalf("ApplyOmpProfile returned id %q, want %q", applied.ID, ompProfile.ID)
 	}
 	if _, err := a.ReadOmpCustomProviders(); err != nil {
 		t.Fatalf("ReadOmpCustomProviders: %v", err)

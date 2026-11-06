@@ -489,22 +489,29 @@ func SetActiveProfileID(id string) error {
 	return core.AtomicWrite(path, core.BytesOf(id))
 }
 
-// ApplyPiProfile writes the profile's providers to ~/.pi/agent/models.json.
-// It merges over the live document instead of rebuilding it so upstream
-// fields this build does not model survive (and an optional `$schema` root
-// key is kept). Providers absent from the profile are removed.
-func ApplyProfile(id string) error {
+// ApplyProfile writes the profile's providers to ~/.pi/agent/models.json and
+// keeps the startup model in ~/.pi/agent/settings.json pointing at a model that
+// still exists. It merges over the live document instead of rebuilding it so
+// upstream fields this build does not model survive (and an optional `$schema`
+// root key is kept). Providers absent from the profile are removed, which is
+// why the returned result carries the reconcile pass that repaired the startup
+// selection (see ReconcileStartupModel).
+func ApplyProfile(id string) (PiApplyResult, error) {
 	profile, err := GetProfile(id)
 	if err != nil {
-		return err
+		return PiApplyResult{}, err
 	}
 	configPath, err := piConfigPath()
 	if err != nil {
-		return err
+		return PiApplyResult{}, err
 	}
 	live, err := readLiveConfigForMerge(configPath)
 	if err != nil {
-		return err
+		return PiApplyResult{}, err
+	}
+	before, err := providersFromDocument(live)
+	if err != nil {
+		return PiApplyResult{}, err
 	}
 	providers := profile.Providers
 	if providers == nil {
@@ -512,12 +519,28 @@ func ApplyProfile(id string) error {
 	}
 	data, err := mergePiConfig(live, providers, false)
 	if err != nil {
-		return err
+		return PiApplyResult{}, err
 	}
 	if err := core.AtomicWrite(configPath, data); err != nil {
-		return err
+		return PiApplyResult{}, err
 	}
-	return SetActiveProfileID(id)
+	if err := SetActiveProfileID(id); err != nil {
+		return PiApplyResult{}, err
+	}
+	// Reconcile against what was written, not the profile: apply unions the
+	// models a surviving provider already had, so a dropped model may well
+	// still be there.
+	after, err := providersFromDocument(data)
+	if err != nil {
+		return PiApplyResult{}, err
+	}
+	result, err := ReconcileStartupModel(before, after)
+	if err != nil {
+		return result, err
+	}
+	result.ID = profile.ID
+	result.AppliedProviders = sortedProviderIDs(after)
+	return result, nil
 }
 
 // GetPiConfigStatus reports models.json state.

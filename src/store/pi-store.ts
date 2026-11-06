@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import {
   commands,
+  type PiApplyResult,
   type PiProfile,
   type PiProviderConfig,
   type PiConfigStatus,
@@ -21,7 +22,6 @@ interface PiState {
   settings: PiSettingsStatus | null
   /** Providers as they exist in the live models.json — the default-model options. */
   liveProviders: Record<string, PiProviderConfig>
-
   loadProfiles: () => Promise<void>
   loadActiveProfileId: () => Promise<void>
   loadConfigStatus: () => Promise<void>
@@ -32,7 +32,7 @@ interface PiState {
   saveProfile: () => Promise<void>
   deleteProfile: (id: string) => Promise<void>
   duplicateProfile: (id: string, newName: string) => Promise<void>
-  applyProfile: (id: string) => Promise<void>
+  applyProfile: (id: string) => Promise<PiApplyResult | null>
   loadFromLiveConfig: () => Promise<void>
   addProvider: (id: string, config: PiProviderConfig) => Promise<void>
   updateProvider: (id: string, config: PiProviderConfig) => Promise<void>
@@ -243,16 +243,20 @@ export const usePiStore = create<PiState>()(
               undefined,
               'pi/applyProfile/saveError'
             )
-            return
+            return null
           }
         }
         const result = await commands.applyPiProfile(id)
         if (result.status !== 'ok') {
           set({ error: result.error }, undefined, 'pi/applyProfile/error')
-          return
+          return null
         }
         set({ activeProfileId: id }, undefined, 'pi/applyProfile/success')
         await get().loadConfigStatus()
+        // The apply may have re-pointed the startup model in settings.json, so
+        // the default-model card must show what is on disk now.
+        await get().loadSettings()
+        return result.data
       },
 
       loadFromLiveConfig: async () => {

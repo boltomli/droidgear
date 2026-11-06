@@ -964,7 +964,7 @@ func (c *cli) pi(args []string) error {
 
 func (c *cli) piSettings(args []string) error {
 	if len(args) == 0 {
-		return c.usage("pi settings needs a subcommand: show | set | reset")
+		return c.usage("pi settings needs a subcommand: show | set | reset | candidates")
 	}
 	switch args[0] {
 	case "show":
@@ -973,9 +973,41 @@ func (c *cli) piSettings(args []string) error {
 		return c.piSettingsSet(args[1:])
 	case "reset":
 		return c.piSettingsReset(args[1:])
+	case "candidates":
+		return c.piSettingsCandidates(args[1:])
 	default:
-		return c.usage("unknown pi settings subcommand %q (want show | set | reset)", args[0])
+		return c.usage("unknown pi settings subcommand %q (want show | set | reset | candidates)", args[0])
 	}
+}
+
+// piSettingsCandidates prints the provider/model pairs the startup model can
+// point at (models.json plus pi's cached catalog) — the same list the GUI
+// pickers and the TUI Defaults screen offer.
+func (c *cli) piSettingsCandidates(args []string) error {
+	if len(args) != 0 {
+		return c.usage("pi settings candidates takes no arguments")
+	}
+	options, err := pi.ListStartupOptions()
+	if err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, options, func(w io.Writer) error {
+		if len(options.Providers) == 0 {
+			_, err := fmt.Fprintln(w, "no providers known (models.json and pi's catalog are both empty)")
+			return err
+		}
+		for _, providerID := range options.Providers {
+			models := options.Models[providerID]
+			if len(models) == 0 {
+				fmt.Fprintf(w, "%s: (no models listed)\\n", providerID)
+				continue
+			}
+			for _, modelID := range models {
+				fmt.Fprintf(w, "%s/%s\\n", providerID, modelID)
+			}
+		}
+		return nil
+	})
 }
 
 // settingOrAuto renders an unset setting the way pi reads it: automatic.
@@ -994,6 +1026,13 @@ func settingFlagValue(value string) *string {
 	return &trimmed
 }
 
+// piSettingsShowResult is PiSettingsStatus plus the advisory notes that explain
+// a selection pi cannot resolve (same wording as `pi settings set`).
+type piSettingsShowResult struct {
+	pi.PiSettingsStatus
+	Warnings []string `json:"warnings,omitempty"`
+}
+
 func (c *cli) piSettingsShow(args []string) error {
 	if len(args) != 0 {
 		return c.usage("pi settings show takes no arguments")
@@ -1002,7 +1041,12 @@ func (c *cli) piSettingsShow(args []string) error {
 	if err != nil {
 		return err
 	}
-	return emit(c.opts, c.stdout, status, func(w io.Writer) error {
+	warnings, err := pi.StartupWarnings(status.PiSettings)
+	if err != nil {
+		return err
+	}
+	result := piSettingsShowResult{PiSettingsStatus: status, Warnings: warnings}
+	return emit(c.opts, c.stdout, result, func(w io.Writer) error {
 		state := "missing"
 		if status.SettingsExists {
 			state = "present"
@@ -1011,6 +1055,9 @@ func (c *cli) piSettingsShow(args []string) error {
 		fmt.Fprintf(w, "provider:  %s\n", settingOrAuto(status.DefaultProvider))
 		fmt.Fprintf(w, "model:     %s\n", settingOrAuto(status.DefaultModel))
 		fmt.Fprintf(w, "thinking:  %s\n", settingOrAuto(status.DefaultThinkingLevel))
+		for _, warning := range warnings {
+			fmt.Fprintf(w, "warning:   %s\n", warning)
+		}
 		return nil
 	})
 }
@@ -1049,6 +1096,10 @@ func (c *cli) piSettingsSet(args []string) error {
 	if err := pi.SaveSettings(next); err != nil {
 		return err
 	}
+	warnings, err := pi.StartupWarnings(next)
+	if err != nil {
+		return err
+	}
 
 	applied := !c.opts.dryRun
 	receipt := map[string]any{
@@ -1058,6 +1109,9 @@ func (c *cli) piSettingsSet(args []string) error {
 		"defaultThinkingLevel": next.DefaultThinkingLevel,
 		"settingsPath":         current.SettingsPath,
 	}
+	if len(warnings) > 0 {
+		receipt["warnings"] = warnings
+	}
 	return emit(c.opts, c.stdout, receipt, func(w io.Writer) error {
 		verb := "set"
 		if !applied {
@@ -1066,6 +1120,9 @@ func (c *cli) piSettingsSet(args []string) error {
 		fmt.Fprintf(w, "%s pi default model: %s / %s (thinking %s)\n",
 			verb, settingOrAuto(next.DefaultProvider), settingOrAuto(next.DefaultModel),
 			settingOrAuto(next.DefaultThinkingLevel))
+		for _, warning := range warnings {
+			fmt.Fprintf(w, "warning: %s\n", warning)
+		}
 		return nil
 	})
 }
@@ -1226,13 +1283,46 @@ func (c *cli) piProfilesApply(args []string) error {
 	if err := c.requirePiProfile(id); err != nil {
 		return err
 	}
-	if err := pi.ApplyProfile(id); err != nil {
+	result, err := pi.ApplyProfile(id)
+	if err != nil {
 		return err
 	}
-	return emit(c.opts, c.stdout, map[string]any{"applied": true, "id": id}, func(w io.Writer) error {
-		_, err := fmt.Fprintf(w, "applied pi profile %s\n", id)
-		return err
+	fields, notes := piStartupReceipt(result)
+	receipt := map[string]any{
+		"applied":          !c.opts.dryRun,
+		"id":               result.ID,
+		"appliedProviders": result.AppliedProviders,
+	}
+	for key, value := range fields {
+		receipt[key] = value
+	}
+	if len(notes) > 0 {
+		receipt["startupReasons"] = result.StartupReasons
+	}
+	return emit(c.opts, c.stdout, receipt, func(w io.Writer) error {
+		if _, err := fmt.Fprintf(w, "applied pi profile %s (%s)\n", id, strings.Join(result.AppliedProviders, ", ")); err != nil {
+			return err
+		}
+		fmt.Fprintf(w, "startup model: %s / %s (thinking %s)\n",
+			settingOrAuto(result.Startup.DefaultProvider),
+			settingOrAuto(result.Startup.DefaultModel),
+			settingOrAuto(result.Startup.DefaultThinkingLevel))
+		for _, note := range notes {
+			fmt.Fprintf(w, "adjusted: %s\n", note)
+		}
+		return nil
 	})
+}
+
+// piStartupReceipt turns a pi apply/delete result into receipt fields plus the
+// human-readable startup-model notes shared by `pi profiles apply` and
+// `pi providers delete`.
+func piStartupReceipt(result pi.PiApplyResult) (map[string]any, []string) {
+	fields := map[string]any{
+		"startup":         result.Startup,
+		"startupAdjusted": result.StartupAdjusted,
+	}
+	return fields, result.StartupReasons
 }
 
 func (c *cli) piProfilesSave(args []string) error {
@@ -1318,18 +1408,58 @@ func (c *cli) piStatus(args []string) error {
 
 func (c *cli) omp(args []string) error {
 	if len(args) == 0 {
-		return c.usage("omp needs a subcommand: profiles | providers | status")
+		return c.usage("omp needs a subcommand: profiles | providers | roles | status")
 	}
 	switch args[0] {
 	case "profiles":
 		return c.ompProfiles(args[1:])
 	case "providers":
 		return c.ompProviders(args[1:])
+	case "roles":
+		return c.ompRoles(args[1:])
 	case "status":
 		return c.ompStatus(args[1:])
 	default:
-		return c.usage("unknown omp subcommand %q (want profiles | providers | status)", args[0])
+		return c.usage("unknown omp subcommand %q (want profiles | providers | roles | status)", args[0])
 	}
+}
+
+func (c *cli) ompRoles(args []string) error {
+	if len(args) == 0 {
+		return c.usage("omp roles needs a subcommand: candidates")
+	}
+	switch args[0] {
+	case "candidates":
+		return c.ompRolesCandidates(args[1:])
+	default:
+		return c.usage("unknown omp roles subcommand %q (want candidates)", args[0])
+	}
+}
+
+// ompRolesCandidates prints every "provider/model-id" a model role can point
+// at (models.yml plus OMP's cached catalog) — the same list the GUI pickers and
+// the TUI hints use.
+func (c *cli) ompRolesCandidates(args []string) error {
+	if len(args) != 0 {
+		return c.usage("omp roles candidates takes no arguments")
+	}
+	options, err := omp.ListRoleOptions()
+	if err != nil {
+		return err
+	}
+	return emit(c.opts, c.stdout, options, func(w io.Writer) error {
+		values := omp.RoleValues(options)
+		if len(values) == 0 {
+			_, err := fmt.Fprintln(w, "no providers known (models.yml and OMP's catalog are both empty)")
+			return err
+		}
+		for _, value := range values {
+			if _, err := fmt.Fprintln(w, value); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (c *cli) ompProfiles(args []string) error {
@@ -1463,12 +1593,28 @@ func (c *cli) ompProfilesApply(args []string) error {
 	if err := c.requireOmpProfile(id); err != nil {
 		return err
 	}
-	if err := omp.ApplyProfile(id); err != nil {
+	result, err := omp.ApplyProfile(id)
+	if err != nil {
 		return err
 	}
-	return emit(c.opts, c.stdout, map[string]any{"applied": true, "id": id}, func(w io.Writer) error {
-		_, err := fmt.Fprintf(w, "applied omp profile %s\n", id)
-		return err
+	receipt := map[string]any{
+		"applied":    !c.opts.dryRun,
+		"id":         result.ID,
+		"modelRoles": result.Roles,
+	}
+	if len(result.Warnings) > 0 {
+		receipt["warnings"] = result.Warnings
+	}
+	return emit(c.opts, c.stdout, receipt, func(w io.Writer) error {
+		if _, err := fmt.Fprintf(w, "applied omp profile %s\n", id); err != nil {
+			return err
+		}
+		for _, warning := range result.Warnings {
+			if _, err := fmt.Fprintf(w, "warning: %s\n", warning); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 
@@ -1534,6 +1680,7 @@ func (c *cli) ompProvidersList(args []string) error {
 }
 
 func (c *cli) ompProvidersSave(args []string) error {
+	var roles omp.OmpRoleReconcile
 	return c.saveJSON("omp providers", args, "path to a provider document ({providerId, config})",
 		func(raw []byte) (string, error) {
 			var entry omp.OmpCustomProviderEntry
@@ -1543,11 +1690,15 @@ func (c *cli) ompProvidersSave(args []string) error {
 			if strings.TrimSpace(entry.ProviderID) == "" {
 				return "", c.usage("provider document needs a non-empty \"providerId\"")
 			}
-			if err := omp.SaveCustomProvider(entry.ProviderID, entry.Config); err != nil {
+			result, err := omp.SaveCustomProvider(entry.ProviderID, entry.Config)
+			if err != nil {
 				return "", err
 			}
+			roles = result
 			return entry.ProviderID, nil
-		})
+		},
+		func() (map[string]any, []string) { return roleReconcileReceipt(roles) },
+	)
 }
 
 func (c *cli) ompProvidersDelete(args []string) error {
@@ -1569,13 +1720,57 @@ func (c *cli) ompProvidersDelete(args []string) error {
 	if !found {
 		return fmt.Errorf("%w: omp provider %q", errNotFound, id)
 	}
-	if err := omp.DeleteCustomProvider(id); err != nil {
+	roles, err := omp.DeleteCustomProvider(id)
+	if err != nil {
 		return err
 	}
-	return emit(c.opts, c.stdout, map[string]any{"applied": true, "providerId": id}, func(w io.Writer) error {
-		_, err := fmt.Fprintf(w, "deleted omp provider %s\n", id)
-		return err
+	fields, notes := roleReconcileReceipt(roles)
+	receipt := map[string]any{"applied": !c.opts.dryRun, "providerId": id}
+	for key, value := range fields {
+		receipt[key] = value
+	}
+	if len(notes) > 0 {
+		receipt["notes"] = notes
+	}
+	return emit(c.opts, c.stdout, receipt, func(w io.Writer) error {
+		if _, err := fmt.Fprintf(w, "deleted omp provider %s\n", id); err != nil {
+			return err
+		}
+		for _, note := range notes {
+			if _, err := fmt.Fprintf(w, "adjusted: %s\n", note); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
+}
+
+// roleReconcileReceipt turns an OMP role repair pass into receipt fields plus
+// the human-readable notes GUI/TUI/CLI all print.
+func roleReconcileReceipt(result omp.OmpRoleReconcile) (map[string]any, []string) {
+	fields := map[string]any{
+		"rolesAdjusted": result.Adjusted,
+		"modelRoles":    result.Roles,
+	}
+	if len(result.Adjustments) > 0 {
+		fields["roleAdjustments"] = result.Adjustments
+	}
+	notes := make([]string, 0, len(result.Adjustments)+1)
+	for _, adjustment := range result.Adjustments {
+		target := "(cleared)"
+		if adjustment.To != nil {
+			target = *adjustment.To
+		}
+		notes = append(notes, fmt.Sprintf("role %s: %s -> %s (%s)",
+			adjustment.Role, adjustment.From, target, adjustment.Reason))
+	}
+	if result.Thinking != nil {
+		fields["thinkingAdjusted"] = true
+		fields["defaultThinkingLevel"] = result.Thinking.To
+		notes = append(notes, fmt.Sprintf("thinking level: %s -> %s (%s)",
+			result.Thinking.From, result.Thinking.To, result.Thinking.Reason))
+	}
+	return fields, notes
 }
 
 func (c *cli) ompStatus(args []string) error {
@@ -1609,7 +1804,10 @@ func (c *cli) ompStatus(args []string) error {
 
 // saveJSON shares the "read a JSON document from --file and hand it to a
 // domain writer" shape used by every `… save --file` subcommand.
-func (c *cli) saveJSON(what string, args []string, help string, write func([]byte) (string, error)) error {
+// saveJSON writes one document from --file and emits the shared receipt. The
+// optional detail hook adds service-reported extras (role repairs) to the JSON
+// receipt and prints its notes after the human line.
+func (c *cli) saveJSON(what string, args []string, help string, write func([]byte) (string, error), detail ...func() (map[string]any, []string)) error {
 	fs := c.newFlagSet(what + " save")
 	file := fs.String("file", "", help)
 	if err := fs.Parse(args); err != nil {
@@ -1629,9 +1827,28 @@ func (c *cli) saveJSON(what string, args []string, help string, write func([]byt
 	if err != nil {
 		return err
 	}
-	return emit(c.opts, c.stdout, map[string]any{"applied": true, "name": name}, func(w io.Writer) error {
-		_, err := fmt.Fprintf(w, "saved %s %q\n", what, name)
-		return err
+	receipt := map[string]any{"applied": true, "name": name}
+	notes := []string{}
+	if len(detail) > 0 && detail[0] != nil {
+		fields, extraNotes := detail[0]()
+		for key, value := range fields {
+			receipt[key] = value
+		}
+		notes = extraNotes
+	}
+	if len(notes) > 0 {
+		receipt["notes"] = notes
+	}
+	return emit(c.opts, c.stdout, receipt, func(w io.Writer) error {
+		if _, err := fmt.Fprintf(w, "saved %s %q\n", what, name); err != nil {
+			return err
+		}
+		for _, note := range notes {
+			if _, err := fmt.Fprintf(w, "adjusted: %s\n", note); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 

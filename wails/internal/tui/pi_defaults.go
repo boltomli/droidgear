@@ -58,6 +58,35 @@ func piDefaultAction(row kvRow, raw string) writeAction {
 	}
 }
 
+// startupChoiceHints prints what the provider/model rows can point at, so the
+// free-text prompt still offers the choices the GUI dropdowns list (the TUI
+// twin of `dg pi settings candidates`).
+func startupChoiceHints() []string {
+	options, err := pi.ListStartupOptions()
+	if err != nil {
+		return []string{"choices: unavailable (" + err.Error() + ")"}
+	}
+	if len(options.Providers) == 0 {
+		return []string{"choices: none (models.json and pi's catalog are both empty)"}
+	}
+	pairs := make([]string, 0, len(options.Providers))
+	for _, providerID := range options.Providers {
+		models := options.Models[providerID]
+		if len(models) == 0 {
+			pairs = append(pairs, providerID+"/-")
+			continue
+		}
+		for _, modelID := range models {
+			pairs = append(pairs, providerID+"/"+modelID)
+		}
+	}
+	const limit = 8
+	if len(pairs) > limit {
+		pairs = append(pairs[:limit], fmt.Sprintf("… %d more", len(pairs)-limit))
+	}
+	return []string{"choices: " + strings.Join(pairs, " · ")}
+}
+
 // newPiDefaultsScreen renders the startup model selection — the terminal
 // counterpart of the GUI's default-model card. `e` edits a row, `x` clears
 // the whole selection; both go through the shared preview → confirm contract,
@@ -76,17 +105,20 @@ func newPiDefaultsScreen(context.Context) (Screen, error) {
 		}
 		return piDefaultRows(current.PiSettings)
 	}
+	trailing := []string{
+		"file " + status.SettingsPath,
+		"unset keys are written as absent, so pi picks automatically",
+		"thinking level: " + strings.Join(pi.ThinkingLevels, " | "),
+		"applying a profile re-points a startup model the profile dropped",
+	}
+	trailing = append(trailing, startupChoiceHints()...)
 	screen := newKVScreen("Pi defaults", rows).
 		withRebuild(rowsFn).
-		withTrailing(
-			"file "+status.SettingsPath,
-			"unset keys are written as absent, so pi picks automatically",
-			"thinking level: "+strings.Join(pi.ThinkingLevels, " | "),
-		).
+		withTrailing(trailing...).
 		withActions(
 			promptAction("e", "edit", kvPrompt{
 				title:      "set pi default · provider | model | thinking level",
-				hint:       "empty clears the key (pi picks automatically) · thinking level: " + strings.Join(pi.ThinkingLevels, " | "),
+				hint:       "empty clears the key (pi picks automatically) · thinking level: " + strings.Join(pi.ThinkingLevels, " | ") + " · provider/model choices: `dg pi settings candidates`",
 				allowEmpty: true,
 				initial: func(row kvRow) string {
 					if row.value == autoLabel {

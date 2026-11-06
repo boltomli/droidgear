@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { IdPicker } from '@/components/ui/id-picker'
 import {
   Select,
   SelectContent,
@@ -87,6 +88,7 @@ export function PiConfigPage() {
   const saveProfile = usePiStore(state => state.saveProfile)
   const setError = usePiStore(state => state.setError)
   const settings = usePiStore(state => state.settings)
+  const liveProviders = usePiStore(state => state.liveProviders)
   const loadSettings = usePiStore(state => state.loadSettings)
   const saveSettings = usePiStore(state => state.saveSettings)
 
@@ -182,13 +184,23 @@ export function PiConfigPage() {
   const handleApply = async () => {
     if (!currentProfile) return
     setError(null)
-    await applyProfile(currentProfile.id)
+    const result = await applyProfile(currentProfile.id)
     setShowApplyConfirm(false)
     // Check if an error was set during apply
     const currentError = usePiStore.getState().error
-    if (!currentError) {
-      toast.success(t('pi.actions.applySuccess'))
+    if (currentError) return
+    if (result?.startupAdjusted) {
+      // Applying a profile can re-point the startup model; say so instead of
+      // letting the user discover a silently different default model.
+      toast.success(
+        t('pi.actions.applySuccessAdjusted', {
+          provider: result.startup.defaultProvider ?? t('pi.defaults.auto'),
+          model: result.startup.defaultModel ?? t('pi.defaults.auto'),
+        })
+      )
+      return
     }
+    toast.success(t('pi.actions.applySuccess'))
   }
 
   const handleLoadFromConfig = async () => {
@@ -266,6 +278,24 @@ export function PiConfigPage() {
       toast.success(t('pi.defaults.saved'))
     }
   }
+
+  // Startup-model choices: the profile being edited plus what the live
+  // models.json already holds. Pi's own catalog stays free text here; the TUI
+  // Defaults screen and `dg pi settings candidates` list it for reference.
+  const profileProviders = currentProfile?.providers ?? {}
+  const providerIds = Array.from(
+    new Set([...Object.keys(profileProviders), ...Object.keys(liveProviders)])
+  ).sort()
+  const modelsOf = (providerId: string) => {
+    const ids = [
+      ...(profileProviders[providerId]?.models ?? []).map(model => model.id),
+      ...(liveProviders[providerId]?.models ?? []).map(model => model.id),
+    ]
+    return Array.from(new Set(ids))
+  }
+  const modelIds = defaultProvider.trim()
+    ? modelsOf(defaultProvider.trim())
+    : Array.from(new Set(providerIds.flatMap(modelsOf)))
 
   return (
     <div className="flex flex-col h-full">
@@ -409,6 +439,9 @@ export function PiConfigPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 {t('pi.defaults.hint')}
               </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('pi.defaults.pickHint')}
+              </p>
               {settings?.settingsPath && (
                 <p className="text-xs text-muted-foreground/70 font-mono truncate">
                   {settings.settingsPath}
@@ -435,6 +468,12 @@ export function PiConfigPage() {
               onChange={e => setDefaultProvider(e.target.value)}
               placeholder={t('pi.defaults.providerPlaceholder')}
             />
+            <IdPicker
+              label={t('pi.defaults.pickProvider')}
+              value={defaultProvider.trim()}
+              options={providerIds}
+              onPick={setDefaultProvider}
+            />
           </div>
           <div className="flex items-center gap-2">
             <Label className="w-32 shrink-0">{t('pi.defaults.model')}</Label>
@@ -443,6 +482,12 @@ export function PiConfigPage() {
               value={defaultModel}
               onChange={e => setDefaultModel(e.target.value)}
               placeholder={t('pi.defaults.modelPlaceholder')}
+            />
+            <IdPicker
+              label={t('pi.defaults.pickModel')}
+              value={defaultModel.trim()}
+              options={modelIds}
+              onPick={setDefaultModel}
             />
           </div>
           <div className="flex items-center gap-2">

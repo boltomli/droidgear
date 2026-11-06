@@ -62,7 +62,10 @@ func (piProvidersSource) Actions() []ListAction {
 	return []ListAction{{
 		Key: "d", Label: "delete",
 		Run: func(_ context.Context, row ListRow) error {
-			return pi.DeleteLiveProvider(row.ID)
+			// Deleting a provider can strand the startup model; the service
+			// repairs settings.json and the preview shows both files.
+			_, err := pi.DeleteLiveProvider(row.ID)
+			return err
 		},
 	}}
 }
@@ -136,7 +139,11 @@ func (ompProvidersSource) Actions() []ListAction {
 	return []ListAction{{
 		Key: "d", Label: "delete",
 		Run: func(_ context.Context, row ListRow) error {
-			return omp.DeleteCustomProvider(row.ID)
+			// Deleting a provider strands config.yml roles (OMP refuses to start
+			// without a default role); the service repairs them and the preview
+			// shows both files.
+			_, err := omp.DeleteCustomProvider(row.ID)
+			return err
 		},
 	}}
 }

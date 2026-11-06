@@ -74,7 +74,7 @@ func channelImportedProvider() OmpCustomProvider {
 
 func TestSaveCustomProviderOmitsNulls(t *testing.T) {
 	home := sandbox(t)
-	if err := SaveCustomProvider("litellm", channelImportedProvider()); err != nil {
+	if _, err := SaveCustomProvider("litellm", channelImportedProvider()); err != nil {
 		t.Fatalf("SaveCustomProvider: %v", err)
 	}
 	path := filepath.Join(home, ".omp", "agent", "models.yml")
@@ -142,7 +142,7 @@ func TestSaveCustomProviderRepairsLegacyNulls(t *testing.T) {
 
 	// Saving any provider rewrites the whole file, so the legacy null keys
 	// must disappear even when this provider is untouched by the save.
-	if err := SaveCustomProvider("other", OmpCustomProvider{
+	if _, err := SaveCustomProvider("other", OmpCustomProvider{
 		BaseURL: strPtr("https://other.example.test/v1"),
 		APIKey:  strPtr("sk-other"),
 		Models:  []OmpCustomModel{{ID: "other-model", API: strPtr("openai-completions")}},
@@ -160,14 +160,14 @@ func TestSaveCustomProviderRepairsLegacyNulls(t *testing.T) {
 
 func TestDeleteCustomProviderKeepsFileNullFree(t *testing.T) {
 	home := sandbox(t)
-	if err := SaveCustomProvider("keep", OmpCustomProvider{
+	if _, err := SaveCustomProvider("keep", OmpCustomProvider{
 		BaseURL: strPtr("https://keep.example.test/v1"),
 		APIKey:  strPtr("sk-keep"),
 		Models:  []OmpCustomModel{{ID: "keep-model", API: strPtr("openai-completions")}},
 	}); err != nil {
 		t.Fatalf("SaveCustomProvider: %v", err)
 	}
-	if err := DeleteCustomProvider("missing"); err != nil {
+	if _, err := DeleteCustomProvider("missing"); err != nil {
 		t.Fatalf("DeleteCustomProvider: %v", err)
 	}
 	written := readModelsFile(t, filepath.Join(home, ".omp", "agent", "models.yml"))
@@ -195,7 +195,7 @@ func TestApplyProfileWritesThinkingLevelAndPresets(t *testing.T) {
 	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveProfile: %v", err)
 	}
-	if err := ApplyProfile("p1"); err != nil {
+	if _, err := ApplyProfile("p1"); err != nil {
 		t.Fatalf("ApplyProfile: %v", err)
 	}
 	config, err := readConfigYML()
@@ -215,7 +215,7 @@ func TestApplyProfileWritesThinkingLevelAndPresets(t *testing.T) {
 	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveProfile: %v", err)
 	}
-	if err := ApplyProfile("p1"); err != nil {
+	if _, err := ApplyProfile("p1"); err != nil {
 		t.Fatalf("ApplyProfile: %v", err)
 	}
 	config, _ = readConfigYML()
@@ -227,7 +227,7 @@ func TestApplyProfileWritesThinkingLevelAndPresets(t *testing.T) {
 	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveProfile: %v", err)
 	}
-	if err := ApplyProfile("p1"); err != nil {
+	if _, err := ApplyProfile("p1"); err != nil {
 		t.Fatalf("ApplyProfile: %v", err)
 	}
 	config, _ = readConfigYML()

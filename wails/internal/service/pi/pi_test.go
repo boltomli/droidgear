@@ -98,7 +98,7 @@ func TestApplyProfileWritesSchemaCleanModelsJSON(t *testing.T) {
 	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveProfile: %v", err)
 	}
-	if err := ApplyProfile(profile.ID); err != nil {
+	if _, err := ApplyProfile(profile.ID); err != nil {
 		t.Fatalf("ApplyProfile: %v", err)
 	}
 
@@ -210,7 +210,7 @@ func TestApplyProfilePreservesUnknownProviderFields(t *testing.T) {
 	if err := SaveProfile(profile); err != nil {
 		t.Fatalf("SaveProfile: %v", err)
 	}
-	if err := ApplyProfile(profile.ID); err != nil {
+	if _, err := ApplyProfile(profile.ID); err != nil {
 		t.Fatalf("ApplyProfile: %v", err)
 	}
 

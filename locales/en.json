@@ -185,6 +185,7 @@
   "common.disabled": "Disabled",
   "common.reset": "Reset",
   "common.cancel": "Cancel",
+  "common.noChoices": "No choices",
   "common.save": "Save",
   "common.back": "Back",
   "common.next": "Next",
@@ -1422,6 +1423,9 @@
 
   "pi.defaults.title": "Default model",
   "pi.defaults.hint": "Which model Pi starts with (written to ~/.pi/agent/settings.json; not part of a profile). Leave both fields empty to let Pi pick automatically.",
+  "pi.defaults.pickHint": "Pick an id from the profile or the live models.json — or type one; applying a profile re-points a default model that no longer exists to the profile's first model.",
+  "pi.defaults.pickProvider": "Choose a provider from the list",
+  "pi.defaults.pickModel": "Choose a model id from the list",
   "pi.defaults.provider": "Default provider",
   "pi.defaults.providerPlaceholder": "e.g. wududu (empty = automatic)",
   "pi.defaults.model": "Default model ID",
@@ -1524,6 +1528,7 @@
   "pi.actions.apply": "Apply Profile",
   "pi.actions.applyConfirm": "Apply this profile? This will update your Pi configuration file (~/.pi/agent/models.json).",
   "pi.actions.applySuccess": "Profile applied successfully",
+  "pi.actions.applySuccessAdjusted": "Profile applied; the old default model no longer existed, so it is now {{provider}} / {{model}}",
   "pi.actions.loadedFromLive": "Loaded from live config",
 
   "pi.sessions.title": "Pi Sessions",
@@ -1561,6 +1566,9 @@
   "omp.profile.delete": "Delete Profile",
 
   "omp.modelRoles.title": "Model Roles",
+  "omp.roles.hint": "Values are provider/model-id; the picker offers the combinations models.yml and OMP's cache know (same list as `dg omp roles candidates`). Deleting a provider or shrinking a model list re-points roles that would otherwise dangle.",
+  "omp.roles.pickRole": "Choose a model from the list",
+  "omp.roles.adjusted": "Repaired {{count}} model role(s): {{notes}}",
   "omp.modelRoles.defaultThinkingLevel": "Default thinking level",
   "omp.modelRoles.presets": "Model presets (JSON)",
   "omp.modelRoles.presetsHint": "Named snapshots of role assignments; merged into config.yml modelPresets on apply.",
@@ -1570,6 +1578,7 @@
 
   "omp.actions.apply": "Apply Profile",
   "omp.actions.applySuccess": "Profile applied successfully",
+  "omp.actions.applySuccessWarnings": "Profile applied, but these roles cannot be resolved: {{warnings}}",
   "omp.actions.loadedFromLive": "Loaded from live config",
   "omp.actions.loadFromLive": "Load from Live",
   "omp.actions.noLiveRoles": "No model roles found in config.yml",

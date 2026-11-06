@@ -403,10 +403,12 @@ Commands:
   pi settings show              startup model selection from ~/.pi/agent/settings.json
   pi settings set [--provider <id>] [--model <id>] [--thinking <level>]  pin the startup model
   pi settings reset             clear the startup model (pi picks automatically)
+  pi settings candidates        list provider/model pairs a startup model can use
   pi status                     report the live config path and active profile
   omp profiles list|show|active|apply|save|delete  manage omp profiles
   omp providers list|save --file <json>|delete <id>  manage omp custom providers
   omp providers import --channel <id> [--token <t>] [--models a,b] [--provider <id>]  import a channel as an omp provider
+  omp roles candidates          list provider/model-id values a model role can use
   omp status                    report config/DB presence and the active profile
   export list                   list export templates
   export save --file <json>     create or replace a template from a JSON document

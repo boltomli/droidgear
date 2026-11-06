@@ -2,11 +2,14 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	_ "modernc.org/sqlite" // pure-Go SQLite driver, same one internal/service/omp uses
 )
 
 // sandbox points every home-ish root at a temp directory and restores it
@@ -1197,5 +1200,253 @@ func TestPiSettingsLifecycle(t *testing.T) {
 	}
 	if shown["settingsExists"] != true {
 		t.Errorf("settingsExists = %v, want true", shown["settingsExists"])
+	}
+}
+
+// TestPiProfilesApplyRepointsStartupModel covers the repair path: a profile that
+// no longer carries the startup provider used to leave settings.json pointing
+// at a model pi cannot resolve, so pi silently started with another model.
+func TestPiProfilesApplyRepointsStartupModel(t *testing.T) {
+	home := sandbox(t)
+
+	writeFile(t, home, ".pi/agent/models.json", `{
+  "providers": {
+    "wududu": { "models": [{ "id": "deepseek-v4.1-flash" }] }
+  }
+}`)
+	writeFile(t, home, ".pi/agent/settings.json", `{
+  "defaultProvider": "wududu",
+  "defaultModel": "deepseek-v4.1-flash",
+  "defaultThinkingLevel": "high"
+}`)
+
+	profilePath := writeFile(t, home, "pi-profile-corp.json", `{
+  "id": "corp",
+  "name": "Corp",
+  "providers": {
+    "corp-proxy": { "models": [{ "id": "corp-large" }, { "id": "corp-small" }] }
+  }
+}`)
+	if code, _, errOut := runCLI(t, "--json", "pi", "profiles", "save", "--file", profilePath); code != 0 {
+		t.Fatalf("save exit = %d, stderr = %s", code, errOut)
+	}
+
+	code, out, errOut := runCLI(t, "--json", "pi", "profiles", "apply", "corp")
+	if code != 0 {
+		t.Fatalf("apply exit = %d, stderr = %s", code, errOut)
+	}
+	receipt := decode(t, out)
+	if receipt["applied"] != true {
+		t.Errorf("apply receipt = %v", receipt)
+	}
+	if receipt["startupAdjusted"] != true {
+		t.Errorf("startupAdjusted = %v, want true (%v)", receipt["startupAdjusted"], receipt)
+	}
+	startup, _ := receipt["startup"].(map[string]any)
+	if startup["defaultProvider"] != "corp-proxy" || startup["defaultModel"] != "corp-large" {
+		t.Errorf("startup = %v, want corp-proxy/corp-large", startup)
+	}
+
+	data, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "settings.json")) // #nosec G304 -- temp fixture
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	var root map[string]any
+	if err := json.Unmarshal(data, &root); err != nil {
+		t.Fatalf("settings is not JSON: %v", err)
+	}
+	if root["defaultProvider"] != "corp-proxy" || root["defaultModel"] != "corp-large" {
+		t.Errorf("settings.json = %v", root)
+	}
+	if _, ok := root["defaultThinkingLevel"]; ok {
+		t.Errorf("thinking level survived the model change: %v", root["defaultThinkingLevel"])
+	}
+
+	// The candidate list the GUI pickers and the TUI Defaults screen share.
+	code, out, errOut = runCLI(t, "--json", "pi", "settings", "candidates")
+	if code != 0 {
+		t.Fatalf("candidates exit = %d, stderr = %s", code, errOut)
+	}
+	options := decode(t, out)
+	models, _ := options["models"].(map[string]any)
+	if corpModels, _ := models["corp-proxy"].([]any); len(corpModels) != 2 {
+		t.Errorf("candidates = %v", options)
+	}
+}
+
+// seedOmpModelCache writes OMP's cached catalog (models.db model_cache), which
+// is what lets the role repair tell a custom models.yml provider apart from a
+// built-in one.
+func seedOmpModelCache(t *testing.T, home string, providers map[string][]string) {
+	t.Helper()
+	path := filepath.Join(home, ".omp", "agent", "models.db")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("open models.db: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+	if _, err := db.Exec(`CREATE TABLE model_cache (provider_id TEXT PRIMARY KEY, models TEXT)`); err != nil {
+		t.Fatalf("create model_cache: %v", err)
+	}
+	for providerID, modelIDs := range providers {
+		models := make([]map[string]any, 0, len(modelIDs))
+		for _, id := range modelIDs {
+			models = append(models, map[string]any{"id": id})
+		}
+		encoded, err := json.Marshal(models)
+		if err != nil {
+			t.Fatalf("marshal models: %v", err)
+		}
+		if _, err := db.Exec(`INSERT INTO model_cache (provider_id, models) VALUES (?, ?)`, providerID, string(encoded)); err != nil {
+			t.Fatalf("insert model_cache: %v", err)
+		}
+	}
+}
+
+// TestOmpProvidersDeleteRepairsRoles pins the OMP counterpart of the pi
+// startup-model repair: deleting the provider a role points at used to leave
+// config.yml dangling, and OMP then exits with "No default model selected".
+func TestOmpProvidersDeleteRepairsRoles(t *testing.T) {
+	home := sandbox(t)
+	seedOmpModelCache(t, home, map[string][]string{"anthropic": {"claude-fable-5"}})
+	writeFile(t, home, ".omp/agent/models.yml", `providers:
+  custom-a:
+    api: openai-completions
+    apiKey: sk-a
+    models:
+      - id: a1
+  custom-b:
+    api: openai-completions
+    apiKey: sk-b
+    models:
+      - id: b1
+`)
+	writeFile(t, home, ".omp/agent/config.yml", `modelRoles:
+  default: custom-a/a1
+`)
+
+	code, out, errOut := runCLI(t, "--json", "omp", "providers", "delete", "custom-a")
+	if code != 0 {
+		t.Fatalf("delete exit = %d, stderr = %s", code, errOut)
+	}
+	receipt := decode(t, out)
+	if receipt["rolesAdjusted"] != true {
+		t.Errorf("rolesAdjusted = %v, want true (%s)", receipt["rolesAdjusted"], out)
+	}
+	roles, _ := receipt["modelRoles"].(map[string]any)
+	if roles["default"] != "custom-b/b1" {
+		t.Errorf("modelRoles.default = %v, want custom-b/b1", roles["default"])
+	}
+	if adjustments, _ := receipt["roleAdjustments"].([]any); len(adjustments) != 1 {
+		t.Errorf("roleAdjustments = %v, want one", receipt["roleAdjustments"])
+	}
+}
+
+// TestOmpProfilesApplyWarnsAboutBrokenRoles: the profile's own choice is written
+// as-is, but the receipt says OMP cannot resolve it.
+func TestOmpProfilesApplyWarnsAboutBrokenRoles(t *testing.T) {
+	home := sandbox(t)
+	seedOmpModelCache(t, home, map[string][]string{"anthropic": {"claude-fable-5"}})
+	writeFile(t, home, ".omp/agent/models.yml", `providers:
+  proxy:
+    api: openai-completions
+    apiKey: sk-proxy
+    models:
+      - id: m1
+`)
+	profilePath := writeFile(t, home, "omp-broken.json", `{
+  "id": "broken",
+  "name": "Broken",
+  "modelRoles": { "default": "proxy/gone" }
+}`)
+	if code, _, errOut := runCLI(t, "--json", "omp", "profiles", "save", "--file", profilePath); code != 0 {
+		t.Fatalf("save exit = %d, stderr = %s", code, errOut)
+	}
+
+	code, out, errOut := runCLI(t, "--json", "omp", "profiles", "apply", "broken")
+	if code != 0 {
+		t.Fatalf("apply exit = %d, stderr = %s", code, errOut)
+	}
+	warnings, _ := decode(t, out)["warnings"].([]any)
+	if len(warnings) != 1 || !strings.Contains(warnings[0].(string), "does not list that model") {
+		t.Errorf("warnings = %v", warnings)
+	}
+
+	// The apply must not rewrite the profile's choice.
+	raw, err := os.ReadFile(filepath.Join(home, ".omp", "agent", "config.yml")) // #nosec G304 -- temp fixture
+	if err != nil {
+		t.Fatalf("read config.yml: %v", err)
+	}
+	if !strings.Contains(string(raw), "proxy/gone") {
+		t.Errorf("apply rewrote the role: %s", raw)
+	}
+}
+
+// TestOmpRolesCandidates covers the shared candidate list behind the GUI
+// pickers, the TUI hint and `dg omp roles candidates`.
+func TestOmpRolesCandidates(t *testing.T) {
+	home := sandbox(t)
+	seedOmpModelCache(t, home, map[string][]string{"anthropic": {"claude-fable-5"}})
+	writeFile(t, home, ".omp/agent/models.yml", `providers:
+  proxy:
+    api: openai-completions
+    apiKey: sk-proxy
+    models:
+      - id: m1
+`)
+
+	code, out, errOut := runCLI(t, "omp", "roles", "candidates")
+	if code != 0 {
+		t.Fatalf("candidates exit = %d, stderr = %s", code, errOut)
+	}
+	for _, want := range []string{"anthropic/claude-fable-5", "proxy/m1"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("candidates output missing %q:\n%s", want, out)
+		}
+	}
+}
+
+// TestPiProvidersDeleteRepairsStartupModel is the pi twin of the OMP test
+// above: `pi providers delete` could strand settings.json's default model.
+func TestPiProvidersDeleteRepairsStartupModel(t *testing.T) {
+	home := sandbox(t)
+	writeFile(t, home, ".pi/agent/models.json", `{
+  "providers": {
+    "wududu": { "models": [{ "id": "deepseek-v4.1-flash" }] },
+    "corp": { "models": [{ "id": "corp-large" }] }
+  }
+}`)
+	writeFile(t, home, ".pi/agent/settings.json", `{
+  "defaultProvider": "wududu",
+  "defaultModel": "deepseek-v4.1-flash",
+  "defaultThinkingLevel": "high"
+}`)
+
+	code, out, errOut := runCLI(t, "--json", "pi", "providers", "delete", "wududu")
+	if code != 0 {
+		t.Fatalf("delete exit = %d, stderr = %s", code, errOut)
+	}
+	receipt := decode(t, out)
+	if receipt["startupAdjusted"] != true {
+		t.Errorf("startupAdjusted = %v, want true (%s)", receipt["startupAdjusted"], out)
+	}
+	startup, _ := receipt["startup"].(map[string]any)
+	if startup["defaultProvider"] != "corp" || startup["defaultModel"] != "corp-large" {
+		t.Errorf("startup = %v, want corp/corp-large", startup)
+	}
+
+	data, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "settings.json")) // #nosec G304 -- temp fixture
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	var settings map[string]any
+	if err := json.Unmarshal(data, &settings); err != nil {
+		t.Fatalf("settings is not JSON: %v", err)
+	}
+	if settings["defaultProvider"] != "corp" || settings["defaultModel"] != "corp-large" {
+		t.Errorf("settings.json = %v", settings)
 	}
 }

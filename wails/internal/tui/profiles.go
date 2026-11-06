@@ -29,6 +29,8 @@ type profileSource struct {
 	// createFrom implements the "save a new profile from a JSON document"
 	// input action ('n'), the TUI twin of `… profiles save --file`.
 	createFrom func(raw []byte) error
+	// hint is appended to the summary line, e.g. where the role ids come from.
+	hint string
 }
 
 // InputActions exposes profile creation from a JSON file.
@@ -107,10 +109,14 @@ func (p *profileSource) Summary(rows []ListRow) string {
 			break
 		}
 	}
-	return fmt.Sprintf(
+	summary := fmt.Sprintf(
 		"%s · %d profiles · active: %s · r toggle secrets",
 		p.title, len(rows), active,
 	)
+	if p.hint != "" {
+		summary += " · " + p.hint
+	}
+	return summary
 }
 
 // CodexSource adapts internal/service/codex.
@@ -180,7 +186,7 @@ func PiSource() ListSource {
 	return &profileSource{
 		title:  "Pi",
 		active: pi.GetActiveProfileID,
-		apply:  pi.ApplyProfile,
+		apply:  func(id string) error { _, err := pi.ApplyProfile(id); return err },
 		delete: pi.DeleteProfile,
 		createFrom: func(raw []byte) error {
 			var profile pi.PiProfile
@@ -210,8 +216,9 @@ func PiSource() ListSource {
 func OmpSource() ListSource {
 	return &profileSource{
 		title:  "OMP",
+		hint:   "role ids: dg omp roles candidates",
 		active: omp.GetActiveProfileID,
-		apply:  omp.ApplyProfile,
+		apply:  func(id string) error { _, err := omp.ApplyProfile(id); return err },
 		delete: omp.DeleteProfile,
 		createFrom: func(raw []byte) error {
 			var profile omp.OmpProfile

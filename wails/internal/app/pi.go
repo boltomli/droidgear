@@ -65,8 +65,10 @@ func (a *App) SetActivePiProfileId(id string) error {
 	return pi.SetActiveProfileID(id)
 }
 
-// ApplyPiProfile applies a profile to the live ~/.pi/agent/models.json.
-func (a *App) ApplyPiProfile(id string) error {
+// ApplyPiProfile applies a profile to the live ~/.pi/agent/models.json and
+// returns the providers it wrote plus the startup model it had to repair in
+// settings.json (see pi.ReconcileStartupModel).
+func (a *App) ApplyPiProfile(id string) (pi.PiApplyResult, error) {
 	return pi.ApplyProfile(id)
 }
 

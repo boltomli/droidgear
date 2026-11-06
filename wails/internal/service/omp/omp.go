@@ -581,19 +581,23 @@ func ValidateCustomProvider(provider OmpCustomProvider) error {
 }
 
 // SaveOmpCustomProvider upserts one provider in models.yml, preserving
-// unknown fields carried over from the previous version of the entry.
-func SaveCustomProvider(providerID string, provider OmpCustomProvider) error {
+// unknown fields carried over from the previous version of the entry. The
+// returned reconcile pass repairs config.yml roles the upsert made
+// unresolvable (a replaced model list is declared state, so removed models
+// disappear).
+func SaveCustomProvider(providerID string, provider OmpCustomProvider) (OmpRoleReconcile, error) {
 	providerID = strings.TrimSpace(providerID)
 	if providerID == "" {
-		return errors.New("OMP provider ID cannot be empty")
+		return OmpRoleReconcile{}, errors.New("OMP provider ID cannot be empty")
 	}
 	if err := ValidateCustomProvider(provider); err != nil {
-		return err
+		return OmpRoleReconcile{}, err
 	}
 	config, err := readModelsYML()
 	if err != nil {
-		return err
+		return OmpRoleReconcile{}, err
 	}
+	before := cloneProviderMap(config.Providers)
 	if previousRaw, ok := config.Providers[providerID]; ok {
 		raw, err := json.Marshal(previousRaw)
 		if err == nil {
@@ -627,20 +631,29 @@ func SaveCustomProvider(providerID string, provider OmpCustomProvider) error {
 	}
 	value, err := core.ToMap(provider)
 	if err != nil {
-		return fmt.Errorf("Failed to serialize OMP provider: %w", err)
+		return OmpRoleReconcile{}, fmt.Errorf("Failed to serialize OMP provider: %w", err)
 	}
 	config.Providers[providerID] = value
-	return writeModelsYML(config)
+	if err := writeModelsYML(config); err != nil {
+		return OmpRoleReconcile{}, err
+	}
+	return ReconcileModelRoles(before, config.Providers)
 }
 
-// DeleteOmpCustomProvider removes one provider from models.yml.
-func DeleteCustomProvider(providerID string) error {
+// DeleteOmpCustomProvider removes one provider from models.yml and repairs the
+// config.yml roles that pointed at it: OMP refuses to start with
+// "No default model selected" when the default role loses its provider.
+func DeleteCustomProvider(providerID string) (OmpRoleReconcile, error) {
 	config, err := readModelsYML()
 	if err != nil {
-		return err
+		return OmpRoleReconcile{}, err
 	}
+	before := cloneProviderMap(config.Providers)
 	delete(config.Providers, providerID)
-	return writeModelsYML(config)
+	if err := writeModelsYML(config); err != nil {
+		return OmpRoleReconcile{}, err
+	}
+	return ReconcileModelRoles(before, config.Providers)
 }
 
 // ---------------------------------------------------------------------------
@@ -1011,15 +1024,25 @@ func SetActiveProfileID(id string) error {
 	return core.AtomicWrite(path, core.BytesOf(id))
 }
 
+// OmpApplyResult reports what one apply wrote plus the advisory notes for the
+// roles OMP will not be able to resolve (a profile can pin a provider that
+// models.yml no longer carries; the apply does not silently rewrite that
+// choice, it reports it).
+type OmpApplyResult struct {
+	ID       string        `json:"id"`
+	Roles    OmpModelRoles `json:"roles"`
+	Warnings []string      `json:"warnings,omitempty"`
+}
+
 // ApplyOmpProfile writes the profile's model roles into config.yml.
-func ApplyProfile(id string) error {
+func ApplyProfile(id string) (OmpApplyResult, error) {
 	profile, err := GetProfile(id)
 	if err != nil {
-		return err
+		return OmpApplyResult{}, err
 	}
 	config, err := readConfigYML()
 	if err != nil {
-		return err
+		return OmpApplyResult{}, err
 	}
 	roles := mergeOmpModelRoles(config.ModelRoles, profile.ModelRoles)
 	config.ModelRoles = &roles
@@ -1035,9 +1058,16 @@ func ApplyProfile(id string) error {
 		config.ModelPresets = profile.ModelPresets
 	}
 	if err := writeConfigYML(config); err != nil {
-		return err
+		return OmpApplyResult{}, err
 	}
-	return SetActiveProfileID(id)
+	if err := SetActiveProfileID(id); err != nil {
+		return OmpApplyResult{}, err
+	}
+	warnings, err := ValidateModelRoles(roles, config.DefaultThinkingLevel)
+	if err != nil {
+		return OmpApplyResult{}, err
+	}
+	return OmpApplyResult{ID: id, Roles: roles, Warnings: warnings}, nil
 }
 
 // GetOmpConfigStatus reports the OMP config files' state.

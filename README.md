@@ -108,7 +108,7 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 ### OMP（Oh My Pi）支持
 
 - **自定义 Provider** - 按官方 `~/.omp/agent/models.yml` 读写自定义 Provider 与模型（GUI 与 TUI 增删改），支持从渠道更新模型和 Provider，并保留其他 Provider 与未知字段
-- **模型角色** - 管理 `~/.omp/agent/config.yml` 中的 15 个模型角色（default/smol/slow/vision/plan/commit/tiny/memory/task/advisor + image/web/speech/dictation/judge），并可从当前配置加载
+- **模型角色** - 管理 `~/.omp/agent/config.yml` 中的 15 个模型角色（default/smol/slow/vision/plan/commit/tiny/memory/task/advisor + image/web/speech/dictation/judge），并可从当前配置加载；输入框旁的下拉列出 `models.yml` + OMP 缓存的 `provider/model-id`（`dg omp roles candidates` 同源）。**角色跟随写入自动修复**：删除 Provider 或缩减模型列表后，指向失效目标的角色会自动改到第一个可用组合（models.db 缓存里的内置 Provider 不动），无候选则置空；新默认模型无法表达的 `defaultThinkingLevel` 会复位为 `auto`（按模型 `thinking.efforts` 判断），GUI toast / TUI 预览 / `dg` 回执都会说明原因；`omp profiles apply` 对无法解析的角色给出 warning 而不改写用户选择
 - **会话历史** - 浏览 `~/.omp/agent/sessions` 的 JSONL 日志（GUI）：列表或按项目分组、渲染当前分支与思考内容、跟随新消息、隐藏空会话与删除，滚动时分批加载
 
 ### Pi 支持
@@ -117,7 +117,7 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 - **Provider/Model 管理** - 支持配置多个 Provider 及其模型（baseUrl, api, apiKey, headers, compat 等）
 - **连接测试** - 测试 Pi Provider 连通性
 - **Profile 管理** - 多 Profile 支持，一键应用到 `~/.pi/agent/models.json`
-- **默认模型** - 在 `~/.pi/agent/settings.json` 设置启动用的 `defaultProvider` / `defaultModel` / `defaultThinkingLevel`（GUI 默认模型卡、TUI Pi → Defaults、`dg pi settings show|set|reset` 同源），settings.json 的其余键原样保留；留空即交回 Pi 自动选择
+- **默认模型** - 在 `~/.pi/agent/settings.json` 设置启动用的 `defaultProvider` / `defaultModel` / `defaultThinkingLevel`（GUI 默认模型卡、TUI Pi → Defaults、`dg pi settings show|set|reset|candidates` 同源），settings.json 的其余键原样保留；留空即交回 Pi 自动选择。**默认模型跟随 Profile**：应用 Profile 后若原默认模型已不在 models.json 中（pi 的 catalog 模型不动），会自动改到该 Profile 的第一个 Provider/模型，并在 GUI toast、TUI 预览与 `dg pi profiles apply` 回执里说明原因
 - **实时配置读取** - 支持从 Pi 的 live config 加载现有配置
 - **渠道导入** - 从渠道导入 Provider（GUI/TUI `i`/`dg pi providers import` 共用同一套推断：自动规范 Base URL、补齐 `/v1`、按注册表填充模型参数并写入 `compat.forceAdaptiveThinking`）
 - **模型注册表驱动** - 从内置模型注册表丰富 Pi Provider 模型，支持与 Provider 无关的思考级别映射。Anthropic 编码为 `anthropic-adaptive` 的模型（如 `claude-opus-5-5`）会写入 `compat.forceAdaptiveThinking`，已显式关闭的配置会保留

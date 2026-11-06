@@ -150,12 +150,32 @@ func (c *cli) piProvidersDelete(args []string) error {
 	if len(args) != 1 {
 		return c.usage("pi providers delete needs <provider-id>")
 	}
-	if err := pi.DeleteLiveProvider(args[0]); err != nil {
+	result, err := pi.DeleteLiveProvider(args[0])
+	if err != nil {
 		return err
 	}
-	return emit(c.opts, c.stdout, map[string]any{"deleted": true, "id": args[0]}, func(w io.Writer) error {
-		_, err := fmt.Fprintf(w, "deleted pi provider %s\n", args[0])
-		return err
+	fields, notes := piStartupReceipt(result)
+	receipt := map[string]any{
+		"deleted":          !c.opts.dryRun,
+		"id":               args[0],
+		"appliedProviders": result.AppliedProviders,
+	}
+	for key, value := range fields {
+		receipt[key] = value
+	}
+	if len(notes) > 0 {
+		receipt["startupReasons"] = result.StartupReasons
+	}
+	return emit(c.opts, c.stdout, receipt, func(w io.Writer) error {
+		if _, err := fmt.Fprintf(w, "deleted pi provider %s\n", args[0]); err != nil {
+			return err
+		}
+		for _, note := range notes {
+			if _, err := fmt.Fprintf(w, "adjusted: %s\n", note); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 

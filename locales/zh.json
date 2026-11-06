@@ -185,6 +185,7 @@
   "common.disabled": "已禁用",
   "common.reset": "重置",
   "common.cancel": "取消",
+  "common.noChoices": "没有可选项",
   "common.save": "保存",
   "common.back": "返回",
   "common.next": "下一步",
@@ -1422,6 +1423,9 @@
 
   "pi.defaults.title": "默认模型",
   "pi.defaults.hint": "启动时使用哪个模型（写入 ~/.pi/agent/settings.json，不属于任何 Profile）。留空表示由 Pi 自动选择。",
+  "pi.defaults.pickHint": "右侧下拉可选该 Profile / models.json 里已有的 id，也可以直接手填；应用 Profile 后若默认模型已不存在，会自动改到该 Profile 的第一个模型。",
+  "pi.defaults.pickProvider": "从列表选择 Provider",
+  "pi.defaults.pickModel": "从列表选择模型 id",
   "pi.defaults.provider": "默认 Provider",
   "pi.defaults.providerPlaceholder": "例如 wududu（留空 = 自动）",
   "pi.defaults.model": "默认模型 ID",
@@ -1524,6 +1528,7 @@
   "pi.actions.apply": "应用配置",
   "pi.actions.applyConfirm": "应用此配置？这将更新您的 Pi 配置文件 (~/.pi/agent/models.json)。",
   "pi.actions.applySuccess": "配置已成功应用",
+  "pi.actions.applySuccessAdjusted": "配置已应用；原默认模型已失效，已改为 {{provider}} / {{model}}",
   "pi.actions.loadedFromLive": "已从活跃配置加载",
 
   "pi.sessions.title": "Pi 会话",
@@ -1561,6 +1566,9 @@
   "omp.profile.delete": "删除配置",
 
   "omp.modelRoles.title": "模型角色",
+  "omp.roles.hint": "值的格式是 provider/model-id；右侧下拉可选 models.yml 与 OMP 缓存里的组合（`dg omp roles candidates` 同源）。删除 Provider 或缩减模型列表时，指向失效目标的角色会自动改到第一个可用组合。",
+  "omp.roles.pickRole": "从列表选择模型",
+  "omp.roles.adjusted": "已修正 {{count}} 个模型角色：{{notes}}",
   "omp.modelRoles.defaultThinkingLevel": "默认思考级别",
   "omp.modelRoles.presets": "模型预设（JSON）",
   "omp.modelRoles.presetsHint": "角色分配的快照；应用时写入 config.yml 的 modelPresets。",
@@ -1570,6 +1578,7 @@
 
   "omp.actions.apply": "应用配置",
   "omp.actions.applySuccess": "配置已成功应用",
+  "omp.actions.applySuccessWarnings": "配置已应用，但以下角色无法解析：{{warnings}}",
   "omp.actions.loadedFromLive": "已从活跃配置加载",
   "omp.actions.loadFromLive": "从活跃配置加载",
   "omp.actions.noLiveRoles": "config.yml 中未找到模型角色配置",

@@ -393,45 +393,58 @@ func ImportChannelProvider(input PiChannelImportInput) (PiChannelImportResult, e
 }
 
 // DeleteLiveProvider removes one provider from the live models.json while
-// keeping every other provider and unknown root key. It is the counterpart
-// of ImportChannelProvider for `dg pi providers delete` and the TUI.
-func DeleteLiveProvider(providerID string) error {
+// keeping every other provider and unknown root key, then repairs the startup
+// model the deletion stranded. It is the counterpart of ImportChannelProvider
+// for `dg pi providers delete` and the TUI.
+func DeleteLiveProvider(providerID string) (PiApplyResult, error) {
 	providerID = strings.TrimSpace(providerID)
 	if providerID == "" {
-		return errors.New("provider id cannot be empty")
+		return PiApplyResult{}, errors.New("provider id cannot be empty")
 	}
 	configPath, err := piConfigPath()
 	if err != nil {
-		return err
+		return PiApplyResult{}, err
 	}
 	live, err := readLiveConfigForMerge(configPath)
 	if err != nil {
-		return err
+		return PiApplyResult{}, err
 	}
 	root := map[string]json.RawMessage{}
 	if len(strings.TrimSpace(string(live))) > 0 {
 		if err := json.Unmarshal(live, &root); err != nil {
-			return fmt.Errorf("Invalid Pi config JSON: %w", err)
+			return PiApplyResult{}, fmt.Errorf("Invalid Pi config JSON: %w", err)
 		}
 	}
 	providers := map[string]PiProviderConfig{}
 	if raw, ok := root["providers"]; ok {
 		if err := json.Unmarshal(raw, &providers); err != nil {
-			return fmt.Errorf("Invalid Pi providers object: %w", err)
+			return PiApplyResult{}, fmt.Errorf("Invalid Pi providers object: %w", err)
 		}
 	}
 	if _, ok := providers[providerID]; !ok {
-		return fmt.Errorf("Provider %q not found", providerID)
+		return PiApplyResult{}, fmt.Errorf("Provider %q not found", providerID)
+	}
+	before := make(map[string]PiProviderConfig, len(providers))
+	for id, provider := range providers {
+		before[id] = provider
 	}
 	delete(providers, providerID)
 	raw, err := json.Marshal(providers)
 	if err != nil {
-		return err
+		return PiApplyResult{}, err
 	}
 	root["providers"] = raw
 	data, err := json.MarshalIndent(root, "", "  ")
 	if err != nil {
-		return err
+		return PiApplyResult{}, err
 	}
-	return core.AtomicWrite(configPath, data)
+	if err := core.AtomicWrite(configPath, data); err != nil {
+		return PiApplyResult{}, err
+	}
+	result, err := ReconcileStartupModel(before, providers)
+	if err != nil {
+		return result, err
+	}
+	result.AppliedProviders = sortedProviderIDs(providers)
+	return result, nil
 }

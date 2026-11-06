@@ -1244,9 +1244,10 @@ async getActivePiProfileId() : Promise<Result<string | null, string>> {
 }
 },
 /**
- * Apply a profile to `~/.pi/agent/models.json`
+ * Apply a profile to the live ~/.pi/agent/models.json and report the startup
+ * model the reconcile pass had to repair in settings.json
  */
-async applyPiProfile(id: string) : Promise<Result<null, string>> {
+async applyPiProfile(id: string) : Promise<Result<PiApplyResult, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("apply_pi_profile", { id }) };
 } catch (e) {
@@ -1367,7 +1368,7 @@ async getActiveOmpProfileId() : Promise<Result<string | null, string>> {
 /**
  * Apply model roles to `~/.omp/agent/config.yml`
  */
-async applyOmpProfile(id: string) : Promise<Result<null, string>> {
+async applyOmpProfile(id: string) : Promise<Result<OmpApplyResult, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("apply_omp_profile", { id }) };
 } catch (e) {
@@ -1405,7 +1406,7 @@ async readOmpCustomProviders() : Promise<Result<OmpCustomProviders, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async saveOmpCustomProvider(providerId: string, provider: OmpCustomProvider) : Promise<Result<null, string>> {
+async saveOmpCustomProvider(providerId: string, provider: OmpCustomProvider) : Promise<Result<OmpRoleReconcile, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("save_omp_custom_provider", { providerId, provider }) };
 } catch (e) {
@@ -1413,9 +1414,21 @@ async saveOmpCustomProvider(providerId: string, provider: OmpCustomProvider) : P
     else return { status: "error", error: e  as any };
 }
 },
-async deleteOmpCustomProvider(providerId: string) : Promise<Result<null, string>> {
+async deleteOmpCustomProvider(providerId: string) : Promise<Result<OmpRoleReconcile, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("delete_omp_custom_provider", { providerId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * List the "provider/model-id" values a model role can point at (models.yml
+ * plus OMP's cached catalog)
+ */
+async listOmpRoleOptions() : Promise<Result<OmpRoleOptions, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_omp_role_options") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -3314,6 +3327,28 @@ export type OmpModelCost = { input?: number; output?: number; cacheRead?: number
  */
 export type OmpModelRoles = { default?: string | null; smol?: string | null; slow?: string | null; vision?: string | null; plan?: string | null; commit?: string | null; tiny?: string | null; memory?: string | null; task?: string | null; advisor?: string | null; image?: string | null; web?: string | null; speech?: string | null; dictation?: string | null; judge?: string | null }
 /**
+ * One model role that a models.yml write made unresolvable, plus where it moved
+ * (to === null means the role was cleared)
+ */
+export type OmpRoleAdjustment = { role: string; from: string; to?: string | null; reason: string }
+/**
+ * Outcome of the config.yml role repair pass (`adjusted` === true means
+ * config.yml was rewritten)
+ */
+export type OmpRoleReconcile = { adjusted: boolean; adjustments?: OmpRoleAdjustment[] | null; thinking?: OmpThinkingAdjustment | null; roles: OmpModelRoles }
+/**
+ * A defaultThinkingLevel reset caused by the model the default role points at
+ */
+export type OmpThinkingAdjustment = { from: string; to: string; reason: string }
+/**
+ * What one OMP apply wrote plus roles OMP will not be able to resolve
+ */
+export type OmpApplyResult = { id: string; roles: OmpModelRoles; warnings?: string[] | null }
+/**
+ * Provider ids and their model ids a model role can point at
+ */
+export type OmpRoleOptions = { providers: string[]; models: Partial<{ [key in string]: string[] }> }
+/**
  * OMP profile (stored in DroidGear) — snapshot of model role assignments.
  */
 export type OmpProfile = { id: string; name: string; description?: string | null; createdAt: string; updatedAt: string; 
@@ -3483,6 +3518,11 @@ export type PiProviderTestResult = { success: boolean; providerId: string; model
  * Pi startup model selection (subset of ~/.pi/agent/settings.json)
  */
 export type PiSettings = { defaultProvider?: string | null; defaultModel?: string | null; defaultThinkingLevel?: string | null }
+/**
+ * What one Pi profile apply wrote: the providers now in models.json plus the
+ * startup selection the reconcile pass produced
+ */
+export type PiApplyResult = { id: string; appliedProviders: string[]; startup: PiSettings; startupAdjusted: boolean; startupReasons?: string[] | null }
 /**
  * Pi startup model selection plus document state
  */

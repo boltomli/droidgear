@@ -21,6 +21,10 @@ type (
 	OmpConfigStatus        = omp.OmpConfigStatus
 	OmpCurrentConfig       = omp.OmpCurrentConfig
 	OmpProviderTestResult  = omp.OmpProviderTestResult
+	OmpRoleAdjustment      = omp.OmpRoleAdjustment
+	OmpRoleReconcile       = omp.OmpRoleReconcile
+	OmpRoleOptions         = omp.OmpRoleOptions
+	OmpApplyResult         = omp.OmpApplyResult
 )
 
 // ReadOmpCustomProviders lists the custom providers from models.yml.
@@ -28,14 +32,24 @@ func (a *App) ReadOmpCustomProviders() (OmpCustomProviders, error) {
 	return omp.ReadCustomProviders()
 }
 
-// SaveOmpCustomProvider creates or updates a custom provider.
-func (a *App) SaveOmpCustomProvider(providerID string, provider OmpCustomProvider) error {
+// SaveOmpCustomProvider creates or updates a custom provider and reports the
+// config.yml roles the new model list made unresolvable.
+func (a *App) SaveOmpCustomProvider(providerID string, provider OmpCustomProvider) (OmpRoleReconcile, error) {
 	return omp.SaveCustomProvider(providerID, provider)
 }
 
-// DeleteOmpCustomProvider removes a custom provider.
-func (a *App) DeleteOmpCustomProvider(providerID string) error {
+// DeleteOmpCustomProvider removes a custom provider and reports the config.yml
+// roles that pointed at it (OMP exits with "No default model selected" when the
+// default role loses its provider).
+func (a *App) DeleteOmpCustomProvider(providerID string) (OmpRoleReconcile, error) {
 	return omp.DeleteCustomProvider(providerID)
+}
+
+// ListOmpRoleOptions lists the "provider/model-id" values a role can point at
+// (models.yml plus OMP's cached catalog), shared by the GUI pickers, the TUI
+// hints and `dg omp roles candidates`.
+func (a *App) ListOmpRoleOptions() (OmpRoleOptions, error) {
+	return omp.ListRoleOptions()
 }
 
 // ListOmpProfiles lists all OMP profiles sorted by name.
@@ -73,8 +87,9 @@ func (a *App) SetActiveOmpProfileId(id string) error {
 	return omp.SetActiveProfileID(id)
 }
 
-// ApplyOmpProfile applies a profile to the live ~/.omp/agent/config.yml.
-func (a *App) ApplyOmpProfile(id string) error {
+// ApplyOmpProfile applies a profile to the live ~/.omp/agent/config.yml and
+// reports roles that OMP will not be able to resolve.
+func (a *App) ApplyOmpProfile(id string) (OmpApplyResult, error) {
 	return omp.ApplyProfile(id)
 }
 

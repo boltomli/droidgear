@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { IdPicker } from '@/components/ui/id-picker'
 import { useOmpStore } from '@/store/omp-store'
 import { ConfigStatus } from './ConfigStatus'
 import { OmpImportFromChannelDialog } from './OmpImportFromChannelDialog'
@@ -45,6 +46,7 @@ import type {
   OmpCustomProvider,
   OmpCustomProviderEntry,
   OmpProfile,
+  OmpRoleReconcile,
 } from '@/lib/bindings'
 
 const ROLE_KEYS = [
@@ -520,6 +522,41 @@ export function OmpConfigPage() {
   const configStatus = useOmpStore(state => state.configStatus)
   const liveConfig = useOmpStore(state => state.liveConfig)
   const customProviders = useOmpStore(state => state.customProviders)
+
+  // A models.yml write can repair config.yml roles; surface every rewrite so a
+  // silently different default model never reaches OMP unnoticed.
+  const reportRoleAdjustments = (result: OmpRoleReconcile | null) => {
+    if (!result?.adjusted) return
+    const notes = (result.adjustments ?? []).map(
+      adjustment =>
+        `${adjustment.role}: ${adjustment.from} → ${adjustment.to ?? '(cleared)'}`
+    )
+    if (result.thinking) {
+      notes.push(
+        `defaultThinkingLevel: ${result.thinking.from} → ${result.thinking.to}`
+      )
+    }
+    if (notes.length === 0) return
+    toast.warning(
+      t('omp.roles.adjusted', {
+        count: notes.length,
+        notes: notes.join(' · '),
+      })
+    )
+  }
+
+  // Role values are "provider/model-id"; the list comes from the service layer
+  // (models.yml plus OMP's cached catalog), the same one `dg omp roles
+  // candidates` prints.
+  const roleOptions = useOmpStore(state => state.roleOptions)
+  const loadRoleOptions = useOmpStore(state => state.loadRoleOptions)
+  const roleValues = roleOptions
+    ? roleOptions.providers.flatMap(providerId =>
+        (roleOptions.models[providerId] ?? []).map(
+          modelId => `${providerId}/${modelId}`
+        )
+      )
+    : []
   const loadProfiles = useOmpStore(state => state.loadProfiles)
   const loadActiveProfileId = useOmpStore(state => state.loadActiveProfileId)
   const loadConfigStatus = useOmpStore(state => state.loadConfigStatus)
@@ -553,12 +590,14 @@ export function OmpConfigPage() {
     void loadConfigStatus()
     void loadLiveConfig()
     void loadCustomProviders()
+    void loadRoleOptions()
   }, [
     loadProfiles,
     loadActiveProfileId,
     loadConfigStatus,
     loadLiveConfig,
     loadCustomProviders,
+    loadRoleOptions,
   ])
 
   const openNewProvider = () => {
@@ -575,7 +614,7 @@ export function OmpConfigPage() {
     providerId: string,
     provider: OmpCustomProvider
   ) => {
-    await saveCustomProvider(providerId, provider)
+    const roles = await saveCustomProvider(providerId, provider)
     toast.success(
       t(
         importTargetProviderId
@@ -583,6 +622,7 @@ export function OmpConfigPage() {
           : 'omp.provider.importDialog.imported'
       )
     )
+    reportRoleAdjustments(roles)
   }
 
   const openEditProvider = (entry: OmpCustomProviderEntry) => {
@@ -592,15 +632,17 @@ export function OmpConfigPage() {
 
   const handleDeleteProvider = async () => {
     if (!providerToDelete) return
-    await deleteCustomProvider(providerToDelete)
+    const roles = await deleteCustomProvider(providerToDelete)
     setProviderToDelete(null)
+    reportRoleAdjustments(roles)
   }
 
   const handleSaveProvider = async (
     providerId: string,
     provider: OmpCustomProvider
   ) => {
-    await saveCustomProvider(providerId, provider)
+    const roles = await saveCustomProvider(providerId, provider)
+    reportRoleAdjustments(roles)
   }
 
   const handleProfileChange = (id: string) => {
@@ -616,11 +658,20 @@ export function OmpConfigPage() {
 
   const handleApply = async () => {
     if (!currentProfile) return
-    await applyProfile(currentProfile.id)
+    const result = await applyProfile(currentProfile.id)
     const currentError = useOmpStore.getState().error
-    if (!currentError) {
-      toast.success(t('omp.actions.applySuccess'))
+    if (currentError) return
+    if (result?.warnings?.length) {
+      // The profile's own choice is written as-is; say which roles OMP will not
+      // be able to resolve instead of letting it fail at the next start.
+      toast.warning(
+        t('omp.actions.applySuccessWarnings', {
+          warnings: result.warnings.join(' · '),
+        })
+      )
+      return
     }
+    toast.success(t('omp.actions.applySuccess'))
   }
 
   // Presets are a JSON document; keep a per-profile draft so typing is not
@@ -816,6 +867,9 @@ export function OmpConfigPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                {t('omp.roles.hint')}
+              </p>
               {ROLE_KEYS.map(role => (
                 <div key={role} className="flex items-center gap-2">
                   <Label className="w-24 shrink-0 text-sm capitalize">
@@ -830,6 +884,16 @@ export function OmpConfigPage() {
                     onChange={e => handleModelRoleChange(role, e.target.value)}
                     placeholder="provider/model-id"
                     className="flex-1 font-mono text-sm"
+                  />
+                  <IdPicker
+                    label={`${t('omp.roles.pickRole')} · ${role}`}
+                    value={
+                      (currentProfile.modelRoles as Record<string, string>)[
+                        role
+                      ] ?? ''
+                    }
+                    options={roleValues}
+                    onPick={value => handleModelRoleChange(role, value)}
                   />
                 </div>
               ))}

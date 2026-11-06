@@ -152,6 +152,7 @@ const COMMANDS: Record<string, CommandSpec> = {
   get_omp_config_status: { fn: 'GetOmpConfigStatus', args: [] },
   read_omp_current_config: { fn: 'ReadOmpCurrentConfig', args: [] },
   read_omp_custom_providers: { fn: 'ReadOmpCustomProviders', args: [] },
+  list_omp_role_options: { fn: 'ListOmpRoleOptions', args: [] },
   save_omp_custom_provider: {
     fn: 'SaveOmpCustomProvider',
     args: ['providerId', 'provider'],
