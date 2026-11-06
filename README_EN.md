@@ -123,7 +123,7 @@ Configuration remains ordinary `~/.factory/mcp.json`: this preset stores a nonse
 - **Configuration Management** - Hermes Agent YAML profile management
 - **Reasoning Effort** - Set reasoning effort independently for each Hermes profile (none/minimal/low/medium/high/xhigh/max/ultra)
 - **Channel Import** - Import Hermes Agent configuration from channels (GUI, TUI `i`, and `dg hermes providers import` share one rule set: add `/v1`, write the v12 `providers` entry, and make it the default model)
-- **Provider Request Options** - Edit `extra_headers`, `session_affinity_header`, `discover_models`, `transport`, `capabilities`, plus per-model `context_length` / `prompt_caching` / `answer_in_reasoning`
+- **Provider Request Options** - Edit `extra_headers`, `session_affinity_header`, `discover_models`, `transport`, `capabilities`, plus per-model `context_length` / `prompt_caching` / `answer_in_reasoning` and `model.api_mode` / `model.streaming`
 
 ### Pi Support
 
@@ -134,6 +134,7 @@ Configuration remains ordinary `~/.factory/mcp.json`: this preset stores a nonse
 - **Live Config Reading** - Load existing configuration from Pi's live config
 - **Channel Import** - Import a provider from a channel (GUI, TUI `i`, and `dg pi providers import` share one rule set: normalise the base URL, add `/v1`, enrich models from the registry, and set `compat.forceAdaptiveThinking` when required)
 - **Registry-Driven Models** - Enrich Pi provider models from the built-in model registry, with provider-neutral thinking level mapping. Models whose Anthropic profile is `anthropic-adaptive` (such as `claude-opus-5-5`) get `compat.forceAdaptiveThinking`; an explicit opt-out already stored on the model is kept
+- **Advanced Model Options** - One JSON block per model edits `inputLimits`, `promptCache`, `samplingParams`, and `samplingParamsByThinkingLevel` (proxy-side request tuning, so the dialog does not grow a dozen low-frequency fields)
 
 ### Dsh (DeepSeek Harness) Support
 

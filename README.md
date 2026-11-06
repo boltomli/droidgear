@@ -114,6 +114,7 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 - **认证配置** - 官方登录与 BYOK 认证配置文件的保存、切换及冲突检测
 - **即时应用** - 编辑当前活动的 Profile 时立即应用（含切换 Provider），无需手动应用
 - **模型目录同步** - 应用 DeepSeek V4 / MiMo 模型时自动同步 `~/.codex/model-catalogs/` 下的分族模型目录（`model_catalog_json` 随模型族切换）
+- **Provider 高级配置** - 可编辑 `model_catalog_url`、`capabilities`、`env_http_headers`、请求/流重试、流空闲超时、WebSocket、独立联网搜索、命令式鉴权，以及顶层自动压缩范围与回合结束压缩阈值
 
 - **配置管理** - 认证与 `config.toml` 的加载和保存（`~/.codex`）
 - **管理入口** - 在 Codex 入口下提供 MCP 服务器 / 会话 / 终端 管理子页（会话页支持按项目分组浏览、思考过程与 Markdown 渲染、会话删除及 Provider 归属切换）
@@ -123,7 +124,7 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 - **配置管理** - Hermes Agent YAML Profile 配置管理
 - **推理强度** - 为每个 Hermes Profile 独立设置推理强度（none/minimal/low/medium/high/xhigh/max/ultra）
 - **渠道导入** - 从渠道导入 Hermes Agent 配置（GUI/TUI `i`/`dg hermes providers import` 共用同一套推断：自动补 `/v1`、写入 v12 `providers` 字典并设为默认模型）
-- **Provider 请求选项** - 可编辑 `extra_headers`、`session_affinity_header`、`discover_models`、`transport`、`capabilities`，以及模型级 `context_length`/`prompt_caching`/`answer_in_reasoning`
+- **Provider 请求选项** - 可编辑 `extra_headers`、`session_affinity_header`、`discover_models`、`transport`、`capabilities`，以及模型级 `context_length`/`prompt_caching`/`answer_in_reasoning`、`model.api_mode`/`model.streaming`
 
 ### Pi 支持
 
@@ -134,6 +135,7 @@ GUI 的 MCP「快速添加」卡片或 TUI MCP 列表的 `b` 键会打开百智�
 - **实时配置读取** - 支持从 Pi 的 live config 加载现有配置
 - **渠道导入** - 从渠道导入 Provider（GUI/TUI `i`/`dg pi providers import` 共用同一套推断：自动规范 Base URL、补齐 `/v1`、按注册表填充模型参数并写入 `compat.forceAdaptiveThinking`）
 - **模型注册表驱动** - 从内置模型注册表丰富 Pi Provider 模型，支持与 Provider 无关的思考级别映射。Anthropic 编码为 `anthropic-adaptive` 的模型（如 `claude-opus-5-5`）会写入 `compat.forceAdaptiveThinking`，已显式关闭的配置会保留
+- **高级模型选项** - 每个模型可用一个 JSON 块编辑 `inputLimits`、`promptCache`、`samplingParams`、`samplingParamsByThinkingLevel`（代理侧请求调优，避免堆叠大量低频字段）
 
 ### Dsh（DeepSeek Harness）支持
 

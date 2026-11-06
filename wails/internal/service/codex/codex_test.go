@@ -861,3 +861,39 @@ func TestCodexProviderUpstreamFieldsRoundTrip(t *testing.T) {
 		t.Error("auth written together with experimental_bearer_token")
 	}
 }
+
+// TestCodexApplyWritesCompactionScopeAndPercent covers the two remaining
+// top-level compaction keys exposed per provider.
+func TestCodexApplyWritesCompactionScopeAndPercent(t *testing.T) {
+	testutil.IsolatedHome(t)
+	profile := codexTestCustomProfile("p-scope", "Scope")
+	provider := profile.Providers["custom"]
+	provider.ModelAutoCompactTokenLimitScope = core.StrPtr("body_after_prefix")
+	percent := uint32(75)
+	provider.ModelPostTurnCompactThresholdPercent = &percent
+	profile.Providers["custom"] = provider
+	if err := SaveProfile(profile); err != nil {
+		t.Fatalf("SaveProfile: %v", err)
+	}
+	if err := ApplyProfile("p-scope"); err != nil {
+		t.Fatalf("ApplyProfile: %v", err)
+	}
+	config := codexTestParseConfig(t)
+	if config["model_auto_compact_token_limit_scope"] != "body_after_prefix" {
+		t.Errorf("scope = %v", config["model_auto_compact_token_limit_scope"])
+	}
+	if config["model_post_turn_compact_threshold_percent"] != int64(75) {
+		t.Errorf("percent = %v", config["model_post_turn_compact_threshold_percent"])
+	}
+	current, err := ReadCurrentConfig()
+	if err != nil {
+		t.Fatalf("ReadCurrentConfig: %v", err)
+	}
+	backfilled := current.Providers["custom"]
+	if backfilled.ModelAutoCompactTokenLimitScope == nil || *backfilled.ModelAutoCompactTokenLimitScope != "body_after_prefix" {
+		t.Errorf("backfilled scope = %v", backfilled.ModelAutoCompactTokenLimitScope)
+	}
+	if backfilled.ModelPostTurnCompactThresholdPercent == nil || *backfilled.ModelPostTurnCompactThresholdPercent != 75 {
+		t.Errorf("backfilled percent = %v", backfilled.ModelPostTurnCompactThresholdPercent)
+	}
+}

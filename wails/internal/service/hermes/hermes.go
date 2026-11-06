@@ -37,6 +37,10 @@ type HermesModelConfig struct {
 	ContextLength     *uint32 `json:"contextLength,omitempty"`
 	PromptCaching     *bool   `json:"promptCaching,omitempty"`
 	AnswerInReasoning *bool   `json:"answerInReasoning,omitempty"`
+	// Model-section options for the default entry: `model.api_mode` and
+	// `model.streaming`.
+	APIMode   *string `json:"apiMode,omitempty"`
+	Streaming *bool   `json:"streaming,omitempty"`
 }
 
 // HermesProfile mirrors hermes::HermesProfile.
@@ -669,6 +673,16 @@ func applyHermesProfileToConfig(profile HermesProfile, configPath string) error 
 			if hasModel {
 				core.MappingSet(modelSection, "default", core.StringScalar(nonEmpty(defaultEntry.Default)))
 			}
+			if defaultEntry.APIMode != nil {
+				if value := nonEmpty(defaultEntry.APIMode); value != "" {
+					core.MappingSet(modelSection, "api_mode", core.StringScalar(value))
+				} else {
+					core.MappingRemove(modelSection, "api_mode")
+				}
+			}
+			if defaultEntry.Streaming != nil {
+				core.MappingSet(modelSection, "streaming", hermesBoolScalar(*defaultEntry.Streaming))
+			}
 			if resolved != nil {
 				core.MappingSet(modelSection, "provider", core.StringScalar(*resolved))
 				switch *resolved {
@@ -920,6 +934,23 @@ func ReadCurrentConfig() (HermesCurrentConfig, error) {
 		}
 		if !anyDefault {
 			models[0].IsDefault = true
+		}
+	}
+
+	// Model-section options apply to the default entry.
+	if modelSection != nil {
+		for i := range models {
+			if !models[i].IsDefault {
+				continue
+			}
+			if value := getStr("api_mode"); value != "" {
+				apiMode := value
+				models[i].APIMode = &apiMode
+			}
+			if flag, ok := hermesNodeBool(modelSection, "streaming"); ok {
+				models[i].Streaming = &flag
+			}
+			break
 		}
 	}
 

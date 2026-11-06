@@ -2700,6 +2700,16 @@ modelContextWindow?: number | null;
  */
 modelAutoCompactTokenLimit?: number | null; 
 /**
+ * DroidGear-only: written to config.toml top-level
+ * `model_auto_compact_token_limit_scope` (`total` | `body_after_prefix`).
+ */
+modelAutoCompactTokenLimitScope?: string | null; 
+/**
+ * DroidGear-only: written to config.toml top-level
+ * `model_post_turn_compact_threshold_percent` (0-100).
+ */
+modelPostTurnCompactThresholdPercent?: number | null; 
+/**
  * Provider API key. Written to config.toml as `experimental_bearer_token`.
  */
 apiKey?: string | null }
@@ -3144,6 +3154,14 @@ promptCaching?: boolean | null;
  * 单模型把 reasoning 字段当答案（`providers.<name>.models.<id>.answer_in_reasoning`）。
  */
 answerInReasoning?: boolean | null; 
+/**
+ * 默认模型的 `model.api_mode`（如 chat_completions / anthropic_messages）。
+ */
+apiMode?: string | null; 
+/**
+ * 默认模型的 `model.streaming`。
+ */
+streaming?: boolean | null; 
 /**
  * 是否为默认配置（apply 时写入 `model.default` + `model.provider`）。
  */

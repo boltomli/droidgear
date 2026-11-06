@@ -209,6 +209,12 @@ function ProviderForm({
       existingConfig?.streamIdleTimeoutMs != null
         ? String(existingConfig.streamIdleTimeoutMs)
         : '',
+    autoCompactScope:
+      existingConfig?.modelAutoCompactTokenLimitScope ?? 'default',
+    postTurnPercent:
+      existingConfig?.modelPostTurnCompactThresholdPercent != null
+        ? String(existingConfig.modelPostTurnCompactThresholdPercent)
+        : '',
     supportsWebSockets: existingConfig?.supportsWebSockets ?? false,
     supportsStandaloneWebSearch:
       existingConfig?.supportsStandaloneWebSearch ?? false,
@@ -393,6 +399,13 @@ function ProviderForm({
       modelReasoningEffort: resolvedEffort || null,
       modelContextWindow: parseTokenLimit(modelContextWindow),
       modelAutoCompactTokenLimit: parseTokenLimit(modelAutoCompactTokenLimit),
+      modelAutoCompactTokenLimitScope:
+        advanced.autoCompactScope === 'default'
+          ? null
+          : advanced.autoCompactScope,
+      modelPostTurnCompactThresholdPercent: parseOptionalUint(
+        advanced.postTurnPercent
+      ),
       apiKey: trimToNull(apiKey),
     }
 
@@ -689,6 +702,42 @@ function ProviderForm({
                         streamIdleTimeoutMs: e.target.value.replace(/\D+/g, ''),
                       })
                     }
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>{t('codex.provider.autoCompactScope')}</Label>
+                  <Select
+                    value={advanced.autoCompactScope}
+                    onValueChange={value => setAdv({ autoCompactScope: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">
+                        {t('codex.provider.defaultValue')}
+                      </SelectItem>
+                      <SelectItem value="total">total</SelectItem>
+                      <SelectItem value="body_after_prefix">
+                        body_after_prefix
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('codex.provider.postTurnPercent')}</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={advanced.postTurnPercent}
+                    onChange={e =>
+                      setAdv({
+                        postTurnPercent: e.target.value.replace(/\D+/g, ''),
+                      })
+                    }
+                    placeholder="0-100"
                   />
                 </div>
               </div>

@@ -57,7 +57,13 @@ type CodexProviderConfig struct {
 	ModelReasoningEffort        *string                    `json:"modelReasoningEffort,omitempty"`
 	ModelContextWindow          *uint32                    `json:"modelContextWindow,omitempty"`
 	ModelAutoCompactTokenLimit  *uint32                    `json:"modelAutoCompactTokenLimit,omitempty"`
-	APIKey                      *string                    `json:"apiKey,omitempty"`
+	// DroidGear-only, written to config.toml top level while this provider is
+	// active (upstream `model_auto_compact_token_limit_scope`).
+	ModelAutoCompactTokenLimitScope *string `json:"modelAutoCompactTokenLimitScope,omitempty"`
+	// DroidGear-only, written to config.toml top level while this provider is
+	// active (upstream `model_post_turn_compact_threshold_percent`).
+	ModelPostTurnCompactThresholdPercent *uint32 `json:"modelPostTurnCompactThresholdPercent,omitempty"`
+	APIKey                               *string `json:"apiKey,omitempty"`
 }
 
 // CodexProviderCapabilities mirrors `[model_providers.<id>.capabilities]`.
@@ -844,6 +850,17 @@ func codexApplyProfileToConfig(config map[string]any, profile CodexProfile) erro
 	} else {
 		delete(config, "model_auto_compact_token_limit")
 	}
+	if activeProvider != nil && activeProvider.ModelAutoCompactTokenLimitScope != nil &&
+		strings.TrimSpace(*activeProvider.ModelAutoCompactTokenLimitScope) != "" {
+		config["model_auto_compact_token_limit_scope"] = strings.TrimSpace(*activeProvider.ModelAutoCompactTokenLimitScope)
+	} else {
+		delete(config, "model_auto_compact_token_limit_scope")
+	}
+	if activeProvider != nil && activeProvider.ModelPostTurnCompactThresholdPercent != nil {
+		config["model_post_turn_compact_threshold_percent"] = int64(*activeProvider.ModelPostTurnCompactThresholdPercent)
+	} else {
+		delete(config, "model_post_turn_compact_threshold_percent")
+	}
 
 	// Official OpenAI mode must not inject custom providers into live config.
 	// Capture the previous tables first so unknown provider keys (upstream
@@ -1245,6 +1262,8 @@ func ReadCurrentConfig() (CodexCurrentConfig, error) {
 	var effort *string
 	var contextWindow *uint32
 	var autoCompact *uint32
+	var autoCompactScope *string
+	var postTurnPercent *uint32
 	discovery := false
 
 	if PathExists(configPath) {
@@ -1278,6 +1297,12 @@ func ReadCurrentConfig() (CodexCurrentConfig, error) {
 			}
 			if n, ok := codexTOMLInt(config["model_auto_compact_token_limit"]); ok && n >= 0 && n <= codexMaxUint32 {
 				autoCompact = codexPtr(uint32(n))
+			}
+			if s, ok := config["model_auto_compact_token_limit_scope"].(string); ok {
+				autoCompactScope = &s
+			}
+			if n, ok := codexTOMLInt(config["model_post_turn_compact_threshold_percent"]); ok && n >= 0 && n <= codexMaxUint32 {
+				postTurnPercent = codexPtr(uint32(n))
 			}
 			if features, ok := config["features"].(map[string]any); ok {
 				if b, ok := features["api_key_model_discovery"].(bool); ok {
@@ -1313,6 +1338,12 @@ func ReadCurrentConfig() (CodexCurrentConfig, error) {
 		}
 		if provider.ModelAutoCompactTokenLimit == nil {
 			provider.ModelAutoCompactTokenLimit = autoCompact
+		}
+		if provider.ModelAutoCompactTokenLimitScope == nil {
+			provider.ModelAutoCompactTokenLimitScope = autoCompactScope
+		}
+		if provider.ModelPostTurnCompactThresholdPercent == nil {
+			provider.ModelPostTurnCompactThresholdPercent = postTurnPercent
 		}
 		if provider.APIKey == nil {
 			provider.APIKey = authAPIKey

@@ -64,6 +64,8 @@ function cleanEntry(entry: HermesModelConfig): HermesModelConfig {
     contextLength: entry.contextLength ?? null,
     promptCaching: entry.promptCaching ?? null,
     answerInReasoning: entry.answerInReasoning ?? null,
+    apiMode: trimToNull(entry.apiMode ?? ''),
+    streaming: entry.streaming ?? null,
     isDefault: entry.isDefault === true,
   }
 }
@@ -83,6 +85,8 @@ function emptyEntry(isDefault: boolean): HermesModelConfig {
     contextLength: null,
     promptCaching: null,
     answerInReasoning: null,
+    apiMode: null,
+    streaming: null,
     isDefault,
   }
 }
@@ -615,6 +619,48 @@ export function HermesConfigPage() {
                           placeholder="x-litellm-session-id"
                         />
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="w-32 shrink-0 text-xs">
+                          {t('hermes.model.apiMode')}
+                        </Label>
+                        <Input
+                          className="flex-1"
+                          value={entry.apiMode ?? ''}
+                          onChange={e =>
+                            setEditingModels(prev =>
+                              prev.map((m, i) =>
+                                i === index
+                                  ? { ...m, apiMode: e.target.value }
+                                  : m
+                              )
+                            )
+                          }
+                          onBlur={handleModelBlur}
+                          placeholder="chat_completions / anthropic_messages"
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={entry.streaming !== false}
+                          onChange={e =>
+                            setEditingModels(prev =>
+                              prev.map((m, i) =>
+                                i === index
+                                  ? {
+                                      ...m,
+                                      streaming: e.target.checked
+                                        ? null
+                                        : false,
+                                    }
+                                  : m
+                              )
+                            )
+                          }
+                          onBlur={handleModelBlur}
+                        />
+                        {t('hermes.model.streaming')}
+                      </label>
                       <div className="flex items-center gap-2">
                         <Label className="w-32 shrink-0 text-xs">
                           {t('hermes.model.contextLength')}

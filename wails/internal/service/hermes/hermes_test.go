@@ -339,6 +339,7 @@ func TestHermesProviderOptionsRoundTrip(t *testing.T) {
 	promptCaching := true
 	answerInReasoning := true
 	contextLength := uint32(1000000)
+	streamingOff := false
 	profile := HermesProfile{
 		ID: "p-knobs", Name: "Knobs", CreatedAt: core.NowRFC3339(), UpdatedAt: core.NowRFC3339(),
 		Models: []HermesModelConfig{{
@@ -353,6 +354,8 @@ func TestHermesProviderOptionsRoundTrip(t *testing.T) {
 			ContextLength:         &contextLength,
 			PromptCaching:         &promptCaching,
 			AnswerInReasoning:     &answerInReasoning,
+			APIMode:               core.StrPtr("chat_completions"),
+			Streaming:             &streamingOff,
 		}},
 	}
 	if err := SaveProfile(profile); err != nil {
@@ -390,6 +393,12 @@ func TestHermesProviderOptionsRoundTrip(t *testing.T) {
 	}
 	if loaded.PromptCaching == nil || !*loaded.PromptCaching || loaded.AnswerInReasoning == nil || !*loaded.AnswerInReasoning {
 		t.Errorf("model flags = %v / %v", loaded.PromptCaching, loaded.AnswerInReasoning)
+	}
+	if loaded.APIMode == nil || *loaded.APIMode != "chat_completions" {
+		t.Errorf("api mode = %v", loaded.APIMode)
+	}
+	if loaded.Streaming == nil || *loaded.Streaming {
+		t.Errorf("streaming = %v", loaded.Streaming)
 	}
 }
 
