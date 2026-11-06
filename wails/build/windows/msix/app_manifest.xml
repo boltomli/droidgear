@@ -10,7 +10,7 @@
   <Identity 
     Name="com.example.minimalgui"
     Publisher="CN=My Company"
-    Version="1.3.9.9" 
+    Version="1.3.9.10" 
     ProcessorArchitecture="x64" />
   
   <Properties>
