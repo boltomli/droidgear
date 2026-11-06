@@ -13,8 +13,8 @@ the single remaining shell ships.
 
 > ⚠️ **Known gaps:** command-surface parity holds and the shell-level
 > integrations from the audit roadmap (window-state persistence, single
-> instance, opener shim, system-fonts shim, notifications service, updater
-> gating, theme-following window background, cross-platform platform shim)
+> instance, opener shim, system-fonts shim, notifications service, single-file
+> self-update, theme-following window background, cross-platform platform shim)
 > are in place. Still missing: an in-window menu button for Windows/Linux
 > (frameless — see below) and macOS/Linux packaging assets (icon bundles,
 > installers). The headless CLI layer **has** landed — see `cmd/dg` below.
@@ -109,12 +109,13 @@ React stores (unchanged)          Go service
 
 ## What is not implemented
 
-- **Auto-updater** — removed together with the Tauri shell
-  (`services/updater.ts`, the `isUpdaterSupported()` gates, the toast and
-  the palette command are all gone). The Wails build ships no update feed:
-  **Preferences → General → Check for Updates** opens the published releases
-  page in the browser instead. Rebuilding it on Wails `pkg/updater` is
-  tracked in round2 §4 序 9.
+- **Installer-based updates** — updates only work for the single-file
+  `wails-v*` release line (`release-single.yml`). The app checks GitHub,
+  downloads the one asset for the running platform, verifies it against the
+  release's `SHA256SUMS.txt`, swaps the executable and restarts
+  (`internal/service/updater`, `internal/app/update.go`, `dg update`). The
+  legacy `v*` installer pipeline ships no self-update assets. Design:
+  `docs/developer/self-update-single-file.zh.md`.
 
 - **macOS/Linux packaging** — `release-single.yml` ships bare single-file
   binaries for both, but there is no `.icns` bundle, DMG or `.deb` yet

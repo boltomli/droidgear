@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Command-surface facade: 229 snake_case commands plus the shared types.
+// Command-surface facade: 237 snake_case commands plus the shared types.
 // The snake_case → Go method mapping lives in src/lib/shell/commands.ts.
 // Changing a command name or its argument order breaks every call site.
 
@@ -36,6 +36,63 @@ async savePreferences(preferences: AppPreferences) : Promise<Result<null, string
  */
 async getAppVersion() : Promise<string> {
     return await TAURI_INVOKE("get_app_version");
+},
+/**
+ * Asks GitHub for the newest verifiable `wails-v*` single-file release.
+ * Returns `updateAvailable: false` for a source build (`devBuild: true`).
+ */
+async checkForUpdates() : Promise<Result<UpdateCheckResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("check_for_updates") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Downloads and SHA-256-verifies the GUI asset, staging it for applyUpdate.
+ * Emits `update:progress` events while streaming.
+ */
+async downloadUpdate() : Promise<Result<UpdateDownloadResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("download_update") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Swaps the staged binary in and restarts the app (Windows/macOS/Linux).
+ */
+async applyUpdate() : Promise<Result<UpdateApplyResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("apply_update") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Returns the update already downloaded on this machine, or null.
+ */
+async getPendingUpdate() : Promise<Result<UpdatePending | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_pending_update") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Hides the startup banner for one version (persisted in the update cache).
+ */
+async dismissUpdate(version: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("dismiss_update", { version }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 },
 /**
  * Sends a native system notification.
@@ -3719,6 +3776,64 @@ export type WslDistro = { name: string; isDefault: boolean; version: number; sta
  * WSL information including distributions and current user
  */
 export type WslInfo = { available: boolean; distros: WslDistro[] }
+
+// ---------------------------------------------------------------------------
+// Self-update (internal/service/updater)
+// ---------------------------------------------------------------------------
+
+/** Result of `check_for_updates` (mirrors updater.CheckResult). */
+export type UpdateCheckResult = {
+    currentVersion: string
+    latestVersion: string
+    updateAvailable: boolean
+    devBuild: boolean
+    releaseUrl?: string | null
+    notes?: string | null
+    publishedAt?: string | null
+    assetName?: string | null
+    assetSize?: number | null
+    checksum?: string | null
+    dismissedVersion?: string | null
+    repo: string
+    checkedAt: string
+}
+/** A verified, staged download (mirrors updater.DownloadResult). */
+export type UpdateDownloadResult = {
+    kind: "gui" | "cli"
+    version: string
+    assetName: string
+    path: string
+    size: number
+    sha256: string
+    alreadyStaged: boolean
+}
+/** Result of `apply_update` (mirrors updater.ApplyResult). */
+export type UpdateApplyResult = {
+    fromVersion: string
+    toVersion: string
+    executable: string
+    backup?: string | null
+    restart: boolean
+    restartHint?: string | null
+}
+/** A downloaded update waiting to be applied (mirrors updater.PendingUpdate). */
+export type UpdatePending = {
+    kind: "gui" | "cli"
+    version: string
+    assetName: string
+    path: string
+    sha256: string
+    size: number
+    downloadedAt: string
+}
+/** `update:progress` event payload (mirrors updater.Progress). */
+export type UpdateProgress = {
+    phase: "download" | "apply"
+    received: number
+    total: number
+    percent: number
+    message?: string | null
+}
 
 /** Shell command bridge (the only module that talks to the Go service). */
 

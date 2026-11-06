@@ -59,7 +59,9 @@ Go TUI」这条路线拆成可验收的步骤，并固定 CLI/TUI 的对外契�
 
 ### 非目标
 
-- 桌面专有能力：窗口、菜单、通知、更新、字体枚举、PTY 终端页签（GUI-only，CLI 不提供）。
+- 桌面专有能力：窗口、菜单、通知、字体枚举、PTY 终端页签（GUI-only，CLI 不提供）。
+  **更新不在此列**：`internal/service/updater` 是共享实现，GUI 只多出进度事件与
+  「替换后重启」两步（见 [`self-update-single-file.zh.md`](./self-update-single-file.zh.md)）。
 - 在 CLI 阶段做交互式全屏 UI（TUI 另行决策，见 §6）。
 - 让 CLI 变成第二个「配置系统」：它只是 service 的薄壳。
 - 兼容 Rust TUI 的 `--home` 之外的旧参数形态。
@@ -217,6 +219,7 @@ hermes/pi/omp 三批的共同做法也一并记在那里。
 
 ```bash
 dg version                                    # T3 ✅
+dg update [--check] [--force]                 # ✅ 单文件自更新（与 GUI 同一 service；--check/--dry-run 只出计划）
 dg doctor                                     # T2 ✅（只读：不加载 channels，避免触发迁移写）
 dg path show|set <key> <path>|reset <key>     # T1 ✅（set/reset 支持 --dry-run）
 dg channels list|show <id>|tokens <id>        # T1/T2 ✅（tokens 默认打码，--reveal 才出明文）
@@ -250,11 +253,11 @@ dg connectivity test <modelId>|all            # T2 ✅（--mode ping|inference�
 
 覆盖面分级（`PORTING.md` 的 `T1/T2/T3` 含义，沿用本文件）：
 
-| 级别 | 含义                                                    | 规则                                                 |
-| ---- | ------------------------------------------------------- | ---------------------------------------------------- |
-| T1   | 会产生写盘/外部副作用的动作                             | **必须有 `dg` 对应命令**（否则记入豁免表）           |
-| T2   | 只读/诊断动作                                           | 鼓励提供；缺省时 CI 不失败，但需在 README 覆盖表标注 |
-| T3   | GUI 专属（窗口、菜单、通知、更新、PTY、字体、外部打开） | 不提供；豁免无需申请                                 |
+| 级别 | 含义                                              | 规则                                                 |
+| ---- | ------------------------------------------------- | ---------------------------------------------------- |
+| T1   | 会产生写盘/外部副作用的动作                       | **必须有 `dg` 对应命令**（否则记入豁免表）           |
+| T2   | 只读/诊断动作                                     | 鼓励提供；缺省时 CI 不失败，但需在 README 覆盖表标注 |
+| T3   | GUI 专属（窗口、菜单、通知、PTY、字体、外部打开） | 不提供；豁免无需申请                                 |
 
 ### 4.3 全局 flags 与输入
 

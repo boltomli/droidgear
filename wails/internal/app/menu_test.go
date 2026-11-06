@@ -26,6 +26,7 @@ func TestMenuLabelSetsAreComplete(t *testing.T) {
 	pairs := []struct{ en, zh string }{
 		{en.about, zh.about},
 		{en.preferences, zh.preferences},
+		{en.checkForUpdates, zh.checkForUpdates},
 		{en.hide, zh.hide},
 		{en.hideOthers, zh.hideOthers},
 		{en.showAll, zh.showAll},

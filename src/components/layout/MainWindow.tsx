@@ -4,6 +4,7 @@ import {
   ResizableHandle,
 } from '@/components/ui/resizable'
 import { TitleBar } from '@/components/titlebar/TitleBar'
+import { UpdateBanner } from './UpdateBanner'
 import { LeftSideBar } from './LeftSideBar'
 import { RightSideBar } from './RightSideBar'
 import { MainWindowContent } from './MainWindowContent'
@@ -58,6 +59,7 @@ export function MainWindow() {
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
       <TitleBar />
+      <UpdateBanner />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left sidebar with fixed width */}

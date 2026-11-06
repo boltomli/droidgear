@@ -575,6 +575,13 @@ const COMMANDS: Record<string, CommandSpec> = {
   // Plain-text file IO (channel import/export)
   read_text_file: { fn: 'ReadTextFile', args: ['path'] },
   write_text_file: { fn: 'WriteTextFile', args: ['path', 'contents'] },
+
+  // Self-update (internal/service/updater — same service `dg update` drives)
+  check_for_updates: { fn: 'CheckForUpdates', args: [] },
+  download_update: { fn: 'DownloadUpdate', args: [] },
+  apply_update: { fn: 'ApplyUpdate', args: [] },
+  get_pending_update: { fn: 'GetPendingUpdate', args: [] },
+  dismiss_update: { fn: 'DismissUpdate', args: ['version'] },
 }
 
 /**

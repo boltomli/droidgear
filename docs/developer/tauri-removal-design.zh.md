@@ -274,6 +274,12 @@ B 的价值在于消灭手写表，等 A 落地后再评估。
 **结论 A**。若社区需要，Go updater 作为 B 阶段之后的独立任务（可复用 `GetAppVersion`
 与 `internal/core` 的下载/原子替换）。**注意：若选 B，B 阶段要等到 updater 完成**。
 
+> **2026-11 补充**：该 backlog 已落地。新更新器只针对单文件发布线（`wails-v*`
+>
+> - `SHA256SUMS.txt`），走 `internal/service/updater`，GUI 与 `dg update` 共用；
+>   设计与限制见 [`self-update-single-file.zh.md`](./self-update-single-file.zh.md)。
+>   本文其余部分保留为当时的决策记录。
+
 ### D4 TUI 形态 —— 选 A（`dg tui`，bubbletea），分期只读优先
 
 | 选项     | 做法                                                                                             | 代价                                                      |

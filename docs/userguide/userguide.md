@@ -55,11 +55,14 @@ All menu items have keyboard shortcuts and are also available in the command pal
 
 ## Updates
 
-The app checks for updates automatically:
+DroidGear ships as a single executable per platform and updates itself:
 
-- Manual check: App menu → Check for Updates
-- Updates download from GitHub releases
-- You'll be notified when updates are available
+- Automatic check on startup (toggle in Preferences → General); a banner appears
+  when a newer release is available
+- Manual check: App menu → Check for Updates, or Preferences → General
+- The download is verified against the release's `SHA256SUMS.txt` before the
+  executable is replaced, then the app restarts into the new version
+- Headless installs: `dg update` (or `dg update --check`) from the CLI
 
 ---
 

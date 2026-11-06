@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	"os"
 
 	"droidgear-wails/internal/app"
 
@@ -17,6 +18,15 @@ import (
 var assets embed.FS
 
 func main() {
+	// A binary installed by a previous self-update arrives with
+	// `--apply-update-relaunch <pid>`: wait for the old process (which still
+	// holds the single-instance lock) to exit and clear its leftovers. This
+	// has to run before application.New.
+	app.HandleUpdateRelaunch(os.Args[1:])
+	// Background housekeeping: previous `.old` executable and staged downloads
+	// that are no longer pending (internal/service/updater).
+	go app.StartupMaintenance()
+
 	// Cross-platform notifications (SendNativeNotification forwards here).
 	notificationService := notifications.New()
 	app.SetNotificationService(notificationService)

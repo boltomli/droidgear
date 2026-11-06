@@ -6,8 +6,8 @@
 // Hide, Quit) or emit `menu:*` events that the bridge translates into the
 // same store actions as src/lib/menu.ts.
 //
-// "Check for Updates" is intentionally absent: the auto-updater is
-// Tauri-only by design (see capabilities.isUpdaterSupported).
+// "Check for Updates" emits `menu:check-for-updates`; the frontend runs the
+// same service call as Preferences → General (internal/service/updater).
 package app
 
 import (
@@ -24,6 +24,7 @@ import (
 type menuLabelSet struct {
 	about              string
 	preferences        string
+	checkForUpdates    string
 	hide               string
 	hideOthers         string
 	showAll            string
@@ -45,6 +46,7 @@ var appMenuLabels = map[string]menuLabelSet{
 	"en": {
 		about:              "About DroidGear",
 		preferences:        "Preferences...",
+		checkForUpdates:    "Check for Updates...",
 		hide:               "Hide DroidGear",
 		hideOthers:         "Hide Others",
 		showAll:            "Show All",
@@ -64,6 +66,7 @@ var appMenuLabels = map[string]menuLabelSet{
 	"zh": {
 		about:              "关于 DroidGear",
 		preferences:        "偏好设置...",
+		checkForUpdates:    "检查更新...",
 		hide:               "隐藏 DroidGear",
 		hideOthers:         "隐藏其他",
 		showAll:            "显示全部",
@@ -92,8 +95,7 @@ func menuLabelsFor(lang string) menuLabelSet {
 
 // BuildAppMenu (re)builds the native application menu using labels for the
 // given language ("zh", "zh-CN", … → Chinese; anything else → English).
-// Mirrors the Tauri menu built by src/lib/menu.ts (minus the Tauri-only
-// updater entry).
+// Mirrors the menu contract documented in docs/developer/menus.md.
 func (a *App) BuildAppMenu(lang string) error {
 	app := application.Get()
 	if app == nil {
@@ -117,6 +119,9 @@ func (a *App) BuildAppMenu(lang string) error {
 	appMenu.AddSeparator()
 	appMenu.Add(labels.preferences).SetAccelerator("CmdOrCtrl+,").OnClick(func(*application.Context) {
 		app.Event.Emit("menu:open-preferences", map[string]any{})
+	})
+	appMenu.Add(labels.checkForUpdates).OnClick(func(*application.Context) {
+		app.Event.Emit("menu:check-for-updates", map[string]any{})
 	})
 	appMenu.AddSeparator()
 	appMenu.Add(labels.hide).SetAccelerator("CmdOrCtrl+h").OnClick(func(*application.Context) {

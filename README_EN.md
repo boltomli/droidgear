@@ -172,7 +172,7 @@ Configuration remains ordinary `~/.factory/mcp.json`: this preset stores a nonse
 
 ### Other Features
 
-- **Auto Update** - Version check, auto update notification and download progress
+- **Self-update (single-file releases)** - Version check, SHA-256 verification, download progress and one-click restart (`dg update` offers the same from the CLI)
 - **Window State** - Save and restore window state
 - **Exit Protection** - Warns before closing with unsaved changes
 - **Cross-Platform** - Works on macOS, Windows, and Linux

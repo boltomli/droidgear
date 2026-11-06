@@ -24,6 +24,7 @@ import (
 
 	"droidgear-wails/internal/core"
 	"droidgear-wails/internal/service/channels"
+	"droidgear-wails/internal/service/updater"
 )
 
 // Exit codes (design doc §4.4). 0/1/2 are live; 3 (conflict) and 4
@@ -161,6 +162,8 @@ func run(args []string, stdout, stderr io.Writer) (exit int) {
 		runErr = c.spec(cmdArgs)
 	case "connectivity":
 		runErr = c.connectivity(cmdArgs)
+	case "update":
+		runErr = c.update(cmdArgs)
 	case "factory":
 		runErr = c.factory(cmdArgs)
 	case "tui":
@@ -182,6 +185,12 @@ func run(args []string, stdout, stderr io.Writer) (exit int) {
 	case errors.Is(runErr, channels.ErrUpstream):
 		return fail(stderr, opts, exitUpstream, "upstream", runErr.Error(),
 			"provider endpoint unreachable or rejected the request")
+	case errors.Is(runErr, updater.ErrUpstream):
+		return fail(stderr, opts, exitUpstream, "upstream", runErr.Error(),
+			"GitHub is unreachable or rate-limited; retry later or set DROIDGEAR_UPDATE_TOKEN")
+	case errors.Is(runErr, updater.ErrDevBuild):
+		return fail(stderr, opts, exitRuntime, "dev_build", runErr.Error(),
+			"--force replaces a source build with the newest release")
 	default:
 		return fail(stderr, opts, exitRuntime, "runtime", runErr.Error(), "")
 	}
@@ -380,6 +389,7 @@ Usage:
 
 Commands:
   version                       print the build version
+  update [--check] [--force]    check for / install a newer dg (single-file release)
   doctor                        report effective paths, WSL and config files (read-only)
   path show                     print all nine effective config paths
   path set <key> <path>         override one config path

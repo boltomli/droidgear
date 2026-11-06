@@ -10,10 +10,12 @@ name: 'Release single binaries'
 #     only exposes the "Run workflow" button once this file exists on the
 #     **default branch** (main), so on a feature branch use the tag trigger.
 #
-# Produces one self-contained executable per platform and nothing else. It
-# deliberately does NOT touch the tag-triggered pipeline in release.yml (the
-# Windows GUI installer) — it never uploads installers, signatures or
-# manifests.
+# Produces one self-contained executable per platform, plus a single
+# SHA256SUMS.txt that the built-in self-updater verifies downloads against
+# (`dg update`, Preferences → Software Update — see
+# docs/developer/self-update-single-file.zh.md). It deliberately does NOT touch
+# the tag-triggered pipeline in release.yml (the Windows GUI installer) — it
+# never uploads installers, signatures or manifests.
 #
 # Why the Wails shell: `go:embed all:frontend/dist` bakes the Vite bundle into
 # the Go binary, so `go build` alone yields the whole app as one file.
@@ -103,7 +105,9 @@ jobs:
 
           ### Single-file builds / 单文件构建
 
-          One executable per platform — no installer, no updater manifest, no archives.
+          One executable per platform — no installer, no archive. `SHA256SUMS.txt`
+          lists the SHA-256 of every asset; the built-in updater verifies each
+          download against it before replacing itself.
 
           | Platform | Asset | Runtime requirement |
           | --- | --- | --- |
@@ -317,3 +321,28 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release.outputs.tag }}
         run: gh release upload "$TAG" "out/${{ matrix.asset }}" "out/${{ matrix.cli_asset }}" --clobber
+
+  # The self-updater refuses to install bytes it cannot verify, so the release
+  # is not complete until SHA256SUMS.txt exists. It is built here (not in the
+  # per-platform jobs) because the three runners cannot see each other's files:
+  # download the finished assets, hash them in one place, upload the result.
+  checksums:
+    name: Publish SHA256SUMS.txt
+    needs: [release, build]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hash the release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p sums && cd sums
+          gh release download "$TAG" --pattern 'droidgear-wails-*' --pattern 'dg-*' --dir .
+          sha256sum * | LC_ALL=C sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --clobber
