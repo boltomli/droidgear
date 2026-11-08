@@ -73,6 +73,9 @@ destructive colour, the 10 px radius, 13/14 px type and a visible input border.
 
 ## Measured on this machine (Windows 11, release)
 
+See [PERFORMANCE.md](PERFORMANCE.md) for a like-for-like comparison against the Tauri build
+(startup, memory, idle CPU, size) and how it was measured.
+
 |                                                            |                                          |
 | ---------------------------------------------------------- | ---------------------------------------- |
 | Dependency build (Rune + rune-kit + markdown + core, cold) | ~4 min (`cargo test` cold run)           |
