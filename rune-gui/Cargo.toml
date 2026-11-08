@@ -1,0 +1,33 @@
+[package]
+name = "droidgear-gui"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.90"
+publish = false
+description = "DroidGear's native GUI, built with Rune on top of droidgear-core (spike)"
+
+# Standalone workspace: the spike pulls Rune's GPU stack (wgpu/winit/parley), so it keeps its own
+# lockfile and target dir instead of growing the Tauri workspace's dependency graph.
+[workspace]
+
+[dependencies]
+droidgear-core = { path = "../src-tauri/crates/droidgear-core" }
+dirs = "5"
+rune = { git = "https://github.com/anomalyco/rune", rev = "95315866a16f22200478b424a12a27789b6fcf5f" }
+rune-i18n = { git = "https://github.com/anomalyco/rune", rev = "95315866a16f22200478b424a12a27789b6fcf5f" }
+rune-kit = { git = "https://github.com/anomalyco/rune", rev = "95315866a16f22200478b424a12a27789b6fcf5f", features = [
+  "markdown",
+] }
+serde_json = "1"
+
+[build-dependencies]
+serde_json = "1"
+rune-i18n = { git = "https://github.com/anomalyco/rune", rev = "95315866a16f22200478b424a12a27789b6fcf5f", features = [
+  "codegen",
+] }
+
+# Rune's own recipe: dependencies stay optimised in dev builds so the app (and the tests) run at a
+# usable speed while this crate rebuilds in a second.
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
