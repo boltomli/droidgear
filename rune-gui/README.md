@@ -71,6 +71,10 @@ destructive colour, the 10 px radius, 13/14 px type and a visible input border.
 **Preferences.** Appearance and language are read from and written to the same
 `<app data dir>/com.droidgear.app/preferences.json` the Tauri build uses, so the two GUIs agree.
 
+**Launch.** `DROIDGEAR_TRACE_STARTUP=1` prints the app-side milestones from `main` to the first view
+build, which is where launch work is invisible to a profiler. [PERFORMANCE.md](PERFORMANCE.md) has
+the numbers against the Tauri build, what was tried, and where the remaining time goes.
+
 ## Measured on this machine (Windows 11, release)
 
 See [PERFORMANCE.md](PERFORMANCE.md) for a like-for-like comparison against the Tauri build

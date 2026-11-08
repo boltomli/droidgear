@@ -138,7 +138,9 @@ pub struct App {
 
 impl App {
     pub fn init() -> App {
+        crate::trace("init: start");
         let prefs = load_prefs();
+        crate::trace("init: preferences");
         let appearance = match prefs.get("theme").and_then(|v| v.as_str()) {
             Some("light") => Appearance::Light,
             Some("dark") => Appearance::Dark,
@@ -152,6 +154,7 @@ impl App {
             None => crate::i18n::system_locale(),
         };
         I18N.set_locale(locale);
+        crate::trace("init: appearance + language");
 
         let mut app = App {
             view: View::Droid,
@@ -163,6 +166,7 @@ impl App {
             prefs,
         };
         app.open(View::Droid, PageId::Models);
+        crate::trace("init: first page loaded");
         app
     }
 
