@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.3.10.1
+
+**New Features / 新功能**
+
+- A GUI launch that shows nothing now explains itself: Wails' own system log (including the WebView2 runtime version it resolved) and the shell's log lines are mirrored to `~/.droidgear/logs/app.log` (4 MiB, one rotation; `DROIDGEAR_LOG_DIR` / `DROIDGEAR_LOG_LEVEL` override, `dg doctor` reports the path), a Windows preflight reports a missing WebView2 runtime in a native dialog before the app starts (ARM64 builds need the ARM64 runtime), and an 8-second watchdog reveals the window by itself — logging why — when the frontend never calls `Show()` / 启动后什么都没显示的情况现在会自己解释：Wails 自身的系统日志（包括它解析到的 WebView2 版本）与壳的日志行一并镜像到 `~/.droidgear/logs/app.log`（4 MiB 轮转一代；`DROIDGEAR_LOG_DIR` / `DROIDGEAR_LOG_LEVEL` 可覆盖，`dg doctor` 报告该路径），Windows 启动前预检会在缺 WebView2 runtime 时弹原生对话框（ARM64 构建需要 ARM64 runtime），前端从未调用 `Show()` 时 8 秒看门狗会自行显示窗口并记录原因
+- VM / 远程桌面场景多了两个不重新构建就能用的开关：`DROIDGEAR_WEBVIEW_ARGS`（透传 Chromium 开关，如 `--disable-gpu --disable-gpu-compositing`）与 `DROIDGEAR_WEBVIEW_VISUAL_HOSTING=1`（改用 visual hosting，避开虚拟/远程显示下的 DPI 重新 marshal）/ Two escape hatches for VMs and remote desktops, no rebuild required: `DROIDGEAR_WEBVIEW_ARGS` (extra Chromium switches such as `--disable-gpu --disable-gpu-compositing`) and `DROIDGEAR_WEBVIEW_VISUAL_HOSTING=1` (visual hosting instead of windowed, avoiding the DPI re-marshal on virtual/remote displays)
+
+**Bug Fixes / 问题修复**
+
+- The "first launch does nothing, second launch is a black window" failure mode on Windows-on-ARM virtual machines is no longer silent: the black window was the single-instance handler showing a window whose WebView2 never rendered, and the log file now names the cause (missing runtime, disabled GPU, a failed asset request). See `docs/developer/wails-diagnostics.zh.md` for the排查 order / Windows on ARM 虚拟机上的「第一次启动没反应、第二次启动全黑屏」不再是静默失败：那块黑屏是单实例逻辑显示了 WebView2 未渲染的窗口，现在日志文件会指出原因（runtime 缺失、GPU 被禁用、资源请求失败）。排查顺序见 `docs/developer/wails-diagnostics.zh.md`
+
 ## v1.3.10.0
 
 **New Features / 新功能**

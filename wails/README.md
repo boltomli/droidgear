@@ -208,6 +208,26 @@ droidgear-wails/internal/version.Version=…"` injection, so `GetAppVersion`
 (About / General panes) reports the same version everywhere. Drift check (CI):
 `node wails/scripts/sync-version.mjs --check`.
 
+## Diagnostics (no window / black window)
+
+The window is created hidden and revealed by the frontend, so a WebView2 that
+never renders looks like "the app does not start". Three things make that
+observable instead of silent — details in
+[`../developer/wails-diagnostics.zh.md`](../developer/wails-diagnostics.zh.md):
+
+- **Log file**: `~/.droidgear/logs/app.log` (4 MiB, one rotation). Wails' own
+  system log — including the resolved WebView2 version — and `internal/app`
+  both land there; `DROIDGEAR_LOG_DIR` / `DROIDGEAR_LOG_LEVEL` override.
+  `dg doctor` reports the path.
+- **WebView2 preflight**: before `application.New`, a missing runtime is
+  logged and reported in a native MessageBox (ARM64 builds need the ARM64
+  runtime) instead of leaving an invisible window.
+- **8s watchdog**: if the frontend never calls `Show()`, the shell reveals the
+  window itself and logs why.
+
+VM / RDP switches: `DROIDGEAR_WEBVIEW_ARGS` (e.g. `--disable-gpu`) and
+`DROIDGEAR_WEBVIEW_VISUAL_HOSTING=1`.
+
 ## Files added by the spike
 
 ```

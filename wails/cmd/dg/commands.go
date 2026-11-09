@@ -150,6 +150,10 @@ func (c *cli) doctor(args []string) error {
 	addFile("droidgearSettings", settingsPath, err)
 	addFile("channels", filepath.Join(droidGearDir, "channels.json"), nil)
 	addFile("exportTemplates", filepath.Join(droidGearDir, "export-templates.yaml"), nil)
+	// The GUI has no console, so its log file is the first thing to look at
+	// when a launch produced no window (`droidgear logs` shows the same path).
+	logPath, err := core.LogPath()
+	addFile("log", logPath, err)
 
 	report := doctorReport{
 		Version: version.Version,

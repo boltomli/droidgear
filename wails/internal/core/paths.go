@@ -43,6 +43,33 @@ func DroidGearSettingsPath() (string, error) {
 	return filepath.Join(dir, "settings.json"), nil
 }
 
+// LogDirEnv overrides the directory the app log is written to (portable
+// installs, tests).
+const LogDirEnv = "DROIDGEAR_LOG_DIR"
+
+// LogDir returns the directory holding the app log (~/.droidgear/logs).
+func LogDir() (string, error) {
+	if dir := strings.TrimSpace(os.Getenv(LogDirEnv)); dir != "" {
+		return dir, nil
+	}
+	dir, err := DroidGearDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "logs"), nil
+}
+
+// LogPath returns ~/.droidgear/logs/app.log — the file
+// internal/app.SetupLogging writes and `dg doctor` reports. The GUI has no
+// console, so this is where a failed launch explains itself.
+func LogPath() (string, error) {
+	dir, err := LogDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "app.log"), nil
+}
+
 // ReadDroidGearSettings reads ~/.droidgear/settings.json as a generic map.
 // A missing or empty file yields an empty map.
 func ReadDroidGearSettings() map[string]any {

@@ -61,9 +61,10 @@ Release flow (Wails): [`../agents/commands.md`](../agents/commands.md) →
 _CI / Release tags_ and [`../../wails/README.md`](../../wails/README.md) →
 release workflows.
 
-| Document                                                   | Description                                                                     |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| [Single-file self-update](./self-update-single-file.zh.md) | How `wails-v*` releases are discovered, verified (`SHA256SUMS.txt`) and swapped |
+| Document                                                   | Description                                                                      |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| [Single-file self-update](./self-update-single-file.zh.md) | How `wails-v*` releases are discovered, verified (`SHA256SUMS.txt`) and swapped  |
+| [Wails diagnostics](./wails-diagnostics.zh.md)             | No window / black window: log file, WebView2 preflight, 8s watchdog, VM switches |
 
 ## Archive
 

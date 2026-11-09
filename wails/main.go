@@ -4,10 +4,13 @@ import (
 	"embed"
 	"log"
 	"os"
+	"sync/atomic"
+	"time"
 
 	"droidgear-wails/internal/app"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 )
 
@@ -18,6 +21,16 @@ import (
 var assets embed.FS
 
 func main() {
+	// Wails and internal/app log to stderr, which a GUI build does not have —
+	// mirror it into ~/.droidgear/logs/app.log (`dg doctor` prints the path) so
+	// a launch that shows nothing still explains itself afterwards.
+	logger, closeLog := app.SetupLogging()
+	defer closeLog()
+
+	// Report a missing WebView2 runtime in a native dialog instead of letting
+	// the app come up with an invisible (or black) window.
+	checkWebView2Runtime(logger)
+
 	// A binary installed by a previous self-update arrives with
 	// `--apply-update-relaunch <pid>`: wait for the old process (which still
 	// holds the single-instance lock) to exit and clear its leftovers. This
@@ -34,6 +47,12 @@ func main() {
 	appInstance := application.New(application.Options{
 		Name:        "DroidGear Minimal",
 		Description: "Minimal GUI-only Dsh / Pi / Hermes / OMP configurator (Wails v3 spike)",
+		// Wails' own system messages (including the resolved WebView2 version)
+		// go through the logger installed above.
+		Logger: logger,
+		// VM / RDP escape hatches: DROIDGEAR_WEBVIEW_ARGS and
+		// DROIDGEAR_WEBVIEW_VISUAL_HOSTING (webview_env.go).
+		Windows: windowsOptions(logger),
 		Services: []application.Service{
 			application.NewService(&app.App{}),
 			application.NewService(notificationService),
@@ -106,7 +125,33 @@ func main() {
 	mainWindow := appInstance.Window.NewWithOptions(windowOptions)
 	app.AttachWindowState(mainWindow, state)
 
+	// The window is created hidden and only the frontend reveals it
+	// (src/App.tsx calls Show() + Focus()). If the webview never renders —
+	// missing runtime, a JS error before mount, a VM that cannot composite —
+	// that call never happens and the app looks dead: process alive, no window.
+	// A second launch then hits SingleInstance and shows the empty window, i.e.
+	// the "first launch nothing, second launch black screen" failure mode.
+	// Reveal it ourselves after a grace period so the failure is observable and
+	// logged instead of silent.
+	var revealed atomic.Bool
+	mainWindow.OnWindowEvent(events.Common.WindowShow, func(*application.WindowEvent) {
+		revealed.Store(true)
+	})
+	go func() {
+		const grace = 8 * time.Second
+		time.Sleep(grace)
+		if revealed.Load() {
+			return
+		}
+		logger.Error("frontend did not reveal the window before the grace period; forcing it visible",
+			"grace", grace.String(),
+			"log", app.LogPathString())
+		mainWindow.Show()
+		mainWindow.Focus()
+	}()
+
 	if err := appInstance.Run(); err != nil {
+		logger.Error("application exited with an error", "error", err)
 		log.Fatal(err)
 	}
 }
