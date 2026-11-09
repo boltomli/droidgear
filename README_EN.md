@@ -192,6 +192,7 @@ Download the `dg` binary from the `wails-v*` releases on
 the interactive TUI and the scriptable CLI subcommands:
 
 - Windows x64: `dg-windows-x64.exe`
+- Windows arm64: `dg-windows-arm64.exe`
 - macOS arm64: `dg-macos-arm64`
 - Linux x64: `dg-linux-x64`
 

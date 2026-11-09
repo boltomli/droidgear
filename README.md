@@ -190,6 +190,7 @@ DroidGear TUI 是专为 SSH 和无桌面环境设计的终端界面，与桌面�
 `dg` 二进制——`dg` 同时承载交互式 TUI 与可脚本化的 CLI 子命令：
 
 - Windows x64: `dg-windows-x64.exe`
+- Windows arm64: `dg-windows-arm64.exe`
 - macOS arm64: `dg-macos-arm64`
 - Linux x64: `dg-linux-x64`
 

@@ -77,11 +77,13 @@ const (
 var releaseAssets = map[AssetKind]map[string]string{
 	KindGUI: {
 		"windows/amd64": "droidgear-wails-windows-x64.exe",
+		"windows/arm64": "droidgear-wails-windows-arm64.exe",
 		"darwin/arm64":  "droidgear-wails-macos-arm64",
 		"linux/amd64":   "droidgear-wails-linux-x64",
 	},
 	KindCLI: {
 		"windows/amd64": "dg-windows-x64.exe",
+		"windows/arm64": "dg-windows-arm64.exe",
 		"darwin/arm64":  "dg-macos-arm64",
 		"linux/amd64":   "dg-linux-x64",
 	},

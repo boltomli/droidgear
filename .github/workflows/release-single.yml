@@ -112,17 +112,19 @@ jobs:
           | Platform | Asset | Runtime requirement |
           | --- | --- | --- |
           | Windows x64 | `droidgear-wails-windows-x64.exe` | WebView2 runtime (preinstalled on Windows 10/11) |
+          | Windows arm64 | `droidgear-wails-windows-arm64.exe` | ARM64 WebView2 runtime (preinstalled on Windows 11 arm64) |
           | macOS arm64 | `droidgear-wails-macos-arm64` | none (system WebKit); ad-hoc signed |
           | Linux x64 | `droidgear-wails-linux-x64` | GTK3 + WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`) |
 
           ### Headless CLI / 无头命令行
 
-          `dg` is the same build on all three platforms: pure Go, `CGO_ENABLED=0`,
+          `dg` is the same build on every platform: pure Go, `CGO_ENABLED=0`,
           no WebView2/GTK/WebKit required — copy it onto a server and run it.
 
           | Platform | Asset |
           | --- | --- |
           | Windows x64 | `dg-windows-x64.exe` |
+          | Windows arm64 | `dg-windows-arm64.exe` |
           | macOS arm64 | `dg-macos-arm64` |
           | Linux x64 | `dg-linux-x64` |
 
@@ -130,6 +132,11 @@ jobs:
           run `chmod +x droidgear-wails-macos-arm64` and, if Gatekeeper blocks
           it, `xattr -d com.apple.quarantine droidgear-wails-macos-arm64`.
           Windows: SmartScreen may warn because the exe is unsigned.
+
+          Windows arm64 is a native build (no x64 emulation): it needs the ARM64
+          WebView2 runtime, which ships with Windows 11 arm64. On x64 Windows use
+          the x64 assets — the updater picks by `GOARCH`, so an arm64 device can
+          never be handed the x64 file or vice versa.
 
           > macOS/Linux builds compile and launch, but the in-app title bar still
           > uses the Windows control layout and the native menu is still
@@ -178,6 +185,19 @@ jobs:
             build_tags: production
             asset: droidgear-wails-windows-x64.exe
             cli_asset: dg-windows-x64.exe
+            ldflags: '-H windowsgui'
+          # Windows on ARM: cross-compiled from the same x64 runner (no CGO in
+          # the Windows backend, go-webview2 ships webviewloader/arm64), so it
+          # needs no windows-11-arm runner. Native ARM64 runs it; x64 Windows
+          # keeps the x64 asset above. Runtime needs the ARM64 WebView2 runtime.
+          - os: windows-latest
+            goos: windows
+            goarch: arm64
+            cgo: '0'
+            goflags: ''
+            build_tags: production
+            asset: droidgear-wails-windows-arm64.exe
+            cli_asset: dg-windows-arm64.exe
             ldflags: '-H windowsgui'
           # macos-15 is an arm64 runner; building natively keeps cgo/WebKit
           # framework linking honest (no cross-compile, no lipo step).
@@ -243,11 +263,13 @@ jobs:
         run: echo "APP_VERSION=$(node wails/scripts/sync-version.mjs)" >> "$GITHUB_ENV"
 
       # Icon + version resource. Only meaningful (and only buildable) for the
-      # Windows linker; other platforms have no .syso concept.
+      # Windows linker; other platforms have no .syso concept. The arch must be
+      # the matrix one — a amd64 .syso silently wins over arm64's mangled names
+      # and the linker embeds amd64 resources into the arm64 binary.
       - name: Generate Windows .syso resources
         if: matrix.goos == 'windows'
         working-directory: wails/build
-        run: wails3 generate syso -arch amd64 -icon windows/icon.ico -manifest windows/wails.exe.manifest -info windows/info.json -out ../wails_windows_amd64.syso
+        run: wails3 generate syso -arch ${{ matrix.goarch }} -icon windows/icon.ico -manifest windows/wails.exe.manifest -info windows/info.json -out ../wails_windows_${{ matrix.goarch }}.syso
 
       - name: Build single binary
         shell: bash

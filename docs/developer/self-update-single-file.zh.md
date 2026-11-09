@@ -30,14 +30,19 @@
 `release-single.yml` 的 matrix 与 `internal/service/updater` 的 `releaseAssets`
 必须同步（改一处必须改两处，PR 里一起改）：
 
-| AssetKind | windows/amd64                     | darwin/arm64                  | linux/amd64                 |
-| --------- | --------------------------------- | ----------------------------- | --------------------------- |
-| `gui`     | `droidgear-wails-windows-x64.exe` | `droidgear-wails-macos-arm64` | `droidgear-wails-linux-x64` |
-| `cli`     | `dg-windows-x64.exe`              | `dg-macos-arm64`              | `dg-linux-x64`              |
+| AssetKind | windows/amd64                     | windows/arm64                       | darwin/arm64                  | linux/amd64                 |
+| --------- | --------------------------------- | ----------------------------------- | ----------------------------- | --------------------------- |
+| `gui`     | `droidgear-wails-windows-x64.exe` | `droidgear-wails-windows-arm64.exe` | `droidgear-wails-macos-arm64` | `droidgear-wails-linux-x64` |
+| `cli`     | `dg-windows-x64.exe`              | `dg-windows-arm64.exe`              | `dg-macos-arm64`              | `dg-linux-x64`              |
 
 未列出的组合返回 `ErrUnsupportedPlatform`（不猜、不错装）。
 
-`SHA256SUMS.txt` 由流水线的 `checksums` job 在**三平台构建完成之后**统一生成：
+Windows arm64 与 windows amd64 在**同一个 x64 runner 上交叉编译**（Windows 后端无
+CGO，`go-webview2` 自带 `webviewloader/arm64/WebView2Loader.dll`），所以不需要
+`windows-11-arm` runner。运行时依赖是 **ARM64 WebView2 Runtime**（Windows 11 arm64
+预装）；在 x64 Windows 上请继续用 x64 资产。
+
+`SHA256SUMS.txt` 由流水线的 `checksums` job 在**所有平台构建完成之后**统一生成：
 三个 runner 互相看不到文件，所以下载已上传的资产、单点计算 `sha256sum`、再上传。
 没有 `SHA256SUMS.txt` 的 Release **不会被提供**——无法校验的字节不允许替换可执行文件。
 

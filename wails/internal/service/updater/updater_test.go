@@ -60,9 +60,11 @@ func TestAssetFor(t *testing.T) {
 		unsupported bool
 	}{
 		{KindGUI, "windows", "amd64", "droidgear-wails-windows-x64.exe", false},
+		{KindGUI, "windows", "arm64", "droidgear-wails-windows-arm64.exe", false},
 		{KindGUI, "darwin", "arm64", "droidgear-wails-macos-arm64", false},
 		{KindCLI, "linux", "amd64", "dg-linux-x64", false},
-		{KindCLI, "windows", "arm64", "", true},
+		{KindCLI, "windows", "arm64", "dg-windows-arm64.exe", false},
+		{KindCLI, "windows", "386", "", true},
 		{AssetKind("nope"), "windows", "amd64", "", true},
 	}
 	for _, tc := range cases {
@@ -275,7 +277,7 @@ func TestCheckDevBuildMakesNoRequest(t *testing.T) {
 func TestCheckUnsupportedPlatform(t *testing.T) {
 	cfg := Config{
 		Repo: "owner/repo", APIBase: "https://example.test", CurrentVersion: "1.0.0",
-		GOOS: "windows", GOARCH: "arm64", CacheDir: t.TempDir(),
+		GOOS: "windows", GOARCH: "386", CacheDir: t.TempDir(),
 	}
 	if _, err := Check(context.Background(), cfg, KindGUI); !errors.Is(err, ErrUnsupportedPlatform) {
 		t.Fatalf("err = %v, want ErrUnsupportedPlatform", err)

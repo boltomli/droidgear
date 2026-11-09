@@ -167,9 +167,9 @@ Profile tools (`pi`, `hermes`, `omp`, `openclaw`, …) follow once their
 domains move into `internal/service`.
 
 **Release builds** ship `dg` next to the GUI single-file executable:
-`release-single.yml` produces `dg-windows-x64.exe` / `dg-macos-arm64` /
-`dg-linux-x64` alongside the three `droidgear-wails-*` assets, built with
-`CGO_ENABLED=0` and **without** `-H windowsgui` — the CLI is a console
+`release-single.yml` produces `dg-windows-x64.exe` / `dg-windows-arm64.exe` /
+`dg-macos-arm64` / `dg-linux-x64` alongside the four `droidgear-wails-*` assets,
+built with `CGO_ENABLED=0` and **without** `-H windowsgui` — the CLI is a console
 binary that needs none of the GUI's WebView2/GTK/WebKit runtime.
 
 Two release workflows exist on purpose: `release-single.yml`
