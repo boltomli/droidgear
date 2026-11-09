@@ -208,6 +208,10 @@ export function PiImportFromChannelDialog({
           tokenName,
           providerId: '',
           modelIds: result.data.map(model => model.id),
+          channelModels: result.data.map(model => ({
+            id: model.id,
+            name: model.name ?? null,
+          })),
           existingProviderIds,
         })
         if (prepared.status === 'ok') {
@@ -257,6 +261,9 @@ export function PiImportFromChannelDialog({
       tokenName: resolvedTokenName,
       providerId: providerId.trim(),
       modelIds: Array.from(selectedModelIds),
+      channelModels: models
+        .filter(model => selectedModelIds.has(model.id))
+        .map(model => ({ id: model.id, name: model.name ?? null })),
       existingProviderIds,
     })
     if (prepared.status !== 'ok') {

@@ -175,6 +175,10 @@ export function OmpImportFromChannelDialog({
           tokenName,
           providerId: isUpdate ? (targetProviderId ?? '') : '',
           modelIds: result.data.map(model => model.id),
+          channelModels: result.data.map(model => ({
+            id: model.id,
+            name: model.name ?? null,
+          })),
           existingProviderIds,
           existing: targetProvider ?? undefined,
         })
@@ -277,6 +281,9 @@ export function OmpImportFromChannelDialog({
       modelIds: models
         .filter(model => selectedModelIds.has(model.id))
         .map(model => model.id),
+      channelModels: models
+        .filter(model => selectedModelIds.has(model.id))
+        .map(model => ({ id: model.id, name: model.name ?? null })),
       existingProviderIds,
       existing: targetProvider ?? undefined,
     })

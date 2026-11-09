@@ -11,7 +11,7 @@ info:
   description: "Minimal GUI-only Dsh / Pi / Hermes / OMP configurator (Wails v3 spike)" # The application description
   copyright: "(c) 2025 DroidGear" # Copyright text
   comments: "DroidGear Wails v3 spike" # Comments
-  version: "1.3.9" # The application version
+  version: "1.3.10" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"

@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.3.10.0
+
+**New Features / 新功能**
+
+- Windows on ARM is a first-class single-file target: the release pipeline cross-compiles `windows/arm64` on the same x64 runner and publishes `droidgear-wails-windows-arm64.exe` plus `dg-windows-arm64.exe`, and the updater's asset table gained the pair, so an ARM64 host can never be handed the x64 file (or vice versa) — the ARM64 WebView2 runtime it needs ships with Windows 11 arm64 / Windows on ARM 成为正式的单文件发布目标：发布流水线在同一个 x64 runner 上交叉编译 `windows/arm64`，产出 `droidgear-wails-windows-arm64.exe` 与 `dg-windows-arm64.exe`，更新器的资产表同步收录这一对，因此 ARM64 机器永远不会拿到 x64 文件（反之亦然）——它所需的 ARM64 WebView2 运行时随 Windows 11 arm64 预装
+
+**Bug Fixes / 问题修复**
+
+- Channel imports now keep the model display names the channel reports: both the OMP and the pi import dialogs pass `channelModels` (`{ id, name }`) to the service, which writes them into `models.yml` / `models.json` — the TUI already did this via `importflow`, so GUI and TUI agree again / 渠道导入现在会保留渠道返回的模型显示名：OMP 与 pi 两个导入对话框都会向服务传 `channelModels`（`{ id, name }`），由服务写入 `models.yml` / `models.json`——TUI 早已通过 `importflow` 这样做，GUI 与 TUI 行为重新一致
+
+> Version alignment: this release adopts the upstream `1.3.10` version number (the Pi/OMP upstream pass that number stands for already shipped on this line as `1.3.9.11` / `1.3.9.12`, in Go instead of Rust), so the single-file line is no longer numerically behind `main`. / 版本对齐：本版本采用上游的 `1.3.10` 版本号（该版本号对应的 Pi/OMP 上游对齐在这条线上已以 `1.3.9.11` / `1.3.9.12` 的 Go 实现发布过），单文件线不再落后于 `main` 的版本号。
+
 ## v1.3.9.12
 
 **New Features / 新功能**
