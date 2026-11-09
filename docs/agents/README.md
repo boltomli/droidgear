@@ -13,6 +13,7 @@ Detailed coding guidelines for AI agents working on this codebase. These docs ar
 | [Architecture](./architecture.md)                         | Understanding system design, Tauri bridge, i18n |
 | [UI Components](./ui-components.md)                       | Working with Radix UI, shadcn/ui, dialogs       |
 | [Dependencies](./dependencies.md)                         | Updating npm/cargo dependencies, Tauri alphas   |
+| [Upstream Config Sources](./tool-config-sources.md)       | Touching codex / pi / hermes / omp config I/O   |
 
 ## Relationship to Other Docs
 
