@@ -373,7 +373,15 @@ export const commands = {
 	/**  Set active profile ID */
 	setActivePiProfileId: (id: string) => typedError<null, string>(__TAURI_INVOKE("set_active_pi_profile_id", { id })),
 	/**  Apply a profile to `~/.pi/agent/models.json` */
-	applyPiProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("apply_pi_profile", { id })),
+	applyPiProfile: (id: string) => typedError<PiApplyResult, string>(__TAURI_INVOKE("apply_pi_profile", { id })),
+	/**  Read the startup model selection from `~/.pi/agent/settings.json` */
+	readPiSettings: () => typedError<PiSettingsStatus, string>(__TAURI_INVOKE("read_pi_settings")),
+	/**  Save the startup model selection, keeping every other settings key */
+	savePiSettings: (settings: PiSettings) => typedError<null, string>(__TAURI_INVOKE("save_pi_settings", { settings })),
+	/**  Clear the startup model selection so pi picks the model itself again */
+	clearPiSettings: () => typedError<null, string>(__TAURI_INVOKE("clear_pi_settings")),
+	/**  List what the startup model fields can point at (models.json + pi catalog) */
+	listPiStartupOptions: () => typedError<StartupOptions, string>(__TAURI_INVOKE("list_pi_startup_options")),
 	/**  Get Pi config status */
 	getPiConfigStatus: () => typedError<PiConfigStatus, string>(__TAURI_INVOKE("get_pi_config_status")),
 	/**  Read current Pi configuration from config files */
@@ -395,14 +403,18 @@ export const commands = {
 	/**  Set active profile ID */
 	setActiveOmpProfileId: (id: string) => typedError<null, string>(__TAURI_INVOKE("set_active_omp_profile_id", { id })),
 	/**  Apply model roles to `~/.omp/agent/config.yml` */
-	applyOmpProfile: (id: string) => typedError<null, string>(__TAURI_INVOKE("apply_omp_profile", { id })),
+	applyOmpProfile: (id: string) => typedError<OmpApplyResult, string>(__TAURI_INVOKE("apply_omp_profile", { id })),
+	/**  List the `provider/model-id` values an OMP model role can point at */
+	listOmpRoleOptions: () => typedError<OmpRoleOptions, string>(__TAURI_INVOKE("list_omp_role_options")),
+	/**  Build a models.yml provider entry from a channel (pure: no disk or network) */
+	prepareOmpChannelImport: (input: OmpChannelImportInput) => typedError<OmpChannelImportResult, string>(__TAURI_INVOKE("prepare_omp_channel_import", { input })),
 	/**  Get OMP config status */
 	getOmpConfigStatus: () => typedError<OmpConfigStatus, string>(__TAURI_INVOKE("get_omp_config_status")),
 	/**  Read current OMP configuration from config files */
 	readOmpCurrentConfig: () => typedError<OmpCurrentConfig, string>(__TAURI_INVOKE("read_omp_current_config")),
 	readOmpCustomProviders: () => typedError<OmpCustomProviders, string>(__TAURI_INVOKE("read_omp_custom_providers")),
-	saveOmpCustomProvider: (providerId: string, provider: OmpCustomProvider) => typedError<null, string>(__TAURI_INVOKE("save_omp_custom_provider", { providerId, provider })),
-	deleteOmpCustomProvider: (providerId: string) => typedError<null, string>(__TAURI_INVOKE("delete_omp_custom_provider", { providerId })),
+	saveOmpCustomProvider: (providerId: string, provider: OmpCustomProvider) => typedError<OmpRoleReconcile, string>(__TAURI_INVOKE("save_omp_custom_provider", { providerId, provider })),
+	deleteOmpCustomProvider: (providerId: string) => typedError<OmpRoleReconcile, string>(__TAURI_INVOKE("delete_omp_custom_provider", { providerId })),
 	/**  Test an OMP provider connection via HTTP */
 	testOmpProviderConnection: (providerId: string) => typedError<OmpProviderTestResult, string>(__TAURI_INVOKE("test_omp_provider_connection", { providerId })),
 	listOmpSessions: () => typedError<OmpSessionSummary[], string>(__TAURI_INVOKE("list_omp_sessions")),
@@ -1959,7 +1971,8 @@ export type HermesCurrentConfig_Serialize = {
  * 
  *  apply 时：
  *  - `is_default` 的条目 → 写入 config.yaml 的 `model.default` / `model.provider`；
- *  - 解析出 `custom:<name>` 且带 base_url 的条目 → 写入 `custom_providers` 列表；
+ *  - 解析出 `custom:<name>` 且带 base_url 的条目 → upsert 进 `providers` 字典
+ *    （api / api_key / default_model，其余字段保留原值）；
  *  - 裸 `custom`（无 name）→ base_url/api_key 直接写入 `model` 节。
  */
 export type HermesModelConfig = HermesModelConfig_Serialize | HermesModelConfig_Deserialize;
@@ -1969,13 +1982,14 @@ export type HermesModelConfig = HermesModelConfig_Serialize | HermesModelConfig_
  * 
  *  apply 时：
  *  - `is_default` 的条目 → 写入 config.yaml 的 `model.default` / `model.provider`；
- *  - 解析出 `custom:<name>` 且带 base_url 的条目 → 写入 `custom_providers` 列表；
+ *  - 解析出 `custom:<name>` 且带 base_url 的条目 → upsert 进 `providers` 字典
+ *    （api / api_key / default_model，其余字段保留原值）；
  *  - 裸 `custom`（无 name）→ base_url/api_key 直接写入 `model` 节。
  */
 export type HermesModelConfig_Deserialize = {
-	/**  配置名称（对应 `custom_providers[].name`，也是 `custom:<name>` 的引用名）。 */
+	/**  配置名称（对应 `providers` 字典的 key，也是 `custom:<name>` 的引用名）。 */
 	name: string | null,
-	/**  模型 ID（写入 `model.default` 或 `custom_providers[].model`）。 */
+	/**  模型 ID（写入 `model.default` 或 `providers.<name>.default_model`）。 */
 	default: string | null,
 	/**  显式 provider（如 openrouter / deepseek / custom）。留空时按 name/base_url 推导。 */
 	provider: string | null,
@@ -1992,13 +2006,14 @@ export type HermesModelConfig_Deserialize = {
  * 
  *  apply 时：
  *  - `is_default` 的条目 → 写入 config.yaml 的 `model.default` / `model.provider`；
- *  - 解析出 `custom:<name>` 且带 base_url 的条目 → 写入 `custom_providers` 列表；
+ *  - 解析出 `custom:<name>` 且带 base_url 的条目 → upsert 进 `providers` 字典
+ *    （api / api_key / default_model，其余字段保留原值）；
  *  - 裸 `custom`（无 name）→ base_url/api_key 直接写入 `model` 节。
  */
 export type HermesModelConfig_Serialize = {
-	/**  配置名称（对应 `custom_providers[].name`，也是 `custom:<name>` 的引用名）。 */
+	/**  配置名称（对应 `providers` 字典的 key，也是 `custom:<name>` 的引用名）。 */
 	name?: string,
-	/**  模型 ID（写入 `model.default` 或 `custom_providers[].model`）。 */
+	/**  模型 ID（写入 `model.default` 或 `providers.<name>.default_model`）。 */
 	default?: string,
 	/**  显式 provider（如 openrouter / deepseek / custom）。留空时按 name/base_url 推导。 */
 	provider?: string,
@@ -2168,6 +2183,10 @@ export type OmpAgentConfig = OmpAgentConfig_Serialize | OmpAgentConfig_Deseriali
 /**  OMP agent configuration (from `~/.omp/agent/config.yml`). */
 export type OmpAgentConfig_Deserialize = {
 	modelRoles: OmpModelRoles_Deserialize | null,
+	/**  Named snapshots of role assignments, written as `modelPresets`. */
+	modelPresets: { [key in string]: JsonValue } | null,
+	/**  Fallback thinking level (`auto` when OMP decides per model). */
+	defaultThinkingLevel: string | null,
 	theme: OmpTheme_Deserialize | null,
 	steeringMode: string | null,
 	followUpMode: string | null,
@@ -2179,12 +2198,45 @@ export type OmpAgentConfig_Deserialize = {
 /**  OMP agent configuration (from `~/.omp/agent/config.yml`). */
 export type OmpAgentConfig_Serialize = {
 	modelRoles?: OmpModelRoles_Serialize,
+	/**  Named snapshots of role assignments, written as `modelPresets`. */
+	modelPresets?: { [key in string]: JsonValue },
+	/**  Fallback thinking level (`auto` when OMP decides per model). */
+	defaultThinkingLevel?: string,
 	theme?: OmpTheme_Serialize,
 	steeringMode?: string,
 	followUpMode?: string,
 	interruptMode?: string,
 	symbolPreset?: string,
 	setupVersion?: number,
+};
+
+/**
+ *  What one apply wrote plus the advisory notes for the roles OMP will not be
+ *  able to resolve (a profile can pin a provider that models.yml no longer
+ *  carries; the apply does not silently rewrite that choice, it reports it).
+ */
+export type OmpApplyResult = OmpApplyResult_Serialize | OmpApplyResult_Deserialize;
+
+/**
+ *  What one apply wrote plus the advisory notes for the roles OMP will not be
+ *  able to resolve (a profile can pin a provider that models.yml no longer
+ *  carries; the apply does not silently rewrite that choice, it reports it).
+ */
+export type OmpApplyResult_Deserialize = {
+	id: string,
+	roles: OmpModelRoles_Deserialize,
+	warnings?: string[],
+};
+
+/**
+ *  What one apply wrote plus the advisory notes for the roles OMP will not be
+ *  able to resolve (a profile can pin a provider that models.yml no longer
+ *  carries; the apply does not silently rewrite that choice, it reports it).
+ */
+export type OmpApplyResult_Serialize = {
+	id: string,
+	roles: OmpModelRoles_Serialize,
+	warnings?: string[],
 };
 
 /**  A cached model entry from `models.db` (read-only). */
@@ -2201,6 +2253,7 @@ export type OmpCachedModel_Deserialize = {
 	input?: string[],
 	cost: OmpModelCost_Deserialize | null,
 	contextWindow?: number,
+	maxContextWindow?: number,
 	maxTokens?: number,
 	thinking: OmpThinkingConfig_Deserialize | null,
 };
@@ -2216,8 +2269,98 @@ export type OmpCachedModel_Serialize = {
 	input: string[],
 	cost?: OmpModelCost_Serialize,
 	contextWindow: number,
+	maxContextWindow?: number,
 	maxTokens: number,
 	thinking?: OmpThinkingConfig_Serialize,
+};
+
+/**
+ *  The resolved channel/token pair plus the models the caller selected.
+ * 
+ *  Channel and model discovery stays in the caller (GUI command or TUI action)
+ *  so this module never talks to the network.
+ */
+export type OmpChannelImportInput = OmpChannelImportInput_Serialize | OmpChannelImportInput_Deserialize;
+
+/**
+ *  The resolved channel/token pair plus the models the caller selected.
+ * 
+ *  Channel and model discovery stays in the caller (GUI command or TUI action)
+ *  so this module never talks to the network.
+ */
+export type OmpChannelImportInput_Deserialize = {
+	channelName: string,
+	channelType?: string,
+	baseUrl: string,
+	platform?: string | null,
+	apiKey: string,
+	tokenName?: string,
+	providerId?: string,
+	modelIds?: string[],
+	channelModels?: OmpChannelModel_Deserialize[],
+	existingProviderIds?: string[],
+	/**  The live provider entry when re-importing into an existing id. */
+	existing?: OmpCustomProvider_Deserialize | null,
+};
+
+/**
+ *  The resolved channel/token pair plus the models the caller selected.
+ * 
+ *  Channel and model discovery stays in the caller (GUI command or TUI action)
+ *  so this module never talks to the network.
+ */
+export type OmpChannelImportInput_Serialize = {
+	channelName: string,
+	channelType: string,
+	baseUrl: string,
+	platform?: string,
+	apiKey: string,
+	tokenName: string,
+	providerId: string,
+	modelIds: string[],
+	channelModels: OmpChannelModel_Serialize[],
+	existingProviderIds: string[],
+	/**  The live provider entry when re-importing into an existing id. */
+	existing?: OmpCustomProvider_Serialize,
+};
+
+/**  The provider entry the caller saves. */
+export type OmpChannelImportResult = OmpChannelImportResult_Serialize | OmpChannelImportResult_Deserialize;
+
+/**  The provider entry the caller saves. */
+export type OmpChannelImportResult_Deserialize = {
+	providerId: string,
+	provider: OmpCustomProvider_Deserialize,
+};
+
+/**  The provider entry the caller saves. */
+export type OmpChannelImportResult_Serialize = {
+	providerId: string,
+	provider: OmpCustomProvider_Serialize,
+};
+
+/**
+ *  One model listed by a channel token. `name` is the display name the channel
+ *  returned; the vendored registry wins when it knows the id.
+ */
+export type OmpChannelModel = OmpChannelModel_Serialize | OmpChannelModel_Deserialize;
+
+/**
+ *  One model listed by a channel token. `name` is the display name the channel
+ *  returned; the vendored registry wins when it knows the id.
+ */
+export type OmpChannelModel_Deserialize = {
+	id: string,
+	name: string | null,
+};
+
+/**
+ *  One model listed by a channel token. `name` is the display name the channel
+ *  returned; the vendored registry wins when it knows the id.
+ */
+export type OmpChannelModel_Serialize = {
+	id: string,
+	name?: string,
 };
 
 /**  Full OMP configuration status. */
@@ -2264,9 +2407,13 @@ export type OmpCustomModel_Deserialize = {
 	reasoning: boolean | null,
 	thinking: OmpThinkingConfig_Deserialize | null,
 	input: string[] | null,
+	imageInputDecoder: string | null,
 	cost: OmpModelCost_Deserialize | null,
 	contextWindow: number | null,
+	maxContextWindow: number | null,
 	maxTokens: number | null,
+	omitMaxOutputTokens: boolean | null,
+	preferWebsockets: boolean | null,
 	headers: { [key in string]: string } | null,
 	compat: JsonValue | null,
 	remoteCompaction: JsonValue | null,
@@ -2281,9 +2428,13 @@ export type OmpCustomModel_Serialize = {
 	reasoning?: boolean,
 	thinking?: OmpThinkingConfig_Serialize,
 	input?: string[],
+	imageInputDecoder?: string,
 	cost?: OmpModelCost_Serialize,
 	contextWindow?: number,
+	maxContextWindow?: number,
 	maxTokens?: number,
+	omitMaxOutputTokens?: boolean,
+	preferWebsockets?: boolean,
 	headers?: { [key in string]: string },
 	compat?: JsonValue,
 	remoteCompaction?: JsonValue,
@@ -2379,25 +2530,66 @@ export type OmpModelCost_Serialize = {
 	cacheWrite: number | null,
 };
 
-/**  OMP model roles — which model handles which role. */
+/**
+ *  OMP model roles — which model handles which role.
+ * 
+ *  Upstream groups chat roles (`default`, `smol`, `slow`, `vision`, `plan`,
+ *  `commit`, `tiny`, `memory`, `task`, `advisor`) and model-kind roles (`image`,
+ *  `web`, `speech`, `dictation`, `judge`). Roles this build does not model are
+ *  kept in `extra` so an apply never drops them.
+ */
 export type OmpModelRoles = OmpModelRoles_Serialize | OmpModelRoles_Deserialize;
 
-/**  OMP model roles — which model handles which role. */
+/**
+ *  OMP model roles — which model handles which role.
+ * 
+ *  Upstream groups chat roles (`default`, `smol`, `slow`, `vision`, `plan`,
+ *  `commit`, `tiny`, `memory`, `task`, `advisor`) and model-kind roles (`image`,
+ *  `web`, `speech`, `dictation`, `judge`). Roles this build does not model are
+ *  kept in `extra` so an apply never drops them.
+ */
 export type OmpModelRoles_Deserialize = {
 	default: string | null,
 	smol: string | null,
 	slow: string | null,
+	vision: string | null,
 	plan: string | null,
 	commit: string | null,
+	tiny: string | null,
+	memory: string | null,
+	task: string | null,
+	advisor: string | null,
+	image: string | null,
+	web: string | null,
+	speech: string | null,
+	dictation: string | null,
+	judge: string | null,
 };
 
-/**  OMP model roles — which model handles which role. */
+/**
+ *  OMP model roles — which model handles which role.
+ * 
+ *  Upstream groups chat roles (`default`, `smol`, `slow`, `vision`, `plan`,
+ *  `commit`, `tiny`, `memory`, `task`, `advisor`) and model-kind roles (`image`,
+ *  `web`, `speech`, `dictation`, `judge`). Roles this build does not model are
+ *  kept in `extra` so an apply never drops them.
+ */
 export type OmpModelRoles_Serialize = {
 	default?: string,
 	smol?: string,
 	slow?: string,
+	vision?: string,
 	plan?: string,
 	commit?: string,
+	tiny?: string,
+	memory?: string,
+	task?: string,
+	advisor?: string,
+	image?: string,
+	web?: string,
+	speech?: string,
+	dictation?: string,
+	judge?: string,
 };
 
 /**  OMP profile (stored in DroidGear) — snapshot of model role assignments. */
@@ -2412,6 +2604,17 @@ export type OmpProfile_Deserialize = {
 	updatedAt: string,
 	/**  Model role assignments (what gets written to config.yml on apply). */
 	modelRoles?: OmpModelRoles_Deserialize,
+	/**
+	 *  Fallback thinking level written to config.yml. `None` leaves the live
+	 *  value untouched (older profiles predate the field); an empty string
+	 *  clears the key.
+	 */
+	defaultThinkingLevel?: string | null,
+	/**
+	 *  Named role snapshots written as config.yml `modelPresets`. `None` leaves
+	 *  the live value untouched.
+	 */
+	modelPresets?: { [key in string]: JsonValue } | null,
 };
 
 /**  OMP profile (stored in DroidGear) — snapshot of model role assignments. */
@@ -2423,6 +2626,17 @@ export type OmpProfile_Serialize = {
 	updatedAt: string,
 	/**  Model role assignments (what gets written to config.yml on apply). */
 	modelRoles: OmpModelRoles_Serialize,
+	/**
+	 *  Fallback thinking level written to config.yml. `None` leaves the live
+	 *  value untouched (older profiles predate the field); an empty string
+	 *  clears the key.
+	 */
+	defaultThinkingLevel?: string,
+	/**
+	 *  Named role snapshots written as config.yml `modelPresets`. `None` leaves
+	 *  the live value untouched.
+	 */
+	modelPresets?: { [key in string]: JsonValue },
 };
 
 /**  A provider's cached model list from `models.db`. */
@@ -2461,6 +2675,62 @@ export type OmpProviderTestResult_Serialize = {
 	latencyMs: number,
 	responseText?: string,
 	error?: string,
+};
+
+/**
+ *  One role a models.yml write made unresolvable, plus where it moved.
+ *  `to == None` means the role was cleared.
+ */
+export type OmpRoleAdjustment = OmpRoleAdjustment_Serialize | OmpRoleAdjustment_Deserialize;
+
+/**
+ *  One role a models.yml write made unresolvable, plus where it moved.
+ *  `to == None` means the role was cleared.
+ */
+export type OmpRoleAdjustment_Deserialize = {
+	role: string,
+	from: string,
+	to: string | null,
+	reason: string,
+};
+
+/**
+ *  One role a models.yml write made unresolvable, plus where it moved.
+ *  `to == None` means the role was cleared.
+ */
+export type OmpRoleAdjustment_Serialize = {
+	role: string,
+	from: string,
+	to?: string,
+	reason: string,
+};
+
+/**
+ *  The list of values a role input can pick from: models.yml merged with the
+ *  cached catalog, provider ids alphabetical, models.yml model order preserved.
+ */
+export type OmpRoleOptions = {
+	providers: string[],
+	models: { [key in string]: string[] },
+};
+
+/**  The repair pass. `adjusted` is true when config.yml was rewritten. */
+export type OmpRoleReconcile = OmpRoleReconcile_Serialize | OmpRoleReconcile_Deserialize;
+
+/**  The repair pass. `adjusted` is true when config.yml was rewritten. */
+export type OmpRoleReconcile_Deserialize = {
+	adjusted: boolean,
+	adjustments?: OmpRoleAdjustment_Deserialize[],
+	thinking: OmpThinkingAdjustment | null,
+	roles: OmpModelRoles_Deserialize,
+};
+
+/**  The repair pass. `adjusted` is true when config.yml was rewritten. */
+export type OmpRoleReconcile_Serialize = {
+	adjusted: boolean,
+	adjustments?: OmpRoleAdjustment_Serialize[],
+	thinking?: OmpThinkingAdjustment,
+	roles: OmpModelRoles_Serialize,
 };
 
 export type OmpSessionDetail = OmpSessionDetail_Serialize | OmpSessionDetail_Deserialize;
@@ -2518,6 +2788,17 @@ export type OmpTheme_Deserialize = {
 export type OmpTheme_Serialize = {
 	dark?: string,
 	light?: string,
+};
+
+/**
+ *  A `defaultThinkingLevel` reset: the model the default role now points at
+ *  cannot express the level, so config.yml falls back to `auto` instead of
+ *  silently sending an unsupported effort.
+ */
+export type OmpThinkingAdjustment = {
+	from: string,
+	to: string,
+	reason: string,
 };
 
 /**  OMP thinking/reasoning configuration. */
@@ -2843,6 +3124,36 @@ export type OutputStructure = "flat" |
 /**  Nested: channels → tokens → models */
 "nested";
 
+/**
+ *  What one apply wrote: the providers now in models.json and the startup
+ *  selection that came out of the reconcile pass.
+ */
+export type PiApplyResult = PiApplyResult_Serialize | PiApplyResult_Deserialize;
+
+/**
+ *  What one apply wrote: the providers now in models.json and the startup
+ *  selection that came out of the reconcile pass.
+ */
+export type PiApplyResult_Deserialize = {
+	id: string,
+	appliedProviders: string[],
+	startup: PiSettings_Deserialize,
+	startupAdjusted: boolean,
+	startupReasons?: string[],
+};
+
+/**
+ *  What one apply wrote: the providers now in models.json and the startup
+ *  selection that came out of the reconcile pass.
+ */
+export type PiApplyResult_Serialize = {
+	id: string,
+	appliedProviders: string[],
+	startup: PiSettings_Serialize,
+	startupAdjusted: boolean,
+	startupReasons?: string[],
+};
+
 /**  Pi compatibility configuration. Unknown fields are retained for newer pi versions. */
 export type PiCompatConfig = PiCompatConfig_Serialize | PiCompatConfig_Deserialize;
 
@@ -2871,6 +3182,32 @@ export type PiCompatConfig_Deserialize = {
 	forceAdaptiveThinking: boolean | null,
 	openRouterRouting: JsonValue | null,
 	vercelGatewayRouting: JsonValue | null,
+	supportsFinishReason: boolean | null,
+	requiresNonNullAssistantContent: boolean | null,
+	chatTemplateKwargs: JsonValue | null,
+	chatTemplateArgs: JsonValue | null,
+	zaiToolStream: boolean | null,
+	thinkingTokenBudgetField: string | null,
+	supportsThinkingTokenBudget: boolean | null,
+	supportsOpenaiGrammarTools: boolean | null,
+	supportsMidConvoSystemMessages: boolean | null,
+	supportsMidConvoToolAdditions: boolean | null,
+	sendSessionAffinityHeaders: boolean | null,
+	sessionAffinityFormat: string | null,
+	promptCacheKeyMode: string | null,
+	vllmPriority: number | null,
+	supportsAdditionalTools: boolean | null,
+	supportsToolSearch: boolean | null,
+	supportsExplicitPromptCacheMode: boolean | null,
+	supportsMidConvoEffort: boolean | null,
+	supportsMaxOutputTokens: boolean | null,
+	supportsCacheControlOnTools: boolean | null,
+	supportsTemperature: boolean | null,
+	allowEmptySignature: boolean | null,
+	supportsStrictTools: boolean | null,
+	supportsMidConvoToolChanges: boolean | null,
+	supportsMessageThreads: boolean | null,
+	allowedFallbackModels: JsonValue | null,
 };
 
 /**  Pi compatibility configuration. Unknown fields are retained for newer pi versions. */
@@ -2898,6 +3235,32 @@ export type PiCompatConfig_Serialize = {
 	forceAdaptiveThinking?: boolean,
 	openRouterRouting?: JsonValue,
 	vercelGatewayRouting?: JsonValue,
+	supportsFinishReason?: boolean,
+	requiresNonNullAssistantContent?: boolean,
+	chatTemplateKwargs?: JsonValue,
+	chatTemplateArgs?: JsonValue,
+	zaiToolStream?: boolean,
+	thinkingTokenBudgetField?: string,
+	supportsThinkingTokenBudget?: boolean,
+	supportsOpenaiGrammarTools?: boolean,
+	supportsMidConvoSystemMessages?: boolean,
+	supportsMidConvoToolAdditions?: boolean,
+	sendSessionAffinityHeaders?: boolean,
+	sessionAffinityFormat?: string,
+	promptCacheKeyMode?: string,
+	vllmPriority?: number,
+	supportsAdditionalTools?: boolean,
+	supportsToolSearch?: boolean,
+	supportsExplicitPromptCacheMode?: boolean,
+	supportsMidConvoEffort?: boolean,
+	supportsMaxOutputTokens?: boolean,
+	supportsCacheControlOnTools?: boolean,
+	supportsTemperature?: boolean,
+	allowEmptySignature?: boolean,
+	supportsStrictTools?: boolean,
+	supportsMidConvoToolChanges?: boolean,
+	supportsMessageThreads?: boolean,
+	allowedFallbackModels?: JsonValue,
 };
 
 /**  Pi config status */
@@ -2906,16 +3269,33 @@ export type PiConfigStatus = {
 	configPath: string,
 };
 
-/**  Current Pi configuration (from `~/.pi/agent/models.json`) */
+/**
+ *  Current Pi configuration (from `~/.pi/agent/models.json`)
+ * 
+ *  The optional `$schema` root key is modeled so the GUI can show it; every
+ *  other unknown root key survives the lossless apply merge.
+ */
 export type PiCurrentConfig = PiCurrentConfig_Serialize | PiCurrentConfig_Deserialize;
 
-/**  Current Pi configuration (from `~/.pi/agent/models.json`) */
+/**
+ *  Current Pi configuration (from `~/.pi/agent/models.json`)
+ * 
+ *  The optional `$schema` root key is modeled so the GUI can show it; every
+ *  other unknown root key survives the lossless apply merge.
+ */
 export type PiCurrentConfig_Deserialize = {
+	$schema: string | null,
 	providers?: { [key in string]: PiProviderConfig_Deserialize },
 };
 
-/**  Current Pi configuration (from `~/.pi/agent/models.json`) */
+/**
+ *  Current Pi configuration (from `~/.pi/agent/models.json`)
+ * 
+ *  The optional `$schema` root key is modeled so the GUI can show it; every
+ *  other unknown root key survives the lossless apply merge.
+ */
 export type PiCurrentConfig_Serialize = {
+	$schema?: string,
 	providers: { [key in string]: PiProviderConfig_Serialize },
 };
 
@@ -2959,12 +3339,17 @@ export type PiModelOverride = PiModelOverride_Serialize | PiModelOverride_Deseri
 export type PiModelOverride_Deserialize = {
 	name: string | null,
 	api: string | null,
+	baseUrl: string | null,
 	reasoning: boolean | null,
 	thinkingLevelMap: { [key in string]: string | null } | null,
 	input: string[] | null,
+	inputLimits: JsonValue | null,
 	contextWindow: number | null,
 	maxTokens: number | null,
 	cost: PiModelCost_Deserialize | null,
+	promptCache: JsonValue | null,
+	samplingParams: { [key in string]: JsonValue } | null,
+	samplingParamsByThinkingLevel: { [key in string]: JsonValue } | null,
 	headers: { [key in string]: string } | null,
 	compat: PiCompatConfig_Deserialize | null,
 };
@@ -2973,12 +3358,17 @@ export type PiModelOverride_Deserialize = {
 export type PiModelOverride_Serialize = {
 	name?: string,
 	api?: string,
+	baseUrl?: string,
 	reasoning?: boolean,
 	thinkingLevelMap?: { [key in string]: string | null },
 	input?: string[],
+	inputLimits?: JsonValue,
 	contextWindow?: number,
 	maxTokens?: number,
 	cost?: PiModelCost_Serialize,
+	promptCache?: JsonValue,
+	samplingParams?: { [key in string]: JsonValue },
+	samplingParamsByThinkingLevel?: { [key in string]: JsonValue },
 	headers?: { [key in string]: string },
 	compat?: PiCompatConfig_Serialize,
 };
@@ -2986,14 +3376,24 @@ export type PiModelOverride_Serialize = {
 /**  Pi model definition */
 export type PiModel_Deserialize = {
 	id: string,
+	/**
+	 *  Operation discriminator (`chat` | `image` | `classifier`); omitted means
+	 *  chat (upstream models-configuration.md).
+	 */
+	type: string | null,
 	name: string | null,
 	api: string | null,
+	baseUrl: string | null,
 	reasoning?: boolean,
 	thinkingLevelMap: { [key in string]: string | null } | null,
 	input?: string[],
+	inputLimits: JsonValue | null,
 	contextWindow?: number,
 	maxTokens?: number,
 	cost: PiModelCost_Deserialize | null,
+	promptCache: JsonValue | null,
+	samplingParams: { [key in string]: JsonValue } | null,
+	samplingParamsByThinkingLevel: { [key in string]: JsonValue } | null,
 	headers: { [key in string]: string } | null,
 	compat: PiCompatConfig_Deserialize | null,
 };
@@ -3001,14 +3401,24 @@ export type PiModel_Deserialize = {
 /**  Pi model definition */
 export type PiModel_Serialize = {
 	id: string,
+	/**
+	 *  Operation discriminator (`chat` | `image` | `classifier`); omitted means
+	 *  chat (upstream models-configuration.md).
+	 */
+	type?: string,
 	name?: string,
 	api?: string,
+	baseUrl?: string,
 	reasoning: boolean,
 	thinkingLevelMap?: { [key in string]: string | null },
 	input: string[],
+	inputLimits?: JsonValue,
 	contextWindow: number,
 	maxTokens: number,
 	cost?: PiModelCost_Serialize,
+	promptCache?: JsonValue,
+	samplingParams?: { [key in string]: JsonValue },
+	samplingParamsByThinkingLevel?: { [key in string]: JsonValue },
 	headers?: { [key in string]: string },
 	compat?: PiCompatConfig_Serialize,
 };
@@ -3041,6 +3451,7 @@ export type PiProviderConfig = PiProviderConfig_Serialize | PiProviderConfig_Des
 
 /**  Pi provider configuration */
 export type PiProviderConfig_Deserialize = {
+	name: string | null,
 	baseUrl: string | null,
 	api: string | null,
 	apiKey: string | null,
@@ -3054,6 +3465,7 @@ export type PiProviderConfig_Deserialize = {
 
 /**  Pi provider configuration */
 export type PiProviderConfig_Serialize = {
+	name?: string,
 	baseUrl?: string,
 	api?: string,
 	apiKey?: string,
@@ -3128,6 +3540,68 @@ export type PiSessionSummary = {
 	messageCount: number,
 	tokenUsage: PiTokenUsage,
 	path: string,
+};
+
+/**
+ *  The startup model selection DroidGear edits.
+ * 
+ *  An empty field means "let pi pick automatically" and is written as a
+ *  removed key, because upstream validates both `""` and `null`.
+ */
+export type PiSettings = PiSettings_Serialize | PiSettings_Deserialize;
+
+/**
+ *  [`PiSettings`] plus the document's location and state, so the GUI and the
+ *  TUI render one shape.
+ */
+export type PiSettingsStatus = PiSettingsStatus_Serialize | PiSettingsStatus_Deserialize;
+
+/**
+ *  [`PiSettings`] plus the document's location and state, so the GUI and the
+ *  TUI render one shape.
+ */
+export type PiSettingsStatus_Deserialize = {
+	defaultProvider: string | null,
+	defaultModel: string | null,
+	defaultThinkingLevel: string | null,
+	settingsExists: boolean,
+	settingsPath: string,
+};
+
+/**
+ *  [`PiSettings`] plus the document's location and state, so the GUI and the
+ *  TUI render one shape.
+ */
+export type PiSettingsStatus_Serialize = {
+	defaultProvider?: string,
+	defaultModel?: string,
+	defaultThinkingLevel?: string,
+	settingsExists: boolean,
+	settingsPath: string,
+};
+
+/**
+ *  The startup model selection DroidGear edits.
+ * 
+ *  An empty field means "let pi pick automatically" and is written as a
+ *  removed key, because upstream validates both `""` and `null`.
+ */
+export type PiSettings_Deserialize = {
+	defaultProvider: string | null,
+	defaultModel: string | null,
+	defaultThinkingLevel: string | null,
+};
+
+/**
+ *  The startup model selection DroidGear edits.
+ * 
+ *  An empty field means "let pi pick automatically" and is written as a
+ *  removed key, because upstream validates both `""` and `null`.
+ */
+export type PiSettings_Serialize = {
+	defaultProvider?: string,
+	defaultModel?: string,
+	defaultThinkingLevel?: string,
 };
 
 export type PiTokenUsage = {
@@ -3314,6 +3788,15 @@ export type SpecFile = {
 	content: string,
 	/**  Last modified timestamp in milliseconds */
 	modifiedAt: number | null,
+};
+
+/**
+ *  What the startup model fields can point at, so the GUI pickers and the TUI
+ *  offer the same choices instead of asking users to type ids from memory.
+ */
+export type StartupOptions = {
+	providers: string[],
+	models: { [key in string]: string[] },
 };
 
 /**  Telegram channel configuration */
