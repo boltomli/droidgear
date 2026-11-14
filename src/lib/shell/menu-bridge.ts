@@ -33,7 +33,9 @@ function rebuildMenu(): void {
  */
 async function checkForUpdatesFromMenu(): Promise<void> {
   try {
-    const result = await commands.checkForUpdates()
+    // A menu check never pushes a downgrade: only Preferences → General asks the
+    // "switch back to this channel" question.
+    const result = await commands.checkForUpdates(false)
     if (result.status === 'error') throw new Error(result.error)
     const update = result.data
     if (update.devBuild) {

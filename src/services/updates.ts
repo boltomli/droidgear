@@ -17,18 +17,30 @@ import { logger } from '@/lib/logger'
 
 export const updatesQueryKeys = {
   all: ['updates'] as const,
-  check: () => [...updatesQueryKeys.all, 'check'] as const,
+  // The channel and `allowDowngrade` are part of the key: a check that may
+  // offer an older release (channel switch) is a different question.
+  check: (allowDowngrade = false) =>
+    [...updatesQueryKeys.all, 'check', allowDowngrade] as const,
   pending: () => [...updatesQueryKeys.all, 'pending'] as const,
 }
 
 /**
  * The update check. `enabled: false` keeps the app offline (startup check
  * disabled in preferences) until the user asks explicitly.
+ *
+ * `allowDowngrade: true` additionally offers the channel's newest release when
+ * it is older than the running build — that is how a preview build rejoins the
+ * stable line (Preferences → General asks this question, the startup banner
+ * never does).
  */
-export function useUpdateCheck({ enabled = true }: { enabled?: boolean } = {}) {
+export function useUpdateCheck({
+  enabled = true,
+  allowDowngrade = false,
+}: { enabled?: boolean; allowDowngrade?: boolean } = {}) {
   return useQuery({
-    queryKey: updatesQueryKeys.check(),
-    queryFn: async () => unwrapResult(await commands.checkForUpdates()),
+    queryKey: updatesQueryKeys.check(allowDowngrade),
+    queryFn: async () =>
+      unwrapResult(await commands.checkForUpdates(allowDowngrade)),
     enabled,
     // A release does not appear mid-session often enough to poll.
     staleTime: 1000 * 60 * 15,
@@ -49,7 +61,8 @@ export function useDownloadUpdate() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => unwrapResult(await commands.downloadUpdate()),
+    mutationFn: async (allowDowngrade: boolean) =>
+      unwrapResult(await commands.downloadUpdate(allowDowngrade)),
     onSuccess: result => {
       logger.info('Update downloaded and verified', {
         version: result.version,
@@ -75,12 +88,14 @@ export function useApplyUpdate() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => unwrapResult(await commands.applyUpdate()),
+    mutationFn: async (allowDowngrade: boolean) =>
+      unwrapResult(await commands.applyUpdate(allowDowngrade)),
     onSuccess: result => {
       logger.info('Update applied', {
         from: result.fromVersion,
         to: result.toVersion,
         restart: result.restart,
+        downgrade: result.downgrade,
       })
       void queryClient.invalidateQueries({
         queryKey: updatesQueryKeys.pending(),
@@ -109,7 +124,7 @@ export function useDismissUpdate() {
     mutationFn: async (version: string) =>
       unwrapResult(await commands.dismissUpdate(version)),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: updatesQueryKeys.check() })
+      void queryClient.invalidateQueries({ queryKey: updatesQueryKeys.all })
     },
   })
 }

@@ -40,27 +40,37 @@ func (updateProgressEmitter) UpdateProgress(progress updater.Progress) {
 	}
 }
 
-// CheckForUpdates asks GitHub for the newest verifiable single-file release.
-// A dev build reports DevBuild instead of an offer.
-func (a *App) CheckForUpdates() (UpdateCheckResult, error) {
+// CheckForUpdates asks GitHub for the newest verifiable single-file release on
+// the configured channel. A dev build reports DevBuild instead of an offer.
+//
+// allowDowngrade additionally offers the channel's newest release when it is
+// older than the running build — the only way back from a preview build to the
+// stable line.
+func (a *App) CheckForUpdates(allowDowngrade bool) (UpdateCheckResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	return updater.Check(ctx, updater.DefaultConfig(), updater.KindGUI)
+	cfg := updater.DefaultConfig()
+	cfg.AllowDowngrade = allowDowngrade
+	return updater.Check(ctx, cfg, updater.KindGUI)
 }
 
 // DownloadUpdate downloads and verifies the GUI asset, staging it for
 // ApplyUpdate. Emits `update:progress` while streaming.
-func (a *App) DownloadUpdate() (UpdateDownloadResult, error) {
+func (a *App) DownloadUpdate(allowDowngrade bool) (UpdateDownloadResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
-	return updater.Download(ctx, updater.DefaultConfig(), updater.KindGUI, updateProgressEmitter{})
+	cfg := updater.DefaultConfig()
+	cfg.AllowDowngrade = allowDowngrade
+	return updater.Download(ctx, cfg, updater.KindGUI, updateProgressEmitter{})
 }
 
 // ApplyUpdate swaps the staged binary in and restarts the app. The response is
 // returned before the process quits so the frontend can show "restarting"
 // instead of a spurious disconnect.
-func (a *App) ApplyUpdate() (UpdateApplyResult, error) {
-	result, err := updater.Apply(updater.DefaultConfig(), updater.KindGUI, true, updateProgressEmitter{})
+func (a *App) ApplyUpdate(allowDowngrade bool) (UpdateApplyResult, error) {
+	cfg := updater.DefaultConfig()
+	cfg.AllowDowngrade = allowDowngrade
+	result, err := updater.Apply(cfg, updater.KindGUI, true, updateProgressEmitter{})
 	if err != nil {
 		return result, err
 	}

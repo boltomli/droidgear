@@ -34,6 +34,11 @@ export function UpdateBanner() {
       <span className="flex-1 truncate">
         {t('updates.banner.title', { version: update.latestVersion })}
       </span>
+      {update.preview && (
+        <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
+          {t('updates.preview')}
+        </span>
+      )}
       <Button
         size="sm"
         variant="outline"

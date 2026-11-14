@@ -174,6 +174,9 @@ func (f *fakeGitHub) config(t *testing.T, current string) Config {
 		GOARCH:         "amd64",
 		CacheDir:       t.TempDir(),
 		Executable:     filepath.Join(t.TempDir(), "droidgear.exe"),
+		// Pin the channel: the zero value would otherwise fall back to the
+		// developer machine's preferences.json.
+		Channel: ChannelStable,
 	}
 }
 
@@ -185,6 +188,154 @@ func checksumLine(payload []byte, name string) string {
 // ---------------------------------------------------------------------------
 // Check
 // ---------------------------------------------------------------------------
+
+func TestNormalizeChannel(t *testing.T) {
+	for input, want := range map[string]Channel{
+		"":          ChannelPreview,
+		"preview":   ChannelPreview,
+		" Preview ": ChannelPreview,
+		"stable":    ChannelStable,
+		"STABLE":    ChannelStable,
+		"beta":      ChannelPreview, // unknown → the permissive default
+	} {
+		if got := NormalizeChannel(input); got != want {
+			t.Fatalf("NormalizeChannel(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
+func TestChannelAccepts(t *testing.T) {
+	if !ChannelPreview.Accepts(true) || !ChannelPreview.Accepts(false) {
+		t.Fatalf("preview must accept both preview and stable releases")
+	}
+	if ChannelStable.Accepts(true) {
+		t.Fatalf("stable must not accept a prerelease")
+	}
+	if !ChannelStable.Accepts(false) {
+		t.Fatalf("stable must accept released builds")
+	}
+}
+
+func TestResolveChannelPrecedence(t *testing.T) {
+	t.Setenv(ChannelEnv, "stable")
+	if got := resolveChannel(""); got != ChannelStable {
+		t.Fatalf("env channel = %q, want stable", got)
+	}
+	// An explicit value (dg update --channel, tests) beats the environment.
+	if got := resolveChannel(ChannelPreview); got != ChannelPreview {
+		t.Fatalf("explicit channel = %q, want preview", got)
+	}
+	t.Setenv(ChannelEnv, "")
+	// Nothing explicit and nothing in the environment: the stored preference
+	// (or the preview default) decides — never an error.
+	if got := resolveChannel(""); got != ChannelPreview && got != ChannelStable {
+		t.Fatalf("resolved channel = %q", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Channels
+// ---------------------------------------------------------------------------
+
+// The single-file pipeline publishes x.y.z.w builds as pre-releases. An
+// install that follows the preview channel must see them — this is the bug a
+// `prerelease: true` filter produced (every wails-v* release was skipped, so
+// checks always said "up to date").
+func TestCheckPreviewChannelOffersPrerelease(t *testing.T) {
+	previewBytes := []byte("preview-binary")
+	stableBytes := []byte("stable-binary")
+	fake := newFakeGitHub(t, []fakeRelease{
+		{tag: "wails-v1.3.10", assetName: "droidgear-wails-windows-x64.exe", payload: stableBytes, checksums: checksumLine(stableBytes, "droidgear-wails-windows-x64.exe")},
+		{tag: "wails-v1.4.0.1", assetName: "droidgear-wails-windows-x64.exe", payload: previewBytes, prerelease: true, checksums: checksumLine(previewBytes, "droidgear-wails-windows-x64.exe")},
+	})
+
+	cfg := fake.config(t, "1.3.10.1")
+	cfg.Channel = ChannelPreview
+	result, err := Check(context.Background(), cfg, KindGUI)
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	if result.Channel != string(ChannelPreview) {
+		t.Fatalf("channel = %q, want preview", result.Channel)
+	}
+	if result.LatestVersion != "1.4.0.1" || !result.UpdateAvailable {
+		t.Fatalf("preview channel missed the prerelease: %+v", result)
+	}
+	if !result.Preview {
+		t.Fatalf("the offered release is a preview, result.Preview must say so: %+v", result)
+	}
+}
+
+// A stable install ignores prereleases, so a preview-only release means "up to
+// date" rather than an offer it never agreed to.
+func TestCheckStableChannelSkipsPrerelease(t *testing.T) {
+	payload := []byte("preview-binary")
+	fake := newFakeGitHub(t, []fakeRelease{{
+		tag: "wails-v1.4.0.1", assetName: "droidgear-wails-windows-x64.exe",
+		payload: payload, prerelease: true, checksums: checksumLine(payload, "droidgear-wails-windows-x64.exe"),
+	}})
+
+	cfg := fake.config(t, "1.3.10.1") // config() pins ChannelStable
+	result, err := Check(context.Background(), cfg, KindGUI)
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	if result.UpdateAvailable || result.Preview {
+		t.Fatalf("stable channel offered a prerelease: %+v", result)
+	}
+}
+
+// Newer beats channel: a preview install takes a newer stable build too.
+// A binary that took a preview build cannot rejoin the stable line by version
+// order alone (its version is newer than every stable release). AllowDowngrade
+// turns the channel's newest release into an offer.
+func TestCheckOffersDowngradeOnlyWhenAllowed(t *testing.T) {
+	payload := []byte("stable-binary")
+	fake := newFakeGitHub(t, []fakeRelease{{
+		tag: "wails-v1.4.0.1", assetName: "droidgear-wails-windows-x64.exe",
+		payload: payload, checksums: checksumLine(payload, "droidgear-wails-windows-x64.exe"),
+	}})
+
+	cfg := fake.config(t, "1.5.0.0") // running a preview build, stable is older
+	result, err := Check(context.Background(), cfg, KindGUI)
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	if result.UpdateAvailable || result.Downgrade {
+		t.Fatalf("no downgrade may be offered by default: %+v", result)
+	}
+
+	cfg.AllowDowngrade = true
+	result, err = Check(context.Background(), cfg, KindGUI)
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	if !result.UpdateAvailable || !result.Downgrade {
+		t.Fatalf("an explicit channel switch must offer the older release: %+v", result)
+	}
+	if result.LatestVersion != "1.4.0.1" {
+		t.Fatalf("latest = %q", result.LatestVersion)
+	}
+}
+
+func TestCheckPreviewPrefersNewestAcrossChannels(t *testing.T) {
+	previewBytes := []byte("preview-binary")
+	stableBytes := []byte("stable-binary")
+	fake := newFakeGitHub(t, []fakeRelease{
+		{tag: "wails-v1.4.0.1", assetName: "droidgear-wails-windows-x64.exe", payload: previewBytes, prerelease: true, checksums: checksumLine(previewBytes, "droidgear-wails-windows-x64.exe")},
+		{tag: "wails-v1.5.0", assetName: "droidgear-wails-windows-x64.exe", payload: stableBytes, checksums: checksumLine(stableBytes, "droidgear-wails-windows-x64.exe")},
+	})
+
+	cfg := fake.config(t, "1.3.10.1")
+	cfg.Channel = ChannelPreview
+	result, err := Check(context.Background(), cfg, KindGUI)
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	if result.LatestVersion != "1.5.0" || result.Preview {
+		t.Fatalf("latest = %q (preview=%v), want the newer stable 1.5.0", result.LatestVersion, result.Preview)
+	}
+}
 
 func TestCheckPicksNewestVerifiableRelease(t *testing.T) {
 	oldBytes := []byte("old-binary")
@@ -495,8 +646,34 @@ func TestApplyRefusesTheOtherBinariesAsset(t *testing.T) {
 
 func TestApplyRefusesDowngrade(t *testing.T) {
 	cfg, _, _ := stageForApply(t, "0.9.0")
-	if _, err := Apply(cfg, KindGUI, false, nil); err == nil {
-		t.Fatalf("expected a downgrade to be refused")
+	if _, err := Apply(cfg, KindGUI, false, nil); !errors.Is(err, ErrDowngrade) {
+		t.Fatalf("err = %v, want ErrDowngrade", err)
+	}
+	data, err := os.ReadFile(cfg.Executable)
+	if err != nil || string(data) != "old-binary" {
+		t.Fatalf("executable must be untouched, got %q (%v)", data, err)
+	}
+}
+
+// Switching back to a channel whose newest release is older than the running
+// build is the one legitimate downgrade: it only happens when the caller sets
+// AllowDowngrade (the GUI button / `dg update --allow-downgrade`).
+func TestApplyAllowsExplicitDowngrade(t *testing.T) {
+	cfg, staged, payload := stageForApply(t, "0.9.0")
+	cfg.AllowDowngrade = true
+	result, err := Apply(cfg, KindGUI, false, nil)
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if !result.Downgrade || result.FromVersion != "1.0.0" || result.ToVersion != "0.9.0" {
+		t.Fatalf("result = %+v", result)
+	}
+	data, err := os.ReadFile(cfg.Executable)
+	if err != nil || string(data) != string(payload) {
+		t.Fatalf("executable was not replaced: %q (%v)", data, err)
+	}
+	if _, err := os.Stat(staged); !os.IsNotExist(err) {
+		t.Fatalf("staged file still present: %v", err)
 	}
 }
 

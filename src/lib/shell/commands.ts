@@ -577,9 +577,9 @@ const COMMANDS: Record<string, CommandSpec> = {
   write_text_file: { fn: 'WriteTextFile', args: ['path', 'contents'] },
 
   // Self-update (internal/service/updater — same service `dg update` drives)
-  check_for_updates: { fn: 'CheckForUpdates', args: [] },
-  download_update: { fn: 'DownloadUpdate', args: [] },
-  apply_update: { fn: 'ApplyUpdate', args: [] },
+  check_for_updates: { fn: 'CheckForUpdates', args: ['allowDowngrade'] },
+  download_update: { fn: 'DownloadUpdate', args: ['allowDowngrade'] },
+  apply_update: { fn: 'ApplyUpdate', args: ['allowDowngrade'] },
   get_pending_update: { fn: 'GetPendingUpdate', args: [] },
   dismiss_update: { fn: 'DismissUpdate', args: ['version'] },
 }

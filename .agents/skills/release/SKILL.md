@@ -134,6 +134,13 @@ Notes:
   workflow can extract release notes (it strips the `wails-` prefix).
 - It runs from the tagged commit (no `main` merge needed) and creates a draft
   release. See `docs/agents/commands.md` §"CI / Release tags".
+- **Channel**: every release is `x.y.z.w` — the version never encodes the
+  channel. A tag push (no inputs) publishes a GitHub **pre-release** → the
+  updater's `preview` channel, which is the default. To ship a **stable**
+  release, dispatch the workflow with `prerelease=false` (or untick "Set as a
+  pre-release" when publishing the draft); re-dispatching an existing tag with
+  `prerelease=false` promotes that release to stable. See
+  `docs/developer/self-update-single-file.zh.md` §3.0.
 
 ## Verification
 

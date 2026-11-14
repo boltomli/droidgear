@@ -17,6 +17,16 @@ name: 'Release single binaries'
 # the tag-triggered pipeline in release.yml (the Windows GUI installer) — it
 # never uploads installers, signatures or manifests.
 #
+# Channel / 渠道: the release's GitHub `prerelease` flag is the updater's channel
+# marker. Every release is versioned `x.y.z.w` (segments never encode the
+# channel), so the channel is chosen when publishing: a workflow_dispatch run
+# sets it with the `prerelease` input (default true = preview), a tag push
+# defaults to preview, and re-dispatching an existing tag with prerelease=false
+# promotes that release to stable. Setting the flag from CI matters: GitHub
+# pre-ticks "Set as a pre-release" for non-semver tags such as
+# `wails-v1.4.0.1`, and a pre-release the updater skips looks exactly like
+# "no update available".
+#
 # Why the Wails shell: `go:embed all:frontend/dist` bakes the Vite bundle into
 # the Go binary, so `go build` alone yields the whole app as one file.
 #
@@ -52,6 +62,11 @@ on:
         required: false
         type: boolean
         default: false
+      prerelease:
+        description: 'Publish on the preview channel (GitHub pre-release). Default true: the pipeline ships previews unless the release is explicitly a stable one. Tag pushes (no inputs) use the default; re-dispatch the same tag with false to promote it to stable.'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -65,6 +80,9 @@ env:
   # Tag pushes have no inputs, so they default to a draft release: inspect the
   # three files (they are unsigned/ad-hoc signed) before publishing.
   DRAFT_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || 'true' }}
+  # An explicit dispatch value (format keeps `false` from collapsing to ''),
+  # empty for tag pushes — those derive the channel from the tag.
+  PRERELEASE_INPUT: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.prerelease) || '' }}
 
 jobs:
   # macOS is opt-in — nothing is built or published for it unless a
@@ -132,8 +150,36 @@ jobs:
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+          # Channel / 渠道: the GitHub `prerelease` flag is the updater's channel
+          # marker (wails/internal/service/updater: preview = prerelease +
+          # stable, stable = released builds only). Version segments never encode
+          # it — every release, preview or stable, is `x.y.z.w` — so it is a
+          # publishing decision, not a parse:
+          #   workflow_dispatch  → the `prerelease` input (default true = preview)
+          #   tag push           → preview (the pipeline's normal cadence)
+          # Promoting a release to stable: re-dispatch the same tag with
+          # prerelease=false (this job re-asserts the flag below), or untick
+          # "Set as a pre-release" when publishing the draft. CI still sets it
+          # explicitly because GitHub pre-ticks that box for non-semver tags, and
+          # a pre-release the updater skips looks exactly like "no update".
+          is_preview="${PRERELEASE_INPUT:-true}"
+          if [ "$is_preview" = "true" ]; then
+            echo "channel=preview (GitHub pre-release)"
+          else
+            echo "channel=stable"
+          fi
+          echo "prerelease=$is_preview" >> "$GITHUB_OUTPUT"
+
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release $tag already exists — binaries will be replaced (--clobber)."
+            # Re-runs re-assert the channel too, so the flag can never drift from
+            # what the run asked for. `--prerelease=false` is spelled out on
+            # purpose (promoting an existing preview to stable).
+            if [ "$is_preview" = "true" ]; then
+              gh release edit "$tag" --prerelease
+            else
+              gh release edit "$tag" --prerelease=false
+            fi
             exit 0
           fi
 
@@ -195,6 +241,26 @@ jobs:
           args=(--title "DroidGear ${tag} (single binaries)" --notes-file "$notes")
           if [ "${DRAFT_RELEASE:-true}" = "true" ]; then
             args+=(--draft)
+          fi
+          if [ "$is_preview" = "true" ]; then
+            cat >> "$notes" <<'EOF'
+
+          ### Channel / 渠道
+
+          This build ships on the **preview** channel: it is a GitHub
+          pre-release, and the built-in updater follows previews by default.
+          Choose `stable` in Preferences → General (or `dg update --channel
+          stable`) to ignore preview builds.
+          EOF
+            args+=(--prerelease)
+          else
+            cat >> "$notes" <<'EOF'
+
+          ### Channel / 渠道
+
+          This build ships on the **stable** channel: it is a stable release,
+          offered to both the `preview` and the `stable` channel.
+          EOF
           fi
 
           # Pin a new tag to the ref this run was dispatched from (so a build on

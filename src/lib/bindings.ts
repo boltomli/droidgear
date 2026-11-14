@@ -38,12 +38,14 @@ async getAppVersion() : Promise<string> {
     return await TAURI_INVOKE("get_app_version");
 },
 /**
- * Asks GitHub for the newest verifiable `wails-v*` single-file release.
- * Returns `updateAvailable: false` for a source build (`devBuild: true`).
+ * Asks GitHub for the newest verifiable `wails-v*` single-file release on the
+ * configured channel. Returns `updateAvailable: false` for a source build
+ * (`devBuild: true`). `allowDowngrade` also offers a release older than the
+ * running build, for switching back to a channel.
  */
-async checkForUpdates() : Promise<Result<UpdateCheckResult, string>> {
+async checkForUpdates(allowDowngrade: boolean) : Promise<Result<UpdateCheckResult, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("check_for_updates") };
+    return { status: "ok", data: await TAURI_INVOKE("check_for_updates", { allowDowngrade }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -53,9 +55,9 @@ async checkForUpdates() : Promise<Result<UpdateCheckResult, string>> {
  * Downloads and SHA-256-verifies the GUI asset, staging it for applyUpdate.
  * Emits `update:progress` events while streaming.
  */
-async downloadUpdate() : Promise<Result<UpdateDownloadResult, string>> {
+async downloadUpdate(allowDowngrade: boolean) : Promise<Result<UpdateDownloadResult, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("download_update") };
+    return { status: "ok", data: await TAURI_INVOKE("download_update", { allowDowngrade }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -64,9 +66,9 @@ async downloadUpdate() : Promise<Result<UpdateDownloadResult, string>> {
 /**
  * Swaps the staged binary in and restarts the app (Windows/macOS/Linux).
  */
-async applyUpdate() : Promise<Result<UpdateApplyResult, string>> {
+async applyUpdate(allowDowngrade: boolean) : Promise<Result<UpdateApplyResult, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("apply_update") };
+    return { status: "ok", data: await TAURI_INVOKE("apply_update", { allowDowngrade }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2591,6 +2593,11 @@ terminal_shell_command?: string | null;
  */
 disable_auto_update?: boolean | null; 
 /**
+ * Self-update channel: "preview" (prerelease builds plus stable) or "stable" (stable releases only)
+ * If None or unknown, defaults to "preview"
+ */
+updates_channel?: string | null; 
+/**
  * Preferred terminal app for launching Droid CLI
  * "system-default" | "terminal" | "iterm2" | "ghostty" (macOS)
  * "auto-detect" | "gnome-terminal" | "konsole" | "xfce4-terminal" | "x-terminal-emulator" | custom (Linux)
@@ -3787,6 +3794,12 @@ export type UpdateCheckResult = {
     latestVersion: string
     updateAvailable: boolean
     devBuild: boolean
+    /** Channel this check followed: "preview" | "stable" */
+    channel: string
+    /** The offered release is a preview (published on the preview channel) */
+    preview: boolean
+    /** The offer is older than the running build: only with allowDowngrade */
+    downgrade: boolean
     releaseUrl?: string | null
     notes?: string | null
     publishedAt?: string | null
@@ -3815,6 +3828,8 @@ export type UpdateApplyResult = {
     backup?: string | null
     restart: boolean
     restartHint?: string | null
+    /** toVersion is older than fromVersion (explicit channel switch) */
+    downgrade: boolean
 }
 /** A downloaded update waiting to be applied (mirrors updater.PendingUpdate). */
 export type UpdatePending = {

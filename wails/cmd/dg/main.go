@@ -389,7 +389,8 @@ Usage:
 
 Commands:
   version                       print the build version
-  update [--check] [--force]    check for / install a newer dg (single-file release)
+  update [--check] [--force] [--channel preview|stable] [--allow-downgrade]
+                                check for / install a newer dg (single-file release)
   doctor                        report effective paths, WSL and config files (read-only)
   path show                     print all nine effective config paths
   path set <key> <path>         override one config path

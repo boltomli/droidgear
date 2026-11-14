@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"droidgear-wails/internal/core"
+	"droidgear-wails/internal/service/preferences"
 	"droidgear-wails/internal/version"
 )
 
@@ -71,6 +72,49 @@ const (
 	KindCLI AssetKind = "cli"
 )
 
+// Channel selects which releases are offered to the running build.
+//
+// The GitHub `prerelease` flag is the channel marker: the release pipeline
+// ships every build as `x.y.z.w`, and whether that release is a preview or a
+// stable one is decided when publishing (`prerelease: true` = preview). A
+// preview install follows both; a stable install only takes releases GitHub
+// does not flag as pre-releases.
+//
+// Preview is the default: the pipeline's normal cadence is a preview build, and
+// a default that ignored prereleases silently froze updates (see
+// docs/developer/self-update-single-file.zh.md §3.0).
+type Channel string
+
+const (
+	// ChannelPreview accepts preview and stable releases (default).
+	ChannelPreview Channel = "preview"
+	// ChannelStable accepts released builds only.
+	ChannelStable Channel = "stable"
+
+	// ChannelEnv overrides the channel for one process
+	// (DROIDGEAR_UPDATE_CHANNEL=preview|stable); it wins over the stored
+	// preference so `dg update --channel`-style runs and CI can steer it.
+	ChannelEnv = preferences.UpdateChannelEnv
+	// DefaultChannel is what an untouched install follows.
+	DefaultChannel = ChannelPreview
+)
+
+// NormalizeChannel maps an arbitrary value onto a known channel; anything
+// that is not "stable" means preview (the permissive default — a typo must
+// never look like "nothing to update").
+func NormalizeChannel(value string) Channel {
+	if strings.EqualFold(strings.TrimSpace(value), string(ChannelStable)) {
+		return ChannelStable
+	}
+	return ChannelPreview
+}
+
+// Accepts reports whether a release with this `prerelease` flag is offered on
+// the channel.
+func (c Channel) Accepts(prerelease bool) bool {
+	return c != ChannelStable || !prerelease
+}
+
 // Platform assets published by release-single.yml. Keep in sync with the
 // workflow matrix; an unknown pair is reported as unsupported instead of
 // downloading the wrong binary.
@@ -109,6 +153,15 @@ type Config struct {
 	// CacheDir holds the staged download plus state.json (env
 	// DROIDGEAR_UPDATE_CACHE).
 	CacheDir string
+	// Channel is the release channel to follow. Empty resolves through
+	// DROIDGEAR_UPDATE_CHANNEL, then preferences.json (`updates_channel`),
+	// then ChannelPreview.
+	Channel Channel
+	// AllowDowngrade lets the flow offer — and install — the channel's newest
+	// release even when it is older than the running build. That is how a user
+	// who took a preview build rejoins the stable line; it stays off by
+	// default because an automatic downgrade is never what anyone wants.
+	AllowDowngrade bool
 	// Executable is the binary that gets replaced (env DROIDGEAR_UPDATE_EXE
 	// overrides it, else os.Executable() — tests and wrapper launchers).
 	Executable string
@@ -129,7 +182,25 @@ func DefaultConfig() Config {
 		GOARCH:         runtime.GOARCH,
 		CacheDir:       firstNonEmpty(os.Getenv("DROIDGEAR_UPDATE_CACHE"), defaultCacheDir()),
 		Executable:     firstNonEmpty(os.Getenv("DROIDGEAR_UPDATE_EXE"), exe),
+		Channel:        resolveChannel(""),
 	}
+}
+
+// resolveChannel answers "which channel does this process follow?": the
+// caller's explicit value, then DROIDGEAR_UPDATE_CHANNEL, then the preference
+// written by Preferences → General (GUI) or the TUI Preferences screen (`c`),
+// then the preview default.
+func resolveChannel(explicit Channel) Channel {
+	if strings.TrimSpace(string(explicit)) != "" {
+		return NormalizeChannel(string(explicit))
+	}
+	if env := os.Getenv(ChannelEnv); strings.TrimSpace(env) != "" {
+		return NormalizeChannel(env)
+	}
+	if prefs, err := preferences.Load(); err == nil {
+		return NormalizeChannel(prefs.UpdateChannel())
+	}
+	return DefaultChannel
 }
 
 func (c Config) withDefaults() Config {
@@ -151,6 +222,7 @@ func (c Config) withDefaults() Config {
 	if c.CacheDir == "" {
 		c.CacheDir = defaultCacheDir()
 	}
+	c.Channel = resolveChannel(c.Channel)
 	if c.Executable == "" {
 		if exe, err := os.Executable(); err == nil {
 			c.Executable = exe
@@ -196,6 +268,9 @@ var (
 	ErrNoPending = errors.New("no downloaded update to apply")
 	// ErrUpToDate means the running binary is already the newest release.
 	ErrUpToDate = errors.New("already up to date")
+	// ErrDowngrade means the staged release is older than the running build and
+	// the caller did not allow a downgrade (channel switch).
+	ErrDowngrade = errors.New("staged release is older than the running build")
 	// ErrDevBuild means the running binary was built from source.
 	ErrDevBuild = errors.New("development build — updates are disabled")
 )
@@ -223,7 +298,16 @@ type CheckResult struct {
 	LatestVersion   string `json:"latestVersion"`
 	UpdateAvailable bool   `json:"updateAvailable"`
 	// DevBuild reports a source build (version "dev"): no offer is made.
-	DevBuild   bool   `json:"devBuild"`
+	DevBuild bool `json:"devBuild"`
+	// Channel is the channel this check followed ("preview" | "stable").
+	Channel string `json:"channel"`
+	// Preview marks an offered release GitHub flags as a pre-release, i.e. one
+	// published on the preview channel. Always false on the stable channel.
+	Preview bool `json:"preview"`
+	// Downgrade marks an offer that is older than the running build: the
+	// channel's newest release, reachable only with AllowDowngrade (an explicit
+	// "switch back to this channel" action).
+	Downgrade  bool   `json:"downgrade"`
 	ReleaseURL string `json:"releaseUrl,omitempty"`
 	Notes      string `json:"notes,omitempty"`
 	Published  string `json:"publishedAt,omitempty"`
@@ -255,6 +339,9 @@ type ApplyResult struct {
 	Backup      string `json:"backup,omitempty"`
 	Restart     bool   `json:"restart"`
 	RestartHint string `json:"restartHint,omitempty"`
+	// Downgrade reports that ToVersion is older than FromVersion (an explicit
+	// channel switch, never an automatic update).
+	Downgrade bool `json:"downgrade"`
 }
 
 // PendingUpdate is the staged download recorded in state.json.
@@ -476,13 +563,16 @@ func fetchReleases(ctx context.Context, cfg Config) ([]ghRelease, error) {
 	return releases, nil
 }
 
-// Check reports whether a newer verifiable release exists for this binary.
+// Check reports whether a newer verifiable release exists for this binary on
+// the configured channel.
 func Check(ctx context.Context, cfg Config, kind AssetKind) (CheckResult, error) {
 	cfg = cfg.withDefaults()
+	channel := cfg.Channel
 	now := time.Now().UTC().Format(time.RFC3339)
 	state := LoadState(cfg)
 	result := CheckResult{
 		CurrentVersion:   cfg.CurrentVersion,
+		Channel:          string(channel),
 		DismissedVersion: state.DismissedVersion,
 		Repo:             cfg.Repo,
 		CheckedAt:        now,
@@ -508,7 +598,12 @@ func Check(ctx context.Context, cfg Config, kind AssetKind) (CheckResult, error)
 	var latestAsset ghAsset
 	for i := range releases {
 		release := releases[i]
-		if release.Draft || release.Prerelease {
+		if release.Draft {
+			continue
+		}
+		// The channel decides whether GitHub's `prerelease` flag (the preview
+		// channel marker) is acceptable.
+		if !channel.Accepts(release.Prerelease) {
 			continue
 		}
 		tag := NormalizeVersion(release.TagName)
@@ -539,12 +634,22 @@ func Check(ctx context.Context, cfg Config, kind AssetKind) (CheckResult, error)
 	}
 
 	result.LatestVersion = NormalizeVersion(latest.TagName)
+	result.Preview = latest.Prerelease
 	result.ReleaseURL = latest.HTMLURL
 	result.Notes = latest.Body
 	result.Published = latest.PublishedAt
 	result.AssetName = latestAsset.Name
 	result.AssetSize = latestAsset.Size
 	result.UpdateAvailable = CompareVersions(result.LatestVersion, result.CurrentVersion) > 0
+	// A channel switch may point at an older line (the running build came from
+	// a preview that stable has not caught up with). Only an explicit
+	// AllowDowngrade turns that into an offer.
+	if !result.UpdateAvailable && cfg.AllowDowngrade {
+		if CompareVersions(result.LatestVersion, result.CurrentVersion) < 0 {
+			result.UpdateAvailable = true
+			result.Downgrade = true
+		}
+	}
 
 	// `dg --dry-run` must stay read-only: the timestamp is bookkeeping, so it
 	// is simply not recorded there.
@@ -884,8 +989,13 @@ func Apply(cfg Config, kind AssetKind, restart bool, emitter Emitter) (ApplyResu
 	if info, err := os.Stat(target); err != nil || info.IsDir() {
 		return ApplyResult{}, fmt.Errorf("cannot update %s: %w", target, err)
 	}
-	if CompareVersions(pending.Version, cfg.CurrentVersion) <= 0 {
-		return ApplyResult{}, fmt.Errorf("staged version %s is not newer than %s", pending.Version, cfg.CurrentVersion)
+	switch cmp := CompareVersions(pending.Version, cfg.CurrentVersion); {
+	case cmp == 0:
+		return ApplyResult{}, fmt.Errorf("staged version %s is already installed", pending.Version)
+	case cmp < 0 && !cfg.AllowDowngrade:
+		// Rejoining an older line (a preview build switching back to stable) is a
+		// deliberate move: it only happens when the caller asked for it.
+		return ApplyResult{}, fmt.Errorf("%w: staged %s is older than %s", ErrDowngrade, pending.Version, cfg.CurrentVersion)
 	}
 
 	sum, size, err := fileHash(pending.Path)
@@ -908,6 +1018,7 @@ func Apply(cfg Config, kind AssetKind, restart bool, emitter Emitter) (ApplyResu
 		Executable:  target,
 		Backup:      backup,
 		Restart:     restart,
+		Downgrade:   CompareVersions(pending.Version, cfg.CurrentVersion) < 0,
 	}
 	if backup != "" {
 		// Windows keeps the old image locked while this process runs, so the

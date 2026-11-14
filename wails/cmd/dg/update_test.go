@@ -18,6 +18,13 @@ import (
 // asset for windows/amd64 plus SHA256SUMS.txt.
 func fakeUpdateServer(t *testing.T, payload []byte) *httptest.Server {
 	t.Helper()
+	return fakeReleaseServer(t, "wails-v2.0.0", false, payload)
+}
+
+// fakeReleaseServer serves one verifiable release with the given tag and
+// GitHub `prerelease` flag (the channel marker).
+func fakeReleaseServer(t *testing.T, tag string, prerelease bool, payload []byte) *httptest.Server {
+	t.Helper()
 	const asset = "dg-windows-x64.exe"
 
 	var server *httptest.Server
@@ -27,12 +34,12 @@ func fakeUpdateServer(t *testing.T, payload []byte) *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/repos/owner/repo/releases", func(w http.ResponseWriter, r *http.Request) {
 		release := map[string]any{
-			"tag_name":     "wails-v2.0.0",
+			"tag_name":     tag,
 			"draft":        false,
-			"prerelease":   false,
+			"prerelease":   prerelease,
 			"published_at": "2026-01-01T00:00:00Z",
 			"body":         "notes",
-			"html_url":     "https://example.test/wails-v2.0.0",
+			"html_url":     "https://example.test/" + tag,
 			"assets": []map[string]any{
 				{"name": asset, "size": len(payload), "browser_download_url": server.URL + "/dl/" + asset},
 				{"name": "SHA256SUMS.txt", "size": len(checksums), "browser_download_url": server.URL + "/dl/SHA256SUMS.txt"},
@@ -56,8 +63,13 @@ func fakeUpdateServer(t *testing.T, payload []byte) *httptest.Server {
 // executable (never the running test binary).
 func updateSandbox(t *testing.T, payload []byte) (exe string, current string) {
 	t.Helper()
+	return updateSandboxRelease(t, "wails-v2.0.0", false, payload)
+}
+
+func updateSandboxRelease(t *testing.T, tag string, prerelease bool, payload []byte) (exe string, current string) {
+	t.Helper()
 	home := sandbox(t)
-	server := fakeUpdateServer(t, payload)
+	server := fakeReleaseServer(t, tag, prerelease, payload)
 	exe = filepath.Join(home, "dg.exe")
 	if err := os.WriteFile(exe, []byte("old-binary"), 0o755); err != nil {
 		t.Fatalf("write fake exe: %v", err)
@@ -140,6 +152,79 @@ func TestUpdateDryRunPlansWithoutDownloading(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(os.Getenv("DROIDGEAR_UPDATE_CACHE"), "2.0.0")); err == nil {
 		t.Fatalf("dry run downloaded the asset")
+	}
+}
+
+func TestUpdateChannelSwitchesPreviewAndStable(t *testing.T) {
+	// A preview (x.y.z.w) build is GitHub-marked prerelease; it is what the
+	// single-file pipeline actually publishes.
+	updateSandboxRelease(t, "wails-v2.0.1", true, []byte("preview-binary"))
+
+	// Default channel is preview, so the prerelease is offered.
+	code, out, errOut := runCLI(t, "--json", "update", "--check")
+	if code != exitOK {
+		t.Fatalf("update --check exit = %d, stderr = %s", code, errOut)
+	}
+	got := decode(t, out)
+	if got["channel"] != "preview" || got["updateAvailable"] != true {
+		t.Fatalf("preview plan = %s", out)
+	}
+	if got["preview"] != true || got["latestVersion"] != "2.0.1" {
+		t.Fatalf("preview plan = %s", out)
+	}
+
+	// A stable install does not follow previews.
+	code, out, errOut = runCLI(t, "--json", "update", "--check", "--channel", "stable")
+	if code != exitOK {
+		t.Fatalf("stable check exit = %d, stderr = %s", code, errOut)
+	}
+	got = decode(t, out)
+	if got["channel"] != "stable" || got["updateAvailable"] != false {
+		t.Fatalf("stable plan = %s", out)
+	}
+
+	// An unknown channel is a usage error, never a silent fallback.
+	if code, _, _ := runCLI(t, "--json", "update", "--check", "--channel", "nightly"); code != exitUsage {
+		t.Fatalf("exit = %d, want %d for an unknown channel", code, exitUsage)
+	}
+}
+
+func TestUpdateAllowDowngradeSwitchesChannel(t *testing.T) {
+	payload := []byte("stable-binary")
+	exe, _ := updateSandboxRelease(t, "wails-v1.4.0.1", false, payload)
+	// Running a preview build that the stable line has not caught up with: the
+	// stable newest release is older, so the default check is "up to date".
+	version.Version = "2.0.0"
+
+	code, out, errOut := runCLI(t, "--json", "update", "--check", "--channel", "stable")
+	if code != exitOK {
+		t.Fatalf("check exit = %d, stderr = %s", code, errOut)
+	}
+	if got := decode(t, out); got["updateAvailable"] != false {
+		t.Fatalf("a stale-line build must not be offered by default: %s", out)
+	}
+
+	// Explicit channel switch: the older release is offered, and labelled.
+	code, out, errOut = runCLI(t, "--json", "update", "--check", "--channel", "stable", "--allow-downgrade")
+	if code != exitOK {
+		t.Fatalf("check exit = %d, stderr = %s", code, errOut)
+	}
+	got := decode(t, out)
+	if got["updateAvailable"] != true || got["downgrade"] != true || got["latestVersion"] != "1.4.0.1" {
+		t.Fatalf("downgrade plan = %s", out)
+	}
+
+	// And it installs.
+	code, out, errOut = runCLI(t, "--json", "update", "--allow-downgrade")
+	if code != exitOK {
+		t.Fatalf("update exit = %d, stderr = %s", code, errOut)
+	}
+	got = decode(t, out)
+	if got["applied"] != true || got["toVersion"] != "1.4.0.1" || got["downgrade"] != true {
+		t.Fatalf("receipt = %s", out)
+	}
+	if data, err := os.ReadFile(exe); err != nil || string(data) != string(payload) {
+		t.Fatalf("dg was not replaced: %q (%v)", data, err)
 	}
 }
 

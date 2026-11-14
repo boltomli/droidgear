@@ -13,6 +13,7 @@ func settingsRows(prefs preferences.AppPreferences) []kvRow {
 	rows := []kvRow{
 		{section: "General", key: "preferred terminal", value: pointerValue(prefs.PreferredTerminal, "auto detect")},
 		{section: "General", key: "disable auto update", value: boolValue(prefs.DisableAutoUpdate, false)},
+		{section: "General", key: "update channel", value: prefs.UpdateChannel()},
 		{section: "Appearance", key: "theme", value: prefs.Theme},
 		{section: "Appearance", key: "language", value: pointerValue(prefs.Language, "system default")},
 		{section: "Appearance", key: "terminal font", value: pointerValue(prefs.TerminalFontFamily, "terminal default")},
@@ -91,6 +92,23 @@ func newSettingsScreen(context.Context) (Screen, error) {
 					}
 					disabled := current.DisableAutoUpdate != nil && *current.DisableAutoUpdate
 					current.DisableAutoUpdate = boolPtr(!disabled)
+					return preferences.Save(current)
+				},
+			},
+			kvAction{
+				key: "c", label: "cycle update channel",
+				run: func(kvRow) error {
+					current, err := preferences.Load()
+					if err != nil {
+						return err
+					}
+					// nil (unset) is the preview default, so toggling back to
+					// preview clears the field instead of storing "preview".
+					if current.UpdateChannel() == preferences.UpdateChannelPreview {
+						current.UpdatesChannel = strPtrOrNil(preferences.UpdateChannelStable)
+					} else {
+						current.UpdatesChannel = nil
+					}
 					return preferences.Save(current)
 				},
 			},

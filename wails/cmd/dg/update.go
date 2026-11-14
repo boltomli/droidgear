@@ -10,6 +10,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"droidgear-wails/internal/service/updater"
 )
@@ -29,6 +30,9 @@ type updatePlan struct {
 	LatestVersion   string `json:"latestVersion"`
 	UpdateAvailable bool   `json:"updateAvailable"`
 	DevBuild        bool   `json:"devBuild"`
+	Channel         string `json:"channel"`
+	Preview         bool   `json:"preview"`
+	Downgrade       bool   `json:"downgrade,omitempty"`
 	AssetName       string `json:"assetName,omitempty"`
 	AssetSize       int64  `json:"assetSize,omitempty"`
 	Executable      string `json:"executable,omitempty"`
@@ -39,15 +43,30 @@ func (c *cli) update(args []string) error {
 	fs := c.newFlagSet("update")
 	checkOnly := fs.Bool("check", false, "report whether a newer build exists, without downloading")
 	force := fs.Bool("force", false, "allow updating a source build (version dev)")
+	channel := fs.String("channel", "", "release channel for this run: preview (default) or stable")
+	allowDowngrade := fs.Bool("allow-downgrade", false, "offer/install the channel's newest build even if it is older (switching back to a channel)")
 	rest, err := parseMixed(fs, args)
 	if err != nil {
 		return c.usage("%v", err)
 	}
 	if len(rest) != 0 {
-		return c.usage("update takes no arguments (flags: --check, --force)")
+		return c.usage("update takes no arguments (flags: --check, --force, --channel, --allow-downgrade)")
 	}
 
 	cfg := updater.DefaultConfig()
+	// --channel overrides the stored preference for this invocation only: the
+	// channel is user configuration (Preferences → General, TUI settings), a
+	// command must not rewrite it behind the user's back.
+	switch strings.ToLower(strings.TrimSpace(*channel)) {
+	case "":
+	case string(updater.ChannelPreview), string(updater.ChannelStable):
+		cfg.Channel = updater.NormalizeChannel(*channel)
+	default:
+		return c.usage("--channel accepts preview or stable (got %q)", *channel)
+	}
+	// Without this, a binary that took a preview build can never rejoin the
+	// stable line (its version is newer than every stable release).
+	cfg.AllowDowngrade = *allowDowngrade
 	displayVersion := cfg.CurrentVersion
 	if updater.IsDevBuild(cfg.CurrentVersion) {
 		if !*force {
@@ -76,6 +95,9 @@ func (c *cli) update(args []string) error {
 			LatestVersion:   plan.LatestVersion,
 			UpdateAvailable: plan.UpdateAvailable,
 			DevBuild:        plan.DevBuild,
+			Channel:         plan.Channel,
+			Preview:         plan.Preview,
+			Downgrade:       plan.Downgrade,
 			AssetName:       plan.AssetName,
 			AssetSize:       plan.AssetSize,
 			Executable:      cfg.Executable,
@@ -87,11 +109,11 @@ func (c *cli) update(args []string) error {
 				_, err := fmt.Fprintln(w, "development build — no update is offered")
 				return err
 			case plan.UpdateAvailable:
-				_, err := fmt.Fprintf(w, "update available: %s → %s (%s, %s)\n",
-					plan.CurrentVersion, plan.LatestVersion, plan.AssetName, humanSize(plan.AssetSize))
+				_, err := fmt.Fprintf(w, "update available: %s → %s (%s%s%s, %s)\n",
+					plan.CurrentVersion, plan.LatestVersion, channelPrefix(plan.Preview), downgradePrefix(plan.Downgrade), plan.AssetName, humanSize(plan.AssetSize))
 				return err
 			default:
-				_, err := fmt.Fprintf(w, "up to date: %s\n", plan.CurrentVersion)
+				_, err := fmt.Fprintf(w, "up to date: %s (%s channel)\n", plan.CurrentVersion, plan.Channel)
 				return err
 			}
 		})
@@ -132,4 +154,21 @@ func humanSize(bytes int64) string {
 		}
 	}
 	return fmt.Sprintf("%.1f TiB", value/unit)
+}
+
+// channelPrefix labels a preview offer in the human output; stable releases
+// get no label (they are the normal case).
+func channelPrefix(preview bool) string {
+	if preview {
+		return "preview, "
+	}
+	return ""
+}
+
+// downgradePrefix labels an offer that is older than the running build.
+func downgradePrefix(downgrade bool) string {
+	if downgrade {
+		return "downgrade, "
+	}
+	return ""
 }

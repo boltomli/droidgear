@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
   Download,
@@ -22,6 +22,7 @@ import { commands } from '@/lib/app-bindings'
 import { openUrl } from '@/lib/shell/opener'
 import { usePreferences, useSavePreferences } from '@/services/preferences'
 import {
+  updatesQueryKeys,
   useApplyUpdate,
   useDownloadUpdate,
   usePendingUpdate,
@@ -54,6 +55,7 @@ export function GeneralPane() {
   const { t } = useTranslation()
   const { data: preferences } = usePreferences()
   const savePreferences = useSavePreferences()
+  const queryClient = useQueryClient()
   const isWindows = useIsWindows()
   const isMacOS = useIsMacOS()
 
@@ -67,7 +69,10 @@ export function GeneralPane() {
 
   // `enabled: true` here (not the preference) so the button always works even
   // when the startup check is off; the banner owns that decision.
-  const check = useUpdateCheck()
+  // `allowDowngrade` is on *only* here: switching channels may point at an
+  // older release (a preview build rejoining the stable line), and this pane is
+  // where that explicit choice lives.
+  const check = useUpdateCheck({ allowDowngrade: true })
   const pending = usePendingUpdate()
   const download = useDownloadUpdate()
   const apply = useApplyUpdate()
@@ -75,6 +80,8 @@ export function GeneralPane() {
   const [restarting, setRestarting] = useState(false)
 
   const autoCheckEnabled = preferences?.disable_auto_update !== true
+  const updateChannel =
+    preferences?.updates_channel === 'stable' ? 'stable' : 'preview'
   const update = check.data
   const staged = pending.data
   const stagedReady =
@@ -83,15 +90,18 @@ export function GeneralPane() {
     staged.version === update.latestVersion &&
     staged.assetName === update.assetName
   const downloading = download.isPending
+  // A plain upgrade never needs the downgrade permission; a "switch back to
+  // this channel" offer does.
+  const allowDowngrade = update?.downgrade === true
 
   const handleApply = () => {
     setRestarting(true)
-    apply.mutate(undefined, { onSettled: () => setRestarting(false) })
+    apply.mutate(allowDowngrade, { onSettled: () => setRestarting(false) })
   }
 
   const handleDownload = () => {
     resetProgress()
-    download.mutate()
+    download.mutate(allowDowngrade)
   }
 
   return (
@@ -147,10 +157,25 @@ export function GeneralPane() {
           <div className="space-y-3 rounded-lg border border-border p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="space-y-1">
-                <p className="text-sm font-medium">
-                  {t('preferences.general.updateAvailable', {
-                    version: update.latestVersion,
-                  })}
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  {update.downgrade
+                    ? t('preferences.general.updateDowngrade', {
+                        version: update.latestVersion,
+                        current: update.currentVersion,
+                      })
+                    : t('preferences.general.updateAvailable', {
+                        version: update.latestVersion,
+                      })}
+                  {update.preview && (
+                    <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-normal text-primary">
+                      {t('updates.preview')}
+                    </span>
+                  )}
+                  {update.downgrade && (
+                    <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-xs font-normal text-destructive">
+                      {t('updates.downgrade')}
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {update.assetName}
@@ -188,7 +213,9 @@ export function GeneralPane() {
                     ? t('updates.downloading', {
                         percent: Math.round(progress?.percent ?? 0),
                       })
-                    : t('preferences.general.downloadAndInstall')}
+                    : update.downgrade
+                      ? t('preferences.general.downloadDowngrade')
+                      : t('preferences.general.downloadAndInstall')}
                 </Button>
               )}
             </div>
@@ -238,6 +265,49 @@ export function GeneralPane() {
               }
             }}
           />
+        </SettingsField>
+
+        <SettingsField
+          label={t('preferences.general.updateChannel')}
+          description={t('preferences.general.updateChannelDescription')}
+        >
+          <Select
+            value={updateChannel}
+            onValueChange={value => {
+              if (!preferences) return
+              savePreferences.mutate(
+                {
+                  ...preferences,
+                  // Unset is the preview default, so "preview" clears the
+                  // field instead of storing a redundant value.
+                  updates_channel: value === 'stable' ? 'stable' : null,
+                },
+                {
+                  // The channel changes what GitHub is asked for: drop every
+                  // cached update answer (the startup banner has its own key,
+                  // without allowDowngrade) and ask again straight away.
+                  onSuccess: () => {
+                    void queryClient.invalidateQueries({
+                      queryKey: updatesQueryKeys.all,
+                    })
+                    void check.refetch()
+                  },
+                }
+              )
+            }}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="preview">
+                {t('preferences.general.updateChannelPreview')}
+              </SelectItem>
+              <SelectItem value="stable">
+                {t('preferences.general.updateChannelStable')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </SettingsField>
       </SettingsSection>
 

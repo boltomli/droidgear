@@ -219,7 +219,8 @@ hermes/pi/omp 三批的共同做法也一并记在那里。
 
 ```bash
 dg version                                    # T3 ✅
-dg update [--check] [--force]                 # ✅ 单文件自更新（与 GUI 同一 service；--check/--dry-run 只出计划）
+dg update [--check] [--force] [--channel preview|stable] [--allow-downgrade]
+                                              # ✅ 单文件自更新（与 GUI 同一 service；--check/--dry-run 只出计划；--channel 只影响本次调用，不写偏好；--allow-downgrade 允许回退到该渠道更旧的版本）
 dg doctor                                     # T2 ✅（只读：不加载 channels，避免触发迁移写）
 dg path show|set <key> <path>|reset <key>     # T1 ✅（set/reset 支持 --dry-run）
 dg channels list|show <id>|tokens <id>        # T1/T2 ✅（tokens 默认打码，--reveal 才出明文）

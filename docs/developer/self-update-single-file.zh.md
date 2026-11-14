@@ -57,9 +57,11 @@ CGO，`go-webview2` 自带 `webviewloader/arm64/WebView2Loader.dll`），所以�
 
 ```
 Check   ── GET /repos/{repo}/releases?per_page=30
-           ├─ 跳过 draft / prerelease / 非 `wails-v*` tag
+           ├─ 跳过 draft / 非 `wails-v*` tag
+           ├─ 渠道过滤：stable 跳过 GitHub 标记的 prerelease；preview（默认）两者都要
            ├─ 跳过没有「本平台资产 + SHA256SUMS.txt」的 Release
            └─ 取 semver 最大者（1.3.9.4 < 1.3.9.11：按数字段比较，句点段补齐 0）
+              —— 开启 allowDowngrade 时，更旧的目标渠道最新版也算可选项（见 §3.0.1）
 
 Download ── 取同一 Release 的 SHA256SUMS.txt → 得到期望哈希
            ├─ 流式下载到 <cache>/<version>/<asset>.part（进度事件 ~10/s）
@@ -68,6 +70,7 @@ Download ── 取同一 Release 的 SHA256SUMS.txt → 得到期望哈希
            └─ 落盘为 <cache>/<version>/<asset>，写入 state.json 的 pending
 
 Apply   ── 重新校验 pending 文件的哈希
+           ├─ 版本门槛：pending 必须比当前新；更旧只在 AllowDowngrade（切回旧渠道）时允许
            ├─ 复制到 <exe>.new（同目录，写满并 fsync，半成品永远不会变成可执行文件）
            ├─ 交换：
            │    Windows: exe → exe.old，exe.new → exe（失败则回滚 old）
@@ -78,6 +81,58 @@ Apply   ── 重新校验 pending 文件的哈希
 
 缓存目录：`os.UserCacheDir()/droidgear/updates`（可用 `DROIDGEAR_UPDATE_CACHE` 覆盖）。
 `state.json` 里同时记录 `dismissedVersion`（用户忽略过的版本，启动横幅不再打扰）。
+
+### 3.0 渠道：preview（默认）/ stable
+
+GitHub Release 的 `prerelease` 标记就是渠道标记。版本号不编码渠道（预览版和正式版
+都是 `x.y.z.w`），它是**发布时的决定**（见 §5 与 `release-single.yml`）：
+
+| 发布方式                    | 例子             | GitHub `prerelease` | 渠道      |
+| --------------------------- | ---------------- | ------------------- | --------- |
+| tag push（无 inputs）       | `wails-v1.4.0.1` | `true`（默认）      | `preview` |
+| dispatch `prerelease=true`  | `wails-v1.4.0.1` | `true`              | `preview` |
+| dispatch `prerelease=false` | `wails-v1.4.1.0` | `false`             | `stable`  |
+
+| 渠道              | 接受哪些 Release    | 说明                                           |
+| ----------------- | ------------------- | ---------------------------------------------- |
+| `preview`（默认） | prerelease + 正式版 | 与流水线实际节奏一致（日常 tag push 就是预览） |
+| `stable`          | 仅正式版            | 只有预览版时表现为「已是最新」                 |
+
+把已发布的预览版转成正式版：对同一 tag 再跑一次 `workflow_dispatch` 并设
+`prerelease=false`（`release` job 会 `gh release edit --prerelease=false` 并重传资产），
+或在发布草稿时手动取消「Set as a pre-release」。
+
+新旧比较仍然只是 semver：渠道只决定「看不看得到」，不改变「谁更新」。因此 preview
+用户也会正常升级到更新的 stable 版本；stable 用户永远不会收到 prerelease。
+
+取值优先级（`updater.resolveChannel`）：
+
+1. 显式值（`dg update --channel` / 调用方传入的 `Config.Channel`）
+2. 环境变量 `DROIDGEAR_UPDATE_CHANNEL`（`preview` | `stable`）
+3. `preferences.json` 的 `updates_channel`（Preferences → General 的渠道下拉、TUI
+   Preferences 的 `c` 键）——未设置/未知值 = `preview`
+
+> 为什么默认是 preview：单文件流水线日常只发预览构建，而 GitHub 对非 semver 的 tag
+> 默认勾上「Set as a pre-release」。早期实现「prerelease 一律跳过」，结果所有
+> `wails-v*` Release 都被跳过，检查更新永远返回「已是最新」（1.4.0.1 对 1.3.10.1 也不
+> 可见）。渠道化之后：默认能更新，想稳的人显式选 stable。
+
+#### 3.0.1 切回旧渠道：允许回退（`allowDowngrade`）
+
+只按 semver 比较会有一个死结：预览版跑在 stable 前面（例如已装 `1.5.0.0`，stable 最新
+只有 `1.4.0.1`）时，用户把渠道改成 `stable` 也永远看到「已是最新」——回不去了。
+
+所以降级只作为一个**显式选项**存在，默认关闭：
+
+| 入口                          | 行为                                                                                           |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| `Config.AllowDowngrade`       | `Check` 在「没有更新」时把目标渠道的最新版（低于当前版本）报为 `updateAvailable` + `downgrade` |
+| `Apply`                       | 未开该标志时拒绍降级（`ErrDowngrade`）；开了才允许替换成更旧的版本                             |
+| Preferences → General         | 更新卡片显示「本渠道最新版为 x.y.z.w（当前 a.b.c.d）」+「切换到该版本」按钮                    |
+| `dg update --allow-downgrade` | 同上；`--json` 的计划/回执带 `downgrade: true`                                                 |
+
+启动横幅与原生菜单**不会**推送降级（始终 `allowDowngrade: false`）：降级只发生在用户
+主动要求「回到这个渠道」的时候。
 
 ### 3.1 单实例与重启顺序
 
@@ -111,32 +166,34 @@ Wails 的 `SingleInstance` 在 `application.New` 里抢锁，第二个进程会
 
 ## 5. 触发与 UX
 
-| 入口                            | 行为                                                                                     |
-| ------------------------------- | ---------------------------------------------------------------------------------------- |
-| 启动检查（默认开）              | `disable_auto_update !== true` 时后台 `Check`，有新版本 → 标题栏下方横幅（可忽略该版本） |
-| Preferences → General           | 手动「检查更新」、下载进度条、`重启并安装`、自动检查开关                                 |
-| 原生菜单「检查更新...」         | 一次性检查，结果用 toast 呈现（可用版本时提供「立即更新」跳转设置）                      |
-| `dg update [--check] [--force]` | headless：`--check`/`--dry-run` 只出计划；默认下载+校验+自替换（不重启）                 |
+| 入口                                                                            | 行为                                                                                                                                                           |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 启动检查（默认开）                                                              | `disable_auto_update !== true` 时后台 `Check`，有新版本 → 标题栏下方横幅（可忽略该版本）                                                                       |
+| Preferences → General                                                           | 手动「检查更新」、下载进度条、`重启并安装`、自动检查开关                                                                                                       |
+| 原生菜单「检查更新...」                                                         | 一次性检查，结果用 toast 呈现（可用版本时提供「立即更新」跳转设置）                                                                                            |
+| `dg update [--check] [--force] [--channel preview\|stable] [--allow-downgrade]` | headless：`--check`/`--dry-run` 只出计划；默认下载+校验+自替换（不重启）；`--channel` 只影响本次调用、不写偏好；`--allow-downgrade` 允许回退到该渠道更旧的版本 |
 
 `dev` 版本（源码构建，未注入 ldflags）**不提供更新**：避免把开发产物换成发布二进制。
 `dg update` 可用 `--force` 显式覆盖（按 `0.0.0` 处理）。
 
 ## 6. 环境变量
 
-| 变量                     | 用途                                                                     |
-| ------------------------ | ------------------------------------------------------------------------ |
-| `DROIDGEAR_UPDATE_REPO`  | 覆盖 `owner/name`（默认 `boltomli/droidgear`）                           |
-| `DROIDGEAR_UPDATE_API`   | 覆盖 API 根（GitHub Enterprise / 测试用 httptest）                       |
-| `DROIDGEAR_UPDATE_TOKEN` | GitHub token，抬高 60 req/h 的匿名限额（回退 `GH_TOKEN`/`GITHUB_TOKEN`） |
-| `DROIDGEAR_UPDATE_CACHE` | 覆盖暂存目录                                                             |
-| `DROIDGEAR_UPDATE_EXE`   | 覆盖被替换的可执行文件路径（测试/包装启动器）                            |
+| 变量                       | 用途                                                                      |
+| -------------------------- | ------------------------------------------------------------------------- |
+| `DROIDGEAR_UPDATE_REPO`    | 覆盖 `owner/name`（默认 `boltomli/droidgear`）                            |
+| `DROIDGEAR_UPDATE_API`     | 覆盖 API 根（GitHub Enterprise / 测试用 httptest）                        |
+| `DROIDGEAR_UPDATE_TOKEN`   | GitHub token，抬高 60 req/h 的匿名限额（回退 `GH_TOKEN`/`GITHUB_TOKEN`）  |
+| `DROIDGEAR_UPDATE_CACHE`   | 覆盖暂存目录                                                              |
+| `DROIDGEAR_UPDATE_CHANNEL` | `preview`（默认）/ `stable`，覆盖 `preferences.json` 的 `updates_channel` |
+| `DROIDGEAR_UPDATE_EXE`     | 覆盖被替换的可执行文件路径（测试/包装启动器）                             |
 
 ## 7. 命令面 / 契约同步
 
 新增命令必须同时出现在四处，否则门禁失败：
 
 1. `wails/internal/app/update.go` 的 Go 方法（`CheckForUpdates` / `DownloadUpdate` /
-   `ApplyUpdate` / `GetPendingUpdate` / `DismissUpdate`）
+   `ApplyUpdate` / `GetPendingUpdate` / `DismissUpdate`）—— 前三个都带一个
+   `allowDowngrade` 参数（与 `dg update --allow-downgrade` 同义）
 2. `src/lib/shell/commands.ts` 的 snake_case 表
 3. `src/lib/bindings.ts` 的 facade（含 `update:progress` 事件的 payload 类型）
 4. `wails/frontend/bindings/**`（`wails3 generate bindings`，gitignored）
@@ -157,4 +214,4 @@ Wails 的 `SingleInstance` 在 `application.New` 里抢锁，第二个进程会
 - macOS 的 ad-hoc 签名：替换后的文件由 CI 签名，更新器不改签名；若用户把二进制放进
   `.app` 包内则不在支持范围（本项目单文件分发）。
 - 无本地回滚 UI：Windows 上残留的 `exe.old` 是手动回滚材料（重命名即可），下次启动会被清理。
-- 无灰度/通道（stable/beta）：`prerelease` 一律不提供。
+- 无灰度/分阶段推送：只有 `preview` / `stable` 两个渠道（见 §3.0），且渠道只做过滤，不做百分比放量。

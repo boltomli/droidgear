@@ -10,8 +10,18 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"droidgear-wails/internal/core"
+)
+
+// Update channels shared with internal/service/updater.
+const (
+	UpdateChannelPreview = "preview"
+	UpdateChannelStable  = "stable"
+	// UpdateChannelEnv overrides the stored channel for one process
+	// (DROIDGEAR_UPDATE_CHANNEL, read by the updater).
+	UpdateChannelEnv = "DROIDGEAR_UPDATE_CHANNEL"
 )
 
 // DroidRunPreferences mirrors droid_runtime::DroidRunPreferences.
@@ -23,18 +33,31 @@ type DroidRunPreferences struct {
 // AppPreferences mirrors types::AppPreferences (snake_case JSON on purpose —
 // the Rust struct does not rename fields).
 type AppPreferences struct {
-	Theme                string               `json:"theme"`
-	Language             *string              `json:"language"`
-	TerminalFontFamily   *string              `json:"terminal_font_family"`
-	TerminalShellCommand *string              `json:"terminal_shell_command"`
-	DisableAutoUpdate    *bool                `json:"disable_auto_update"`
-	PreferredTerminal    *string              `json:"preferred_terminal"`
-	DroidRun             *DroidRunPreferences `json:"droid_run"`
+	Theme                string  `json:"theme"`
+	Language             *string `json:"language"`
+	TerminalFontFamily   *string `json:"terminal_font_family"`
+	TerminalShellCommand *string `json:"terminal_shell_command"`
+	DisableAutoUpdate    *bool   `json:"disable_auto_update"`
+	// UpdatesChannel selects the self-update channel: "preview" (default,
+	// prerelease builds plus stable) or "stable" (stable releases only).
+	UpdatesChannel    *string              `json:"updates_channel"`
+	PreferredTerminal *string              `json:"preferred_terminal"`
+	DroidRun          *DroidRunPreferences `json:"droid_run"`
 }
 
 // Default returns the built-in preferences (theme=system).
 func Default() AppPreferences {
 	return AppPreferences{Theme: "system"}
+}
+
+// UpdateChannel returns the effective update channel — "preview" unless the
+// user explicitly opted into "stable". Unknown values fall back to preview so
+// a hand-edited preferences.json never silently freezes updates.
+func (p AppPreferences) UpdateChannel() string {
+	if p.UpdatesChannel != nil && strings.EqualFold(strings.TrimSpace(*p.UpdatesChannel), UpdateChannelStable) {
+		return UpdateChannelStable
+	}
+	return UpdateChannelPreview
 }
 
 // AppDataDir returns the platform app-data directory holding
