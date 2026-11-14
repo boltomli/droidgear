@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.4.0.2
+
+**New Features / 新功能**
+
+- Software update now has channels: `preview` (default) follows preview builds plus stable releases, `stable` takes released builds only. Pick it in Preferences → General, in the TUI Preferences screen (`c`), or through `dg update --channel preview|stable` / `DROIDGEAR_UPDATE_CHANNEL` / `preferences.json`'s `updates_channel`; the startup banner and the Preferences card label an offered preview build, and `dg update --check --json` reports `channel` / `preview` / `downgrade` / 软件更新新增渠道：`preview`（默认）跟随预览构建与正式版，`stable` 只接收正式版。可在「偏好设置 → 通用」、TUI 的 Preferences 屏（`c` 键），或通过 `dg update --channel preview|stable` / `DROIDGEAR_UPDATE_CHANNEL` / `preferences.json` 的 `updates_channel` 选择；启动横幅与偏好设置卡片会标注得出的预览版，`dg update --check --json` 会报告 `channel` / `preview` / `downgrade`
+- A client that took a preview build can go back: the Preferences card offers the channel's newest release even when it is older than the running build, `dg update --allow-downgrade` does the same headlessly, and both stay behind an explicit click (the startup banner and the native menu never push a downgrade) / 装过预览版的客户端可以回退：偏好设置卡片在该渠道最新版比当前版本旧时仍提供它，`dg update --allow-downgrade` 提供同样的 headless 能力，两者都需要显式点击（启动横幅与原生菜单不会推送降级）
+- The release workflow decides the channel when publishing instead of leaving it to the release page checkbox: `workflow_dispatch` takes a `prerelease` input (default true = preview), re-runs re-assert the flag, and the release notes state which channel the build ships on / 发布流水线在发布时决定渠道，而不是交给发布页的勾选框：`workflow_dispatch` 新增 `prerelease` 输入（默认 true = 预览），重跑会对齐该标记，发布说明里写明该构建属于哪个渠道
+
+**Bug Fixes / 问题修复**
+
+- "Check for updates" always answered "up to date" on this release line: GitHub flags every `wails-v*` release as a pre-release (the tag is not semver), while the updater skipped pre-releases unconditionally — so 1.3.10.1 could not see the already published 1.4.0.1. The check now filters by the selected channel instead / 这条发布线的「检查更新」总是回答「已是最新」：GitHub 把每个 `wails-v*` Release 都标记为 pre-release（tag 不是 semver），而更新器无条件跳过 pre-release，导致 1.3.10.1 看不到已经发布的 1.4.0.1。现在改为按所选渠道过滤
+- Applying a staged release no longer accepts a same-version swap, and an older staged build is refused with a dedicated `ErrDowngrade` unless the caller asked for the channel switch / 应用已暂存的发布不再接受同版本替换，更旧的暂存构建会被专门的 `ErrDowngrade` 拒绝，除非调用方明确要求切换渠道
+
 ## v1.4.0.1
 
 **New Features / 新功能**
