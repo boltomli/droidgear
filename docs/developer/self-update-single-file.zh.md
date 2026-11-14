@@ -37,6 +37,13 @@
 
 未列出的组合返回 `ErrUnsupportedPlatform`（不猜、不错装）。
 
+> **macOS 目前默认不发布（2026-11 起）**：`build_macos` 默认 `false`，标签触发
+> （`push: tags: wails-v*`）拿不到 inputs，因此**只构建 windows x64 / windows arm64 /
+> linux x64**。需要在某个版本带上 macOS 时，用 `workflow_dispatch` 手动指定
+> `build_macos=true`（会走 `macos-15` runner，产物仍是 ad-hoc 签名、未公证）。
+> 资产表（`releaseAssets`）里 darwin/arm64 一行保持不变——重新开启发布不需要改 Go
+> 代码；在 macOS 上跑 `dg update` 只会看到「本平台资产缺失」的明确错误。
+
 Windows arm64 与 windows amd64 在**同一个 x64 runner 上交叉编译**（Windows 后端无
 CGO，`go-webview2` 自带 `webviewloader/arm64/WebView2Loader.dll`），所以不需要
 `windows-11-arm` runner。运行时依赖是 **ARM64 WebView2 Runtime**（Windows 11 arm64
