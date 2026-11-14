@@ -873,13 +873,22 @@ func DeleteCodexSession(sessionPath string) error {
 	if err != nil {
 		return err
 	}
-	if !codexSessionWithin(sessionsDir, sessionPath) {
+	// Safety guard: only delete files inside the codex sessions directory.
+	// Both sides are canonicalized, so `..` segments and symlinks cannot escape
+	// it.
+	resolved, err := core.CanonicalizeWithin(sessionsDir, sessionPath)
+	if err != nil {
 		return errString("Session file not found")
 	}
+	sessionPath = resolved
 	if err := core.RemoveFile(sessionPath); err != nil {
 		return fmt.Errorf("Failed to delete session: %w", err)
 	}
-	// Prune empty day/month directories, up to the sessions dir.
+	// Prune empty day/month directories, up to the sessions dir (compared in
+	// canonical form, so a symlinked home still matches).
+	if resolvedDir, dirErr := filepath.EvalSymlinks(sessionsDir); dirErr == nil {
+		sessionsDir = resolvedDir
+	}
 	dir := filepath.Dir(sessionPath)
 	for dir != sessionsDir && strings.HasPrefix(dir, sessionsDir+string(filepath.Separator)) {
 		if err := core.RemoveFile(dir); err != nil {

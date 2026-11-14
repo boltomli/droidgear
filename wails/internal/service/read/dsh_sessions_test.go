@@ -326,6 +326,32 @@ func TestGetDshSessionDetail(t *testing.T) {
 	}
 }
 
+// TestDeleteDshSessionRejectsParentDirTraversal: <sessions>/../other/... must be
+// rejected, otherwise the recursive session-dir removal would take out a whole
+// unrelated tree.
+func TestDeleteDshSessionRejectsParentDirTraversal(t *testing.T) {
+	home := testutil.IsolatedHome(t)
+	dshWriteRawSession(t, home, dshFixtureFull)
+
+	victimDir := filepath.Join(home, ".dsh", "other", "proj", "sess")
+	if err := os.MkdirAll(victimDir, 0o755); err != nil {
+		t.Fatalf("mkdir victim: %v", err)
+	}
+	victimLog := filepath.Join(victimDir, "log.jsonl")
+	if err := os.WriteFile(victimLog, []byte("x"), 0o644); err != nil {
+		t.Fatalf("write victim: %v", err)
+	}
+	sneaky := filepath.Join(home, ".dsh", "sessions", "..", "other", "proj", "sess", "log.jsonl")
+
+	err := DeleteDshSession(sneaky)
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected not-found error, got %v", err)
+	}
+	if _, statErr := os.Stat(victimLog); statErr != nil {
+		t.Fatalf("victim log must survive: %v", statErr)
+	}
+}
+
 // TestDeleteDshSession covers the safety guard (only logs inside the Dsh
 // sessions tree), session-dir removal and project-dir pruning.
 func TestDeleteDshSession(t *testing.T) {

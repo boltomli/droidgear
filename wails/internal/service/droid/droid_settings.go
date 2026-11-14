@@ -101,27 +101,18 @@ func droidReadDroidGearSettings(home string) (any, error) {
 	return settings, nil
 }
 
-// droidWriteDroidGearSettings rewrites ~/.droidgear/settings.json through a
-// sibling settings.tmp + rename (mirrors write_droidgear_settings_to_path).
+// droidWriteDroidGearSettings rewrites ~/.droidgear/settings.json through the
+// shared atomic writer (mirrors write_droidgear_settings_to_path). The writer
+// creates the parent directory, uses a unique temp name and cleans up on
+// failure, so two writers never clobber each other's temp file.
 func droidWriteDroidGearSettings(home string, settings any) error {
 	path := droidDroidGearSettingsPath(home)
-	dir := filepath.Dir(path)
-	if !core.PathExists(dir) {
-		if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- config directory
-			return fmt.Errorf("Failed to create .droidgear directory: %w", err)
-		}
-	}
 	data, err := core.MarshalPretty(settings)
 	if err != nil {
 		return fmt.Errorf("Failed to serialize settings: %w", err)
 	}
-	tempPath := core.WithExtension(path, "tmp")                 // settings.json → settings.tmp
-	if err := os.WriteFile(tempPath, data, 0o644); err != nil { // #nosec G306 -- config files
+	if err := droidAtomicWrite(path, data); err != nil {
 		return fmt.Errorf("Failed to write settings: %w", err)
-	}
-	if err := os.Rename(tempPath, path); err != nil {
-		_ = os.Remove(tempPath)
-		return fmt.Errorf("Failed to finalize settings: %w", err)
 	}
 	return nil
 }
@@ -415,20 +406,14 @@ func droidCreateSettingsFile(home string, name string, copyFromActive bool) (Set
 			if err != nil {
 				return SettingsFileInfo{}, fmt.Errorf("Failed to copy settings: %w", err)
 			}
-			if !core.RecordWrite(path, data) {
-				if err := os.WriteFile(path, data, 0o644); err != nil { // #nosec G306 -- settings files
-					return SettingsFileInfo{}, fmt.Errorf("Failed to copy settings: %w", err)
-				}
+			if err := droidAtomicWrite(path, data); err != nil {
+				return SettingsFileInfo{}, fmt.Errorf("Failed to copy settings: %w", err)
 			}
-		} else if !core.RecordWrite(path, []byte("{}")) {
-			if err := os.WriteFile(path, []byte("{}"), 0o644); err != nil { // #nosec G306 -- settings files
-				return SettingsFileInfo{}, fmt.Errorf("Failed to create settings file: %w", err)
-			}
-		}
-	} else if !core.RecordWrite(path, []byte("{}")) {
-		if err := os.WriteFile(path, []byte("{}"), 0o644); err != nil { // #nosec G306 -- settings files
+		} else if err := droidAtomicWrite(path, []byte("{}")); err != nil {
 			return SettingsFileInfo{}, fmt.Errorf("Failed to create settings file: %w", err)
 		}
+	} else if err := droidAtomicWrite(path, []byte("{}")); err != nil {
+		return SettingsFileInfo{}, fmt.Errorf("Failed to create settings file: %w", err)
 	}
 
 	// Auto-switch to the new file.
@@ -577,7 +562,7 @@ func droidReadActiveConfig(home string) (any, droidConfigStatus, error) {
 }
 
 // droidWriteActiveConfig mirrors factory_settings::write_active_config_file
-// (parent dir, symlink resolution, settings.tmp + rename).
+// (parent dir, symlink resolution, shared atomic writer).
 func droidWriteActiveConfig(home string, config any) error {
 	activePath, err := droidActiveSettingsPath(home)
 	if err != nil {
@@ -601,13 +586,8 @@ func droidWriteActiveConfig(home string, config any) error {
 	if err != nil {
 		return fmt.Errorf("Failed to serialize config: %w", err)
 	}
-	tempPath := core.WithExtension(actualPath, "tmp")           // settings.json → settings.tmp
-	if err := os.WriteFile(tempPath, data, 0o644); err != nil { // #nosec G306 -- config files
+	if err := droidAtomicWrite(actualPath, data); err != nil {
 		return fmt.Errorf("Failed to write config file: %w", err)
-	}
-	if err := os.Rename(tempPath, actualPath); err != nil {
-		_ = os.Remove(tempPath)
-		return fmt.Errorf("Failed to finalize config file: %w", err)
 	}
 	return nil
 }

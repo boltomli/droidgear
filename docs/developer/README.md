@@ -20,14 +20,13 @@ Technical documentation for building and extending this app. These docs describe
 
 ## Core Systems
 
-| Document                                                | Description                                                    |
-| ------------------------------------------------------- | -------------------------------------------------------------- |
-| [Command System](./command-system.md)                   | Unified action dispatch, command registration                  |
-| [Keyboard Shortcuts](./keyboard-shortcuts.md)           | Global shortcut handling, platform modifiers                   |
-| [Menus](./menus.md)                                     | Native menu building with i18n                                 |
-| [Quick Panes](./quick-panes.md)                         | Multi-window quick entry pattern — **Tauri-era, impl removed** |
-| [Claude Code Profiles](./claude-code-profile-design.md) | Product and runtime design for Claude Code profiles            |
-| [DSH Config Surfaces](./dsh-config-surfaces.zh.md)      | DeepSeek Harness local config model and Dsh page surfaces      |
+| Document                                                | Description                                               |
+| ------------------------------------------------------- | --------------------------------------------------------- |
+| [Command System](./command-system.md)                   | Unified action dispatch, command registration             |
+| [Keyboard Shortcuts](./keyboard-shortcuts.md)           | Global shortcut handling, platform modifiers              |
+| [Menus](./menus.md)                                     | Native menu building with i18n                            |
+| [Claude Code Profiles](./claude-code-profile-design.md) | Product and runtime design for Claude Code profiles       |
+| [DSH Config Surfaces](./dsh-config-surfaces.zh.md)      | DeepSeek Harness local config model and Dsh page surfaces |
 
 - [GitHub Copilot BYOK](./copilot-byok.md) — Profiles, local configuration, and temporary launchers
 

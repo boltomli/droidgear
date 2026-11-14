@@ -229,7 +229,7 @@ func updateSpecForHome(home string, path string, content string) (SpecFile, erro
 	if core.RecordWrite(cleanPath, []byte(content)) {
 		return readSpecFile(cleanPath) // preview only: nothing was written
 	}
-	if err := os.WriteFile(cleanPath, []byte(content), 0o644); err != nil { // #nosec G306 -- spec files
+	if err := core.AtomicWrite(cleanPath, []byte(content)); err != nil {
 		return SpecFile{}, fmt.Errorf("Failed to write file: %w", err)
 	}
 	return readSpecFile(path)

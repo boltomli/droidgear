@@ -874,13 +874,24 @@ func deleteDshSession(logPath string) error {
 	if err != nil {
 		return err
 	}
-	info, err := os.Stat(logPath)
-	if err != nil || info.IsDir() || !sessionPathWithin(sessionsDir, logPath) {
+	// Safety guard: only delete logs inside the Dsh sessions directory. Both
+	// sides are canonicalized, so `..` segments and symlinks cannot point the
+	// recursive removal outside it.
+	resolvedLog, err := core.CanonicalizeWithin(sessionsDir, logPath)
+	if err != nil {
 		return errString("Dsh session file not found")
 	}
+	if info, statErr := os.Stat(resolvedLog); statErr != nil || info.IsDir() {
+		return errString("Dsh session file not found")
+	}
+	resolvedSessions := sessionsDir
+	if dir, dirErr := filepath.EvalSymlinks(sessionsDir); dirErr == nil {
+		resolvedSessions = dir
+	}
+	logPath = resolvedLog
 	sessionDir := filepath.Dir(logPath)
 	projectDir := filepath.Dir(sessionDir)
-	if filepath.Clean(filepath.Dir(projectDir)) != filepath.Clean(sessionsDir) {
+	if filepath.Dir(projectDir) != resolvedSessions {
 		return errString("Dsh session file not found")
 	}
 	if core.RecordRemove(sessionDir) {

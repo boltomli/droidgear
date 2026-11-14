@@ -3,6 +3,7 @@ package droid
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -31,6 +32,17 @@ func stampFactoryAuthFiles(t *testing.T, home string) string {
 	return factoryHome
 }
 
+// listProfiles reads the manifest through the typed helper so failures point
+// at the test that triggered them.
+func listProfiles(t *testing.T, home string) AuthProfileState {
+	t.Helper()
+	state, err := droidListAuthProfiles(home)
+	if err != nil {
+		t.Fatalf("list profiles: %v", err)
+	}
+	return state
+}
+
 func readAuth(t *testing.T, dir string, name string) string {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(dir, name)) // #nosec G304 -- test fixture
@@ -52,7 +64,7 @@ func TestFactoryAuthProfileLifecycle(t *testing.T) {
 	profilesDir := filepath.Join(home, ".droidgear", "auth-profiles", "droid")
 
 	// Empty manifest initially.
-	state := droidListAuthProfiles(home)
+	state := listProfiles(t, home)
 	if len(state.Profiles) != 0 || state.Active != nil {
 		t.Fatalf("expected empty manifest, got %+v", state)
 	}
@@ -60,7 +72,7 @@ func TestFactoryAuthProfileLifecycle(t *testing.T) {
 		t.Fatalf("save acct-1: %v", err)
 	}
 
-	state = droidListAuthProfiles(home)
+	state = listProfiles(t, home)
 	if state.Active == nil || *state.Active != "acct-1" {
 		t.Fatalf("expected acct-1 active, got %+v", state.Active)
 	}
@@ -82,7 +94,7 @@ func TestFactoryAuthProfileLifecycle(t *testing.T) {
 	if err := droidSaveCurrentAuthProfile(home, "acct-2", "Account 2"); err != nil {
 		t.Fatalf("save acct-2: %v", err)
 	}
-	state = droidListAuthProfiles(home)
+	state = listProfiles(t, home)
 	if state.Active == nil || *state.Active != "acct-1" {
 		t.Fatalf("saving must not switch the active profile: %+v", state.Active)
 	}
@@ -104,7 +116,7 @@ func TestFactoryAuthProfileLifecycle(t *testing.T) {
 	if readAuth(t, factoryHome, "auth.v2.file") != "token-1" {
 		t.Fatal("switch did not restore acct-1 token")
 	}
-	state = droidListAuthProfiles(home)
+	state = listProfiles(t, home)
 	if state.Active == nil || *state.Active != "acct-1" {
 		t.Fatalf("active not updated: %+v", state.Active)
 	}
@@ -113,7 +125,7 @@ func TestFactoryAuthProfileLifecycle(t *testing.T) {
 	if err := droidSaveCurrentAuthProfile(home, "acct-1", "Renamed 1"); err != nil {
 		t.Fatalf("re-save: %v", err)
 	}
-	state = droidListAuthProfiles(home)
+	state = listProfiles(t, home)
 	if len(state.Profiles) != 2 || state.Profiles[0].Label != "Renamed 1" {
 		t.Fatalf("label update failed: %+v", state.Profiles)
 	}
@@ -122,7 +134,7 @@ func TestFactoryAuthProfileLifecycle(t *testing.T) {
 	if err := droidRenameAuthProfile(home, "acct-1", "Work"); err != nil {
 		t.Fatalf("rename: %v", err)
 	}
-	state = droidListAuthProfiles(home)
+	state = listProfiles(t, home)
 	if state.Profiles[0].Label != "Work" || state.Profiles[0].Name != "acct-1" {
 		t.Fatalf("rename failed: %+v", state.Profiles[0])
 	}
@@ -137,7 +149,7 @@ func TestFactoryAuthProfileLifecycle(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(profilesDir, "acct-2")); !os.IsNotExist(err) {
 		t.Fatalf("profile directory not removed: %v", err)
 	}
-	state = droidListAuthProfiles(home)
+	state = listProfiles(t, home)
 	if len(state.Profiles) != 1 || state.Profiles[0].Name != "acct-1" {
 		t.Fatalf("manifest not updated: %+v", state.Profiles)
 	}
@@ -178,6 +190,40 @@ func TestFactoryAuthProfileSwitchBacksUpCurrentFiles(t *testing.T) {
 	}
 	if readAuth(t, filepath.Join(profilesDir, "acct-1"), "auth.v2.key") != "key-3" {
 		t.Fatal("acct-1 was not backed up before the switch")
+	}
+}
+
+// A corrupt manifest must fail instead of reading as empty: otherwise the next
+// save/delete/rename rewrites profiles.json without the existing profiles.
+func TestFactoryAuthProfileCorruptManifestIsAnError(t *testing.T) {
+	home, _ := authFixture(t)
+	manifestPath := filepath.Join(home, ".droidgear", "auth-profiles", "droid", "profiles.json")
+	if err := os.MkdirAll(filepath.Dir(manifestPath), 0o755); err != nil {
+		t.Fatalf("mkdir manifest dir: %v", err)
+	}
+	if err := os.WriteFile(manifestPath, []byte("{ truncated"), 0o600); err != nil {
+		t.Fatalf("write corrupt manifest: %v", err)
+	}
+
+	if _, err := droidListAuthProfiles(home); err == nil || !strings.Contains(err.Error(), "Failed to parse profiles manifest") {
+		t.Fatalf("expected parse error, got %v", err)
+	}
+	if err := droidSaveCurrentAuthProfile(home, "acct-1", "Account 1"); err == nil {
+		t.Fatal("save must fail on a corrupt manifest")
+	}
+	if err := droidDeleteAuthProfile(home, "acct-1"); err == nil {
+		t.Fatal("delete must fail on a corrupt manifest")
+	}
+	if err := droidRenameAuthProfile(home, "acct-1", "Label"); err == nil {
+		t.Fatal("rename must fail on a corrupt manifest")
+	}
+	// The corrupt file is left untouched for the user to fix.
+	data, err := os.ReadFile(manifestPath) // #nosec G304 -- test fixture
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if string(data) != "{ truncated" {
+		t.Fatalf("manifest was rewritten: %q", string(data))
 	}
 }
 

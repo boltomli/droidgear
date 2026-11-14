@@ -165,7 +165,11 @@ func writeChannelAuth(channelID string, auth channelAuth) error {
 	if err != nil {
 		return fmt.Errorf("Failed to serialize auth: %w", err)
 	}
-	return core.AtomicWrite(path, data)
+	// Channel auth holds API keys: keep it owner-only on Unix.
+	if err := core.AtomicWritePrivate(path, data); err != nil {
+		return fmt.Errorf("Failed to write auth file: %w", err)
+	}
+	return nil
 }
 
 // SaveApiKey stores an api_key auth entry for a channel.

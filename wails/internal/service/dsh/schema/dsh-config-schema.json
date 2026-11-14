@@ -3,7 +3,7 @@
   "dshVersion": "0.2.1-rc.2",
   "generatedAt": "2026-10-22",
   "source": "deepseek-ai/deepseek-harness@dsh-v0.2.1-rc.2",
-  "generator": "node scripts/gen-dsh-config-schema.mjs --dsh <deepseek-harness-checkout> --version 0.2.1-rc.2  (reads DSH bundle patches + docs/config-catalog.zh.md + schemastery sources; never hand-edit the output)",
+  "generator": "node scripts/gen-dsh-config-schema.mjs --dsh <deepseek-harness-checkout> --version 0.2.1-rc.2  (reads DSH bundle patches + docs/config-catalog.zh.md + schemastery sources; never hand-edit the output) ; the @deepseek-ai/dsh-subagent-codex bundle + its subagent-codex/tool-subagent-codex entries were grafted from the 0.2.2-rc.1 snapshot (see docs/developer/dsh-config-surfaces.zh.md)",
   "bundles": {
     "@deepseek-ai/dsh-base": {
       "entries": [
@@ -2306,6 +2306,23 @@
         {
           "id": "auto-review",
           "name": "@deepseek-ai/dsh-experimental-auto-review"
+        }
+      ]
+    },
+    "@deepseek-ai/dsh-subagent-codex": {
+      "entries": [
+        {
+          "id": "subagent-codex",
+          "name": "@deepseek-ai/dsh-subagent-codex"
+        },
+        {
+          "id": "tool-subagent-codex",
+          "name": "@deepseek-ai/dsh-tool-subagent",
+          "config": {
+            "provider": "codex",
+            "toolName": "subagent_codex",
+            "maxDepth": "provider-managed"
+          }
         }
       ]
     }
@@ -7491,6 +7508,167 @@
       "tier": "C",
       "description": "Per-tool LLM authorization review for the DeepSeek Harness Auto permission preset",
       "fields": []
+    },
+    "subagent-codex": {
+      "package": "@deepseek-ai/dsh-subagent-codex",
+      "tier": "B",
+      "description": "Deployment-owned model, permission, environment, and process-release settings.",
+      "fields": [
+        {
+          "name": "providerName",
+          "kind": "string",
+          "default": "codex",
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Provider name on `ctx.subagents` (default `codex`)."
+        },
+        {
+          "name": "model",
+          "kind": "string",
+          "default": null,
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Native Codex model fixed for this instance; omitted to inherit Codex settings."
+        },
+        {
+          "name": "env",
+          "kind": "json",
+          "default": {},
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Explicit environment entries layered over the subprocess seam's credential-scrubbed parent environment."
+        },
+        {
+          "name": "permissionMode",
+          "kind": "enum",
+          "default": "never",
+          "nullable": false,
+          "enumValues": [
+            "never",
+            "approve-for-me",
+            "dangerously-bypass-approvals-and-sandbox"
+          ],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Native non-interactive permission mode fixed for this Provider instance."
+        },
+        {
+          "name": "disposeGraceMs",
+          "kind": "number",
+          "default": 3000,
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Grace in milliseconds between app-server managed-range termination tiers."
+        }
+      ]
+    },
+    "tool-subagent-codex": {
+      "package": "@deepseek-ai/dsh-tool-subagent",
+      "tier": "B",
+      "description": "Config: which registered provider this tool delegates to, plus child defaults.",
+      "fields": [
+        {
+          "name": "provider",
+          "kind": "string",
+          "default": null,
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "The `ctx.subagents` provider name to start runs on (e.g. `spawn`, `acp`)."
+        },
+        {
+          "name": "toolName",
+          "kind": "string",
+          "default": "subagent",
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Model-facing tool name (default `subagent`). Each loaded instance must use a distinct name."
+        },
+        {
+          "name": "modelSelection",
+          "kind": "boolean",
+          "default": false,
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Expose optional child `provider`, `model`, and `reasoning_effort` fields. Requires provider `agentOptions` support. Execution enforces the Session policy, or restricts explicit selection to the current parent route."
+        },
+        {
+          "name": "modelDiscovery",
+          "kind": "boolean",
+          "default": false,
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Register the shared `list_subagent_models` tool for this scope. Enable on only one instance per scope; defaults to false and does not enable model selection. Discovery is removed when this instance unloads."
+        },
+        {
+          "name": "agentOptions",
+          "kind": "json",
+          "default": null,
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Agent options applied to every child; omitted fields use child-loop defaults."
+        },
+        {
+          "name": "agentPreset",
+          "kind": "string",
+          "default": null,
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Default independent preset; omission inherits the parent when the model makes no selection."
+        },
+        {
+          "name": "allowedAgentPresets",
+          "kind": "json",
+          "default": null,
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Non-empty allowlist exposing agent_preset to the model; omission disables model selection."
+        },
+        {
+          "name": "maxDepth",
+          "kind": "json",
+          "default": null,
+          "nullable": false,
+          "enumValues": [],
+          "volatile": false,
+          "secret": false,
+          "tier": "B",
+          "description": "Maximum child depth: a non-negative safe integer (`0` forbids delegation), or `'provider-managed'` to send no cap. A numeric cap requires the provider's `depthLimit` capability (mount fails loud otherwise). The provider checks the calling agent's current depth at every start; the tool remains model-visible so runtime policy owns rejection. `'provider-managed'` is for an out-of-process provider whose recursion budget belongs to the child runtime or its own deployment. Omission reads the current Host subagent depth setting (default `1`) at each delegation."
+        }
+      ]
     }
   }
 }

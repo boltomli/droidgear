@@ -53,22 +53,33 @@ func droidAuthProfileDir(home string, name string) string {
 }
 
 // ---------------------------------------------------------------------------
-// Manifest I/O (read errors silently yield an empty manifest, like Rust)
+// Manifest I/O
 // ---------------------------------------------------------------------------
 
-func droidReadAuthManifest(home string) AuthProfileState {
-	data, err := os.ReadFile(droidAuthManifestPath(home)) // #nosec G304 -- droidgear manifest path
+// droidReadAuthManifest returns the saved profile manifest.
+//
+// A missing manifest means "no profiles yet". An unreadable or malformed one
+// is an error: treating it as empty would let the next write (save, switch,
+// delete, rename) rewrite profiles.json without the existing profiles.
+func droidReadAuthManifest(home string) (AuthProfileState, error) {
+	path := droidAuthManifestPath(home)
+	data, err := os.ReadFile(path) // #nosec G304 -- droidgear manifest path
 	if err != nil {
-		return AuthProfileState{Profiles: []AuthProfile{}}
+		if os.IsNotExist(err) {
+			return AuthProfileState{Profiles: []AuthProfile{}}, nil
+		}
+		return AuthProfileState{Profiles: []AuthProfile{}},
+			fmt.Errorf("Failed to read profiles manifest %s: %w", path, err)
 	}
 	var manifest AuthProfileState
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		return AuthProfileState{Profiles: []AuthProfile{}}
+		return AuthProfileState{Profiles: []AuthProfile{}},
+			fmt.Errorf("Failed to parse profiles manifest %s: %w", path, err)
 	}
 	if manifest.Profiles == nil {
 		manifest.Profiles = []AuthProfile{}
 	}
-	return manifest
+	return manifest, nil
 }
 
 func droidWriteAuthManifest(home string, manifest AuthProfileState) error {
@@ -154,7 +165,7 @@ func droidAuthProfileExists(manifest AuthProfileState, name string) bool {
 // Commands
 // ---------------------------------------------------------------------------
 
-func droidListAuthProfiles(home string) AuthProfileState {
+func droidListAuthProfiles(home string) (AuthProfileState, error) {
 	return droidReadAuthManifest(home)
 }
 
@@ -171,7 +182,10 @@ func droidSaveCurrentAuthProfile(home string, name string, label string) error {
 		return err
 	}
 
-	manifest := droidReadAuthManifest(home)
+	manifest, err := droidReadAuthManifest(home)
+	if err != nil {
+		return err
+	}
 	updated := false
 	for i := range manifest.Profiles {
 		if manifest.Profiles[i].Name == name {
@@ -198,7 +212,10 @@ func droidSwitchAuthProfile(home string, name string) error {
 	if err := droidValidateProfileName(name); err != nil {
 		return err
 	}
-	manifest := droidReadAuthManifest(home)
+	manifest, err := droidReadAuthManifest(home)
+	if err != nil {
+		return err
+	}
 	if !droidAuthProfileExists(manifest, name) {
 		return fmt.Errorf("Profile '%s' not found", name)
 	}
@@ -227,7 +244,10 @@ func droidDeleteAuthProfile(home string, name string) error {
 	if err := droidValidateProfileName(name); err != nil {
 		return err
 	}
-	manifest := droidReadAuthManifest(home)
+	manifest, err := droidReadAuthManifest(home)
+	if err != nil {
+		return err
+	}
 	if !droidAuthProfileExists(manifest, name) {
 		return fmt.Errorf("Profile '%s' not found", name)
 	}
@@ -254,7 +274,10 @@ func droidRenameAuthProfile(home string, name string, newLabel string) error {
 	if err := droidValidateProfileName(name); err != nil {
 		return err
 	}
-	manifest := droidReadAuthManifest(home)
+	manifest, err := droidReadAuthManifest(home)
+	if err != nil {
+		return err
+	}
 	for i := range manifest.Profiles {
 		if manifest.Profiles[i].Name == name {
 			manifest.Profiles[i].Label = newLabel
@@ -275,7 +298,7 @@ func ListAuthProfiles() (AuthProfileState, error) {
 	if err != nil {
 		return AuthProfileState{Profiles: []AuthProfile{}}, err
 	}
-	return droidListAuthProfiles(home), nil
+	return droidListAuthProfiles(home)
 }
 
 // SwitchAuthProfile copies the target profile's auth files into the

@@ -123,20 +123,33 @@ func EnsureDir(dir string) error {
 // Manifest I/O
 // ---------------------------------------------------------------------------
 
-func ReadAuthManifest() codexAuthProfilesManifest {
+// ReadAuthManifest returns the saved profile manifest.
+//
+// A missing manifest means "no profiles yet". An unreadable or malformed one
+// is an error: treating it as empty would let the next write (save, switch,
+// delete, rename) rewrite profiles.json without the existing profiles.
+func ReadAuthManifest() (codexAuthProfilesManifest, error) {
 	path, err := codexAuthManifestPath()
 	if err != nil {
-		return codexAuthProfilesManifest{Profiles: []CodexAuthProfile{}}
+		return codexAuthProfilesManifest{Profiles: []CodexAuthProfile{}}, err
 	}
 	data, err := os.ReadFile(path) // #nosec G304 -- manifest path
-	if err != nil || strings.TrimSpace(string(data)) == "" {
-		return codexAuthProfilesManifest{Profiles: []CodexAuthProfile{}}
+	if err != nil {
+		if os.IsNotExist(err) {
+			return codexAuthProfilesManifest{Profiles: []CodexAuthProfile{}}, nil
+		}
+		return codexAuthProfilesManifest{Profiles: []CodexAuthProfile{}},
+			fmt.Errorf("Failed to read profiles manifest %s: %w", path, err)
 	}
 	var manifest codexAuthProfilesManifest
-	if err := json.Unmarshal(data, &manifest); err != nil || manifest.Profiles == nil {
-		return codexAuthProfilesManifest{Profiles: []CodexAuthProfile{}}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return codexAuthProfilesManifest{Profiles: []CodexAuthProfile{}},
+			fmt.Errorf("Failed to parse profiles manifest %s: %w", path, err)
 	}
-	return manifest
+	if manifest.Profiles == nil {
+		manifest.Profiles = []CodexAuthProfile{}
+	}
+	return manifest, nil
 }
 
 func WriteAuthManifest(manifest codexAuthProfilesManifest) error {
@@ -353,7 +366,10 @@ func ApplyAuthProfileModelToLiveConfig(profile CodexAuthProfile) error {
 // ListCodexAuthProfiles lists saved auth profiles plus whether the live auth
 // is official.
 func ListAuthProfiles() (CodexAuthProfileState, error) {
-	manifest := ReadAuthManifest()
+	manifest, err := ReadAuthManifest()
+	if err != nil {
+		return CodexAuthProfileState{Profiles: []CodexAuthProfile{}}, err
+	}
 	isCurrentOfficial, err := CurrentAuthIsOfficial()
 	if err != nil {
 		isCurrentOfficial = false
@@ -415,7 +431,10 @@ func SaveCurrentAuthProfile(name string, label string) error {
 		ModelReasoningEffort: effort,
 	}
 
-	manifest := ReadAuthManifest()
+	manifest, err := ReadAuthManifest()
+	if err != nil {
+		return err
+	}
 	found := false
 	for i := range manifest.Profiles {
 		if manifest.Profiles[i].Name == name {
@@ -444,7 +463,10 @@ func SwitchAuthProfile(name string) error {
 	if err := ValidateAuthProfileName(name); err != nil {
 		return err
 	}
-	manifest := ReadAuthManifest()
+	manifest, err := ReadAuthManifest()
+	if err != nil {
+		return err
+	}
 	found := false
 	for _, p := range manifest.Profiles {
 		if p.Name == name {
@@ -510,7 +532,10 @@ func SwitchAuthProfile(name string) error {
 		return err
 	}
 
-	manifest = ReadAuthManifest()
+	manifest, err = ReadAuthManifest()
+	if err != nil {
+		return err
+	}
 	manifest.Active = &name
 	var authProfile *CodexAuthProfile
 	var codexProfileID *string
@@ -544,7 +569,10 @@ func DeleteAuthProfile(name string) error {
 	if err := ValidateAuthProfileName(name); err != nil {
 		return err
 	}
-	manifest := ReadAuthManifest()
+	manifest, err := ReadAuthManifest()
+	if err != nil {
+		return err
+	}
 	found := false
 	for _, p := range manifest.Profiles {
 		if p.Name == name {
@@ -582,7 +610,10 @@ func RenameAuthProfile(name string, label string) error {
 	if err := ValidateAuthProfileName(name); err != nil {
 		return err
 	}
-	manifest := ReadAuthManifest()
+	manifest, err := ReadAuthManifest()
+	if err != nil {
+		return err
+	}
 	updated := false
 	for i := range manifest.Profiles {
 		if manifest.Profiles[i].Name == name {
@@ -661,7 +692,10 @@ func codexRestoreAuthFile(name string) error {
 	if err := ValidateAuthProfileName(name); err != nil {
 		return err
 	}
-	manifest := ReadAuthManifest()
+	manifest, err := ReadAuthManifest()
+	if err != nil {
+		return err
+	}
 	var profile *CodexAuthProfile
 	for i := range manifest.Profiles {
 		if manifest.Profiles[i].Name == name {
@@ -693,7 +727,10 @@ func codexRestoreAuthFile(name string) error {
 		return err
 	}
 
-	manifest = ReadAuthManifest()
+	manifest, err = ReadAuthManifest()
+	if err != nil {
+		return err
+	}
 	manifest.Active = &name
 	if err := WriteAuthManifest(manifest); err != nil {
 		return err
@@ -705,7 +742,10 @@ func codexRestoreAuthFile(name string) error {
 // longer matches any saved profile). Errors are ignored by callers, matching
 // Rust's `let _ = clear_active_for_home(...)`.
 func codexClearActiveAuthProfile() error {
-	manifest := ReadAuthManifest()
+	manifest, err := ReadAuthManifest()
+	if err != nil {
+		return err
+	}
 	manifest.Active = nil
 	return WriteAuthManifest(manifest)
 }

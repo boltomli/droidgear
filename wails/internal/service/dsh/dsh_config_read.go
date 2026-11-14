@@ -303,7 +303,7 @@ func buildWarnings(entries []composedEntry, homePatch string, schema *schemaDoc,
 		warnings = append(warnings, DshMigrationWarning{
 			Code: "DSH_CONFIG_VERSION_MISMATCH", Severity: "warning",
 			Message: fmt.Sprintf("Installed DeepSeek Harness is %s, but the bundled schema was generated from %s", *installedVersion, schema.DshVersion),
-			Hint:    "Regenerate res/dsh-config-schema.json from the installed DSH source before editing unfamiliar fields.",
+			Hint:    "Regenerate wails/internal/service/dsh/schema/dsh-config-schema.json from the installed DSH source (scripts/gen-dsh-config-schema.mjs) before editing unfamiliar fields.",
 		})
 	}
 

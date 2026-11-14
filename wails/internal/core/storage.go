@@ -1,9 +1,11 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -68,6 +70,31 @@ func atomicWriteWithMode(path string, data []byte, private bool) error {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 	return nil
+}
+
+// CanonicalizeWithin resolves path and requires it to live inside root.
+//
+// Both sides are canonicalized first, so `..` segments and symlinks cannot be
+// used to point a destructive operation (e.g. deleting a session) at a file
+// outside the directory it is supposed to be confined to. Mirrors
+// droidgear-core::storage::canonicalize_within.
+func CanonicalizeWithin(root, path string) (string, error) {
+	resolvedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", fmt.Errorf("Directory not found: %w", err)
+	}
+	resolvedPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", fmt.Errorf("File not found: %w", err)
+	}
+	rel, err := filepath.Rel(resolvedRoot, resolvedPath)
+	if err != nil {
+		return "", errors.New("File not found inside the expected directory")
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		return "", errors.New("File not found inside the expected directory")
+	}
+	return resolvedPath, nil
 }
 
 func uniqueTempPath(parent, target string) string {

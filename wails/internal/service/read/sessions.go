@@ -509,16 +509,25 @@ func applyDroidSessionLine(detail *SessionDetail, parsed map[string]any) {
 }
 
 func deleteDroidSession(sessionPath string) error {
-	jsonlPath := sessionPath + ".jsonl"
-	settingsPath := sessionPath + ".settings.json"
-
-	if _, err := os.Stat(jsonlPath); err != nil {
+	sessionsDir, err := droidSessionsDir()
+	if err != nil {
+		return err
+	}
+	// Safety guard: only delete files inside the Droid sessions directory.
+	// Both sides are canonicalized, so `..` segments and symlinks cannot point
+	// the deletion outside it.
+	jsonlPath, err := core.CanonicalizeWithin(sessionsDir, sessionPath+".jsonl")
+	if err != nil {
 		return errString("Session file not found")
 	}
+	if info, statErr := os.Stat(jsonlPath); statErr != nil || !info.Mode().IsRegular() {
+		return errString("Session file not found")
+	}
+	settingsPath := strings.TrimSuffix(jsonlPath, ".jsonl") + ".settings.json"
 	if err := core.RemoveFile(jsonlPath); err != nil {
 		return fmt.Errorf("Failed to delete session: %w", err)
 	}
-	if _, err := os.Stat(settingsPath); err == nil {
+	if _, statErr := os.Stat(settingsPath); statErr == nil {
 		_ = core.RemoveFile(settingsPath)
 	}
 	return nil

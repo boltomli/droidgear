@@ -41,6 +41,55 @@ const codexTestOfficialAuth = `{
 // TestCodexAuthOfficialDetection: auth_mode present → official; BYOK-only →
 // not official; missing file → not official (no error).
 
+// TestCodexAuthCorruptManifestIsAnError: a malformed profiles.json must fail
+// instead of reading as empty — otherwise the next save/switch/delete/rename
+// rewrites the manifest without the existing profiles.
+func TestCodexAuthCorruptManifestIsAnError(t *testing.T) {
+	testutil.IsolatedHome(t)
+
+	manifestPath, err := codexAuthManifestPath()
+	if err != nil {
+		t.Fatalf("codexAuthManifestPath: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(manifestPath), 0o755); err != nil {
+		t.Fatalf("mkdir manifest dir: %v", err)
+	}
+	if err := os.WriteFile(manifestPath, []byte("{ truncated"), 0o600); err != nil {
+		t.Fatalf("write corrupt manifest: %v", err)
+	}
+
+	if _, err := ReadAuthManifest(); err == nil || !strings.Contains(err.Error(), "Failed to parse profiles manifest") {
+		t.Fatalf("expected parse error, got %v", err)
+	}
+	if _, err := ListAuthProfiles(); err == nil {
+		t.Fatal("list must fail on a corrupt manifest")
+	}
+	codexTestWriteLiveAuth(t, codexTestOfficialAuth)
+	if err := SaveCurrentAuthProfile("acct-1", "Account 1"); err == nil {
+		t.Fatal("save must fail on a corrupt manifest")
+	}
+	if err := SwitchAuthProfile("acct-1"); err == nil {
+		t.Fatal("switch must fail on a corrupt manifest")
+	}
+	if err := DeleteAuthProfile("acct-1"); err == nil {
+		t.Fatal("delete must fail on a corrupt manifest")
+	}
+	if err := RenameAuthProfile("acct-1", "Label"); err == nil {
+		t.Fatal("rename must fail on a corrupt manifest")
+	}
+	if err := codexClearActiveAuthProfile(); err == nil {
+		t.Fatal("clear-active must fail on a corrupt manifest")
+	}
+	// The corrupt file is left untouched for the user to fix.
+	data, err := os.ReadFile(manifestPath) // #nosec G304 -- test fixture
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if string(data) != "{ truncated" {
+		t.Fatalf("manifest was rewritten: %q", string(data))
+	}
+}
+
 // TestCodexAuthSaveRejectsBYOK: only official login credentials can be saved.
 func TestCodexAuthSaveRejectsBYOK(t *testing.T) {
 	testutil.IsolatedHome(t)

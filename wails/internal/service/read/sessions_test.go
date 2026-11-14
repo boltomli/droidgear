@@ -144,6 +144,29 @@ func TestDeleteSessionGeneric(t *testing.T) {
 	}
 }
 
+// TestDeleteSessionRejectsPathsOutsideSessionsDir: the Droid deletion must stay
+// inside <factory home>/sessions, so a path outside it — including one reached
+// through `..` — cannot delete anything.
+func TestDeleteSessionRejectsPathsOutsideSessionsDir(t *testing.T) {
+	home := testutil.IsolatedHome(t)
+	dir := testutil.SessionsFixtureDir(t, home, "-work-demo")
+	testutil.SessionsWriteSession(t, dir, "sess-1", testutil.SessionsFixtureJSONL, testutil.SessionsFixtureSettings)
+
+	outside := filepath.Join(home, "notes")
+	if err := os.WriteFile(outside+".jsonl", []byte("{}"), 0o600); err != nil {
+		t.Fatalf("write outside session: %v", err)
+	}
+	traversal := filepath.Join(home, "sessions", "..", "..", "notes")
+	for _, path := range []string{outside, traversal} {
+		if err := DeleteSession(path); err == nil || err.Error() != "Session file not found" {
+			t.Fatalf("expected not-found for %q, got %v", path, err)
+		}
+	}
+	if _, err := os.Stat(outside + ".jsonl"); err != nil {
+		t.Fatalf("file outside the sessions dir was deleted: %v", err)
+	}
+}
+
 func TestSessionJSONContract(t *testing.T) {
 	summary := SessionSummary{
 		ID: "id", Title: "t", Project: "p", Model: "m", ModifiedAt: 1,

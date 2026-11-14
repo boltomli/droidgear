@@ -1,0 +1,68 @@
+name: 'CI'
+
+# Fast, unfiltered gate: this is the workflow that runs on *every* pull
+# request, so a change can never merge with failing static checks (upstream
+# #95's intent, kept after the Tauri removal).
+#
+# Scope on purpose:
+#   - No Rust anymore: the Rust workspace was deleted in fe22c57
+#     (docs/developer/tauri-removal-design.zh.md).
+#   - No `wails3 generate bindings` step: the generated bindings directory is
+#     gitignored and `internal/app` pulls in Wails' GTK bindings, so the
+#     typecheck/test/build half of `check:all` runs in `wails.yml` on
+#     windows-latest, after the bindings exist. Baking it in here would need a
+#     WebKitGTK toolchain and would duplicate that job.
+#   - The steps below are the ones that need neither bindings nor a Go GUI
+#     toolchain, which is exactly the set that can run per-PR on Linux for free.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: static gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Prettier
+        run: npm run format:check
+
+      - name: ast-grep
+        run: npm run ast:lint
+
+      # Tauri is gone; this gate keeps it from creeping back into src/, the build
+      # config or CI (no bindings needed).
+      - name: No Tauri references
+        run: npm run check:no-tauri
+
+      # Parses src/store/ui-store.ts only — no generated bindings involved.
+      - name: TUI parity gate
+        run: npm run check:tui-parity
+
+      - name: Version source drift
+        run: node wails/scripts/sync-version.mjs --check
+
+      # Shared registry data must stay byte-identical between the frontend and
+      # the Go service (no bindings needed).
+      - name: Shared registry data drift
+        shell: bash
+        run: cmp src/lib/model-registry-data.json wails/internal/core/registrydata/model-registry-data.json

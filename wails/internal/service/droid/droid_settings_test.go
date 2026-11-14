@@ -143,6 +143,32 @@ func TestDroidSettingsFilesCreateSwitchDelete(t *testing.T) {
 	}
 }
 
+// TestDroidGearSettingsWriteSurvivesAStaleTempEntry: the write used to be a
+// fixed `settings.tmp` sibling + rename, so a leftover entry with that name
+// made every save fail. The shared atomic writer uses a unique temp name.
+func TestDroidGearSettingsWriteSurvivesAStaleTempEntry(t *testing.T) {
+	home := t.TempDir()
+	dir := filepath.Join(home, ".droidgear")
+	if err := os.MkdirAll(filepath.Join(dir, "settings.tmp"), 0o755); err != nil {
+		t.Fatalf("mkdir stale temp: %v", err)
+	}
+
+	if err := droidWriteDroidGearSettings(home, map[string]any{"theme": "dark"}); err != nil {
+		t.Fatalf("droidWriteDroidGearSettings: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "settings.json")) // #nosec G304 -- test fixture
+	if err != nil {
+		t.Fatalf("read settings.json: %v", err)
+	}
+	if !strings.Contains(string(data), `"theme": "dark"`) {
+		t.Fatalf("settings not written: %s", data)
+	}
+	if info, statErr := os.Stat(filepath.Join(dir, "settings.tmp")); statErr != nil || !info.IsDir() {
+		t.Fatalf("stale temp entry must be left alone: %v", statErr)
+	}
+}
+
 func TestDroidSettingsLinkUnlinkLifecycle(t *testing.T) {
 	home := droidSettingsTestHome(t)
 	external := filepath.Join(t.TempDir(), "team-settings.json")

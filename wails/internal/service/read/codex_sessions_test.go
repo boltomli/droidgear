@@ -118,6 +118,32 @@ func TestCodexSessionListTokenUsageFromTailWindow(t *testing.T) {
 	}
 }
 
+// TestCodexSessionDeleteRejectsParentDirTraversal: a path that starts with the
+// sessions dir lexically but resolves outside it (sessions/../config.toml) must
+// be rejected, because both sides are canonicalized before deleting.
+func TestCodexSessionDeleteRejectsParentDirTraversal(t *testing.T) {
+	testutil.IsolatedHome(t)
+
+	testutil.CodexSessFixture(t, testutil.CodexSessFull)
+	home, err := testutil.CoreHomeForTest()
+	if err != nil {
+		t.Fatalf("home: %v", err)
+	}
+	outside := filepath.Join(home, ".codex", "config.toml")
+	if err := os.WriteFile(outside, []byte("x"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	sneaky := filepath.Join(home, ".codex", "sessions", "..", "config.toml")
+
+	err = DeleteCodexSession(sneaky)
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("traversal delete: %v", err)
+	}
+	if _, statErr := os.Stat(outside); statErr != nil {
+		t.Fatalf("outside file must survive: %v", statErr)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Detail
 // ---------------------------------------------------------------------------

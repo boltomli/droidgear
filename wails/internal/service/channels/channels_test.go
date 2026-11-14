@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -97,6 +98,37 @@ func TestSaveChannelsRoundTrip(t *testing.T) {
 	}
 	if len(got) != 2 || got[0].ID != "a" || got[1].BaseURL != "http://b.test" {
 		t.Errorf("round trip = %+v", got)
+	}
+}
+
+// TestChannelAuthFileIsOwnerOnlyAndLeavesNoTempFiles: channel auth holds API
+// keys, so it is written owner-only through the shared atomic writer and no
+// temp sibling is left behind.
+func TestChannelAuthFileIsOwnerOnlyAndLeavesNoTempFiles(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix file modes only")
+	}
+	home := sandbox(t)
+	ctx := context.Background()
+
+	if err := SaveApiKey(ctx, "c1", "sk-test"); err != nil {
+		t.Fatalf("SaveApiKey: %v", err)
+	}
+
+	authDir := filepath.Join(home, ".droidgear", "auth")
+	info, err := os.Stat(filepath.Join(authDir, "c1.json"))
+	if err != nil {
+		t.Fatalf("stat auth file: %v", err)
+	}
+	if mode := info.Mode().Perm(); mode != 0o600 {
+		t.Fatalf("auth file mode = %o, want 600", mode)
+	}
+	entries, err := os.ReadDir(authDir)
+	if err != nil {
+		t.Fatalf("read auth dir: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "c1.json" {
+		t.Fatalf("auth dir must hold only c1.json, got %v", entries)
 	}
 }
 

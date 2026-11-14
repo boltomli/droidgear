@@ -181,6 +181,37 @@ func TestMcpLoadSkipsInvalidServerRecords(t *testing.T) {
 	}
 }
 
+// TestMcpSaveIsNotBlockedByAStaleTempEntry: saves used to go through a fixed
+// `mcp.tmp` sibling, so a leftover entry with that name made every save fail.
+// The shared atomic writer uses a unique temp name instead.
+func TestMcpSaveIsNotBlockedByAStaleTempEntry(t *testing.T) {
+	home := t.TempDir()
+	factory := filepath.Join(home, ".factory")
+	if err := os.MkdirAll(filepath.Join(factory, "mcp.tmp"), 0o755); err != nil {
+		t.Fatalf("mkdir stale temp: %v", err)
+	}
+	path := filepath.Join(factory, "mcp.json")
+	payload := `{"mcpServers":{},"unknown":true}`
+	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil { // #nosec G306 -- test fixture
+		t.Fatalf("write mcp.json: %v", err)
+	}
+
+	if err := saveBaizhiPresetForHome(home); err != nil {
+		t.Fatalf("saveBaizhiPresetForHome: %v", err)
+	}
+
+	raw := mcpReadConfig(t, home)
+	if raw["unknown"] != true {
+		t.Fatalf("unknown field lost: %v", raw["unknown"])
+	}
+	if servers, ok := raw["mcpServers"].(map[string]any); !ok || len(servers) != 1 {
+		t.Fatalf("expected one server entry, got %v", raw["mcpServers"])
+	}
+	if info, err := os.Stat(filepath.Join(factory, "mcp.tmp")); err != nil || !info.IsDir() {
+		t.Fatalf("stale temp entry must be left alone: %v", err)
+	}
+}
+
 func TestMcpBaizhiPresetIsFixedAndNeverReplaced(t *testing.T) {
 	home := t.TempDir()
 	if err := saveBaizhiPresetForHome(home); err != nil {
