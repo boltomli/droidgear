@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.4.0.1
+
+**New Features / 新功能**
+
+- The single-file line now carries upstream `main` 1.4.0 while staying Tauri-free: the upstream fixes reach this build as Go code in `wails/internal/{core,service}` instead of a second Rust implementation, so the GUI, `dg` and the TUI all get them from one layer / 单文件线现在包含上游 `main` 1.4.0 的内容，同时仍然没有 Tauri：上游的修复以 `wails/internal/{core,service}` 里的 Go 代码落地，而不是再写一份 Rust，因此 GUI、`dg` 与 TUI 从同一层拿到同样的行为
+- The embedded DSH schema snapshot covers the Codex subagent bundle: `@deepseek-ai/dsh-subagent-codex` (`subagent-codex` provider + `subagent_codex` tool entry) is no longer silently skipped by `composeEntries`, and both entries are curated as tier B so the advanced page renders them editable / 内置 DSH Schema 快照覆盖 Codex 子代理 bundle：`@deepseek-ai/dsh-subagent-codex`（`subagent-codex` Provider 与 `subagent_codex` 工具条目）不再被 `composeEntries` 静默跳过，两者编为 B 级以便高级页可编辑
+
+**Bug Fixes / 问题修复**
+
+- Session deletion is confined to the tool's own sessions directory on every tool now: Droid deleted whatever path it was handed (no guard at all on this line) and the Codex/Dsh guards compared paths lexically, so `<sessions>/../other` — and a symlink out of the tree — passed; all three canonicalize both sides through a shared helper / 所有工具的会话删除现在都限定在各自会话目录内：Droid 之前对传入路径完全不设防，Codex/Dsh 只做字面前缀比较，`<sessions>/../other` 与指向树外的符号链接都能通过；三者现在都通过共享助手规范化两侧路径
+- Every remaining config write goes through the shared atomic writer (unique temp name, cleanup on failure): the Droid settings writers no longer hand-roll a fixed `settings.tmp` sibling, spec updates are atomic, and a stale `settings.tmp`/`mcp.tmp` entry can no longer block saves. Channel auth files hold API keys, so they are written owner-only (0600) on Unix / 剩余配置写入统一走共享原子写入器（唯一临时名、失败清理）：Droid 设置不再手写固定的 `settings.tmp` 旁路文件，规格更新改为原子写，遗留的 `settings.tmp`/`mcp.tmp` 条目不再阻塞保存。渠道认证文件存放 API Key，在 Unix 上改为仅所有者可读写（0600）
+- A corrupt auth-profile manifest now fails the operation instead of being read as an empty list, for both the Droid (Factory) and Codex stores, so the next save, switch, delete or rename can no longer rewrite `profiles.json` without the existing profiles. A missing manifest still means "no profiles yet" / 认证 Profile 清单损坏时报错，而不是读成空清单（Droid/Factory 与 Codex 两个存储均已修复），后续保存、切换、删除或重命名不会再重写 `profiles.json` 丢掉已有 Profile。清单缺失仍表示「尚无 Profile」
+
+**Improvements / 改进**
+
+- CI runs a static gate on every pull request (prettier, ast-grep, the no-Tauri gate, the TUI parity gate, version and shared-registry drift); the typecheck/test/build half plus the Go vet/test run stay in `wails.yml`, which generates the bindings first / CI 在每次 Pull Request 上跑静态门禁（prettier、ast-grep、no-Tauri、TUI parity、版本与共享注册表漂移）；类型检查/测试/构建那一半以及 Go vet/test 留在 `wails.yml`，由它先生成 bindings
+- macOS arm64 assets are **opt-in** — this release publishes `windows-x64`, `windows-arm64` and `linux-x64` only. Pass `build_macos=true` to a `workflow_dispatch` run to build the ad-hoc signed macOS binaries / macOS arm64 资产改为**可选**——本次发布只提供 `windows-x64`、`windows-arm64` 与 `linux-x64`。需要 macOS（ad-hoc 签名）时用 `workflow_dispatch` 指定 `build_macos=true`
+
+> Version alignment: `1.4.0.1` is upstream `main`'s `1.4.0` plus this line's 4th part, so the single-file line is no longer numerically behind `main` and the tag (`wails-v1.4.0.1`) still matches `package.json` exactly. / 版本对齐：`1.4.0.1` 即上游 `main` 的 `1.4.0` 加上本线的第 4 位，单文件线不再落后于 `main` 的版本号，tag（`wails-v1.4.0.1`）仍与 `package.json` 完全一致。
+
 ## v1.4.0
 
 **New Features / 新功能**
