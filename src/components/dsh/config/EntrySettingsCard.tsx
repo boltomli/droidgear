@@ -309,7 +309,7 @@ export function EntrySettingsCard({
               const kind = override?.kind ?? field.kind
               const value = hasDraft(field.name)
                 ? (drafts[field.name] ?? null)
-                : field.value
+                : (field.value ?? null)
               const js = isJsExpression(field.value)
               const tierEditable = editableTiers.includes(field.tier)
               const readOnly =

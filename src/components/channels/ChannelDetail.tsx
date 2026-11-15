@@ -155,7 +155,7 @@ export function ChannelDetail({ channel, onEdit }: ChannelDetailProps) {
     const result = await commands.fetchModelsByApiKey(
       channel.baseUrl,
       apiKey.key,
-      channel.type === 'deep-seek' ? 'deepseek' : apiKey.platform
+      channel.type === 'deep-seek' ? 'deepseek' : (apiKey.platform ?? null)
     )
     setIsFetchingModels(false)
 

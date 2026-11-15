@@ -90,7 +90,7 @@ export function supportsMultipleImages(model: {
 
 /** Builds playground models from a channel's `/v1/models` selection. */
 export function buildImportedImageModels(params: {
-  models: { id: string; name: string | null }[]
+  models: { id: string; name?: string | null }[]
   selectedIds: ReadonlySet<string>
   channelId: string
   tokenId: number | null

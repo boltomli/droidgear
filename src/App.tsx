@@ -81,7 +81,7 @@ function App() {
             const savedLanguage =
               result.status === 'ok' ? result.data.language : null
 
-            await initializeLanguage(savedLanguage)
+            await initializeLanguage(savedLanguage ?? null)
             await buildAppMenu()
             logger.debug('Application menu built')
             setupMenuLanguageListener()

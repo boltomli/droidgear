@@ -716,7 +716,7 @@ export type AppPreferences_Deserialize = {
 	 *  User's preferred language (e.g., "en", "es", "de")
 	 *  If None, uses system locale detection
 	 */
-	language: string | null,
+	language?: string | null,
 	/**
 	 *  Custom font family for terminal (e.g., "Cascadia Mono NF")
 	 *  If None, uses default monospace fonts
@@ -788,7 +788,14 @@ export type AuthProfile = {
 	createdAt: string,
 };
 
-export type AuthProfileState = {
+export type AuthProfileState = AuthProfileState_Serialize | AuthProfileState_Deserialize;
+
+export type AuthProfileState_Deserialize = {
+	active?: string | null,
+	profiles: AuthProfile[],
+};
+
+export type AuthProfileState_Serialize = {
 	active: string | null,
 	profiles: AuthProfile[],
 };
@@ -798,8 +805,8 @@ export type BlockStreamingChunk = BlockStreamingChunk_Serialize | BlockStreaming
 
 /**  Block streaming chunk configuration */
 export type BlockStreamingChunk_Deserialize = {
-	minChars: number | null,
-	maxChars: number | null,
+	minChars?: number | null,
+	maxChars?: number | null,
 };
 
 /**  Block streaming chunk configuration */
@@ -813,7 +820,7 @@ export type BlockStreamingCoalesce = BlockStreamingCoalesce_Serialize | BlockStr
 
 /**  Block streaming coalesce configuration */
 export type BlockStreamingCoalesce_Deserialize = {
-	idleMs: number | null,
+	idleMs?: number | null,
 };
 
 /**  Block streaming coalesce configuration */
@@ -826,11 +833,11 @@ export type BlockStreamingConfig = BlockStreamingConfig_Serialize | BlockStreami
 
 /**  Block streaming configuration */
 export type BlockStreamingConfig_Deserialize = {
-	blockStreamingDefault: string | null,
-	blockStreamingBreak: string | null,
-	blockStreamingChunk: BlockStreamingChunk_Deserialize | null,
-	blockStreamingCoalesce: BlockStreamingCoalesce_Deserialize | null,
-	telegramChannel: TelegramChannelConfig_Deserialize | null,
+	blockStreamingDefault?: string | null,
+	blockStreamingBreak?: string | null,
+	blockStreamingChunk?: BlockStreamingChunk_Deserialize | null,
+	blockStreamingCoalesce?: BlockStreamingCoalesce_Deserialize | null,
+	telegramChannel?: TelegramChannelConfig_Deserialize | null,
 };
 
 /**  Block streaming configuration */
@@ -866,7 +873,32 @@ export type ChannelFilter_Serialize = {
 };
 
 /**  Token from channel API */
-export type ChannelToken = {
+export type ChannelToken = ChannelToken_Serialize | ChannelToken_Deserialize;
+
+/**  Token from channel API */
+export type ChannelToken_Deserialize = {
+	/**  Token ID from API */
+	id: number | null,
+	/**  Token name */
+	name: string,
+	/**  Token key (sk-xxx) */
+	key: string,
+	/**  Status (1=enabled, 2=disabled, etc.) */
+	status: number,
+	/**  Remaining quota */
+	remainQuota: number | null,
+	/**  Used quota */
+	usedQuota: number | null,
+	/**  Unlimited quota flag */
+	unlimitedQuota: boolean,
+	/**  Platform type (openai, anthropic, gemini, etc.) - from Sub2API */
+	platform?: string | null,
+	/**  Group name - from Sub2API */
+	groupName?: string | null,
+};
+
+/**  Token from channel API */
+export type ChannelToken_Serialize = {
 	/**  Token ID from API */
 	id: number | null,
 	/**  Token name */
@@ -897,13 +929,13 @@ export type ClaudeCodeProfile = ClaudeCodeProfile_Serialize | ClaudeCodeProfile_
 export type ClaudeCodeProfile_Deserialize = {
 	id: string,
 	name: string,
-	description: string | null,
-	baseUrl: string | null,
-	bearerToken: string | null,
-	model: string | null,
+	description?: string | null,
+	baseUrl?: string | null,
+	bearerToken?: string | null,
+	model?: string | null,
 	smallModelUsesMainModel?: boolean,
-	smallModel: string | null,
-	reasoningEffort: ClaudeReasoningEffort | null,
+	smallModel?: string | null,
+	reasoningEffort?: ClaudeReasoningEffort | null,
 	thinkingMode?: ClaudeThinkingMode,
 	createdAt: string,
 	updatedAt: string,
@@ -933,7 +965,7 @@ export type ClaudeConfigStatus_Deserialize = {
 	settingsExists: boolean,
 	settingsPath: string,
 	configDir: string,
-	parseError: string | null,
+	parseError?: string | null,
 };
 
 /**  Claude Code live config status. */
@@ -949,12 +981,12 @@ export type ClaudeCurrentConfig = ClaudeCurrentConfig_Serialize | ClaudeCurrentC
 
 /**  Current Claude Code configuration read back from live settings. */
 export type ClaudeCurrentConfig_Deserialize = {
-	baseUrl: string | null,
-	bearerToken: string | null,
-	model: string | null,
+	baseUrl?: string | null,
+	bearerToken?: string | null,
+	model?: string | null,
 	smallModelUsesMainModel?: boolean,
-	smallModel: string | null,
-	reasoningEffort: ClaudeReasoningEffort | null,
+	smallModel?: string | null,
+	reasoningEffort?: ClaudeReasoningEffort | null,
 	thinkingMode?: ClaudeThinkingMode,
 };
 
@@ -995,7 +1027,7 @@ export type ClaudeTemporaryRunDebugPreview_Deserialize = {
 	childProgram: string,
 	childArgs: string[],
 	liveConfigDir: string,
-	inheritedEnvFileSource: string | null,
+	inheritedEnvFileSource?: string | null,
 	env: ([string, string])[],
 	unsetEnv: string[],
 	secretEnvKeys: string[],
@@ -1041,7 +1073,7 @@ export type CodexAuthProfile = CodexAuthProfile_Serialize | CodexAuthProfile_Des
 export type CodexAuthProfileState = CodexAuthProfileState_Serialize | CodexAuthProfileState_Deserialize;
 
 export type CodexAuthProfileState_Deserialize = {
-	active: string | null,
+	active?: string | null,
 	profiles: CodexAuthProfile_Deserialize[],
 	isCurrentOfficial: boolean,
 };
@@ -1062,7 +1094,7 @@ export type CodexAuthProfile_Deserialize = {
 	 *  The CodexProfile ID that was active when this auth profile was saved.
 	 *  When restoring, this profile will also be applied (config.toml only).
 	 */
-	codexProfileId: string | null,
+	codexProfileId?: string | null,
 	/**  Live config.toml `model` snapshotted when this auth was saved. */
 	model?: string | null,
 	/**  Live config.toml `model_reasoning_effort` snapshotted when this auth was saved. */
@@ -1105,8 +1137,8 @@ export type CodexContentBlock = CodexContentBlock_Serialize | CodexContentBlock_
 /**  Message content block */
 export type CodexContentBlock_Deserialize = {
 	type: string,
-	text: string | null,
-	thinking: string | null,
+	text?: string | null,
+	thinking?: string | null,
 };
 
 /**  Message content block */
@@ -1124,9 +1156,9 @@ export type CodexCurrentConfig_Deserialize = {
 	providers?: { [key in string]: CodexProviderConfig_Deserialize },
 	modelProvider: string,
 	model: string,
-	modelReasoningEffort: string | null,
+	modelReasoningEffort?: string | null,
 	apiKeyModelDiscovery?: boolean,
-	apiKey: string | null,
+	apiKey?: string | null,
 };
 
 /**  当前 Codex Live 配置（从 `~/.codex/*` 读取） */
@@ -1162,14 +1194,14 @@ export type CodexProfile = CodexProfile_Serialize | CodexProfile_Deserialize;
 export type CodexProfile_Deserialize = {
 	id: string,
 	name: string,
-	description: string | null,
+	description?: string | null,
 	createdAt: string,
 	updatedAt: string,
 	providers?: { [key in string]: CodexProviderConfig_Deserialize },
 	modelProvider: string,
 	model: string,
-	modelReasoningEffort: string | null,
-	apiKey: string | null,
+	modelReasoningEffort?: string | null,
+	apiKey?: string | null,
 	/**  Saved Codex auth profile name to restore on apply (openai mode only). */
 	authProfileName?: string | null,
 	apiKeyModelDiscovery?: boolean,
@@ -1197,28 +1229,28 @@ export type CodexProviderConfig = CodexProviderConfig_Serialize | CodexProviderC
 
 /**  Codex Provider 配置（对应 config.toml 中的 [model_providers.<id>]） */
 export type CodexProviderConfig_Deserialize = {
-	name: string | null,
-	baseUrl: string | null,
-	wireApi: string | null,
-	requiresOpenaiAuth: boolean | null,
-	envKey: string | null,
-	envKeyInstructions: string | null,
-	httpHeaders: { [key in string]: string } | null,
-	queryParams: { [key in string]: string } | null,
-	model: string | null,
-	modelReasoningEffort: string | null,
+	name?: string | null,
+	baseUrl?: string | null,
+	wireApi?: string | null,
+	requiresOpenaiAuth?: boolean | null,
+	envKey?: string | null,
+	envKeyInstructions?: string | null,
+	httpHeaders?: { [key in string]: string } | null,
+	queryParams?: { [key in string]: string } | null,
+	model?: string | null,
+	modelReasoningEffort?: string | null,
 	/**
 	 *  DroidGear-only: written to config.toml top-level
 	 *  `model_context_window` while this provider is active.
 	 */
-	modelContextWindow: number | null,
+	modelContextWindow?: number | null,
 	/**
 	 *  DroidGear-only: written to config.toml top-level
 	 *  `model_auto_compact_token_limit` while this provider is active.
 	 */
-	modelAutoCompactTokenLimit: number | null,
+	modelAutoCompactTokenLimit?: number | null,
 	/**  Provider API key. Written to config.toml as `experimental_bearer_token`. */
-	apiKey: string | null,
+	apiKey?: string | null,
 };
 
 /**  Codex Provider 配置（对应 config.toml 中的 [model_providers.<id>]） */
@@ -1345,15 +1377,15 @@ export type ConfigPaths = ConfigPaths_Serialize | ConfigPaths_Deserialize;
 
 /**  User-defined configuration paths (only stores explicitly set paths) */
 export type ConfigPaths_Deserialize = {
-	factory: string | null,
-	opencode: string | null,
-	opencodeAuth: string | null,
-	codex: string | null,
-	claude: string | null,
-	openclaw: string | null,
-	hermes: string | null,
-	pi: string | null,
-	omp: string | null,
+	factory?: string | null,
+	opencode?: string | null,
+	opencodeAuth?: string | null,
+	codex?: string | null,
+	claude?: string | null,
+	openclaw?: string | null,
+	hermes?: string | null,
+	pi?: string | null,
+	omp?: string | null,
 };
 
 /**  User-defined configuration paths (only stores explicitly set paths) */
@@ -1376,13 +1408,13 @@ export type ConnectionDiagnostics_Deserialize = {
 	provider: string,
 	modelId: string,
 	latencyMs: number,
-	error: string | null,
+	error?: string | null,
 	timestamp: string,
 	testMode: TestMode,
 	/**  Actual model response text (inference mode only). */
-	responseText: string | null,
+	responseText?: string | null,
 	/**  The prompt that was sent (inference mode only). */
-	promptUsed: string | null,
+	promptUsed?: string | null,
 };
 
 export type ConnectionDiagnostics_Serialize = {
@@ -1413,8 +1445,8 @@ export type ContentBlock = ContentBlock_Serialize | ContentBlock_Deserialize;
 /**  Message content block */
 export type ContentBlock_Deserialize = {
 	type: string,
-	text: string | null,
-	thinking: string | null,
+	text?: string | null,
+	thinking?: string | null,
 };
 
 /**  Message content block */
@@ -1424,7 +1456,19 @@ export type ContentBlock_Serialize = {
 	thinking?: string,
 };
 
-export type CopilotChannelSelection = {
+export type CopilotChannelSelection = CopilotChannelSelection_Serialize | CopilotChannelSelection_Deserialize;
+
+export type CopilotChannelSelection_Deserialize = {
+	channelType: ChannelType,
+	baseUrl: string,
+	apiKey: string,
+	platform?: string | null,
+	provider?: Provider | null,
+	model: string,
+	maxOutputTokens?: number | null,
+};
+
+export type CopilotChannelSelection_Serialize = {
 	channelType: ChannelType,
 	baseUrl: string,
 	apiKey: string,
@@ -1443,12 +1487,12 @@ export type CopilotCurrentConfig = CopilotCurrentConfig_Serialize | CopilotCurre
 
 export type CopilotCurrentConfig_Deserialize = {
 	isByok: boolean,
-	baseUrl: string | null,
-	providerType: string | null,
-	apiKey: string | null,
-	model: string | null,
-	maxPromptTokens: number | null,
-	maxOutputTokens: number | null,
+	baseUrl?: string | null,
+	providerType?: string | null,
+	apiKey?: string | null,
+	model?: string | null,
+	maxPromptTokens?: number | null,
+	maxOutputTokens?: number | null,
 };
 
 export type CopilotCurrentConfig_Serialize = {
@@ -1466,16 +1510,16 @@ export type CopilotProfile = CopilotProfile_Serialize | CopilotProfile_Deseriali
 export type CopilotProfile_Deserialize = {
 	id: string,
 	name: string,
-	description: string | null,
+	description?: string | null,
 	createdAt: string,
 	updatedAt: string,
 	useOfficialAuth?: boolean,
-	baseUrl: string | null,
-	providerType: string | null,
-	apiKey: string | null,
-	model: string | null,
-	maxPromptTokens: number | null,
-	maxOutputTokens: number | null,
+	baseUrl?: string | null,
+	providerType?: string | null,
+	apiKey?: string | null,
+	model?: string | null,
+	maxPromptTokens?: number | null,
+	maxOutputTokens?: number | null,
 };
 
 export type CopilotProfile_Serialize = {
@@ -1501,11 +1545,11 @@ export type CustomModel_Deserialize = {
 	/**  Model identifier sent via API */
 	model: string,
 	/**  Unique identifier for the model (e.g., "custom:ModelName-0") */
-	id: string | null,
+	id?: string | null,
 	/**  Index of the model in the list */
-	index: number | null,
+	index?: number | null,
 	/**  Human-friendly name shown in model selector */
-	displayName: string | null,
+	displayName?: string | null,
 	/**  API endpoint base URL */
 	baseUrl: string,
 	/**  API key for the provider */
@@ -1513,13 +1557,13 @@ export type CustomModel_Deserialize = {
 	/**  Provider type */
 	provider: Provider,
 	/**  Maximum output tokens */
-	maxOutputTokens: number | null,
+	maxOutputTokens?: number | null,
 	/**  Whether to disable image support for this model (default: images supported) */
-	noImageSupport: boolean | null,
+	noImageSupport?: boolean | null,
 	/**  Additional provider-specific arguments */
-	extraArgs: { [key in string]: JsonValue } | null,
+	extraArgs?: { [key in string]: JsonValue } | null,
 	/**  Additional HTTP headers */
-	extraHeaders: { [key in string]: string } | null,
+	extraHeaders?: { [key in string]: string } | null,
 };
 
 /**  Custom model configuration */
@@ -1565,7 +1609,7 @@ export type DshCompatConfig = DshCompatConfig_Serialize | DshCompatConfig_Deseri
 
 /**  Dsh provider compatibility flags. Unknown fields are retained. */
 export type DshCompatConfig_Deserialize = {
-	supportsDeveloperRole: boolean | null,
+	supportsDeveloperRole?: boolean | null,
 };
 
 /**  Dsh provider compatibility flags. Unknown fields are retained. */
@@ -1574,7 +1618,30 @@ export type DshCompatConfig_Serialize = {
 };
 
 /**  One composed plugin entry. */
-export type DshConfigEntryView = {
+export type DshConfigEntryView = DshConfigEntryView_Serialize | DshConfigEntryView_Deserialize;
+
+/**  One composed plugin entry. */
+export type DshConfigEntryView_Deserialize = {
+	id: string,
+	packageName: string,
+	/**  `bundle:<package>` | `profile` | `home`. */
+	layer: string,
+	tier: string,
+	description: string,
+	disabled: boolean,
+	/**  Effective config contains at least one `!!js` expression. */
+	hasJs: boolean,
+	/**  Effective config; secret fields are replaced by `{"$secret": true}`. */
+	config?: JsonValue | null,
+	/**  The profile patch carries a config override for this entry. */
+	overridden: boolean,
+	/**  The home overlay carries a config override for this entry. */
+	shadowedByHome: boolean,
+	fields: DshConfigFieldView_Deserialize[],
+};
+
+/**  One composed plugin entry. */
+export type DshConfigEntryView_Serialize = {
 	id: string,
 	packageName: string,
 	/**  `bundle:<package>` | `profile` | `home`. */
@@ -1590,11 +1657,29 @@ export type DshConfigEntryView = {
 	overridden: boolean,
 	/**  The home overlay carries a config override for this entry. */
 	shadowedByHome: boolean,
-	fields: DshConfigFieldView[],
+	fields: DshConfigFieldView_Serialize[],
 };
 
 /**  One top-level configuration field with its effective value. */
-export type DshConfigFieldView = {
+export type DshConfigFieldView = DshConfigFieldView_Serialize | DshConfigFieldView_Deserialize;
+
+/**  One top-level configuration field with its effective value. */
+export type DshConfigFieldView_Deserialize = {
+	name: string,
+	/**  `string` | `number` | `boolean` | `enum` | `json`. */
+	kind: string,
+	value?: JsonValue | null,
+	default?: JsonValue | null,
+	enumValues: string[],
+	volatile: boolean,
+	secret: boolean,
+	description: string,
+	overridden: boolean,
+	tier: string,
+};
+
+/**  One top-level configuration field with its effective value. */
+export type DshConfigFieldView_Serialize = {
 	name: string,
 	/**  `string` | `number` | `boolean` | `enum` | `json`. */
 	kind: string,
@@ -1609,7 +1694,35 @@ export type DshConfigFieldView = {
 };
 
 /**  Everything the Dsh configuration page needs for one profile. */
-export type DshConfigSnapshot = {
+export type DshConfigSnapshot = DshConfigSnapshot_Serialize | DshConfigSnapshot_Deserialize;
+
+/**  Everything the Dsh configuration page needs for one profile. */
+export type DshConfigSnapshot_Deserialize = {
+	/**  DSH version the generated schema describes. */
+	schemaVersion: string,
+	/**  Version of the installed desktop app, when it can be detected. */
+	installedVersion?: string | null,
+	/**  Resolved profile name (`desktop`, `web`, ...). */
+	profile?: string | null,
+	/**  Effective profile patch file (`cordis.patch.yml`). */
+	profilePatchPath: string,
+	/**  Home overlay patch (`~/.dsh/cordis.patch.yml`), read-only. */
+	homePatchPath: string,
+	homePatchExists: boolean,
+	/**  Legacy pre-0.2 settings document. */
+	legacySettingsPath: string,
+	/**  Whether the legacy document (or its `.imported` rename) exists. */
+	legacySettingsExists: boolean,
+	/**  Content hash of the profile patch (`"absent"` when missing). */
+	patchHash: string,
+	/**  Composed entries, lowest layer first. */
+	entries: DshConfigEntryView_Deserialize[],
+	/**  Migration / safety warnings for the UI. */
+	warnings: DshMigrationWarning_Deserialize[],
+};
+
+/**  Everything the Dsh configuration page needs for one profile. */
+export type DshConfigSnapshot_Serialize = {
 	/**  DSH version the generated schema describes. */
 	schemaVersion: string,
 	/**  Version of the installed desktop app, when it can be detected. */
@@ -1628,13 +1741,39 @@ export type DshConfigSnapshot = {
 	/**  Content hash of the profile patch (`"absent"` when missing). */
 	patchHash: string,
 	/**  Composed entries, lowest layer first. */
-	entries: DshConfigEntryView[],
+	entries: DshConfigEntryView_Serialize[],
 	/**  Migration / safety warnings for the UI. */
-	warnings: DshMigrationWarning[],
+	warnings: DshMigrationWarning_Serialize[],
 };
 
 /**  Dsh configuration file status. */
-export type DshConfigStatus = {
+export type DshConfigStatus = DshConfigStatus_Serialize | DshConfigStatus_Deserialize;
+
+/**  Dsh configuration file status. */
+export type DshConfigStatus_Deserialize = {
+	/**
+	 *  Resolved profile name (`None` when no profile exists and the legacy
+	 *  `settings.yaml` layout is used).
+	 */
+	profileName?: string | null,
+	configExists: boolean,
+	/**
+	 *  Effective file DroidGear writes providers into: the profile's
+	 *  `cordis.patch.yml`, or the legacy `settings.yaml` without a profile.
+	 */
+	configPath: string,
+	/**
+	 *  Whether the legacy `~/.dsh/settings.yaml` still exists (modern Dsh
+	 *  imports it once and renames it to `settings.yaml.imported`).
+	 */
+	legacyExists: boolean,
+	legacyPath: string,
+	credentialsExists: boolean,
+	credentialsPath: string,
+};
+
+/**  Dsh configuration file status. */
+export type DshConfigStatus_Serialize = {
 	/**
 	 *  Resolved profile name (`None` when no profile exists and the legacy
 	 *  `settings.yaml` layout is used).
@@ -1693,7 +1832,20 @@ export type DshCurrentConfig_Serialize = {
 };
 
 /**  One migration or safety warning. */
-export type DshMigrationWarning = {
+export type DshMigrationWarning = DshMigrationWarning_Serialize | DshMigrationWarning_Deserialize;
+
+/**  One migration or safety warning. */
+export type DshMigrationWarning_Deserialize = {
+	code: string,
+	/**  `info` | `warning` | `error`. */
+	severity: string,
+	entryId?: string | null,
+	message: string,
+	hint: string,
+};
+
+/**  One migration or safety warning. */
+export type DshMigrationWarning_Serialize = {
 	code: string,
 	/**  `info` | `warning` | `error`. */
 	severity: string,
@@ -1708,11 +1860,11 @@ export type DshModel = DshModel_Serialize | DshModel_Deserialize;
 /**  Dsh model definition inside a provider. */
 export type DshModel_Deserialize = {
 	id: string,
-	name: string | null,
-	contextWindow: number | null,
-	maxTokens: number | null,
+	name?: string | null,
+	contextWindow?: number | null,
+	maxTokens?: number | null,
 	/**  Reasoning effort mapping, e.g. `{"off": null, "high": "high"}`. */
-	reasoningEfforts: { [key in string]: string | null } | null,
+	reasoningEfforts?: { [key in string]: string | null } | null,
 	/**
 	 *  Request modalities this model accepts (`text`, `image`).
 	 * 
@@ -1720,7 +1872,7 @@ export type DshModel_Deserialize = {
 	 *  `defaultInput` (`text`), and a custom route has no installed entry, so
 	 *  omitting this makes images unsupported even for a vision model.
 	 */
-	input: string[] | null,
+	input?: string[] | null,
 };
 
 /**  Dsh model definition inside a provider. */
@@ -1756,19 +1908,19 @@ export type DshProviderConfig = DshProviderConfig_Serialize | DshProviderConfig_
 
 /**  Dsh provider configuration (one entry of `llm-pi-ai.providers`). */
 export type DshProviderConfig_Deserialize = {
-	displayName: string | null,
+	displayName?: string | null,
 	/**  The file uses `baseURL` (not `baseUrl`). */
-	baseURL: string | null,
-	apiKeyEnv: string | null,
-	api: string | null,
+	baseURL?: string | null,
+	apiKeyEnv?: string | null,
+	api?: string | null,
 	/**
 	 *  Route default thinking level applied when a session selects no effort.
 	 * 
 	 *  DSH resolves a pi-ai model's `defaultEffort` from this route field only,
 	 *  so a BYOK route without it shows "Default" in the model picker.
 	 */
-	reasoning: string | null,
-	compat: DshCompatConfig_Deserialize | null,
+	reasoning?: string | null,
+	compat?: DshCompatConfig_Deserialize | null,
 	models?: DshModel_Deserialize[],
 };
 
@@ -1974,7 +2126,7 @@ export type HermesCurrentConfig_Deserialize = {
 	 */
 	models: HermesModelConfig_Deserialize[],
 	/**  推理努力程度（对应 config.yaml 中的 agent.reasoning_effort） */
-	reasoningEffort: string | null,
+	reasoningEffort?: string | null,
 };
 
 /**  当前 Hermes Live 配置（从 `~/.hermes/config.yaml` 读取） */
@@ -2010,15 +2162,15 @@ export type HermesModelConfig = HermesModelConfig_Serialize | HermesModelConfig_
  */
 export type HermesModelConfig_Deserialize = {
 	/**  配置名称（对应 `providers` 字典的 key，也是 `custom:<name>` 的引用名）。 */
-	name: string | null,
+	name?: string | null,
 	/**  模型 ID（写入 `model.default` 或 `providers.<name>.default_model`）。 */
-	default: string | null,
+	default?: string | null,
 	/**  显式 provider（如 openrouter / deepseek / custom）。留空时按 name/base_url 推导。 */
-	provider: string | null,
+	provider?: string | null,
 	/**  OpenAI 兼容端点地址（自定义供应商使用）。 */
-	baseUrl: string | null,
+	baseUrl?: string | null,
 	/**  API 密钥（自定义供应商使用）。 */
-	apiKey: string | null,
+	apiKey?: string | null,
 	/**  是否为默认配置（apply 时写入 `model.default` + `model.provider`）。 */
 	isDefault?: boolean,
 };
@@ -2064,7 +2216,7 @@ export type HermesProfile = HermesProfile_Serialize | HermesProfile_Deserialize;
 export type HermesProfile_Deserialize = {
 	id: string,
 	name: string,
-	description: string | null,
+	description?: string | null,
 	createdAt: string,
 	updatedAt: string,
 	/**  模型配置列表（至少一条应标记 is_default）。 */
@@ -2073,7 +2225,7 @@ export type HermesProfile_Deserialize = {
 	 *  推理努力程度（对应 config.yaml 中的 agent.reasoning_effort）
 	 *  选项：none, minimal, low, medium, high, xhigh, max, ultra
 	 */
-	reasoningEffort: string | null,
+	reasoningEffort?: string | null,
 };
 
 /**
@@ -2098,7 +2250,22 @@ export type HermesProfile_Serialize = {
 };
 
 /**  One generated image, surfaced to the UI and stored with the task. */
-export type ImageAsset = {
+export type ImageAsset = ImageAsset_Serialize | ImageAsset_Deserialize;
+
+/**  One generated image, surfaced to the UI and stored with the task. */
+export type ImageAsset_Deserialize = {
+	/**
+	 *  Absolute path of the decoded file under the playground media directory.
+	 *  Absent when the upstream only returned a link that could not be saved.
+	 */
+	localPath?: string | null,
+	/**  Remote URL, kept so the image can still be opened or re-downloaded. */
+	url?: string | null,
+	mimeType: string,
+};
+
+/**  One generated image, surfaced to the UI and stored with the task. */
+export type ImageAsset_Serialize = {
 	/**
 	 *  Absolute path of the decoded file under the playground media directory.
 	 *  Absent when the upstream only returned a link that could not be saved.
@@ -2110,11 +2277,35 @@ export type ImageAsset = {
 };
 
 /**  An image model configured for the playground. */
-export type ImageModel = {
+export type ImageModel = ImageModel_Serialize | ImageModel_Deserialize;
+
+/**  An image model configured for the playground. */
+export type ImageModel_Deserialize = {
 	id: string,
 	name: string,
 	modelId: string,
-	source: ImageSource,
+	source: ImageSource_Deserialize,
+	protocol: ImageProtocol,
+	/**
+	 *  Suggested size values. The meaning follows the protocol: `WxH` for
+	 *  Chat/Responses, `WxH`, `A:B` or `1K`/`2K`/`4K` for Google.
+	 */
+	sizes: string[],
+	/**
+	 *  Suggested quality values (Responses: low/medium/high/auto, Google:
+	 *  1K/2K/4K).
+	 */
+	qualities: string[],
+	/**  Whether the model accepts reference images. */
+	supportsImageInput: boolean,
+};
+
+/**  An image model configured for the playground. */
+export type ImageModel_Serialize = {
+	id: string,
+	name: string,
+	modelId: string,
+	source: ImageSource_Serialize,
 	protocol: ImageProtocol,
 	/**
 	 *  Suggested size values. The meaning follows the protocol: `WxH` for
@@ -2140,7 +2331,20 @@ export type ImageProtocol =
 "google";
 
 /**  Where an image model gets its endpoint and credentials. */
-export type ImageSource = 
+export type ImageSource = ImageSource_Serialize | ImageSource_Deserialize;
+
+/**  Where an image model gets its endpoint and credentials. */
+export type ImageSource_Deserialize = 
+/**
+ *  Reuse an existing channel. `token_id` is the token selected when the
+ *  model was imported; `None` lets the resolver pick the first active one.
+ */
+{ kind: "channel"; channelId: string; tokenId?: number | null } | 
+/**  A standalone endpoint with its own API key. */
+{ kind: "custom"; baseUrl: string; apiKey: string };
+
+/**  Where an image model gets its endpoint and credentials. */
+export type ImageSource_Serialize = 
 /**
  *  Reuse an existing channel. `token_id` is the token selected when the
  *  model was imported; `None` lets the resolver pick the first active one.
@@ -2163,7 +2367,13 @@ export type ImageTaskParams = {
  *  A playground image task persisted under
  *  `~/.droidgear/playground/image_tasks.json`.
  */
-export type ImageTaskRecord = {
+export type ImageTaskRecord = ImageTaskRecord_Serialize | ImageTaskRecord_Deserialize;
+
+/**
+ *  A playground image task persisted under
+ *  `~/.droidgear/playground/image_tasks.json`.
+ */
+export type ImageTaskRecord_Deserialize = {
 	id: string,
 	modelId: string,
 	modelName: string,
@@ -2171,10 +2381,37 @@ export type ImageTaskRecord = {
 	 *  Snapshot of the model at submit time. Custom API keys are stripped on
 	 *  disk and merged back from `image_secrets.json` on load.
 	 */
-	model: ImageModel,
+	model: ImageModel_Deserialize,
 	params: ImageTaskParams,
 	status: ImageTaskStatus,
-	images: ImageAsset[],
+	images: ImageAsset_Deserialize[],
+	revisedPrompt?: string | null,
+	/**
+	 *  Text the model returned together with the images (Gemini usually adds a
+	 *  short explanation).
+	 */
+	responseText?: string | null,
+	createdAt: number,
+	completedAt?: number | null,
+	error?: string | null,
+};
+
+/**
+ *  A playground image task persisted under
+ *  `~/.droidgear/playground/image_tasks.json`.
+ */
+export type ImageTaskRecord_Serialize = {
+	id: string,
+	modelId: string,
+	modelName: string,
+	/**
+	 *  Snapshot of the model at submit time. Custom API keys are stripped on
+	 *  disk and merged back from `image_secrets.json` on load.
+	 */
+	model: ImageModel_Serialize,
+	params: ImageTaskParams,
+	status: ImageTaskStatus,
+	images: ImageAsset_Serialize[],
 	revisedPrompt: string | null,
 	/**
 	 *  Text the model returned together with the images (Gemini usually adds a
@@ -2187,8 +2424,20 @@ export type ImageTaskRecord = {
 };
 
 /**  One protocol result, normalized for the playground UI. */
-export type ImageTaskSnapshot = {
-	images: ImageAsset[],
+export type ImageTaskSnapshot = ImageTaskSnapshot_Serialize | ImageTaskSnapshot_Deserialize;
+
+/**  One protocol result, normalized for the playground UI. */
+export type ImageTaskSnapshot_Deserialize = {
+	images: ImageAsset_Deserialize[],
+	revisedPrompt?: string | null,
+	responseText?: string | null,
+	/**  Milliseconds since the Unix epoch. */
+	completedAt: number,
+};
+
+/**  One protocol result, normalized for the playground UI. */
+export type ImageTaskSnapshot_Serialize = {
+	images: ImageAsset_Serialize[],
 	revisedPrompt: string | null,
 	responseText: string | null,
 	/**  Milliseconds since the Unix epoch. */
@@ -2214,15 +2463,15 @@ export type McpServerConfig_Deserialize = {
 	/**  Whether the server is disabled */
 	disabled?: boolean,
 	/**  Command to run (stdio only) */
-	command: string | null,
+	command?: string | null,
 	/**  Command arguments (stdio only) */
-	args: string[] | null,
+	args?: string[] | null,
 	/**  Environment variables (stdio only) */
-	env: { [key in string]: string } | null,
+	env?: { [key in string]: string } | null,
 	/**  HTTP URL (http only) */
-	url: string | null,
+	url?: string | null,
 	/**  HTTP headers (http only) */
-	headers: { [key in string]: string } | null,
+	headers?: { [key in string]: string } | null,
 };
 
 /**  MCP server configuration */
@@ -2267,10 +2516,10 @@ export type MissionModelSettings = MissionModelSettings_Serialize | MissionModel
 
 /**  Mission model settings for Mission mode workers */
 export type MissionModelSettings_Deserialize = {
-	workerModel: string | null,
-	workerReasoningEffort: string | null,
-	validationWorkerModel: string | null,
-	validationWorkerReasoningEffort: string | null,
+	workerModel?: string | null,
+	workerReasoningEffort?: string | null,
+	validationWorkerModel?: string | null,
+	validationWorkerReasoningEffort?: string | null,
 };
 
 /**  Mission model settings for Mission mode workers */
@@ -2282,7 +2531,16 @@ export type MissionModelSettings_Serialize = {
 };
 
 /**  Model info returned from API */
-export type ModelInfo = {
+export type ModelInfo = ModelInfo_Serialize | ModelInfo_Deserialize;
+
+/**  Model info returned from API */
+export type ModelInfo_Deserialize = {
+	id: string,
+	name?: string | null,
+};
+
+/**  Model info returned from API */
+export type ModelInfo_Serialize = {
 	id: string,
 	name: string | null,
 };
@@ -2308,17 +2566,17 @@ export type OmpAgentConfig = OmpAgentConfig_Serialize | OmpAgentConfig_Deseriali
 
 /**  OMP agent configuration (from `~/.omp/agent/config.yml`). */
 export type OmpAgentConfig_Deserialize = {
-	modelRoles: OmpModelRoles_Deserialize | null,
+	modelRoles?: OmpModelRoles_Deserialize | null,
 	/**  Named snapshots of role assignments, written as `modelPresets`. */
-	modelPresets: { [key in string]: JsonValue } | null,
+	modelPresets?: { [key in string]: JsonValue } | null,
 	/**  Fallback thinking level (`auto` when OMP decides per model). */
-	defaultThinkingLevel: string | null,
-	theme: OmpTheme_Deserialize | null,
-	steeringMode: string | null,
-	followUpMode: string | null,
-	interruptMode: string | null,
-	symbolPreset: string | null,
-	setupVersion: number | null,
+	defaultThinkingLevel?: string | null,
+	theme?: OmpTheme_Deserialize | null,
+	steeringMode?: string | null,
+	followUpMode?: string | null,
+	interruptMode?: string | null,
+	symbolPreset?: string | null,
+	setupVersion?: number | null,
 };
 
 /**  OMP agent configuration (from `~/.omp/agent/config.yml`). */
@@ -2371,17 +2629,17 @@ export type OmpCachedModel = OmpCachedModel_Serialize | OmpCachedModel_Deseriali
 /**  A cached model entry from `models.db` (read-only). */
 export type OmpCachedModel_Deserialize = {
 	id: string,
-	name: string | null,
-	api: string | null,
-	provider: string | null,
-	baseUrl: string | null,
+	name?: string | null,
+	api?: string | null,
+	provider?: string | null,
+	baseUrl?: string | null,
 	reasoning?: boolean,
 	input?: string[],
-	cost: OmpModelCost_Deserialize | null,
+	cost?: OmpModelCost_Deserialize | null,
 	contextWindow?: number,
 	maxContextWindow?: number,
 	maxTokens?: number,
-	thinking: OmpThinkingConfig_Deserialize | null,
+	thinking?: OmpThinkingConfig_Deserialize | null,
 };
 
 /**  A cached model entry from `models.db` (read-only). */
@@ -2477,7 +2735,7 @@ export type OmpChannelModel = OmpChannelModel_Serialize | OmpChannelModel_Deseri
  */
 export type OmpChannelModel_Deserialize = {
 	id: string,
-	name: string | null,
+	name?: string | null,
 };
 
 /**
@@ -2527,22 +2785,22 @@ export type OmpCustomModel = OmpCustomModel_Serialize | OmpCustomModel_Deseriali
 /**  A model declared in `models.yml`. */
 export type OmpCustomModel_Deserialize = {
 	id: string,
-	name: string | null,
-	api: string | null,
-	baseUrl: string | null,
-	reasoning: boolean | null,
-	thinking: OmpThinkingConfig_Deserialize | null,
-	input: string[] | null,
-	imageInputDecoder: string | null,
-	cost: OmpModelCost_Deserialize | null,
-	contextWindow: number | null,
-	maxContextWindow: number | null,
-	maxTokens: number | null,
-	omitMaxOutputTokens: boolean | null,
-	preferWebsockets: boolean | null,
-	headers: { [key in string]: string } | null,
-	compat: JsonValue | null,
-	remoteCompaction: JsonValue | null,
+	name?: string | null,
+	api?: string | null,
+	baseUrl?: string | null,
+	reasoning?: boolean | null,
+	thinking?: OmpThinkingConfig_Deserialize | null,
+	input?: string[] | null,
+	imageInputDecoder?: string | null,
+	cost?: OmpModelCost_Deserialize | null,
+	contextWindow?: number | null,
+	maxContextWindow?: number | null,
+	maxTokens?: number | null,
+	omitMaxOutputTokens?: boolean | null,
+	preferWebsockets?: boolean | null,
+	headers?: { [key in string]: string } | null,
+	compat?: JsonValue | null,
+	remoteCompaction?: JsonValue | null,
 };
 
 /**  A model declared in `models.yml`. */
@@ -2586,22 +2844,22 @@ export type OmpCustomProviderEntry_Serialize = {
 
 /**  A provider declared in `~/.omp/agent/models.yml`. */
 export type OmpCustomProvider_Deserialize = {
-	baseUrl: string | null,
-	api: string | null,
-	apiKey: string | null,
-	auth: string | null,
-	headers: { [key in string]: string } | null,
-	authHeader: boolean | null,
+	baseUrl?: string | null,
+	api?: string | null,
+	apiKey?: string | null,
+	auth?: string | null,
+	headers?: { [key in string]: string } | null,
+	authHeader?: boolean | null,
 	models?: OmpCustomModel_Deserialize[],
-	discovery: JsonValue | null,
-	modelOverrides: { [key in string]: JsonValue } | null,
-	compat: JsonValue | null,
-	disableStrictTools: boolean | null,
-	remoteCompaction: JsonValue | null,
-	guardrailIdentifier: string | null,
-	guardrailVersion: string | null,
-	guardrailTrace: string | null,
-	transport: string | null,
+	discovery?: JsonValue | null,
+	modelOverrides?: { [key in string]: JsonValue } | null,
+	compat?: JsonValue | null,
+	disableStrictTools?: boolean | null,
+	remoteCompaction?: JsonValue | null,
+	guardrailIdentifier?: string | null,
+	guardrailVersion?: string | null,
+	guardrailTrace?: string | null,
+	transport?: string | null,
 };
 
 /**  A provider declared in `~/.omp/agent/models.yml`. */
@@ -2675,21 +2933,21 @@ export type OmpModelRoles = OmpModelRoles_Serialize | OmpModelRoles_Deserialize;
  *  kept in `extra` so an apply never drops them.
  */
 export type OmpModelRoles_Deserialize = {
-	default: string | null,
-	smol: string | null,
-	slow: string | null,
-	vision: string | null,
-	plan: string | null,
-	commit: string | null,
-	tiny: string | null,
-	memory: string | null,
-	task: string | null,
-	advisor: string | null,
-	image: string | null,
-	web: string | null,
-	speech: string | null,
-	dictation: string | null,
-	judge: string | null,
+	default?: string | null,
+	smol?: string | null,
+	slow?: string | null,
+	vision?: string | null,
+	plan?: string | null,
+	commit?: string | null,
+	tiny?: string | null,
+	memory?: string | null,
+	task?: string | null,
+	advisor?: string | null,
+	image?: string | null,
+	web?: string | null,
+	speech?: string | null,
+	dictation?: string | null,
+	judge?: string | null,
 };
 
 /**
@@ -2725,7 +2983,7 @@ export type OmpProfile = OmpProfile_Serialize | OmpProfile_Deserialize;
 export type OmpProfile_Deserialize = {
 	id: string,
 	name: string,
-	description: string | null,
+	description?: string | null,
 	createdAt: string,
 	updatedAt: string,
 	/**  Model role assignments (what gets written to config.yml on apply). */
@@ -2789,8 +3047,8 @@ export type OmpProviderTestResult_Deserialize = {
 	providerId: string,
 	modelId: string,
 	latencyMs: number,
-	responseText: string | null,
-	error: string | null,
+	responseText?: string | null,
+	error?: string | null,
 };
 
 /**  Result of validating an OMP provider through HTTP connectivity testing. */
@@ -2816,7 +3074,7 @@ export type OmpRoleAdjustment = OmpRoleAdjustment_Serialize | OmpRoleAdjustment_
 export type OmpRoleAdjustment_Deserialize = {
 	role: string,
 	from: string,
-	to: string | null,
+	to?: string | null,
 	reason: string,
 };
 
@@ -2847,7 +3105,7 @@ export type OmpRoleReconcile = OmpRoleReconcile_Serialize | OmpRoleReconcile_Des
 export type OmpRoleReconcile_Deserialize = {
 	adjusted: boolean,
 	adjustments?: OmpRoleAdjustment_Deserialize[],
-	thinking: OmpThinkingAdjustment | null,
+	thinking?: OmpThinkingAdjustment | null,
 	roles: OmpModelRoles_Deserialize,
 };
 
@@ -2906,8 +3164,8 @@ export type OmpTheme = OmpTheme_Serialize | OmpTheme_Deserialize;
 
 /**  OMP theme configuration. */
 export type OmpTheme_Deserialize = {
-	dark: string | null,
-	light: string | null,
+	dark?: string | null,
+	light?: string | null,
 };
 
 /**  OMP theme configuration. */
@@ -2932,9 +3190,9 @@ export type OmpThinkingConfig = OmpThinkingConfig_Serialize | OmpThinkingConfig_
 
 /**  OMP thinking/reasoning configuration. */
 export type OmpThinkingConfig_Deserialize = {
-	mode: string | null,
-	efforts: string[] | null,
-	defaultLevel: string | null,
+	mode?: string | null,
+	efforts?: string[] | null,
+	defaultLevel?: string | null,
 };
 
 /**  OMP thinking/reasoning configuration. */
@@ -2965,7 +3223,7 @@ export type OpenClawCurrentConfig = OpenClawCurrentConfig_Serialize | OpenClawCu
 
 /**  Current OpenClaw configuration (from config files) */
 export type OpenClawCurrentConfig_Deserialize = {
-	defaultModel: string | null,
+	defaultModel?: string | null,
 	providers?: { [key in string]: OpenClawProviderConfig_Deserialize },
 };
 
@@ -2981,11 +3239,11 @@ export type OpenClawModel = OpenClawModel_Serialize | OpenClawModel_Deserialize;
 /**  OpenClaw Model definition */
 export type OpenClawModel_Deserialize = {
 	id: string,
-	name: string | null,
+	name?: string | null,
 	reasoning?: boolean,
 	input?: string[],
-	contextWindow: number | null,
-	maxTokens: number | null,
+	contextWindow?: number | null,
+	maxTokens?: number | null,
 };
 
 /**  OpenClaw Model definition */
@@ -3005,13 +3263,13 @@ export type OpenClawProfile = OpenClawProfile_Serialize | OpenClawProfile_Deseri
 export type OpenClawProfile_Deserialize = {
 	id: string,
 	name: string,
-	description: string | null,
+	description?: string | null,
 	createdAt: string,
 	updatedAt: string,
-	defaultModel: string | null,
-	failoverModels: string[] | null,
+	defaultModel?: string | null,
+	failoverModels?: string[] | null,
 	providers?: { [key in string]: OpenClawProviderConfig_Deserialize },
-	blockStreamingConfig: BlockStreamingConfig_Deserialize | null,
+	blockStreamingConfig?: BlockStreamingConfig_Deserialize | null,
 };
 
 /**  OpenClaw Profile (stored in DroidGear) */
@@ -3032,9 +3290,9 @@ export type OpenClawProviderConfig = OpenClawProviderConfig_Serialize | OpenClaw
 
 /**  OpenClaw Provider configuration */
 export type OpenClawProviderConfig_Deserialize = {
-	baseUrl: string | null,
-	apiKey: string | null,
-	api: string | null,
+	baseUrl?: string | null,
+	apiKey?: string | null,
+	api?: string | null,
 	models?: OpenClawModel_Deserialize[],
 };
 
@@ -3054,8 +3312,8 @@ export type OpenClawSubAgentIdentity = OpenClawSubAgentIdentity_Serialize | Open
 
 /**  OpenClaw SubAgent identity */
 export type OpenClawSubAgentIdentity_Deserialize = {
-	emoji: string | null,
-	name: string | null,
+	emoji?: string | null,
+	name?: string | null,
 };
 
 /**  OpenClaw SubAgent identity */
@@ -3069,8 +3327,8 @@ export type OpenClawSubAgentModel = OpenClawSubAgentModel_Serialize | OpenClawSu
 
 /**  OpenClaw SubAgent model config */
 export type OpenClawSubAgentModel_Deserialize = {
-	primary: string | null,
-	fallbacks: string[] | null,
+	primary?: string | null,
+	fallbacks?: string[] | null,
 };
 
 /**  OpenClaw SubAgent model config */
@@ -3084,8 +3342,8 @@ export type OpenClawSubAgentSubagentsConfig = OpenClawSubAgentSubagentsConfig_Se
 
 /**  OpenClaw SubAgent subagents config (for main agent's allowAgents) */
 export type OpenClawSubAgentSubagentsConfig_Deserialize = {
-	allowAgents: string[] | null,
-	maxConcurrent: number | null,
+	allowAgents?: string[] | null,
+	maxConcurrent?: number | null,
 };
 
 /**  OpenClaw SubAgent subagents config (for main agent's allowAgents) */
@@ -3099,7 +3357,7 @@ export type OpenClawSubAgentTools = OpenClawSubAgentTools_Serialize | OpenClawSu
 
 /**  OpenClaw SubAgent tools config */
 export type OpenClawSubAgentTools_Deserialize = {
-	profile: string | null,
+	profile?: string | null,
 };
 
 /**  OpenClaw SubAgent tools config */
@@ -3110,12 +3368,12 @@ export type OpenClawSubAgentTools_Serialize = {
 /**  OpenClaw SubAgent definition */
 export type OpenClawSubAgent_Deserialize = {
 	id: string,
-	name: string | null,
-	identity: OpenClawSubAgentIdentity_Deserialize | null,
-	model: OpenClawSubAgentModel_Deserialize | null,
-	tools: OpenClawSubAgentTools_Deserialize | null,
-	workspace: string | null,
-	subagents: OpenClawSubAgentSubagentsConfig_Deserialize | null,
+	name?: string | null,
+	identity?: OpenClawSubAgentIdentity_Deserialize | null,
+	model?: OpenClawSubAgentModel_Deserialize | null,
+	tools?: OpenClawSubAgentTools_Deserialize | null,
+	workspace?: string | null,
+	subagents?: OpenClawSubAgentSubagentsConfig_Deserialize | null,
 };
 
 /**  OpenClaw SubAgent definition */
@@ -3157,8 +3415,8 @@ export type OpenCodeModelConfig = OpenCodeModelConfig_Serialize | OpenCodeModelC
 
 /**  OpenCode Model configuration */
 export type OpenCodeModelConfig_Deserialize = {
-	name: string | null,
-	limit: OpenCodeModelLimit_Deserialize | null,
+	name?: string | null,
+	limit?: OpenCodeModelLimit_Deserialize | null,
 };
 
 /**  OpenCode Model configuration */
@@ -3172,8 +3430,8 @@ export type OpenCodeModelLimit = OpenCodeModelLimit_Serialize | OpenCodeModelLim
 
 /**  OpenCode Model limit configuration */
 export type OpenCodeModelLimit_Deserialize = {
-	context: number | null,
-	output: number | null,
+	context?: number | null,
+	output?: number | null,
 };
 
 /**  OpenCode Model limit configuration */
@@ -3189,7 +3447,7 @@ export type OpenCodeProfile = OpenCodeProfile_Serialize | OpenCodeProfile_Deseri
 export type OpenCodeProfile_Deserialize = {
 	id: string,
 	name: string,
-	description: string | null,
+	description?: string | null,
 	createdAt: string,
 	updatedAt: string,
 	providers: { [key in string]: OpenCodeProviderConfig_Deserialize },
@@ -3212,10 +3470,10 @@ export type OpenCodeProviderConfig = OpenCodeProviderConfig_Serialize | OpenCode
 
 /**  OpenCode Provider configuration */
 export type OpenCodeProviderConfig_Deserialize = {
-	npm: string | null,
-	name: string | null,
-	options: OpenCodeProviderOptions_Deserialize | null,
-	models: { [key in string]: OpenCodeModelConfig_Deserialize } | null,
+	npm?: string | null,
+	name?: string | null,
+	options?: OpenCodeProviderOptions_Deserialize | null,
+	models?: { [key in string]: OpenCodeModelConfig_Deserialize } | null,
 };
 
 /**  OpenCode Provider configuration */
@@ -3231,10 +3489,10 @@ export type OpenCodeProviderOptions = OpenCodeProviderOptions_Serialize | OpenCo
 
 /**  OpenCode Provider options */
 export type OpenCodeProviderOptions_Deserialize = {
-	baseURL: string | null,
-	apiKey: string | null,
-	timeout: number | null,
-	headers: { [key in string]: string } | null,
+	baseURL?: string | null,
+	apiKey?: string | null,
+	timeout?: number | null,
+	headers?: { [key in string]: string } | null,
 };
 
 /**  OpenCode Provider options */
@@ -3285,55 +3543,55 @@ export type PiCompatConfig = PiCompatConfig_Serialize | PiCompatConfig_Deseriali
 
 /**  Pi compatibility configuration. Unknown fields are retained for newer pi versions. */
 export type PiCompatConfig_Deserialize = {
-	supportsStore: boolean | null,
-	supportsDeveloperRole: boolean | null,
-	supportsReasoningEffort: boolean | null,
-	reasoningEffortMap: { [key in string]: JsonValue } | null,
-	supportsUsageInStreaming: boolean | null,
-	maxTokensField: string | null,
-	requiresToolResultName: boolean | null,
-	requiresAssistantAfterToolResult: boolean | null,
-	requiresThinkingAsText: boolean | null,
-	requiresReasoningContentOnAssistantMessages: boolean | null,
-	thinkingFormat: string | null,
-	cacheControlFormat: string | null,
-	supportsStrictMode: boolean | null,
-	supportsLongCacheRetention: boolean | null,
-	supportsEagerToolInputStreaming: boolean | null,
+	supportsStore?: boolean | null,
+	supportsDeveloperRole?: boolean | null,
+	supportsReasoningEffort?: boolean | null,
+	reasoningEffortMap?: { [key in string]: JsonValue } | null,
+	supportsUsageInStreaming?: boolean | null,
+	maxTokensField?: string | null,
+	requiresToolResultName?: boolean | null,
+	requiresAssistantAfterToolResult?: boolean | null,
+	requiresThinkingAsText?: boolean | null,
+	requiresReasoningContentOnAssistantMessages?: boolean | null,
+	thinkingFormat?: string | null,
+	cacheControlFormat?: string | null,
+	supportsStrictMode?: boolean | null,
+	supportsLongCacheRetention?: boolean | null,
+	supportsEagerToolInputStreaming?: boolean | null,
 	/**
 	 *  Force adaptive thinking (thinking.type: adaptive + output_config.effort)
 	 *  regardless of model ID. Required by Anthropic-compatible upstreams for
 	 *  models like claude-opus-5-5.
 	 */
-	forceAdaptiveThinking: boolean | null,
-	openRouterRouting: JsonValue | null,
-	vercelGatewayRouting: JsonValue | null,
-	supportsFinishReason: boolean | null,
-	requiresNonNullAssistantContent: boolean | null,
-	chatTemplateKwargs: JsonValue | null,
-	chatTemplateArgs: JsonValue | null,
-	zaiToolStream: boolean | null,
-	thinkingTokenBudgetField: string | null,
-	supportsThinkingTokenBudget: boolean | null,
-	supportsOpenaiGrammarTools: boolean | null,
-	supportsMidConvoSystemMessages: boolean | null,
-	supportsMidConvoToolAdditions: boolean | null,
-	sendSessionAffinityHeaders: boolean | null,
-	sessionAffinityFormat: string | null,
-	promptCacheKeyMode: string | null,
-	vllmPriority: number | null,
-	supportsAdditionalTools: boolean | null,
-	supportsToolSearch: boolean | null,
-	supportsExplicitPromptCacheMode: boolean | null,
-	supportsMidConvoEffort: boolean | null,
-	supportsMaxOutputTokens: boolean | null,
-	supportsCacheControlOnTools: boolean | null,
-	supportsTemperature: boolean | null,
-	allowEmptySignature: boolean | null,
-	supportsStrictTools: boolean | null,
-	supportsMidConvoToolChanges: boolean | null,
-	supportsMessageThreads: boolean | null,
-	allowedFallbackModels: JsonValue | null,
+	forceAdaptiveThinking?: boolean | null,
+	openRouterRouting?: JsonValue | null,
+	vercelGatewayRouting?: JsonValue | null,
+	supportsFinishReason?: boolean | null,
+	requiresNonNullAssistantContent?: boolean | null,
+	chatTemplateKwargs?: JsonValue | null,
+	chatTemplateArgs?: JsonValue | null,
+	zaiToolStream?: boolean | null,
+	thinkingTokenBudgetField?: string | null,
+	supportsThinkingTokenBudget?: boolean | null,
+	supportsOpenaiGrammarTools?: boolean | null,
+	supportsMidConvoSystemMessages?: boolean | null,
+	supportsMidConvoToolAdditions?: boolean | null,
+	sendSessionAffinityHeaders?: boolean | null,
+	sessionAffinityFormat?: string | null,
+	promptCacheKeyMode?: string | null,
+	vllmPriority?: number | null,
+	supportsAdditionalTools?: boolean | null,
+	supportsToolSearch?: boolean | null,
+	supportsExplicitPromptCacheMode?: boolean | null,
+	supportsMidConvoEffort?: boolean | null,
+	supportsMaxOutputTokens?: boolean | null,
+	supportsCacheControlOnTools?: boolean | null,
+	supportsTemperature?: boolean | null,
+	allowEmptySignature?: boolean | null,
+	supportsStrictTools?: boolean | null,
+	supportsMidConvoToolChanges?: boolean | null,
+	supportsMessageThreads?: boolean | null,
+	allowedFallbackModels?: JsonValue | null,
 };
 
 /**  Pi compatibility configuration. Unknown fields are retained for newer pi versions. */
@@ -3410,7 +3668,7 @@ export type PiCurrentConfig = PiCurrentConfig_Serialize | PiCurrentConfig_Deseri
  *  other unknown root key survives the lossless apply merge.
  */
 export type PiCurrentConfig_Deserialize = {
-	$schema: string | null,
+	$schema?: string | null,
 	providers?: { [key in string]: PiProviderConfig_Deserialize },
 };
 
@@ -3446,7 +3704,7 @@ export type PiModelCost_Deserialize = {
 	output?: number | null,
 	cacheRead?: number | null,
 	cacheWrite?: number | null,
-	tiers: PiModelCostTier[] | null,
+	tiers?: PiModelCostTier[] | null,
 };
 
 /**  Pi model cost configuration */
@@ -3463,21 +3721,21 @@ export type PiModelOverride = PiModelOverride_Serialize | PiModelOverride_Deseri
 
 /**  Pi model override (subset of PiModel fields for overriding built-in models) */
 export type PiModelOverride_Deserialize = {
-	name: string | null,
-	api: string | null,
-	baseUrl: string | null,
-	reasoning: boolean | null,
-	thinkingLevelMap: { [key in string]: string | null } | null,
-	input: string[] | null,
-	inputLimits: JsonValue | null,
-	contextWindow: number | null,
-	maxTokens: number | null,
-	cost: PiModelCost_Deserialize | null,
-	promptCache: JsonValue | null,
-	samplingParams: { [key in string]: JsonValue } | null,
-	samplingParamsByThinkingLevel: { [key in string]: JsonValue } | null,
-	headers: { [key in string]: string } | null,
-	compat: PiCompatConfig_Deserialize | null,
+	name?: string | null,
+	api?: string | null,
+	baseUrl?: string | null,
+	reasoning?: boolean | null,
+	thinkingLevelMap?: { [key in string]: string | null } | null,
+	input?: string[] | null,
+	inputLimits?: JsonValue | null,
+	contextWindow?: number | null,
+	maxTokens?: number | null,
+	cost?: PiModelCost_Deserialize | null,
+	promptCache?: JsonValue | null,
+	samplingParams?: { [key in string]: JsonValue } | null,
+	samplingParamsByThinkingLevel?: { [key in string]: JsonValue } | null,
+	headers?: { [key in string]: string } | null,
+	compat?: PiCompatConfig_Deserialize | null,
 };
 
 /**  Pi model override (subset of PiModel fields for overriding built-in models) */
@@ -3506,22 +3764,22 @@ export type PiModel_Deserialize = {
 	 *  Operation discriminator (`chat` | `image` | `classifier`); omitted means
 	 *  chat (upstream models-configuration.md).
 	 */
-	type: string | null,
-	name: string | null,
-	api: string | null,
-	baseUrl: string | null,
+	type?: string | null,
+	name?: string | null,
+	api?: string | null,
+	baseUrl?: string | null,
 	reasoning?: boolean,
-	thinkingLevelMap: { [key in string]: string | null } | null,
+	thinkingLevelMap?: { [key in string]: string | null } | null,
 	input?: string[],
-	inputLimits: JsonValue | null,
+	inputLimits?: JsonValue | null,
 	contextWindow?: number,
 	maxTokens?: number,
-	cost: PiModelCost_Deserialize | null,
-	promptCache: JsonValue | null,
-	samplingParams: { [key in string]: JsonValue } | null,
-	samplingParamsByThinkingLevel: { [key in string]: JsonValue } | null,
-	headers: { [key in string]: string } | null,
-	compat: PiCompatConfig_Deserialize | null,
+	cost?: PiModelCost_Deserialize | null,
+	promptCache?: JsonValue | null,
+	samplingParams?: { [key in string]: JsonValue } | null,
+	samplingParamsByThinkingLevel?: { [key in string]: JsonValue } | null,
+	headers?: { [key in string]: string } | null,
+	compat?: PiCompatConfig_Deserialize | null,
 };
 
 /**  Pi model definition */
@@ -3556,7 +3814,7 @@ export type PiProfile = PiProfile_Serialize | PiProfile_Deserialize;
 export type PiProfile_Deserialize = {
 	id: string,
 	name: string,
-	description: string | null,
+	description?: string | null,
 	createdAt: string,
 	updatedAt: string,
 	providers?: { [key in string]: PiProviderConfig_Deserialize },
@@ -3577,16 +3835,16 @@ export type PiProviderConfig = PiProviderConfig_Serialize | PiProviderConfig_Des
 
 /**  Pi provider configuration */
 export type PiProviderConfig_Deserialize = {
-	name: string | null,
-	baseUrl: string | null,
-	api: string | null,
-	apiKey: string | null,
-	oauth: string | null,
-	headers: { [key in string]: string } | null,
-	authHeader: boolean | null,
+	name?: string | null,
+	baseUrl?: string | null,
+	api?: string | null,
+	apiKey?: string | null,
+	oauth?: string | null,
+	headers?: { [key in string]: string } | null,
+	authHeader?: boolean | null,
 	models?: PiModel_Deserialize[],
-	modelOverrides: { [key in string]: PiModelOverride_Deserialize } | null,
-	compat: PiCompatConfig_Deserialize | null,
+	modelOverrides?: { [key in string]: PiModelOverride_Deserialize } | null,
+	compat?: PiCompatConfig_Deserialize | null,
 };
 
 /**  Pi provider configuration */
@@ -3612,8 +3870,8 @@ export type PiProviderTestResult_Deserialize = {
 	providerId: string,
 	modelId: string,
 	latencyMs: number,
-	responseText: string | null,
-	error: string | null,
+	responseText?: string | null,
+	error?: string | null,
 };
 
 /**  Result of validating a provider through Pi's own CLI runtime. */
@@ -3687,9 +3945,9 @@ export type PiSettingsStatus = PiSettingsStatus_Serialize | PiSettingsStatus_Des
  *  TUI render one shape.
  */
 export type PiSettingsStatus_Deserialize = {
-	defaultProvider: string | null,
-	defaultModel: string | null,
-	defaultThinkingLevel: string | null,
+	defaultProvider?: string | null,
+	defaultModel?: string | null,
+	defaultThinkingLevel?: string | null,
 	settingsExists: boolean,
 	settingsPath: string,
 };
@@ -3713,9 +3971,9 @@ export type PiSettingsStatus_Serialize = {
  *  removed key, because upstream validates both `""` and `null`.
  */
 export type PiSettings_Deserialize = {
-	defaultProvider: string | null,
-	defaultModel: string | null,
-	defaultThinkingLevel: string | null,
+	defaultProvider?: string | null,
+	defaultModel?: string | null,
+	defaultThinkingLevel?: string | null,
 };
 
 /**
@@ -3740,7 +3998,19 @@ export type PiTokenUsage = {
 	cost: number | null,
 };
 
-export type PortableUpdateInfo = {
+export type PortableUpdateInfo = PortableUpdateInfo_Serialize | PortableUpdateInfo_Deserialize;
+
+export type PortableUpdateInfo_Deserialize = {
+	version: string,
+	body?: string | null,
+	pubDate?: string | null,
+	url: string,
+	signature: string,
+	sha256: string,
+	releaseUrl: string,
+};
+
+export type PortableUpdateInfo_Serialize = {
 	version: string,
 	body: string | null,
 	pubDate: string | null,
@@ -3760,8 +4030,8 @@ export type ProviderTemplate = ProviderTemplate_Serialize | ProviderTemplate_Des
 export type ProviderTemplate_Deserialize = {
 	id: string,
 	name: string,
-	npm: string | null,
-	defaultBaseUrl: string | null,
+	npm?: string | null,
+	defaultBaseUrl?: string | null,
 	requiresApiKey: boolean,
 };
 
@@ -3792,13 +4062,13 @@ export type SessionDefaultSettings = SessionDefaultSettings_Serialize | SessionD
 
 /**  Session default settings for mixed models configuration */
 export type SessionDefaultSettings_Deserialize = {
-	model: string | null,
-	reasoningEffort: string | null,
-	specModeModel: string | null,
-	specModeReasoningEffort: string | null,
-	autonomyMode: string | null,
-	autonomyLevel: string | null,
-	interactionMode: string | null,
+	model?: string | null,
+	reasoningEffort?: string | null,
+	specModeModel?: string | null,
+	specModeReasoningEffort?: string | null,
+	autonomyMode?: string | null,
+	autonomyLevel?: string | null,
+	interactionMode?: string | null,
 };
 
 /**  Session default settings for mixed models configuration */
@@ -3930,8 +4200,8 @@ export type TelegramChannelConfig = TelegramChannelConfig_Serialize | TelegramCh
 
 /**  Telegram channel configuration */
 export type TelegramChannelConfig_Deserialize = {
-	blockStreaming: boolean | null,
-	chunkMode: string | null,
+	blockStreaming?: boolean | null,
+	chunkMode?: string | null,
 };
 
 /**  Telegram channel configuration */
@@ -3949,7 +4219,7 @@ export type TokenFilter = TokenFilter_Serialize | TokenFilter_Deserialize;
 /**  Token filter conditions */
 export type TokenFilter_Deserialize = {
 	/**  Token status (1=enabled, empty = all) */
-	status: number | null,
+	status?: number | null,
 	/**  Only include tokens matching these platforms (empty = all) */
 	platforms?: string[],
 };
@@ -3979,7 +4249,7 @@ export type TrustedFolder = {
 
 export type UpdateChannel = "managed" | "portable";
 
-export type Value = "Null" | ({ Bool: boolean }) & { Array?: never; Number?: never; Object?: never; String?: never } | ({ Number: number }) & { Array?: never; Bool?: never; Object?: never; String?: never } | ({ String: string }) & { Array?: never; Bool?: never; Number?: never; Object?: never } | ({ Array: Value[] }) & { Bool?: never; Number?: never; Object?: never; String?: never } | ({ Object: { [key in string]: Value } }) & { Array?: never; Bool?: never; Number?: never; String?: never };
+export type Value = null | boolean | number | string | Value[] | { [key in string]: Value };
 
 /**  A video model configured for the playground. */
 export type VideoModel = VideoModel_Serialize | VideoModel_Deserialize;
@@ -3989,7 +4259,7 @@ export type VideoModel_Deserialize = {
 	id: string,
 	name: string,
 	modelId: string,
-	source: VideoSource,
+	source: VideoSource_Deserialize,
 	protocol: VideoProtocol_Deserialize,
 	durations: number[],
 	resolutions: string[],
@@ -4001,7 +4271,7 @@ export type VideoModel_Serialize = {
 	id: string,
 	name: string,
 	modelId: string,
-	source: VideoSource,
+	source: VideoSource_Serialize,
 	protocol: VideoProtocol_Serialize,
 	durations: number[],
 	resolutions: string[],
@@ -4032,7 +4302,20 @@ export type VideoProtocol_Serialize =
 "doubao";
 
 /**  Where a video model gets its endpoint and credentials. */
-export type VideoSource = 
+export type VideoSource = VideoSource_Serialize | VideoSource_Deserialize;
+
+/**  Where a video model gets its endpoint and credentials. */
+export type VideoSource_Deserialize = 
+/**
+ *  Reuse an existing channel. `token_id` is the token selected when the
+ *  model was imported; `None` lets the resolver pick the first active one.
+ */
+{ kind: "channel"; channelId: string; tokenId?: number | null } | 
+/**  A standalone endpoint with its own API key. */
+{ kind: "custom"; baseUrl: string; apiKey: string };
+
+/**  Where a video model gets its endpoint and credentials. */
+export type VideoSource_Serialize = 
 /**
  *  Reuse an existing channel. `token_id` is the token selected when the
  *  model was imported; `None` lets the resolver pick the first active one.
@@ -4067,10 +4350,10 @@ export type VideoTaskRecord_Deserialize = {
 	status: VideoTaskStatus,
 	progress: number,
 	createdAt: number,
-	completedAt: number | null,
-	videoUrl: string | null,
-	localPath: string | null,
-	error: string | null,
+	completedAt?: number | null,
+	videoUrl?: string | null,
+	localPath?: string | null,
+	error?: string | null,
 };
 
 /**  A playground task persisted under `~/.droidgear/playground/video_tasks.json`. */
@@ -4094,7 +4377,22 @@ export type VideoTaskRecord_Serialize = {
 };
 
 /**  One protocol query result, normalized for the playground UI. */
-export type VideoTaskSnapshot = {
+export type VideoTaskSnapshot = VideoTaskSnapshot_Serialize | VideoTaskSnapshot_Deserialize;
+
+/**  One protocol query result, normalized for the playground UI. */
+export type VideoTaskSnapshot_Deserialize = {
+	id: string,
+	status: VideoTaskStatus,
+	progress: number,
+	videoUrl?: string | null,
+	localPath?: string | null,
+	error?: string | null,
+	/**  Milliseconds since the Unix epoch, when the upstream reports one. */
+	completedAt?: number | null,
+};
+
+/**  One protocol query result, normalized for the playground UI. */
+export type VideoTaskSnapshot_Serialize = {
 	id: string,
 	status: VideoTaskStatus,
 	progress: number,

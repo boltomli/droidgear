@@ -52,9 +52,9 @@ semver = "1"
 sha2 = "0.11"
 
 # Type-safe Tauri command bindings
-specta = { version = "=2.0.0-rc.26", features = ["derive", "serde_json"] }
+specta = { version = "=2.0.0-rc.28", features = ["derive", "serde_json"] }
 tauri-specta = { path = "../../tauri-specta", features = ["typescript"] }
-specta-typescript = "=0.0.13"
+specta-typescript = "=0.0.15"
 tauri-plugin-system-fonts = { path = "../../tauri-plugin-system-fonts" }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
@@ -76,10 +76,3 @@ strip = true             # Remove debug symbols
 [workspace]
 members = ["crates/droidgear-core", "crates/droidgear-tui"]
 resolver = "2"
-
-[patch.crates-io]
-specta = { git = "https://github.com/specta-rs/specta.git", rev = "2757fa8899926dce7da999780c7edf2dc08a732a" }
-specta-macros = { git = "https://github.com/specta-rs/specta.git", rev = "2757fa8899926dce7da999780c7edf2dc08a732a" }
-specta-serde = { git = "https://github.com/specta-rs/specta.git", rev = "2757fa8899926dce7da999780c7edf2dc08a732a" }
-specta-typescript = { git = "https://github.com/specta-rs/specta.git", rev = "2757fa8899926dce7da999780c7edf2dc08a732a" }
-specta-util = { git = "https://github.com/specta-rs/specta.git", rev = "2757fa8899926dce7da999780c7edf2dc08a732a" }

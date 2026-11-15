@@ -79,7 +79,7 @@ export function videoProtocolLabel(
  * Sora, New API and doubao models in one import.
  */
 export function buildImportedVideoModels(params: {
-  models: { id: string; name: string | null }[]
+  models: { id: string; name?: string | null }[]
   selectedIds: ReadonlySet<string>
   channelId: string
   tokenId: number | null

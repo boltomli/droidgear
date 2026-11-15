@@ -109,7 +109,7 @@ export function ChannelModelPicker({
     ? (keys[selectedChannelId] ?? [])
     : []
   const channelKeys = platformFilter
-    ? allChannelKeys.filter(k => platformFilter(k.platform))
+    ? allChannelKeys.filter(k => platformFilter(k.platform ?? null))
     : allChannelKeys
   const selectedKey = channelKeys.find(k => String(k.id) === selectedKeyId)
 
@@ -149,7 +149,7 @@ export function ChannelModelPicker({
     const result = await commands.fetchModelsByApiKey(
       selectedChannel.baseUrl,
       key.key,
-      key.platform
+      key.platform ?? null
     )
     setIsFetchingModels(false)
 
@@ -236,7 +236,7 @@ export function ChannelModelPicker({
       channelName: selectedChannel.name,
       baseUrl: selectedChannel.baseUrl,
       apiKey: selectedKey.key,
-      platform: selectedKey.platform,
+      platform: selectedKey.platform ?? null,
       channelType: selectedChannel.type,
       provider: supportsMultiProtocol ? protocolProvider : undefined,
     }

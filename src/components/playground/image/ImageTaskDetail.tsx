@@ -37,7 +37,7 @@ function MetaRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 function imageAssetSrc(asset: ImageAsset): string | null {
   if (asset.localPath) return convertFileSrc(asset.localPath)
-  return asset.url
+  return asset.url ?? null
 }
 
 function ImageStage({
