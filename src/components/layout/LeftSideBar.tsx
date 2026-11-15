@@ -12,6 +12,7 @@ import {
   Cpu,
   CircuitBoard,
   BotMessageSquare,
+  FlaskConical,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/components/ui/action-button'
@@ -47,10 +48,16 @@ import { PiFeatureList } from '@/components/pi/PiFeatureList'
 import { OmpFeatureList } from '@/components/omp/OmpFeatureList'
 import { CopilotFeatureList } from '@/components/copilot/CopilotFeatureList'
 import { DshFeatureList } from '@/components/dsh/DshFeatureList'
+import { PlaygroundFeatureList } from '@/components/playground/PlaygroundFeatureList'
 import { useUIStore } from '@/store/ui-store'
 import { useChannelStore } from '@/store/channel-store'
 import { useModelStore } from '@/store/model-store'
 import { type ApiChannel } from '@/lib/bindings'
+import {
+  isRunningImageTask,
+  useImagePlaygroundStore,
+} from '@/store/image-playground-store'
+import { isActiveVideoTask, usePlaygroundStore } from '@/store/playground-store'
 import { saveChannelAuth } from '@/lib/channel-utils'
 
 type NavigationView =
@@ -65,6 +72,7 @@ type NavigationView =
   | 'omp'
   | 'copilot'
   | 'dsh'
+  | 'playground'
 
 interface LeftSideBarProps {
   children?: React.ReactNode
@@ -81,6 +89,14 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   const selectChannel = useChannelStore(state => state.selectChannel)
   const channelHasChanges = useChannelStore(state => state.hasChanges)
   const modelHasChanges = useModelStore(state => state.hasChanges)
+  const videoPlaygroundActiveCount = usePlaygroundStore(
+    state => state.videoTasks.filter(isActiveVideoTask).length
+  )
+  const imagePlaygroundActiveCount = useImagePlaygroundStore(
+    state => state.imageTasks.filter(isRunningImageTask).length
+  )
+  const playgroundActiveCount =
+    videoPlaygroundActiveCount + imagePlaygroundActiveCount
 
   const [channelDialogOpen, setChannelDialogOpen] = useState(false)
   const [editingChannel, setEditingChannel] = useState<ApiChannel | undefined>()
@@ -238,8 +254,8 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
         </ActionButton>
 
         {/* Droid/OpenCode Switcher - conditional rendering based on current view */}
-        {currentView === 'channels' ? (
-          // Simple button when in Channels - direct switch to lastToolView
+        {currentView === 'channels' || currentView === 'playground' ? (
+          // Simple button outside tool views - direct switch to lastToolView
           <ActionButton
             variant="ghost"
             size="sm"
@@ -378,6 +394,20 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+
+        <ActionButton
+          variant={currentView === 'playground' ? 'secondary' : 'ghost'}
+          size="icon-sm"
+          className="relative shrink-0"
+          title={t('sidebar.playground')}
+          aria-label={t('sidebar.playground')}
+          onClick={() => handleViewChange('playground')}
+        >
+          <FlaskConical className="h-4 w-4" />
+          {playgroundActiveCount > 0 && currentView !== 'playground' && (
+            <span className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />
+          )}
+        </ActionButton>
       </div>
 
       {/* Content based on view */}
@@ -402,6 +432,8 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           <CopilotFeatureList />
         ) : currentView === 'dsh' ? (
           <DshFeatureList />
+        ) : currentView === 'playground' ? (
+          <PlaygroundFeatureList />
         ) : (
           <CodexFeatureList />
         )}

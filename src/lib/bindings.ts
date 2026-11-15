@@ -652,6 +652,28 @@ export const commands = {
 	startCodexSessionsWatcher: () => typedError<null, string>(__TAURI_INVOKE("start_codex_sessions_watcher")),
 	/**  Stops watching the codex sessions directory. */
 	stopCodexSessionsWatcher: () => typedError<null, string>(__TAURI_INVOKE("stop_codex_sessions_watcher")),
+	/**  Loads the video models configured for the Playground. */
+	loadVideoModels: () => typedError<VideoModel[], string>(__TAURI_INVOKE("load_video_models")),
+	/**  Persists the video models configured for the Playground. */
+	saveVideoModels: (models: VideoModel[]) => typedError<null, string>(__TAURI_INVOKE("save_video_models", { models })),
+	/**  Loads persisted Playground video tasks. */
+	loadVideoTasks: () => typedError<VideoTaskRecord[], string>(__TAURI_INVOKE("load_video_tasks")),
+	/**  Persists Playground video tasks. */
+	saveVideoTasks: (tasks: VideoTaskRecord[]) => typedError<null, string>(__TAURI_INVOKE("save_video_tasks", { tasks })),
+	/**  Submits a video generation task with the model's configured protocol. */
+	createVideoTask: (model: VideoModel, prompt: string, duration: number | null, resolution: string | null, imageUrls: string[], extraJson: string) => typedError<VideoTaskSnapshot, string>(__TAURI_INVOKE("create_video_task", { model, prompt, duration, resolution, imageUrls, extraJson })),
+	/**  Queries a video generation task with the model's configured protocol. */
+	queryVideoTask: (model: VideoModel, taskId: string) => typedError<VideoTaskSnapshot, string>(__TAURI_INVOKE("query_video_task", { model, taskId })),
+	/**  Loads the image models configured for the Playground. */
+	loadImageModels: () => typedError<ImageModel[], string>(__TAURI_INVOKE("load_image_models")),
+	/**  Persists the image models configured for the Playground. */
+	saveImageModels: (models: ImageModel[]) => typedError<null, string>(__TAURI_INVOKE("save_image_models", { models })),
+	/**  Loads persisted Playground image tasks. */
+	loadImageTasks: () => typedError<ImageTaskRecord[], string>(__TAURI_INVOKE("load_image_tasks")),
+	/**  Persists Playground image tasks. */
+	saveImageTasks: (tasks: ImageTaskRecord[]) => typedError<null, string>(__TAURI_INVOKE("save_image_tasks", { tasks })),
+	/**  Generates images with the model's configured protocol. */
+	createImageTask: (model: ImageModel, taskId: string, prompt: string, size: string, quality: string, count: number, imageUrls: string[], extraJson: string) => typedError<ImageTaskSnapshot, string>(__TAURI_INVOKE("create_image_task", { model, taskId, prompt, size, quality, count, imageUrls, extraJson })),
 	/**
 	 *  Tauri command: snap the main window to the default size, clear fullscreen,
 	 *  re-center, and quarantine the saved state file so the next launch starts
@@ -2075,6 +2097,110 @@ export type HermesProfile_Serialize = {
 	reasoningEffort?: string,
 };
 
+/**  One generated image, surfaced to the UI and stored with the task. */
+export type ImageAsset = {
+	/**
+	 *  Absolute path of the decoded file under the playground media directory.
+	 *  Absent when the upstream only returned a link that could not be saved.
+	 */
+	localPath: string | null,
+	/**  Remote URL, kept so the image can still be opened or re-downloaded. */
+	url: string | null,
+	mimeType: string,
+};
+
+/**  An image model configured for the playground. */
+export type ImageModel = {
+	id: string,
+	name: string,
+	modelId: string,
+	source: ImageSource,
+	protocol: ImageProtocol,
+	/**
+	 *  Suggested size values. The meaning follows the protocol: `WxH` for
+	 *  Chat/Responses, `WxH`, `A:B` or `1K`/`2K`/`4K` for Google.
+	 */
+	sizes: string[],
+	/**
+	 *  Suggested quality values (Responses: low/medium/high/auto, Google:
+	 *  1K/2K/4K).
+	 */
+	qualities: string[],
+	/**  Whether the model accepts reference images. */
+	supportsImageInput: boolean,
+};
+
+/**  Image wire protocol used by a playground model. */
+export type ImageProtocol = 
+/**  OpenAI ChatCompletions (`/v1/chat/completions`). */
+"chat" | 
+/**  OpenAI Responses with the `image_generation` tool (`/v1/responses`). */
+"responses" | 
+/**  Gemini native `:generateContent` / `:predict`. */
+"google";
+
+/**  Where an image model gets its endpoint and credentials. */
+export type ImageSource = 
+/**
+ *  Reuse an existing channel. `token_id` is the token selected when the
+ *  model was imported; `None` lets the resolver pick the first active one.
+ */
+{ kind: "channel"; channelId: string; tokenId: number | null } | 
+/**  A standalone endpoint with its own API key. */
+{ kind: "custom"; baseUrl: string; apiKey: string };
+
+/**  Form values captured when an image task was submitted. */
+export type ImageTaskParams = {
+	prompt: string,
+	size: string,
+	quality: string,
+	count: number,
+	imageUrl: string,
+	extraJson: string,
+};
+
+/**
+ *  A playground image task persisted under
+ *  `~/.droidgear/playground/image_tasks.json`.
+ */
+export type ImageTaskRecord = {
+	id: string,
+	modelId: string,
+	modelName: string,
+	/**
+	 *  Snapshot of the model at submit time. Custom API keys are stripped on
+	 *  disk and merged back from `image_secrets.json` on load.
+	 */
+	model: ImageModel,
+	params: ImageTaskParams,
+	status: ImageTaskStatus,
+	images: ImageAsset[],
+	revisedPrompt: string | null,
+	/**
+	 *  Text the model returned together with the images (Gemini usually adds a
+	 *  short explanation).
+	 */
+	responseText: string | null,
+	createdAt: number,
+	completedAt: number | null,
+	error: string | null,
+};
+
+/**  One protocol result, normalized for the playground UI. */
+export type ImageTaskSnapshot = {
+	images: ImageAsset[],
+	revisedPrompt: string | null,
+	responseText: string | null,
+	/**  Milliseconds since the Unix epoch. */
+	completedAt: number,
+};
+
+/**
+ *  Lifecycle of one playground image task. Generation is a single request, so
+ *  a task only stays `running` while the request is in flight.
+ */
+export type ImageTaskStatus = "running" | "completed" | "failed";
+
 /**  MCP server entry with name */
 export type McpServer = McpServer_Serialize | McpServer_Deserialize;
 
@@ -3472,7 +3598,7 @@ export type PiProviderConfig_Serialize = {
 	oauth?: string,
 	headers?: { [key in string]: string },
 	authHeader?: boolean,
-	models?: PiModel_Serialize[],
+	models: PiModel_Serialize[],
 	modelOverrides?: { [key in string]: PiModelOverride_Serialize },
 	compat?: PiCompatConfig_Serialize,
 };
@@ -3854,6 +3980,133 @@ export type TrustedFolder = {
 export type UpdateChannel = "managed" | "portable";
 
 export type Value = "Null" | ({ Bool: boolean }) & { Array?: never; Number?: never; Object?: never; String?: never } | ({ Number: number }) & { Array?: never; Bool?: never; Object?: never; String?: never } | ({ String: string }) & { Array?: never; Bool?: never; Number?: never; Object?: never } | ({ Array: Value[] }) & { Bool?: never; Number?: never; Object?: never; String?: never } | ({ Object: { [key in string]: Value } }) & { Array?: never; Bool?: never; Number?: never; String?: never };
+
+/**  A video model configured for the playground. */
+export type VideoModel = VideoModel_Serialize | VideoModel_Deserialize;
+
+/**  A video model configured for the playground. */
+export type VideoModel_Deserialize = {
+	id: string,
+	name: string,
+	modelId: string,
+	source: VideoSource,
+	protocol: VideoProtocol_Deserialize,
+	durations: number[],
+	resolutions: string[],
+	supportsImageInput: boolean,
+};
+
+/**  A video model configured for the playground. */
+export type VideoModel_Serialize = {
+	id: string,
+	name: string,
+	modelId: string,
+	source: VideoSource,
+	protocol: VideoProtocol_Serialize,
+	durations: number[],
+	resolutions: string[],
+	supportsImageInput: boolean,
+};
+
+/**  Video wire protocol used by a playground model. */
+export type VideoProtocol = VideoProtocol_Serialize | VideoProtocol_Deserialize;
+
+/**  Video wire protocol used by a playground model. */
+export type VideoProtocol_Deserialize = 
+/**  New API's OpenAI-compatible Videos wire (`/v1/videos`). */
+"sora" | 
+/**  New API's OpenAI-compatible Videos wire (`/v1/videos`). */
+"new-api-videos" | 
+/**  New API's native video generation wire (`/v1/video/generations`). */
+"new-api" | 
+/**  Doubao / Ark task API (`/api/v3/contents/generations/tasks`). */
+"doubao";
+
+/**  Video wire protocol used by a playground model. */
+export type VideoProtocol_Serialize = 
+/**  New API's OpenAI-compatible Videos wire (`/v1/videos`). */
+"sora" | 
+/**  New API's native video generation wire (`/v1/video/generations`). */
+"new-api" | 
+/**  Doubao / Ark task API (`/api/v3/contents/generations/tasks`). */
+"doubao";
+
+/**  Where a video model gets its endpoint and credentials. */
+export type VideoSource = 
+/**
+ *  Reuse an existing channel. `token_id` is the token selected when the
+ *  model was imported; `None` lets the resolver pick the first active one.
+ */
+{ kind: "channel"; channelId: string; tokenId: number | null } | 
+/**  A standalone endpoint with its own API key. */
+{ kind: "custom"; baseUrl: string; apiKey: string };
+
+/**  Form values captured when a video task was submitted. */
+export type VideoTaskParams = {
+	prompt: string,
+	duration: string,
+	resolution: string,
+	imageUrl: string,
+	extraJson: string,
+};
+
+/**  A playground task persisted under `~/.droidgear/playground/video_tasks.json`. */
+export type VideoTaskRecord = VideoTaskRecord_Serialize | VideoTaskRecord_Deserialize;
+
+/**  A playground task persisted under `~/.droidgear/playground/video_tasks.json`. */
+export type VideoTaskRecord_Deserialize = {
+	id: string,
+	modelId: string,
+	modelName: string,
+	/**
+	 *  Snapshot of the model at submit time. Custom API keys are stripped on
+	 *  disk and merged back from `video_secrets.json` on load.
+	 */
+	model: VideoModel_Deserialize,
+	params: VideoTaskParams,
+	status: VideoTaskStatus,
+	progress: number,
+	createdAt: number,
+	completedAt: number | null,
+	videoUrl: string | null,
+	localPath: string | null,
+	error: string | null,
+};
+
+/**  A playground task persisted under `~/.droidgear/playground/video_tasks.json`. */
+export type VideoTaskRecord_Serialize = {
+	id: string,
+	modelId: string,
+	modelName: string,
+	/**
+	 *  Snapshot of the model at submit time. Custom API keys are stripped on
+	 *  disk and merged back from `video_secrets.json` on load.
+	 */
+	model: VideoModel_Serialize,
+	params: VideoTaskParams,
+	status: VideoTaskStatus,
+	progress: number,
+	createdAt: number,
+	completedAt: number | null,
+	videoUrl: string | null,
+	localPath: string | null,
+	error: string | null,
+};
+
+/**  One protocol query result, normalized for the playground UI. */
+export type VideoTaskSnapshot = {
+	id: string,
+	status: VideoTaskStatus,
+	progress: number,
+	videoUrl: string | null,
+	localPath: string | null,
+	error: string | null,
+	/**  Milliseconds since the Unix epoch, when the upstream reports one. */
+	completedAt: number | null,
+};
+
+/**  Normalized task states shared by both upstream protocols. */
+export type VideoTaskStatus = "queued" | "in_progress" | "completed" | "failed" | "cancelled";
 
 /**  WSL distribution info */
 export type WslDistro = {

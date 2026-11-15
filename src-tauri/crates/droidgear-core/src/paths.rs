@@ -92,10 +92,6 @@ pub fn droidgear_dir_from_home(home_dir: &Path) -> PathBuf {
     home_dir.join(".droidgear")
 }
 
-pub fn get_droidgear_settings_path() -> Result<PathBuf, String> {
-    Ok(droidgear_dir_from_home(&get_home_dir()?).join(SETTINGS_FILE))
-}
-
 pub fn get_droidgear_settings_path_for_home(home_dir: &Path) -> PathBuf {
     droidgear_dir_from_home(home_dir).join(SETTINGS_FILE)
 }
@@ -118,22 +114,10 @@ pub fn read_droidgear_settings_from_path_internal(path: &Path) -> Result<Value, 
 }
 
 fn write_droidgear_settings_to_path(path: &Path, settings: &Value) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        if !parent.exists() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("Failed to create .droidgear directory: {e}"))?;
-        }
-    }
-
-    let temp_path = path.with_extension("tmp");
     let content = serde_json::to_string_pretty(settings)
         .map_err(|e| format!("Failed to serialize settings: {e}"))?;
-    std::fs::write(&temp_path, content).map_err(|e| format!("Failed to write settings: {e}"))?;
-    std::fs::rename(&temp_path, path).map_err(|e| {
-        let _ = std::fs::remove_file(&temp_path);
-        format!("Failed to finalize settings: {e}")
-    })?;
-    Ok(())
+    crate::storage::atomic_write(path, content.as_bytes())
+        .map_err(|e| format!("Failed to write settings: {e}"))
 }
 
 /// Public wrapper for writing droidgear settings to a path
@@ -489,12 +473,6 @@ pub fn get_factory_home_for_home(home_dir: &Path, config: &ConfigPaths) -> Resul
     }
 }
 
-pub fn get_opencode_config_dir() -> Result<PathBuf, String> {
-    let home = get_home_dir()?;
-    let config = load_config_paths_for_home(&home);
-    get_opencode_config_dir_for_home(&home, &config)
-}
-
 pub fn get_opencode_config_dir_for_home(
     home_dir: &Path,
     config: &ConfigPaths,
@@ -503,12 +481,6 @@ pub fn get_opencode_config_dir_for_home(
         Some(custom) => Ok(PathBuf::from(custom)),
         None => default_opencode_config_dir_for_home(home_dir),
     }
-}
-
-pub fn get_opencode_auth_dir() -> Result<PathBuf, String> {
-    let home = get_home_dir()?;
-    let config = load_config_paths_for_home(&home);
-    get_opencode_auth_dir_for_home(&home, &config)
 }
 
 pub fn get_opencode_auth_dir_for_home(
@@ -534,23 +506,11 @@ pub fn get_codex_home_for_home(home_dir: &Path, config: &ConfigPaths) -> Result<
     }
 }
 
-pub fn get_claude_home() -> Result<PathBuf, String> {
-    let home = get_home_dir()?;
-    let config = load_config_paths_for_home(&home);
-    get_claude_home_for_home(&home, &config)
-}
-
 pub fn get_claude_home_for_home(home_dir: &Path, config: &ConfigPaths) -> Result<PathBuf, String> {
     match &config.claude {
         Some(custom) => Ok(PathBuf::from(custom)),
         None => default_claude_home_for_home(home_dir),
     }
-}
-
-pub fn get_openclaw_home() -> Result<PathBuf, String> {
-    let home = get_home_dir()?;
-    let config = load_config_paths_for_home(&home);
-    get_openclaw_home_for_home(&home, &config)
 }
 
 pub fn get_openclaw_home_for_home(
@@ -577,12 +537,6 @@ pub fn get_hermes_home_for_home(home_dir: &Path, config: &ConfigPaths) -> Result
         Some(custom) => Ok(PathBuf::from(custom)),
         None => default_hermes_home_for_home(home_dir),
     }
-}
-
-pub fn get_pi_home() -> Result<PathBuf, String> {
-    let home = get_home_dir()?;
-    let config = load_config_paths_for_home(&home);
-    get_pi_home_for_home(&home, &config)
 }
 
 pub fn get_pi_home_for_home(home_dir: &Path, config: &ConfigPaths) -> Result<PathBuf, String> {
