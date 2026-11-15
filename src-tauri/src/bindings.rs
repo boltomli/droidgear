@@ -299,6 +299,9 @@ pub fn generate_bindings() -> Builder<tauri::DynRuntime> {
             image::create_image_task,
             window::reset_window_state,
         ])
+        // tauri-specta 2.0.0-rc.29 defaults to `Throw`; the frontend is typed
+        // around `{ status: 'ok' | 'error' }`, so keep the status-tagged result.
+        .error_handling(tauri_specta::ErrorHandlingMode::Result)
         .dangerously_cast_bigints_to_number()
 }
 
