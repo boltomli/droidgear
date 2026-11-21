@@ -19,6 +19,8 @@ import {
 
 const ADVANCED_PLACEHOLDERS: Record<ImageProtocol, string> = {
   chat: '{\n  "image_config": { "aspect_ratio": "16:9" }\n}',
+  images: '{\n  "response_format": "b64_json"\n}',
+  // Legacy value kept for models saved before the Responses wire was dropped.
   responses: '{\n  "background": "transparent"\n}',
   google: '{\n  "generationConfig": { "seed": 42 }\n}',
 }
@@ -168,7 +170,9 @@ export function ImageCreatePanel() {
           </div>
         )}
 
-        {model?.supportsImageInput && (
+        {/* `/v1/images/generations` has no reference-image input; that is the
+            separate edits endpoint, which this protocol does not implement. */}
+        {model?.supportsImageInput && model.protocol !== 'images' && (
           <div className="grid gap-2">
             <Label>{t('playground.image.create.imageUrls')}</Label>
             <ReferenceImages

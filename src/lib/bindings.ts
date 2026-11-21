@@ -661,6 +661,12 @@ export const commands = {
 	/**  Generates images with the model's configured protocol. */
 	createImageTask: (model: ImageModel, taskId: string, prompt: string, size: string, quality: string, count: number, imageUrls: string[], extraJson: string, options?: InvokeOptions) => typedError<ImageTaskSnapshot, string>(__TAURI_INVOKE("create_image_task", { model, taskId, prompt, size, quality, count, imageUrls, extraJson }, options)),
 	/**
+	 *  Saves a playground video or image wherever the user points the save dialog.
+	 * 
+	 *  Returns the destination path, or `None` when the dialog was cancelled.
+	 */
+	savePlaygroundMediaAs: (sourcePath: string | null, sourceUrl: string | null, suggestedName: string, options?: InvokeOptions) => typedError<string | null, string>(__TAURI_INVOKE("save_playground_media_as", { sourcePath, sourceUrl, suggestedName }, options)),
+	/**
 	 *  Tauri command: snap the main window to the default size, clear fullscreen,
 	 *  re-center, and quarantine the saved state file so the next launch starts
 	 *  fresh. Surfaced via the application menu and a global shortcut so users
@@ -987,7 +993,7 @@ export type ClaudeCurrentConfig_Serialize = {
 	thinkingMode: ClaudeThinkingMode,
 };
 
-export type ClaudeReasoningEffort = "low" | "medium" | "high" | "max";
+export type ClaudeReasoningEffort = "low" | "medium" | "high" | "xhigh" | "max";
 
 /**  Information about a single Claude settings file. */
 export type ClaudeSettingsFileInfo = {
@@ -2271,14 +2277,14 @@ export type ImageModel_Deserialize = {
 	name: string,
 	modelId: string,
 	source: ImageSource_Deserialize,
-	protocol: ImageProtocol,
+	protocol: ImageProtocol_Deserialize,
 	/**
 	 *  Suggested size values. The meaning follows the protocol: `WxH` for
-	 *  Chat/Responses, `WxH`, `A:B` or `1K`/`2K`/`4K` for Google.
+	 *  Chat/Images, `WxH`, `A:B` or `1K`/`2K`/`4K` for Google.
 	 */
 	sizes: string[],
 	/**
-	 *  Suggested quality values (Responses: low/medium/high/auto, Google:
+	 *  Suggested quality values (Images: low/medium/high/auto, Google:
 	 *  1K/2K/4K).
 	 */
 	qualities: string[],
@@ -2292,14 +2298,14 @@ export type ImageModel_Serialize = {
 	name: string,
 	modelId: string,
 	source: ImageSource_Serialize,
-	protocol: ImageProtocol,
+	protocol: ImageProtocol_Serialize,
 	/**
 	 *  Suggested size values. The meaning follows the protocol: `WxH` for
-	 *  Chat/Responses, `WxH`, `A:B` or `1K`/`2K`/`4K` for Google.
+	 *  Chat/Images, `WxH`, `A:B` or `1K`/`2K`/`4K` for Google.
 	 */
 	sizes: string[],
 	/**
-	 *  Suggested quality values (Responses: low/medium/high/auto, Google:
+	 *  Suggested quality values (Images: low/medium/high/auto, Google:
 	 *  1K/2K/4K).
 	 */
 	qualities: string[],
@@ -2308,11 +2314,40 @@ export type ImageModel_Serialize = {
 };
 
 /**  Image wire protocol used by a playground model. */
-export type ImageProtocol = 
+export type ImageProtocol = ImageProtocol_Serialize | ImageProtocol_Deserialize;
+
+/**  Image wire protocol used by a playground model. */
+export type ImageProtocol_Deserialize = 
 /**  OpenAI ChatCompletions (`/v1/chat/completions`). */
 "chat" | 
-/**  OpenAI Responses with the `image_generation` tool (`/v1/responses`). */
+/**
+ *  OpenAI Images (`/v1/images/generations`).
+ * 
+ *  `responses` is an alias for models and tasks saved before the Responses
+ *  wire was removed; those entries now resolve to this endpoint.
+ */
+"images" | 
+/**
+ *  OpenAI Images (`/v1/images/generations`).
+ * 
+ *  `responses` is an alias for models and tasks saved before the Responses
+ *  wire was removed; those entries now resolve to this endpoint.
+ */
 "responses" | 
+/**  Gemini native `:generateContent` / `:predict`. */
+"google";
+
+/**  Image wire protocol used by a playground model. */
+export type ImageProtocol_Serialize = 
+/**  OpenAI ChatCompletions (`/v1/chat/completions`). */
+"chat" | 
+/**
+ *  OpenAI Images (`/v1/images/generations`).
+ * 
+ *  `responses` is an alias for models and tasks saved before the Responses
+ *  wire was removed; those entries now resolve to this endpoint.
+ */
+"images" | 
 /**  Gemini native `:generateContent` / `:predict`. */
 "google";
 
@@ -4247,8 +4282,13 @@ export type VideoModel_Deserialize = {
 	modelId: string,
 	source: VideoSource_Deserialize,
 	protocol: VideoProtocol_Deserialize,
-	durations: number[],
-	resolutions: string[],
+	/**
+	 *  Editable suggestion lists. Older files may predate them; defaulting
+	 *  keeps the rest of the file (and its other models) loadable instead of
+	 *  failing the whole model list over two optional presets.
+	 */
+	durations?: number[],
+	resolutions?: string[],
 	supportsImageInput: boolean,
 };
 
@@ -4259,6 +4299,11 @@ export type VideoModel_Serialize = {
 	modelId: string,
 	source: VideoSource_Serialize,
 	protocol: VideoProtocol_Serialize,
+	/**
+	 *  Editable suggestion lists. Older files may predate them; defaulting
+	 *  keeps the rest of the file (and its other models) loadable instead of
+	 *  failing the whole model list over two optional presets.
+	 */
 	durations: number[],
 	resolutions: string[],
 	supportsImageInput: boolean,

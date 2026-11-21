@@ -7,10 +7,13 @@ import {
 /** Suggested size values per protocol.
  *
  * ChatCompletions models accept either pixel sizes (`size`) or an aspect ratio
- * (`image_config.aspect_ratio`). Responses models use OpenAI image sizes.
- * Google's native wire reads an aspect ratio and a separate image size. */
+ * (`image_config.aspect_ratio`). Images models use OpenAI image sizes. Google's
+ * native wire reads an aspect ratio and a separate image size. */
 export const COMMON_IMAGE_SIZES: Record<ImageProtocol, string[]> = {
   chat: ['1024x1024', '1536x1024', '1024x1536', '16:9', '9:16', '4:3', '3:4'],
+  images: ['auto', '1024x1024', '1536x1024', '1024x1536'],
+  // Legacy value: the Responses wire was dropped, but models saved before then
+  // deserialize into it, and the alias keeps it in the generated union.
   responses: ['auto', '1024x1024', '1536x1024', '1024x1536'],
   google: [
     '1:1',
@@ -30,6 +33,7 @@ export const COMMON_IMAGE_SIZES: Record<ImageProtocol, string[]> = {
  * advanced JSON because every gateway names it differently. */
 export const COMMON_IMAGE_QUALITIES: Record<ImageProtocol, string[]> = {
   chat: [],
+  images: ['auto', 'low', 'medium', 'high'],
   responses: ['auto', 'low', 'medium', 'high'],
   google: ['1K', '2K', '4K'],
 }
@@ -54,8 +58,8 @@ export function imageProtocolOptions(
   return [
     { value: 'chat', label: t('playground.image.modelDialog.protocolChat') },
     {
-      value: 'responses',
-      label: t('playground.image.modelDialog.protocolResponses'),
+      value: 'images',
+      label: t('playground.image.modelDialog.protocolImages'),
     },
     {
       value: 'google',
@@ -74,14 +78,14 @@ export function imageProtocolLabel(
   )
 }
 
-/** ChatCompletions can return several images (`n`), and Imagen's `:predict`
- * takes `sampleCount`. Responses and Gemini's `generateContent` always answer
+/** ChatCompletions and the Images endpoint both take `n`, and Imagen's
+ * `:predict` takes `sampleCount`. Gemini's `generateContent` always answers
  * with the image the model decided to draw. */
 export function supportsMultipleImages(model: {
   protocol: ImageProtocol
   modelId: string
 }): boolean {
-  if (model.protocol === 'chat') return true
+  if (model.protocol === 'chat' || model.protocol === 'images') return true
   return (
     model.protocol === 'google' &&
     model.modelId.trim().toLowerCase().startsWith('imagen')
