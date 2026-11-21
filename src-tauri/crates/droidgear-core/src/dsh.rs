@@ -448,7 +448,7 @@ fn write_settings_yaml_for_home(home_dir: &Path, value: &YamlValue) -> Result<()
     }
     let yaml_str = serde_yaml::to_string(value)
         .map_err(|e| format!("Failed to serialize Dsh settings: {e}"))?;
-    storage::atomic_write(&path, yaml_str.as_bytes())
+    storage::atomic_write_private(&path, yaml_str.as_bytes())
 }
 
 // ============================================================================
@@ -540,7 +540,7 @@ fn write_patch_document(path: &Path, original: &str, entries: &[YamlValue]) -> R
                 .map_err(|e| format!("Failed to create Dsh profile directory: {e}"))?;
         }
     }
-    storage::atomic_write(path, format!("{header}{}", blocks.concat()).as_bytes())
+    storage::atomic_write_private(path, format!("{header}{}", blocks.concat()).as_bytes())
 }
 
 /// Serialize a patch entry mapping as a sequence item: first line prefixed

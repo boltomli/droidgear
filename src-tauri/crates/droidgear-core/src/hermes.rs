@@ -315,7 +315,7 @@ fn write_profile_file(home_dir: &Path, profile: &HermesProfile) -> Result<(), St
     let path = profile_path_for_home(home_dir, &profile.id)?;
     let s = serde_json::to_string_pretty(profile)
         .map_err(|e| format!("Failed to serialize profile JSON: {e}"))?;
-    storage::atomic_write(&path, s.as_bytes())
+    storage::atomic_write_private(&path, s.as_bytes())
 }
 
 fn load_profile_by_id(home_dir: &Path, id: &str) -> Result<HermesProfile, String> {
@@ -651,7 +651,7 @@ fn apply_profile_to_config_path(profile: &HermesProfile, config_path: &Path) -> 
 
     let yaml_str = serde_yaml::to_string(&config)
         .map_err(|e| format!("Failed to serialize config.yaml: {e}"))?;
-    storage::atomic_write(config_path, yaml_str.as_bytes())
+    storage::atomic_write_private(config_path, yaml_str.as_bytes())
 }
 
 /// Internal: read current Hermes config from a specific config.yaml path.

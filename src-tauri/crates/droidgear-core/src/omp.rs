@@ -461,7 +461,7 @@ fn write_models_yml(home_dir: &Path, config: &OmpModelsConfig) -> Result<(), Str
     let path = omp_models_yml_path_for_home(home_dir)?;
     let yaml = serde_yaml::to_string(config)
         .map_err(|e| format!("Failed to serialize models.yml: {e}"))?;
-    storage::atomic_write(&path, yaml.as_bytes())
+    storage::atomic_write_private(&path, yaml.as_bytes())
 }
 
 pub fn read_omp_custom_providers_for_home(home_dir: &Path) -> Result<OmpCustomProviders, String> {
@@ -643,7 +643,7 @@ fn write_profile_file(home_dir: &Path, profile: &OmpProfile) -> Result<(), Strin
     let path = profile_path_for_home(home_dir, &profile.id)?;
     let s = serde_json::to_string_pretty(profile)
         .map_err(|e| format!("Failed to serialize profile JSON: {e}"))?;
-    storage::atomic_write(&path, s.as_bytes())
+    storage::atomic_write_private(&path, s.as_bytes())
 }
 
 fn load_profile_by_id(home_dir: &Path, id: &str) -> Result<OmpProfile, String> {
@@ -679,7 +679,7 @@ fn write_config_yml(home_dir: &Path, config: &OmpAgentConfig) -> Result<(), Stri
             .map_err(|e| format!("Failed to create OMP config directory: {e}"))?;
     }
 
-    storage::atomic_write(&path, yaml_str.as_bytes())
+    storage::atomic_write_private(&path, yaml_str.as_bytes())
 }
 
 // ============================================================================

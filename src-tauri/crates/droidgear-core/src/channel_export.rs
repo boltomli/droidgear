@@ -648,7 +648,7 @@ fn render_toml(records: &[ExportRecord], path: &Path) -> Result<(), String> {
 
 /// Atomic file write: temp file + rename.
 fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
-    crate::storage::atomic_write(path, content.as_bytes())
+    crate::storage::atomic_write_private(path, content.as_bytes())
         .map_err(|e| format!("Failed to write to '{}': {e}", path.display()))
 }
 
