@@ -177,21 +177,6 @@ export const commands = {
 	/**  Run an export template by name and return the result. */
 	runExportTemplate: (name: string, options?: InvokeOptions) => typedError<ExportResult, string>(__TAURI_INVOKE("run_export_template", { name }, options)),
 	/**
-	 *  Gets the value of an environment variable.
-	 *  Returns None if the variable is not set.
-	 */
-	getEnvVar: (name: string, options?: InvokeOptions) => __TAURI_INVOKE<string | null>("get_env_var", { name }, options),
-	/**
-	 *  Sets an environment variable for the current process.
-	 *  Note: This only affects the current process, not the system or shell.
-	 */
-	setEnvVar: (name: string, value: string, options?: InvokeOptions) => __TAURI_INVOKE<void>("set_env_var", { name, value }, options),
-	/**
-	 *  Removes an environment variable from the current process.
-	 *  Note: This only affects the current process, not the system or shell.
-	 */
-	removeEnvVar: (name: string, options?: InvokeOptions) => __TAURI_INVOKE<void>("remove_env_var", { name }, options),
-	/**
 	 *  Gets environment variables from a login shell.
 	 *  This is useful for GUI apps that don't inherit shell environment.
 	 *  Uses non-interactive mode for faster execution.
