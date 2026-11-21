@@ -32,3 +32,11 @@ out of `cargo test` / `cargo clippy`.
    `src-tauri/Cargo.toml`, drop any `[patch.crates-io]` entry, then
    `cd src-tauri && cargo update -p <name>` and re-run
    `npm run check:all` + `cargo audit`.
+
+## License notes
+
+- `tauri-plugin-updater/`, `tauri-specta/`, `tauri-plugin-system-fonts/` ship
+  their upstream `LICENSE` files (MIT / Apache-2.0).
+- `tauri-plugin-pty/` upstream has **no LICENSE file** (only `license = "MIT"` in
+  its manifest); it is redistributed here under that declared MIT license. If
+  upstream adds a file, copy it in.
