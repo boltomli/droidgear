@@ -28,3 +28,6 @@ src/lib/bindings.ts
 .omo/
 # Vendor data — keep byte-identical to the official DeepSeek setup script
 src-tauri/crates/droidgear-core/res/
+
+# Vendored crate — keep byte-identical to the published tauri-plugin-updater
+src-tauri/vendor/

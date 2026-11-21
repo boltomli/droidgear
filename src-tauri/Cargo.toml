@@ -76,3 +76,15 @@ strip = true             # Remove debug symbols
 [workspace]
 members = ["crates/droidgear-core", "crates/droidgear-tui"]
 resolver = "2"
+
+# Temporary fork of tauri-plugin-updater 3.0.0-alpha.3.
+#
+# The published alpha pins `zip = "4"` on Windows, which carries the archive
+# extraction advisories RUSTSEC-2026-0367 / 0368 / 0369 / 0429 / 0545 / 0548
+# (SUID preservation, symlink escapes, AES auth-code skip, header mismatch).
+# Upstream's v3 branch still requires zip 4, so `vendor/tauri-plugin-updater` is
+# the crates.io source with two lines changed: `zip = "9"` and the deflate
+# feature needed to keep unpacking updater bundles. Remove this patch once a
+# published release depends on zip >= 9 (see the vendor README).
+[patch.crates-io]
+tauri-plugin-updater = { path = "vendor/tauri-plugin-updater" }
