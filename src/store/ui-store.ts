@@ -58,7 +58,6 @@ export interface PendingUpdate {
 
 interface UIState {
   leftSidebarVisible: boolean
-  rightSidebarVisible: boolean
   commandPaletteOpen: boolean
   preferencesOpen: boolean
   currentView: NavigationView
@@ -84,8 +83,6 @@ interface UIState {
 
   toggleLeftSidebar: () => void
   setLeftSidebarVisible: (visible: boolean) => void
-  toggleRightSidebar: () => void
-  setRightSidebarVisible: (visible: boolean) => void
   toggleCommandPalette: () => void
   setCommandPaletteOpen: (open: boolean) => void
   togglePreferences: () => void
@@ -117,7 +114,6 @@ export const useUIStore = create<UIState>()(
     persist(
       set => ({
         leftSidebarVisible: true,
-        rightSidebarVisible: false,
         commandPaletteOpen: false,
         preferencesOpen: false,
         currentView: 'droid',
@@ -153,20 +149,6 @@ export const useUIStore = create<UIState>()(
             { leftSidebarVisible: visible },
             undefined,
             'setLeftSidebarVisible'
-          ),
-
-        toggleRightSidebar: () =>
-          set(
-            state => ({ rightSidebarVisible: !state.rightSidebarVisible }),
-            undefined,
-            'toggleRightSidebar'
-          ),
-
-        setRightSidebarVisible: visible =>
-          set(
-            { rightSidebarVisible: visible },
-            undefined,
-            'setRightSidebarVisible'
           ),
 
         toggleCommandPalette: () =>
@@ -291,7 +273,6 @@ export const useUIStore = create<UIState>()(
           currentView: state.currentView,
           lastToolView: state.lastToolView,
           leftSidebarVisible: state.leftSidebarVisible,
-          rightSidebarVisible: state.rightSidebarVisible,
         }),
       }
     ),

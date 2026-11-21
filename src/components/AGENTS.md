@@ -34,7 +34,7 @@ components/
 | Directory          | Files   | Purpose                                                                                                            |
 | ------------------ | ------- | ------------------------------------------------------------------------------------------------------------------ |
 | `ui/`              | 45      | shadcn/ui primitives — Dialog, Select, Tabs, etc. DO NOT modify                                                    |
-| `layout/`          | 5       | MainWindow, LeftSideBar, RightSideBar, MainWindowContent                                                           |
+| `layout/`          | 4       | MainWindow, LeftSideBar, MainWindowContent                                                                         |
 | `titlebar/`        | 7       | TitleBar + platform-specific window controls (MacOS, Windows, Linux)                                               |
 | `preferences/`     | 3+panes | PreferencesDialog with panes: General, Appearance, Models, Paths, Advanced, About                                  |
 | `command-palette/` | 2       | Cmd+K command palette system                                                                                       |
